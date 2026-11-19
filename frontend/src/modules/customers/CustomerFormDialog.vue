@@ -31,7 +31,8 @@ const FIELDS = [
   'district',
   'city',
   'state',
-  'account_manager',
+  'primary_account_manager',
+  'secondary_account_managers',
   'is_active',
   'notes',
 ] as const
@@ -51,7 +52,8 @@ function emptyForm(): CustomerInput {
     district: '',
     city: '',
     state: '',
-    account_manager: null,
+    primary_account_manager: null,
+    secondary_account_managers: [],
     is_active: true,
     notes: '',
   }
@@ -86,20 +88,38 @@ function toInput(c: Customer): CustomerInput {
     district: c.district,
     city: c.city,
     state: c.state,
-    account_manager: c.account_manager,
+    primary_account_manager: c.primary_account_manager,
+    secondary_account_managers: [...c.secondary_account_managers],
     is_active: c.is_active,
     notes: c.notes,
   }
 }
 
-// The account manager picker starts fresh (remounts) every time the dialog opens
+// The account manager pickers start fresh (remount) every time the dialog opens
 const openCount = ref(0)
-const initialManagers = computed<AccountManagerRef[]>(() => {
+const initialPrimary = computed<AccountManagerRef[]>(() => {
   const c = props.customer
-  return c?.account_manager && c.account_manager_name
-    ? [{ id: c.account_manager, full_name: c.account_manager_name }]
+  return c?.primary_account_manager
+    ? [{ id: c.primary_account_manager, full_name: c.primary_account_manager_name }]
     : []
 })
+const initialSecondaries = computed(() => props.customer?.secondary_account_managers_detail ?? [])
+
+const primaryRules = [(v: unknown) => (v !== null && v !== undefined) || t('validation.required')]
+
+/** The primary account manager is never also a secondary one. */
+function onPrimaryChange(primary: number | number[] | null) {
+  clearError('primary_account_manager')
+  if (typeof primary === 'number') {
+    form.value.secondary_account_managers = form.value.secondary_account_managers.filter(
+      (id) => id !== primary,
+    )
+  }
+}
+
+const excludedFromSecondaries = computed(() =>
+  form.value.primary_account_manager === null ? [] : [form.value.primary_account_manager],
+)
 
 watch(open, (isOpen) => {
   if (!isOpen) return
@@ -333,14 +353,16 @@ function clearError(field: string) {
           <v-row dense>
             <v-col cols="12" md="8">
               <AccountManagerPicker
-                :key="openCount"
-                v-model="form.account_manager"
-                :initial-options="initialManagers"
-                :label="$t('customers.fields.accountManager')"
-                :error-messages="fieldErrors.account_manager"
+                :key="`primary-${openCount}`"
+                v-model="form.primary_account_manager"
+                :initial-options="initialPrimary"
+                :label="$t('customers.fields.primaryAccountManager')"
+                :rules="primaryRules"
+                :error-messages="fieldErrors.primary_account_manager"
                 :no-data-text="$t('accountManagers.noneFound')"
-                data-testid="account-manager"
-                @update:model-value="clearError('account_manager')"
+                prepend-inner-icon="mdi-star"
+                data-testid="primary-account-manager"
+                @update:model-value="onPrimaryChange"
               />
             </v-col>
             <v-col cols="12" md="4" class="d-flex align-center">
@@ -350,6 +372,20 @@ function clearError(field: string) {
                 color="primary"
                 hide-details
                 inset
+              />
+            </v-col>
+            <v-col cols="12">
+              <AccountManagerPicker
+                :key="`secondary-${openCount}`"
+                v-model="form.secondary_account_managers"
+                multiple
+                :initial-options="initialSecondaries"
+                :exclude="excludedFromSecondaries"
+                :label="$t('customers.fields.secondaryAccountManagers')"
+                :error-messages="fieldErrors.secondary_account_managers"
+                :no-data-text="$t('accountManagers.noneFound')"
+                data-testid="secondary-account-managers"
+                @update:model-value="clearError('secondary_account_managers')"
               />
             </v-col>
             <v-col cols="12">

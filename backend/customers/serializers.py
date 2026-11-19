@@ -19,7 +19,10 @@ def _collapse_spaces(value: str) -> str:
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    account_manager_name = serializers.SerializerMethodField()
+    # Write: primary_account_manager (id, required) and secondary_account_managers (ids).
+    # Read: also names, for display.
+    primary_account_manager_name = serializers.SerializerMethodField()
+    secondary_account_managers_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = Customer
@@ -38,19 +41,26 @@ class CustomerSerializer(serializers.ModelSerializer):
             "district",
             "city",
             "state",
-            "account_manager",
-            "account_manager_name",
+            "primary_account_manager",
+            "primary_account_manager_name",
+            "secondary_account_managers",
+            "secondary_account_managers_detail",
             "is_active",
             "notes",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {"secondary_account_managers": {"required": False}}
         # Uniqueness of (country, tax_id) is checked in validate() with a friendlier message
         validators = []
 
-    def get_account_manager_name(self, obj) -> str | None:
-        return obj.account_manager.full_name if obj.account_manager else None
+    def get_primary_account_manager_name(self, obj) -> str:
+        return obj.primary_account_manager.full_name
+
+    def get_secondary_account_managers_detail(self, obj) -> list[dict]:
+        managers = sorted(obj.secondary_account_managers.all(), key=lambda m: m.full_name.lower())
+        return [{"id": m.id, "full_name": m.full_name} for m in managers]
 
     # --- Field normalization ------------------------------------------------------------------
 
@@ -121,6 +131,19 @@ class CustomerSerializer(serializers.ModelSerializer):
                 duplicates = duplicates.exclude(pk=self.instance.pk)
             if duplicates.exists():
                 errors["tax_id"] = _("A customer with this tax ID already exists.")
+
+        # The primary account manager is not also a secondary one
+        primary = current("primary_account_manager", None)
+        if "secondary_account_managers" in attrs:
+            secondaries = attrs["secondary_account_managers"]
+        elif self.instance is not None:
+            secondaries = list(self.instance.secondary_account_managers.all())
+        else:
+            secondaries = []
+        if primary is not None and primary in secondaries:
+            errors["secondary_account_managers"] = _(
+                "The primary account manager cannot also be a secondary one."
+            )
 
         if errors:
             raise serializers.ValidationError(errors)

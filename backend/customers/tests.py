@@ -22,22 +22,35 @@ def logged_client(client, db):
 
 
 @pytest.fixture
-def ana(db):
-    return AccountManager.objects.create(full_name="Ana Souza", email="ana@example.com")
+def managers(db):
+    return {
+        "ana": AccountManager.objects.create(full_name="Ana Souza", email="ana@example.com"),
+        "bruno": AccountManager.objects.create(full_name="Bruno Lima", email="bruno@example.com"),
+        "carla": AccountManager.objects.create(full_name="Carla Mendes", email="carla@example.com"),
+    }
 
 
 @pytest.fixture
-def customers(ana):
+def ana(managers):
+    return managers["ana"]
+
+
+@pytest.fixture
+def customers(managers):
+    trans = Customer.objects.create(
+        name="Transportes Rápidos Ltda", trade_name="TransRápido", tax_id=CNPJ,
+        city="Campinas", state="SP", primary_account_manager=managers["ana"],
+    )  # fmt: skip
+    trans.secondary_account_managers.set([managers["carla"], managers["bruno"]])
     return [
-        Customer.objects.create(
-            name="Transportes Rápidos Ltda", trade_name="TransRápido", tax_id=CNPJ,
-            city="Campinas", state="SP", account_manager=ana,
-        ),
+        trans,
         Customer.objects.create(
             name="Alpha Equipamentos S.A.", tax_id=CNPJ_ALPHANUMERIC, city="Curitiba", state="PR",
+            primary_account_manager=managers["bruno"],
         ),
         Customer.objects.create(
             name="Maria Oliveira", tax_id=CPF, city="Recife", state="PE", is_active=False,
+            primary_account_manager=managers["carla"],
         ),
     ]  # fmt: skip
 
@@ -93,7 +106,7 @@ def test_requires_login(client):
     assert client.get(URL).status_code == 403
 
 
-def test_list_includes_account_manager_name(logged_client, customers):
+def test_list_includes_account_managers(logged_client, customers, managers):
     results = logged_client.get(URL).json()["results"]
     assert [c["name"] for c in results] == [
         "Alpha Equipamentos S.A.",
@@ -101,8 +114,17 @@ def test_list_includes_account_manager_name(logged_client, customers):
         "Transportes Rápidos Ltda",
     ]
     trans = results[2]
-    assert trans["account_manager_name"] == "Ana Souza"
-    assert results[0]["account_manager_name"] is None
+    assert trans["primary_account_manager"] == managers["ana"].pk
+    assert trans["primary_account_manager_name"] == "Ana Souza"
+    assert sorted(trans["secondary_account_managers"]) == sorted(
+        [managers["bruno"].pk, managers["carla"].pk]
+    )
+    # Detail sorted by name, for display
+    assert [m["full_name"] for m in trans["secondary_account_managers_detail"]] == [
+        "Bruno Lima",
+        "Carla Mendes",
+    ]
+    assert results[0]["secondary_account_managers_detail"] == []
 
 
 @pytest.mark.parametrize(
@@ -110,7 +132,9 @@ def test_list_includes_account_manager_name(logged_client, customers):
     [
         ("transrápido", ["Transportes Rápidos Ltda"]),
         ("curitiba", ["Alpha Equipamentos S.A."]),
-        ("ana souza", ["Transportes Rápidos Ltda"]),
+        ("ana souza", ["Transportes Rápidos Ltda"]),  # primary
+        # Bruno is primary of Alpha and secondary of Trans: each customer once
+        ("bruno", ["Alpha Equipamentos S.A.", "Transportes Rápidos Ltda"]),
         ("11.222.333/0001-81", ["Transportes Rápidos Ltda"]),
         ("11222333", ["Transportes Rápidos Ltda"]),
         ("12.abc.345", ["Alpha Equipamentos S.A."]),
@@ -122,10 +146,15 @@ def test_search(logged_client, customers, term, expected):
     assert [c["name"] for c in results] == expected
 
 
-@pytest.mark.parametrize("ordering", ["account_manager__full_name", "-account_manager__full_name"])
-def test_customers_without_account_manager_sort_last(logged_client, customers, ordering):
-    results = logged_client.get(URL, {"ordering": ordering}).json()["results"]
-    assert [c["account_manager_name"] for c in results] == ["Ana Souza", None, None]
+def test_ordering_by_primary_account_manager(logged_client, customers):
+    results = logged_client.get(URL, {"ordering": "-primary_account_manager__full_name"}).json()[
+        "results"
+    ]
+    assert [c["primary_account_manager_name"] for c in results] == [
+        "Carla Mendes",
+        "Bruno Lima",
+        "Ana Souza",
+    ]
 
 
 # --- API: create / update / delete -----------------------------------------------------------
@@ -141,7 +170,7 @@ def test_create_normalizes_fields(logged_client, ana):
             "postal_code": "13010-100",
             "state": "sp",
             "city": " Campinas ",
-            "account_manager": ana.pk,
+            "primary_account_manager": ana.pk,
         },
     )
     assert r.status_code == 201, r.json()
@@ -155,12 +184,31 @@ def test_create_normalizes_fields(logged_client, ana):
         "Campinas",
         "BR",
     )
-    assert c.account_manager == ana
+    assert c.primary_account_manager == ana
+    assert c.secondary_account_managers.count() == 0
     assert c.is_active is True
 
 
-def test_create_with_alphanumeric_cnpj(logged_client):
-    r = _post(logged_client, {"name": "Gama S.A.", "tax_id": "12.abc.345/01de-35"})
+def test_create_with_secondary_account_managers(logged_client, managers):
+    r = _post(
+        logged_client,
+        {
+            "name": "Beta Locações",
+            "tax_id": CNPJ,
+            "primary_account_manager": managers["ana"].pk,
+            "secondary_account_managers": [managers["bruno"].pk, managers["carla"].pk],
+        },
+    )
+    assert r.status_code == 201, r.json()
+    c = Customer.objects.get(pk=r.json()["id"])
+    assert set(c.secondary_account_managers.all()) == {managers["bruno"], managers["carla"]}
+
+
+def test_create_with_alphanumeric_cnpj(logged_client, ana):
+    r = _post(
+        logged_client,
+        {"name": "Gama S.A.", "tax_id": "12.abc.345/01de-35", "primary_account_manager": ana.pk},
+    )
     assert r.status_code == 201
     assert r.json()["tax_id"] == CNPJ_ALPHANUMERIC
 
@@ -175,32 +223,84 @@ def test_create_with_alphanumeric_cnpj(logged_client):
         ({"name": "X", "tax_id": CNPJ, "state": "XX"}, "state"),
         ({"name": "X", "tax_id": CNPJ, "email": "not-an-email"}, "email"),
         ({"name": "X", "tax_id": CNPJ, "country": "Brazil"}, "country"),
-        ({"name": "X", "tax_id": CNPJ, "account_manager": 999999}, "account_manager"),
+        ({"primary_account_manager": 999999}, "primary_account_manager"),
+        ({"secondary_account_managers": [999999]}, "secondary_account_managers"),
     ],
 )
-def test_create_validation(logged_client, db, data, field):
-    r = _post(logged_client, data)
+def test_create_validation(logged_client, ana, data, field):
+    valid = {"name": "X", "tax_id": CNPJ, "primary_account_manager": ana.pk}
+    r = _post(logged_client, {**valid, **data})
     assert r.status_code == 400
     assert field in r.json()
 
 
-def test_foreign_customer_tax_id_is_free_form(logged_client):
+def test_primary_account_manager_is_required(logged_client, db):
+    r = _post(logged_client, {"name": "X", "tax_id": CNPJ})
+    assert r.status_code == 400
+    assert "primary_account_manager" in r.json()
+    r = _post(logged_client, {"name": "X", "tax_id": CNPJ, "primary_account_manager": None})
+    assert r.status_code == 400
+    assert "primary_account_manager" in r.json()
+
+
+def test_primary_cannot_also_be_secondary(logged_client, managers):
     r = _post(
         logged_client,
-        {"name": "Acme Inc.", "tax_id": "12-3456789", "country": "us", "postal_code": "94105"},
+        {
+            "name": "X",
+            "tax_id": CNPJ,
+            "primary_account_manager": managers["ana"].pk,
+            "secondary_account_managers": [managers["bruno"].pk, managers["ana"].pk],
+        },
+    )
+    assert r.status_code == 400
+    assert r.json()["secondary_account_managers"] == [
+        "The primary account manager cannot also be a secondary one."
+    ]
+
+
+def test_changing_primary_to_a_current_secondary_is_rejected(logged_client, customers, managers):
+    # Trans: primary Ana, secondaries Bruno and Carla. Promoting Bruno alone conflicts…
+    trans = customers[0]
+    r = _patch(logged_client, trans.pk, {"primary_account_manager": managers["bruno"].pk})
+    assert r.status_code == 400
+    # …but swapping in the same request is fine
+    r = _patch(
+        logged_client,
+        trans.pk,
+        {
+            "primary_account_manager": managers["bruno"].pk,
+            "secondary_account_managers": [managers["ana"].pk, managers["carla"].pk],
+        },
+    )
+    assert r.status_code == 200, r.json()
+    trans.refresh_from_db()
+    assert trans.primary_account_manager == managers["bruno"]
+    assert set(trans.secondary_account_managers.all()) == {managers["ana"], managers["carla"]}
+
+
+def test_foreign_customer_tax_id_is_free_form(logged_client, ana):
+    r = _post(
+        logged_client,
+        {
+            "name": "Acme Inc.",
+            "tax_id": "12-3456789",
+            "country": "us",
+            "postal_code": "94105",
+            "primary_account_manager": ana.pk,
+        },
     )
     assert r.status_code == 201, r.json()
     assert (r.json()["tax_id"], r.json()["country"]) == ("123456789", "US")
 
 
-def test_tax_id_must_be_unique_per_country(logged_client, customers):
-    r = _post(logged_client, {"name": "Other", "tax_id": "11.222.333/0001-81"})
+def test_tax_id_must_be_unique_per_country(logged_client, customers, ana):
+    base = {"name": "Other", "primary_account_manager": ana.pk}
+    r = _post(logged_client, {**base, "tax_id": "11.222.333/0001-81"})
     assert r.status_code == 400
     assert r.json()["tax_id"] == ["A customer with this tax ID already exists."]
     # Same number in another country is a different document
-    assert (
-        _post(logged_client, {"name": "Other", "tax_id": CNPJ, "country": "PT"}).status_code == 201
-    )
+    assert _post(logged_client, {**base, "tax_id": CNPJ, "country": "PT"}).status_code == 201
 
 
 def test_update_keeps_own_tax_id(logged_client, customers):
@@ -211,11 +311,24 @@ def test_update_keeps_own_tax_id(logged_client, customers):
     assert trans.is_active is False
 
 
-def test_update_can_remove_account_manager(logged_client, customers):
+def test_update_without_account_managers_keeps_them(logged_client, customers, managers):
     trans = customers[0]
-    assert _patch(logged_client, trans.pk, {"account_manager": None}).status_code == 200
+    assert _patch(logged_client, trans.pk, {"city": "Jundiaí"}).status_code == 200
     trans.refresh_from_db()
-    assert trans.account_manager is None
+    assert trans.primary_account_manager == managers["ana"]
+    assert trans.secondary_account_managers.count() == 2
+
+
+def test_update_can_clear_secondary_account_managers(logged_client, customers):
+    trans = customers[0]
+    r = _patch(logged_client, trans.pk, {"secondary_account_managers": []})
+    assert r.status_code == 200
+    assert trans.secondary_account_managers.count() == 0
+
+
+def test_primary_account_manager_cannot_be_removed(logged_client, customers):
+    r = _patch(logged_client, customers[0].pk, {"primary_account_manager": None})
+    assert r.status_code == 400
 
 
 def test_delete(logged_client, customers):
@@ -223,19 +336,46 @@ def test_delete(logged_client, customers):
     assert Customer.objects.count() == 2
 
 
-# --- Relationship with account managers ------------------------------------------------------
+# --- Deleting account managers ---------------------------------------------------------------
 
 
-def test_account_manager_with_customers_cannot_be_deleted(logged_client, customers, ana):
-    r = logged_client.delete(f"/api/account-managers/{ana.pk}/")
+def test_primary_account_manager_cannot_be_deleted(logged_client, customers, managers):
+    r = logged_client.delete(f"/api/account-managers/{managers['ana'].pk}/")
     assert r.status_code == 409
     assert r.json()["detail"] == "This account manager has customers and cannot be deleted."
-    assert AccountManager.objects.filter(pk=ana.pk).exists()
+    assert AccountManager.objects.filter(pk=managers["ana"].pk).exists()
 
 
-def test_validation_messages_follow_user_language(logged_client, db):
+def test_secondary_account_manager_cannot_be_deleted(logged_client, customers, managers):
+    # Carla is primary of Maria: make her only a secondary somewhere
+    customers[2].primary_account_manager = managers["bruno"]
+    customers[2].save()
+    r = logged_client.delete(f"/api/account-managers/{managers['carla'].pk}/")
+    assert r.status_code == 409
+    assert customers[0].secondary_account_managers.filter(pk=managers["carla"].pk).exists()
+
+
+def test_account_manager_without_customers_can_be_deleted(logged_client, customers):
+    free = AccountManager.objects.create(full_name="Diego Alves", email="diego@example.com")
+    assert logged_client.delete(f"/api/account-managers/{free.pk}/").status_code == 204
+
+
+def test_validation_messages_follow_user_language(logged_client, managers):
     logged_client.patch(
         "/api/auth/preferences/", {"language": "pt-br"}, content_type="application/json"
     )
-    r = _post(logged_client, {"name": "X", "tax_id": "123"})
+    ana = managers["ana"]
+    r = _post(logged_client, {"name": "X", "tax_id": "123", "primary_account_manager": ana.pk})
     assert r.json()["tax_id"] == ["Informe um CPF ou CNPJ válido."]
+    r = _post(
+        logged_client,
+        {
+            "name": "X",
+            "tax_id": CNPJ,
+            "primary_account_manager": ana.pk,
+            "secondary_account_managers": [ana.pk],
+        },
+    )
+    assert r.json()["secondary_account_managers"] == [
+        "O account manager principal não pode ser também secundário."
+    ]

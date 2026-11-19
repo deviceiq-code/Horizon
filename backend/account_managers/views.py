@@ -22,10 +22,15 @@ class AccountManagerViewSet(viewsets.ModelViewSet):
     ordering = ["full_name"]
 
     def destroy(self, request, *args, **kwargs):
+        # Primary customers are protected by the foreign key (ProtectedError); secondary ones
+        # live in a many-to-many table that would just drop the link, so check them here.
+        refused = Response(
+            {"detail": _("This account manager has customers and cannot be deleted.")},
+            status=status.HTTP_409_CONFLICT,
+        )
+        if self.get_object().secondary_customers.exists():
+            return refused
         try:
             return super().destroy(request, *args, **kwargs)
         except ProtectedError:
-            return Response(
-                {"detail": _("This account manager has customers and cannot be deleted.")},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return refused

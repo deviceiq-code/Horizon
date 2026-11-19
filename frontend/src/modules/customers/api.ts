@@ -1,4 +1,5 @@
 import { api, listQuery, type ListParams, type Paginated } from '@/api'
+import type { AccountManagerRef } from '@/modules/account-managers/api'
 
 export interface Customer {
   id: number
@@ -17,8 +18,13 @@ export interface Customer {
   district: string
   city: string
   state: string
-  account_manager: number | null
-  account_manager_name: string | null
+  /** Exactly one, required (null only while editing a new customer) */
+  primary_account_manager: number | null
+  primary_account_manager_name: string
+  /** Any number; never includes the primary one */
+  secondary_account_managers: number[]
+  /** Same secondary managers with names, sorted by name (read-only) */
+  secondary_account_managers_detail: AccountManagerRef[]
   is_active: boolean
   notes: string
   created_at: string
@@ -27,7 +33,11 @@ export interface Customer {
 
 export type CustomerInput = Omit<
   Customer,
-  'id' | 'account_manager_name' | 'created_at' | 'updated_at'
+  | 'id'
+  | 'primary_account_manager_name'
+  | 'secondary_account_managers_detail'
+  | 'created_at'
+  | 'updated_at'
 >
 
 const BASE = '/customers/'

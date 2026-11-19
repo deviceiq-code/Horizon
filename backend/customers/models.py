@@ -28,14 +28,19 @@ class Customer(models.Model):
     city = models.CharField(_("city"), max_length=100, blank=True)
     state = models.CharField(_("state"), max_length=50, blank=True)
 
-    # Relationship
-    account_manager = models.ForeignKey(
+    # Relationship: exactly one primary account manager and any number of secondary ones.
+    # An account manager linked to customers (either way) cannot be deleted.
+    primary_account_manager = models.ForeignKey(
         AccountManager,
-        on_delete=models.PROTECT,  # an account manager with customers cannot be deleted
-        null=True,
+        on_delete=models.PROTECT,
+        related_name="primary_customers",
+        verbose_name=_("primary account manager"),
+    )
+    secondary_account_managers = models.ManyToManyField(
+        AccountManager,
         blank=True,
-        related_name="customers",
-        verbose_name=_("account manager"),
+        related_name="secondary_customers",
+        verbose_name=_("secondary account managers"),
     )
     is_active = models.BooleanField(_("active"), default=True)
     notes = models.TextField(_("notes"), blank=True)

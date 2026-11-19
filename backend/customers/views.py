@@ -23,14 +23,23 @@ class CustomerSearchFilter(filters.SearchFilter):
 class CustomerViewSet(viewsets.ModelViewSet):
     """CRUD for customers.
 
-    List supports ?search= (name, trade name, tax ID, email, city, account manager),
-    ?ordering=, ?page= and ?page_size=.
+    List supports ?search= (name, trade name, tax ID, email, city, primary or secondary
+    account manager), ?ordering=, ?page= and ?page_size=.
     """
 
-    queryset = Customer.objects.select_related("account_manager")
+    queryset = Customer.objects.select_related("primary_account_manager").prefetch_related(
+        "secondary_account_managers"
+    )
     serializer_class = CustomerSerializer
     filter_backends = [CustomerSearchFilter, NullsLastOrderingFilter]
-    search_fields = ["name", "trade_name", "email", "city", "account_manager__full_name"]
+    search_fields = [
+        "name",
+        "trade_name",
+        "email",
+        "city",
+        "primary_account_manager__full_name",
+        "secondary_account_managers__full_name",
+    ]
     ordering_fields = [
         "id",
         "name",
@@ -39,6 +48,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
         "city",
         "state",
         "is_active",
-        "account_manager__full_name",
+        "primary_account_manager__full_name",
     ]
     ordering = ["name"]

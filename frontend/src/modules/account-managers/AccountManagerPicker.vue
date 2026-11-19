@@ -14,10 +14,20 @@ const props = withDefaults(
     label: string
     multiple?: boolean
     initialOptions?: AccountManagerRef[]
+    /** Account managers never offered (e.g. the primary one, in the secondary field) */
+    exclude?: number[]
+    rules?: ((value: unknown) => true | string)[]
     errorMessages?: string[]
     noDataText?: string
   }>(),
-  { multiple: false, initialOptions: () => [], errorMessages: undefined, noDataText: undefined },
+  {
+    multiple: false,
+    initialOptions: () => [],
+    exclude: () => [],
+    rules: () => [],
+    errorMessages: undefined,
+    noDataText: undefined,
+  },
 )
 
 const toOption = (m: AccountManagerRef): RemoteOption => ({ value: m.id, title: m.full_name })
@@ -41,6 +51,8 @@ async function search(term: string) {
     :search="search"
     :multiple="multiple"
     :initial-options="initial"
+    :exclude="exclude"
+    :rules="rules"
     :error-messages="errorMessages"
     :no-data-text="noDataText"
   />

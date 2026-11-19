@@ -37,6 +37,33 @@ export async function typeInto(testId: string, value: string) {
   await settle()
 }
 
+/** Titles currently offered in the open dropdown of an autocomplete/select. */
+export function dropdownOptions(): string[] {
+  return [...document.body.querySelectorAll('.v-overlay--active .v-list-item-title')].map(
+    (el) => el.textContent?.trim() ?? '',
+  )
+}
+
+/** Open the dropdown of an autocomplete/select (by data-testid). */
+export async function openDropdown(testId: string) {
+  inBody(`[data-testid="${testId}"] .v-field`)!.dispatchEvent(
+    new MouseEvent('mousedown', { bubbles: true }),
+  )
+  await settle()
+}
+
+/** Open an autocomplete/select (by data-testid) and click the option with this title. */
+export async function pickOption(testId: string, title: string) {
+  await openDropdown(testId)
+  const option = [
+    ...document.body.querySelectorAll<HTMLElement>('.v-overlay--active .v-list-item'),
+  ].find((el) => el.querySelector('.v-list-item-title')?.textContent?.trim() === title)
+  if (!option)
+    throw new Error(`Option "${title}" not offered; got: ${dropdownOptions().join(', ')}`)
+  option.click()
+  await settle()
+}
+
 export async function click(testId: string) {
   inBody(`[data-testid="${testId}"]`)!.click()
   await settle()

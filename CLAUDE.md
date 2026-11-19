@@ -21,8 +21,10 @@ Multi-user web system for **operating lease residual value pricing**
     case-insensitive, `verticals` M2M = the business verticals they work in), CRUD at
     `/api/account-managers/` (DRF ModelViewSet). **The account manager owns the relation**:
     verticals are assigned on the account manager, never on the vertical.
-  - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, account manager
-    FK with PROTECT, active flag). `customers/tax_ids.py` validates CPF and CNPJ, including the
+  - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, active flag,
+    `primary_account_manager` — required FK, PROTECT — and `secondary_account_managers` — M2M,
+    never including the primary). An account manager who is primary or secondary of any customer
+    cannot be deleted (409; secondaries checked in `AccountManagerViewSet.destroy`). `customers/tax_ids.py` validates CPF and CNPJ, including the
     alphanumeric CNPJ (in force since July 2026). CRUD at `/api/customers/`.
   - `catalogs/` — small reference tables ("Cadastros"), one model each, under `/api/catalogs/<table>/`.
     `Vertical` (business vertical): name (unique, case-insensitive), enabled flag, notes — these
@@ -53,6 +55,8 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/components/RemoteAutocomplete.vue` — generic single/multiple picker with server-side
     search; module pickers wrap it: `AccountManagerPicker.vue`, `VerticalPicker.vue` (enabled only).
     Multiple mode has per-chip X only (no "clear all") and clears the typed text after each pick.
+    `exclude` hides records chosen elsewhere (e.g. the primary account manager in the secondaries);
+    `rules` makes it required. Tests pick options with `pickOption`/`openDropdown` (test-utils).
   - `src/modules/catalogs/verticals/TermsField.vue` — list of terms in months as chips with
     "Add term" (type months, Enter adds, Esc cancels).
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;

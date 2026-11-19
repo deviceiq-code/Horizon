@@ -8,7 +8,7 @@
  * Multiple mode: each chip has its own X and there is no "clear all" button (too easy to hit
  * by mistake next to the chips); the typed text is cleared after each pick.
  */
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { showInDropdown } from './remoteFilter'
 
 export interface RemoteOption {
@@ -24,13 +24,28 @@ const props = withDefaults(
     search: (term: string) => Promise<RemoteOption[]>
     multiple?: boolean
     initialOptions?: RemoteOption[]
+    /** Records never offered in the dropdown (e.g. one already chosen in another field) */
+    exclude?: number[]
+    rules?: ((value: unknown) => true | string)[]
     errorMessages?: string[]
     noDataText?: string
   }>(),
-  { multiple: false, initialOptions: () => [], errorMessages: undefined, noDataText: undefined },
+  {
+    multiple: false,
+    initialOptions: () => [],
+    exclude: () => [],
+    rules: () => [],
+    errorMessages: undefined,
+    noDataText: undefined,
+  },
 )
 
 const options = ref<RemoteOption[]>([...props.initialOptions])
+const offered = computed(() =>
+  options.value.filter(
+    (o) => !props.exclude.includes(o.value) || selectedValues().includes(o.value),
+  ),
+)
 const loading = ref(false)
 let timer: ReturnType<typeof setTimeout> | undefined
 let lastRequest = 0
@@ -71,11 +86,10 @@ async function fetchOptions(term: string) {
 
 function onSearch(term: string | null) {
   clearTimeout(timer)
-  // In single mode Vuetify sets the search text to the selected title; no need to search it
-  if (!props.multiple && term) {
-    const selected = options.value.find((o) => o.value === model.value)
-    if (selected && term === selected.title) return
-  }
+  // In single mode Vuetify fills the search text with the chosen title (possibly before the
+  // model updates). Searching for it would shrink the list to that one record, so skip it:
+  // a text equal to a loaded option's title adds nothing new.
+  if (!props.multiple && term && options.value.some((o) => o.title === term)) return
   timer = setTimeout(() => fetchOptions(term ?? ''), 300)
 }
 
@@ -85,10 +99,11 @@ onMounted(() => fetchOptions(''))
 <template>
   <v-autocomplete
     v-model="model"
-    :items="options"
+    :items="offered"
     item-title="title"
     item-value="value"
     :label="label"
+    :rules="rules"
     :multiple="multiple"
     :chips="multiple"
     :closable-chips="multiple"

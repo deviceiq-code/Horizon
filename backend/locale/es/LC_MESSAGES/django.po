@@ -279,3 +279,15 @@ msgstr "No se pudieron guardar las subverticales. Inténtelo de nuevo."
 #: catalogs/admin.py
 msgid "The general sub-vertical cannot be deleted."
 msgstr "La subvertical General no se puede eliminar."
+
+#: customers/models.py
+msgid "primary account manager"
+msgstr "gestor de cuenta principal"
+
+#: customers/models.py
+msgid "secondary account managers"
+msgstr "gestores de cuenta secundarios"
+
+#: customers/serializers.py
+msgid "The primary account manager cannot also be a secondary one."
+msgstr "El gestor de cuenta principal no puede ser también secundario."

@@ -28,7 +28,7 @@ const {
   reloadAfterDelete,
 } = useServerTable(listCustomers, {
   sortBy: [{ key: 'name', order: 'asc' }],
-  orderingFields: { account_manager_name: 'account_manager__full_name' },
+  orderingFields: { primary_account_manager_name: 'primary_account_manager__full_name' },
 })
 
 const headers = computed(() => [
@@ -36,7 +36,8 @@ const headers = computed(() => [
   { title: t('customers.fields.name'), key: 'name' },
   { title: t('customers.fields.taxId'), key: 'tax_id', width: 200 },
   { title: t('customers.fields.location'), key: 'city' },
-  { title: t('customers.fields.accountManager'), key: 'account_manager_name' },
+  // Sorted by the primary account manager
+  { title: t('customers.fields.accountManagers'), key: 'primary_account_manager_name' },
   { title: t('customers.fields.status'), key: 'is_active', width: 120 },
   {
     title: t('common.actions'),
@@ -152,9 +153,25 @@ async function confirmDelete() {
           <span class="text-no-wrap">{{ formatTaxId(item.tax_id, item.country) }}</span>
         </template>
         <template #[`item.city`]="{ item }">{{ location(item) }}</template>
-        <template #[`item.account_manager_name`]="{ item }">
-          <span v-if="item.account_manager_name">{{ item.account_manager_name }}</span>
-          <span v-else class="text-medium-emphasis">—</span>
+        <template #[`item.primary_account_manager_name`]="{ item }">
+          <div class="d-flex flex-wrap align-center ga-1 py-1">
+            <span
+              class="d-inline-flex align-center font-weight-medium text-no-wrap"
+              :title="$t('customers.fields.primaryAccountManager')"
+            >
+              <v-icon icon="mdi-star" size="x-small" color="amber-darken-2" class="mr-1" />
+              {{ item.primary_account_manager_name }}
+            </span>
+            <v-chip
+              v-if="item.secondary_account_managers_detail.length"
+              size="x-small"
+              variant="tonal"
+              :title="item.secondary_account_managers_detail.map((m) => m.full_name).join(', ')"
+              data-testid="secondary-count"
+            >
+              +{{ item.secondary_account_managers_detail.length }}
+            </v-chip>
+          </div>
         </template>
         <template #[`item.is_active`]="{ item }">
           <v-chip

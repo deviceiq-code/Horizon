@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 
 import { setLanguage } from '@/i18n'
-import { mountWithPlugins, settle } from '@/test-utils'
+import { dropdownOptions, mountWithPlugins, openDropdown, pickOption, settle } from '@/test-utils'
 import * as managersApi from '../api'
 import AccountManagerPicker from '../AccountManagerPicker.vue'
 
@@ -87,6 +87,40 @@ describe('AccountManagerPicker', () => {
     expect(api.listAccountManagers).toHaveBeenLastCalledWith(
       expect.objectContaining({ search: 'bru' }),
     )
+    wrapper.unmount()
+  })
+
+  it('single mode: picking someone keeps every option available for a later change', async () => {
+    // Regression: the chosen name was searched on the server, shrinking the list to that one
+    api.listAccountManagers.mockResolvedValue(
+      page([
+        { id: 1, full_name: 'Ana Souza' },
+        { id: 2, full_name: 'Bruno Lima' },
+      ]),
+    )
+    const selected = ref<number | null>(null)
+    const Host = defineComponent(
+      () => () =>
+        h(AccountManagerPicker, {
+          modelValue: selected.value,
+          'onUpdate:modelValue': (v: number | number[] | null) => (selected.value = v as number),
+          label: 'Primary',
+          'data-testid': 'primary',
+        }),
+    )
+    const wrapper = mountWithPlugins(Host)
+    await settle()
+
+    await pickOption('primary', 'Ana Souza')
+    await new Promise((r) => setTimeout(r, 400)) // past the search delay
+    await settle()
+
+    expect(selected.value).toBe(1)
+    expect(api.listAccountManagers).not.toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'Ana Souza' }),
+    )
+    await openDropdown('primary')
+    expect(dropdownOptions()).toEqual(['Ana Souza', 'Bruno Lima'])
     wrapper.unmount()
   })
 })
