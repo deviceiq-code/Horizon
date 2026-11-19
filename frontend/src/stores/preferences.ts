@@ -15,6 +15,13 @@ export interface Preferences {
 export type PreferencesUpdate = Partial<{ language: Language; theme: Theme }>
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']
+
+/** The themes offered to users (Settings and the user menu), with their icons. */
+export const THEME_OPTIONS: readonly { value: Theme; icon: string }[] = [
+  { value: 'light', icon: 'mdi-white-balance-sunny' },
+  { value: 'dark', icon: 'mdi-weather-night' },
+  { value: 'system', icon: 'mdi-theme-light-dark' },
+]
 const THEME_STORAGE_KEY = 'horizon.theme'
 
 function readStoredTheme(): Theme {

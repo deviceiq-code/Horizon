@@ -5,12 +5,37 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class UserNameDisplay(models.TextChoices):
+    USERNAME = "username", _("Username")
+    FIRST_NAME = "first_name", _("First name")
+    FULL_NAME = "full_name", _("Full name")
+
+
+class FullNameOrder(models.TextChoices):
+    FIRST_LAST = "first_last", _("First Last")
+    LAST_FIRST = "last_first", _("Last, First")
+
+
 class SystemSettings(models.Model):
     """A single row (pk=1). Read it with SystemSettings.current()."""
 
     # SearXNG instance used to search photos on the internet (JSON output must be enabled
     # there). Empty = photo search off.
     searxng_url = models.URLField(_("SearXNG URL"), max_length=300, blank=True)
+
+    # How users are shown everywhere (top bar, "created by"…)
+    user_name_display = models.CharField(
+        _("show users by"),
+        max_length=20,
+        choices=UserNameDisplay,
+        default=UserNameDisplay.FULL_NAME,
+    )
+    full_name_order = models.CharField(
+        _("full name order"),
+        max_length=20,
+        choices=FullNameOrder,
+        default=FullNameOrder.FIRST_LAST,
+    )
 
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
     updated_by = models.ForeignKey(

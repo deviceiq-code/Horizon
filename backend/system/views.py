@@ -5,6 +5,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from users.permissions import is_administrator
+
 from .models import SystemSettings
 from .serializers import SystemSettingsSerializer
 from .web import WebError, search_images
@@ -29,8 +31,13 @@ def web_error_message(error: WebError) -> str:
 
 
 def _data(request, obj):
-    data = {"photo_search_enabled": bool(obj.searxng_url)}
-    if request.user.is_staff:
+    data = {
+        "photo_search_enabled": bool(obj.searxng_url),
+        # Everyone: how user names are shown
+        "user_name_display": obj.user_name_display,
+        "full_name_order": obj.full_name_order,
+    }
+    if is_administrator(request.user):
         data.update(SystemSettingsSerializer(obj).data)
     return data
 
@@ -40,7 +47,7 @@ def system_settings(request):
     """GET: what is enabled (plus every setting for administrators). PATCH: administrators."""
     obj = SystemSettings.current()
     if request.method == "PATCH":
-        if not request.user.is_staff:
+        if not is_administrator(request.user):
             return Response(
                 {"detail": _("Only administrators can change the system settings.")},
                 status=status.HTTP_403_FORBIDDEN,
@@ -54,7 +61,7 @@ def system_settings(request):
 @api_view(["POST"])
 def test_searxng(request):
     """Try a search on the SearXNG URL given (not saved). Administrators only."""
-    if not request.user.is_staff:
+    if not is_administrator(request.user):
         return Response(
             {"detail": _("Only administrators can change the system settings.")},
             status=status.HTTP_403_FORBIDDEN,

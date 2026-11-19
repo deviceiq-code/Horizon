@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "catalogs",
     "pricing",
     "system",
+    "users",
 ]
 
 MIDDLEWARE = [

@@ -18,6 +18,8 @@ const page = (results: { id: number; full_name: string }[]) => ({
   previous: null,
   results: results.map((r) => ({
     ...r,
+    first_name: r.full_name.split(' ')[0] ?? '',
+    last_name: r.full_name.split(' ').slice(1).join(' '),
     email: '',
     verticals: [],
     verticals_detail: [],

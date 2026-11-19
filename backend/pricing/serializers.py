@@ -7,6 +7,7 @@ from rest_framework import serializers
 from catalogs.models import AssetClass, Manufacturer
 from catalogs.serializers import spec_messages, sub_vertical_label
 from catalogs.specs import SpecError, snapshot_values
+from users.display import display_name_in
 
 from .curves import anchor_value, increasing_terms, monthly_curve, percent_of
 from .documents import opens_inline
@@ -102,8 +103,7 @@ class AveragePriceSerializer(serializers.ModelSerializer):
         return obj.increasing_terms()
 
     def get_created_by_name(self, obj) -> str | None:
-        user = obj.created_by
-        return (user.get_full_name() or user.username) if user else None
+        return display_name_in(self.context, obj.created_by)
 
 
 class CurvePointSerializer(serializers.Serializer):
@@ -282,8 +282,7 @@ class PriceDocumentSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_uploaded_by_name(self, obj) -> str | None:
-        user = obj.uploaded_by
-        return (user.get_full_name() or user.username) if user else None
+        return display_name_in(self.context, obj.uploaded_by)
 
     def get_opens_inline(self, obj) -> bool:
         return opens_inline(obj.name)

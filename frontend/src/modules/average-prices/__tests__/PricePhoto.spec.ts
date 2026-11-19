@@ -36,7 +36,11 @@ describe('PricePhoto', () => {
   beforeEach(() => {
     setLanguage('en')
     setActivePinia(createPinia())
-    useSystemSettingsStore().settings = { photo_search_enabled: false }
+    useSystemSettingsStore().settings = {
+      photo_search_enabled: false,
+      user_name_display: 'full_name',
+      full_name_order: 'first_last',
+    }
   })
 
   afterEach(() => {
@@ -106,7 +110,11 @@ describe('PricePhoto', () => {
     wrapper.unmount()
     document.body.innerHTML = ''
 
-    useSystemSettingsStore().settings = { photo_search_enabled: true }
+    useSystemSettingsStore().settings = {
+      photo_search_enabled: true,
+      user_name_display: 'full_name',
+      full_name_order: 'first_last',
+    }
     const second = mountPhoto(null)
     await settle()
     inBody('[data-testid="photo-upload"]')!.click()

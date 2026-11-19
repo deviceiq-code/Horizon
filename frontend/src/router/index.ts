@@ -21,7 +21,15 @@ const router = createRouter({
           name: 'home',
           component: () => import('@/views/HomeView.vue'),
         },
-        ...MODULES.flatMap((module) => module.routes),
+        // Routes of admin-only modules are marked so the guard below can check them
+        ...MODULES.flatMap((module) =>
+          module.adminOnly
+            ? module.routes.map((route) => ({
+                ...route,
+                meta: { ...route.meta, adminOnly: true },
+              }))
+            : module.routes,
+        ),
         {
           path: 'settings',
           name: 'settings',
@@ -39,6 +47,9 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: { next: to.fullPath } }
   }
   if (to.name === 'login' && auth.isAuthenticated) {
+    return { name: 'home' }
+  }
+  if (to.matched.some((record) => record.meta.adminOnly) && !auth.user?.is_admin) {
     return { name: 'home' }
   }
 })

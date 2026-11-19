@@ -9,6 +9,7 @@ import accountManagers from './account-managers'
 import averagePrices from './average-prices'
 import catalogs from './catalogs'
 import customers from './customers'
+import users from './users'
 
 export interface AppModule {
   /** Route name of the module's main page (the menu links to it) */
@@ -21,6 +22,13 @@ export interface AppModule {
   routes: RouteRecordRaw[]
   /** 'main' (default): business modules at the top of the menu; 'system': bottom group */
   placement?: 'main' | 'system'
+  /** Only administrators see it in the menu and can open its routes */
+  adminOnly?: boolean
 }
 
-export const MODULES: AppModule[] = [averagePrices, customers, accountManagers, catalogs]
+/** Modules the user can open (admin-only ones need an administrator). */
+export function visibleModules(isAdmin: boolean): AppModule[] {
+  return MODULES.filter((module) => isAdmin || !module.adminOnly)
+}
+
+export const MODULES: AppModule[] = [averagePrices, customers, accountManagers, catalogs, users]

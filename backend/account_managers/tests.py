@@ -16,9 +16,11 @@ def logged_client(client, db):
 @pytest.fixture
 def managers(db):
     return [
-        AccountManager.objects.create(full_name="Carla Mendes", email="carla@example.com"),
-        AccountManager.objects.create(full_name="Ana Souza", email="ana@example.com"),
-        AccountManager.objects.create(full_name="Bruno Lima", email="bruno@corp.com"),
+        AccountManager.objects.create(
+            first_name="Carla", last_name="Mendes", email="carla@example.com"
+        ),
+        AccountManager.objects.create(first_name="Ana", last_name="Souza", email="ana@example.com"),
+        AccountManager.objects.create(first_name="Bruno", last_name="Lima", email="bruno@corp.com"),
     ]
 
 
@@ -33,7 +35,7 @@ def _patch(client, pk, data):
 @pytest.mark.django_db
 def test_requires_login(client):
     assert client.get(URL).status_code == 403
-    assert _post(client, {"full_name": "X", "email": "x@example.com"}).status_code == 403
+    assert _post(client, {"first_name": "X", "email": "x@example.com"}).status_code == 403
 
 
 # --- List / search / ordering / pagination ---------------------------------------------------
@@ -45,6 +47,8 @@ def test_list_is_paginated_and_ordered_by_name(logged_client, managers):
     assert [m["full_name"] for m in data["results"]] == ["Ana Souza", "Bruno Lima", "Carla Mendes"]
     assert set(data["results"][0]) == {
         "id",
+        "first_name",
+        "last_name",
         "full_name",
         "email",
         "verticals",
@@ -87,7 +91,10 @@ def test_page_size(logged_client, managers):
 
 
 def test_create_normalizes_name_and_email(logged_client):
-    r = _post(logged_client, {"full_name": "  Diego   Alves ", "email": " Diego@Example.COM "})
+    r = _post(
+        logged_client,
+        {"first_name": "  Diego", "last_name": "Alves", "email": " Diego@Example.COM "},
+    )
     assert r.status_code == 201
     manager = AccountManager.objects.get(pk=r.json()["id"])
     assert (manager.full_name, manager.email) == ("Diego Alves", "diego@example.com")
@@ -96,10 +103,10 @@ def test_create_normalizes_name_and_email(logged_client):
 @pytest.mark.parametrize(
     "data",
     [
-        {"full_name": "", "email": "a@example.com"},
-        {"full_name": "   ", "email": "a@example.com"},
-        {"full_name": "Someone", "email": "not-an-email"},
-        {"full_name": "Someone"},
+        {"first_name": "", "email": "a@example.com"},
+        {"first_name": "   ", "email": "a@example.com"},
+        {"first_name": "Someone", "email": "not-an-email"},
+        {"first_name": "Someone"},
         {"email": "a@example.com"},
     ],
 )
@@ -109,14 +116,16 @@ def test_create_validates_fields(logged_client, data):
 
 
 def test_email_must_be_unique_ignoring_case(logged_client, managers):
-    r = _post(logged_client, {"full_name": "Other Ana", "email": "ANA@example.com"})
+    r = _post(
+        logged_client, {"first_name": "Other", "last_name": "Ana", "email": "ANA@example.com"}
+    )
     assert r.status_code == 400
     assert r.json()["email"] == ["An account manager with this email already exists."]
 
 
 def test_update(logged_client, managers):
     ana = managers[1]
-    r = _patch(logged_client, ana.pk, {"full_name": "Ana Souza Costa"})
+    r = _patch(logged_client, ana.pk, {"first_name": "Ana", "last_name": "Souza Costa"})
     assert r.status_code == 200
     ana.refresh_from_db()
     assert (ana.full_name, ana.email) == ("Ana Souza Costa", "ana@example.com")
@@ -142,7 +151,9 @@ def test_validation_messages_follow_user_language(logged_client, managers):
     logged_client.patch(
         "/api/auth/preferences/", {"language": "pt-br"}, content_type="application/json"
     )
-    r = _post(logged_client, {"full_name": "Other Ana", "email": "ana@example.com"})
+    r = _post(
+        logged_client, {"first_name": "Other", "last_name": "Ana", "email": "ana@example.com"}
+    )
     assert r.json()["email"] == ["Já existe um account manager com este e-mail."]
 
 
@@ -169,7 +180,8 @@ def test_create_with_verticals(logged_client, verticals):
     r = _post(
         logged_client,
         {
-            "full_name": "Diego Alves",
+            "first_name": "Diego",
+            "last_name": "Alves",
             "email": "diego@example.com",
             "verticals": [verticals["it"].pk, verticals["industry"].pk],
         },
@@ -185,7 +197,9 @@ def test_create_with_verticals(logged_client, verticals):
 
 
 def test_create_without_verticals(logged_client, db):
-    r = _post(logged_client, {"full_name": "Diego Alves", "email": "diego@example.com"})
+    r = _post(
+        logged_client, {"first_name": "Diego", "last_name": "Alves", "email": "diego@example.com"}
+    )
     assert r.status_code == 201
     assert r.json()["verticals"] == []
 
@@ -201,14 +215,21 @@ def test_update_replaces_verticals(logged_client, managers, verticals):
 def test_update_without_verticals_keeps_them(logged_client, managers, verticals):
     ana = managers[1]
     ana.verticals.set([verticals["industry"]])
-    assert _patch(logged_client, ana.pk, {"full_name": "Ana S."}).status_code == 200
+    assert (
+        _patch(logged_client, ana.pk, {"first_name": "Ana", "last_name": "S."}).status_code == 200
+    )
     assert list(ana.verticals.all()) == [verticals["industry"]]
 
 
 def test_unknown_vertical_is_rejected(logged_client, db):
     r = _post(
         logged_client,
-        {"full_name": "Diego Alves", "email": "diego@example.com", "verticals": [999999]},
+        {
+            "first_name": "Diego",
+            "last_name": "Alves",
+            "email": "diego@example.com",
+            "verticals": [999999],
+        },
     )
     assert r.status_code == 400
     assert "verticals" in r.json()
@@ -308,6 +329,26 @@ def test_deleting_a_manager_removes_the_photo(logged_client, managers, media):
 def test_editing_keeps_the_photo(logged_client, managers, media):
     ana = managers[0]
     version = _photo(logged_client, ana.pk).json()["photo_version"]
-    r = _patch(logged_client, ana.pk, {"full_name": "Ana S. Souza"})
+    r = _patch(logged_client, ana.pk, {"first_name": "Ana", "last_name": "S. Souza"})
     assert r.status_code == 200
     assert r.json()["photo_version"] == version
+
+
+def test_first_and_last_name_make_the_full_name(logged_client):
+    r = _post(
+        logged_client,
+        {"first_name": "  Ana  Maria ", "last_name": " de  Souza ", "email": "am@example.com"},
+    )
+    assert r.status_code == 201, r.json()
+    data = r.json()
+    assert (data["first_name"], data["last_name"], data["full_name"]) == (
+        "Ana Maria",
+        "de Souza",
+        "Ana Maria de Souza",
+    )
+    # The full name is read-only (sent values are ignored) and follows changes
+    r = _patch(logged_client, data["id"], {"last_name": "Costa", "full_name": "Ignored"})
+    assert r.json()["full_name"] == "Ana Maria Costa"
+    # The last name is optional
+    r = _post(logged_client, {"first_name": "Cher", "email": "cher@example.com"})
+    assert r.json()["full_name"] == "Cher"

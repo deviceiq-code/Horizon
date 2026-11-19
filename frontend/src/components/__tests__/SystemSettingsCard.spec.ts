@@ -15,7 +15,12 @@ describe('SystemSettingsCard', () => {
     setLanguage('en')
     setActivePinia(createPinia())
     store = useSystemSettingsStore()
-    store.settings = { photo_search_enabled: false, searxng_url: '' }
+    store.settings = {
+      photo_search_enabled: false,
+      user_name_display: 'full_name',
+      full_name_order: 'first_last',
+      searxng_url: '',
+    }
   })
 
   afterEach(() => {
@@ -26,9 +31,14 @@ describe('SystemSettingsCard', () => {
   it('tests and saves the SearXNG address', async () => {
     const test = vi.spyOn(store, 'testSearxng').mockResolvedValue({ results: 23 })
     const save = vi.spyOn(store, 'save').mockImplementation(async (changes) => {
-      store.settings = { photo_search_enabled: true, searxng_url: 'http://192.168.0.22:30053' }
+      store.settings = {
+        photo_search_enabled: true,
+        user_name_display: 'full_name',
+        full_name_order: 'first_last',
+        searxng_url: 'http://192.168.0.22:30053',
+      }
       expect(changes).toEqual({ searxng_url: 'http://192.168.0.22:30053/' })
-      return store.settings
+      return store.settings!
     })
     const wrapper = mountWithPlugins(SystemSettingsCard)
     await settle()

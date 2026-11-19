@@ -9,6 +9,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from users.display import display_name
+from users.models import user_photo_version
+from users.permissions import is_administrator
+
 from .models import UserPreferences
 from .serializers import UserPreferencesSerializer
 
@@ -18,8 +22,13 @@ def _user_data(user):
     return {
         "id": user.id,
         "username": user.username,
-        "name": user.get_full_name() or user.username,
-        "is_staff": user.is_staff,
+        # As set in the system settings (username, first name or full name)
+        "name": display_name(user),
+        # Administrators can do everything (users, roles, system settings…)
+        "is_admin": is_administrator(user),
+        "roles": sorted(role.name for role in user.roles.all()),
+        # The user's photo (GET /api/users/<id>/photo/?v=<version>), null without one
+        "photo_version": user_photo_version(user),
         "preferences": UserPreferencesSerializer(preferences).data,
     }
 

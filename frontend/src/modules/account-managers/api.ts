@@ -3,6 +3,10 @@ import type { VerticalRef } from '@/modules/catalogs/verticals/api'
 
 export interface AccountManager {
   id: number
+  first_name: string
+  /** Optional */
+  last_name: string
+  /** "First Last", composed by the API (read-only) */
   full_name: string
   email: string
   /** IDs of the business verticals this account manager works in */
@@ -15,7 +19,10 @@ export interface AccountManager {
   updated_at: string
 }
 
-export type AccountManagerInput = Pick<AccountManager, 'full_name' | 'email' | 'verticals'>
+export type AccountManagerInput = Pick<
+  AccountManager,
+  'first_name' | 'last_name' | 'email' | 'verticals'
+>
 
 /** Minimal reference to an account manager, as other modules display it. */
 export type AccountManagerRef = Pick<AccountManager, 'id' | 'full_name'>

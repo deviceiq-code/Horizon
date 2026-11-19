@@ -35,6 +35,8 @@ const vertical = (id: number, name: string, is_enabled = true) => ({ id, name, i
 
 const ANA: managersApi.AccountManager = {
   id: 1,
+  first_name: 'Ana',
+  last_name: 'Souza',
   full_name: 'Ana Souza',
   email: 'ana@example.com',
   verticals: [1, 2, 3, 4],
@@ -212,13 +214,15 @@ describe('AccountManagersView', () => {
 
     await wrapper.find('[data-testid="new"]').trigger('click')
     await settle()
-    await typeInto('full-name', '  Carla  ')
+    await typeInto('first-name', '  Carla  ')
+    await typeInto('last-name', ' Mendes ')
     await typeInto('email', 'carla@example.com')
     inBody('[data-testid="save"]')!.click()
     await settle()
 
     expect(api.createAccountManager).toHaveBeenCalledWith({
-      full_name: 'Carla',
+      first_name: 'Carla',
+      last_name: 'Mendes',
       email: 'carla@example.com',
       verticals: [],
     })
@@ -253,13 +257,15 @@ describe('AccountManagersView', () => {
 
     await wrapper.findAll('[data-testid="edit"]')[0]!.trigger('click')
     await settle()
-    const name = inBody('[data-testid="full-name"] input') as HTMLInputElement
-    expect(name.value).toBe('Ana Souza')
+    const first = inBody('[data-testid="first-name"] input') as HTMLInputElement
+    const last = inBody('[data-testid="last-name"] input') as HTMLInputElement
+    expect([first.value, last.value]).toEqual(['Ana', 'Souza'])
     inBody('[data-testid="save"]')!.click()
     await settle()
 
     expect(api.updateAccountManager).toHaveBeenCalledWith(1, {
-      full_name: 'Ana Souza',
+      first_name: 'Ana',
+      last_name: 'Souza',
       email: 'ana@example.com',
       verticals: [1, 2, 3, 4], // kept as they were
     })
@@ -302,7 +308,7 @@ describe('AccountManagersView', () => {
 
     await wrapper.find('[data-testid="new"]').trigger('click')
     await settle()
-    await typeInto('full-name', 'Carla')
+    await typeInto('first-name', 'Carla')
     await typeInto('email', 'carla@example.com')
     const input = inBody('[data-testid="photo-input"]') as HTMLInputElement
     const picture = new File(['jpeg'], 'carla.png', { type: 'image/png' })

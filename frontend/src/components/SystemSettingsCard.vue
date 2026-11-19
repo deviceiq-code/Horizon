@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** System settings for administrators (Settings page): photo search through SearXNG. */
+/** Photo search through SearXNG (Settings → System, administrators only). */
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -66,13 +66,11 @@ async function test() {
 
 <template>
   <v-card data-testid="system-settings">
-    <v-card-item prepend-icon="mdi-cog-outline">
-      <v-card-title>{{ $t('system.title') }}</v-card-title>
-      <v-card-subtitle>{{ $t('system.subtitle') }}</v-card-subtitle>
+    <v-card-item prepend-icon="mdi-image-search-outline">
+      <v-card-title>{{ $t('system.searxng.title') }}</v-card-title>
+      <v-card-subtitle class="text-wrap">{{ $t('system.searxng.hint') }}</v-card-subtitle>
     </v-card-item>
     <v-card-text>
-      <div class="text-subtitle-2 mb-1">{{ $t('system.searxng.title') }}</div>
-      <p class="text-body-2 text-medium-emphasis mb-3">{{ $t('system.searxng.hint') }}</p>
       <div class="d-flex flex-wrap ga-2 align-start">
         <v-text-field
           v-model="searxngUrl"

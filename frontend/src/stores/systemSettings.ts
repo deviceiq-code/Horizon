@@ -6,8 +6,14 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/api'
 
+export type UserNameDisplay = 'username' | 'first_name' | 'full_name'
+export type FullNameOrder = 'first_last' | 'last_first'
+
 export interface SystemSettings {
   photo_search_enabled: boolean
+  /** How users are shown everywhere (the API already sends names formatted this way) */
+  user_name_display: UserNameDisplay
+  full_name_order: FullNameOrder
   /** Administrators only */
   searxng_url?: string
   updated_at?: string
@@ -26,7 +32,9 @@ export const useSystemSettingsStore = defineStore('systemSettings', () => {
     return loading
   }
 
-  async function save(changes: Partial<Pick<SystemSettings, 'searxng_url'>>) {
+  async function save(
+    changes: Partial<Pick<SystemSettings, 'searxng_url' | 'user_name_display' | 'full_name_order'>>,
+  ) {
     settings.value = await api<SystemSettings>('/system/settings/', {
       method: 'PATCH',
       body: JSON.stringify(changes),

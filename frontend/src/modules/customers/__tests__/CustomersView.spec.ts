@@ -102,6 +102,8 @@ describe('CustomersView', () => {
       previous: null,
       results: [ANA, BRUNO, CARLA].map((m) => ({
         ...m,
+        first_name: m.full_name.split(' ')[0] ?? '',
+        last_name: m.full_name.split(' ').slice(1).join(' '),
         email: '',
         verticals: [],
         verticals_detail: [],

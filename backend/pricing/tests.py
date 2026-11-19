@@ -483,3 +483,13 @@ def test_list_created_filter_includes_the_whole_day(logged_client, rows):
     today = timezone.localdate().isoformat()
     params = {"created_from": today, "created_to": today}
     assert logged_client.get(URL, params).json()["count"] == 2
+
+
+def test_created_by_follows_the_user_name_setting(logged_client, price):
+    from system.models import SystemSettings
+
+    assert logged_client.get(f"{URL}{price.pk}/").json()["created_by_name"] == "Ana Souza"
+    SystemSettings.objects.update_or_create(
+        pk=1, defaults={"user_name_display": "full_name", "full_name_order": "last_first"}
+    )
+    assert logged_client.get(URL).json()["results"][0]["created_by_name"] == "Souza, Ana"

@@ -1,7 +1,7 @@
-import posixpath
-
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+
+from config.photos import photo_version
 
 from .models import AccountManager
 
@@ -16,6 +16,8 @@ class AccountManagerSerializer(serializers.ModelSerializer):
         model = AccountManager
         fields = [
             "id",
+            "first_name",
+            "last_name",
             "full_name",
             "email",
             "verticals",
@@ -24,21 +26,24 @@ class AccountManagerSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "full_name", "created_at", "updated_at"]
         extra_kwargs = {"verticals": {"required": False}}
 
     def get_photo_version(self, obj) -> str | None:
-        return posixpath.splitext(posixpath.basename(obj.photo.name))[0] if obj.photo else None
+        return photo_version(obj.photo)
 
     def get_verticals_detail(self, obj) -> list[dict]:
         verticals = sorted(obj.verticals.all(), key=lambda v: v.name.lower())
         return [{"id": v.id, "name": v.name, "is_enabled": v.is_enabled} for v in verticals]
 
-    def validate_full_name(self, value):
+    def validate_first_name(self, value):
         value = " ".join(value.split())
         if not value:
             raise serializers.ValidationError(_("This field may not be blank."))
         return value
+
+    def validate_last_name(self, value):
+        return " ".join(value.split())
 
     def validate_email(self, value):
         value = value.strip().lower()

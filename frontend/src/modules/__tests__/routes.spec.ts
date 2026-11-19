@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-import { MODULES } from '@/modules'
+import { MODULES, visibleModules } from '@/modules'
 import { CATALOG_TABS } from '@/modules/catalogs/tabs'
 
 function makeRouter() {
@@ -29,5 +29,10 @@ describe('module routes', () => {
     await router.push({ name: 'catalogs' })
     expect(router.currentRoute.value.name).toBe(CATALOG_TABS[0]!.name)
     expect(router.currentRoute.value.path).toBe('/catalogs/verticals')
+  })
+
+  it('administrator-only modules are hidden from other users', () => {
+    expect(visibleModules(true).map((m) => m.name)).toContain('users')
+    expect(visibleModules(false).map((m) => m.name)).not.toContain('users')
   })
 })

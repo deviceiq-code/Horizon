@@ -18,9 +18,15 @@ def logged_client(client, db):
 @pytest.fixture
 def managers(db):
     return {
-        "ana": AccountManager.objects.create(full_name="Ana Souza", email="ana@example.com"),
-        "bruno": AccountManager.objects.create(full_name="Bruno Lima", email="bruno@example.com"),
-        "carla": AccountManager.objects.create(full_name="Carla Mendes", email="carla@example.com"),
+        "ana": AccountManager.objects.create(
+            first_name="Ana", last_name="Souza", email="ana@example.com"
+        ),
+        "bruno": AccountManager.objects.create(
+            first_name="Bruno", last_name="Lima", email="bruno@example.com"
+        ),
+        "carla": AccountManager.objects.create(
+            first_name="Carla", last_name="Mendes", email="carla@example.com"
+        ),
     }
 
 

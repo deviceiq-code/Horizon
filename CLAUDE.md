@@ -17,12 +17,19 @@ Multi-user web system for **operating lease residual value pricing**
   - `accounts/` — session authentication and user preferences (`UserPreferences`: language and
     theme), endpoints under `/api/auth/` (`login/`, `logout/`, `me/`, `preferences/`).
   - `assets/` — domain app (no models yet; business rules to be defined).
-  - `account_managers/` — first business module (`AccountManager`: full_name, email unique
-    case-insensitive, `verticals` M2M = the business verticals they work in, `photo`), CRUD at
+  - `account_managers/` — first business module (`AccountManager`: first_name, last_name
+    (optional), `full_name` — "First Last", composed on save, read-only in the API, used for
+    search/sorting and by other modules —, email unique case-insensitive, `verticals` M2M = the
+    business verticals they work in, `photo`), CRUD at
     `/api/account-managers/` (DRF ModelViewSet). Photo: GET/POST/DELETE `/<id>/photo/`
-    (`photo_version` in the API changes with each new photo); the browser crops it square
-    (`src/utils/image.ts::squareImage`, 192×192 JPEG) and it shows in a circle
-    (`AccountManagerAvatar.vue`, initials without a photo). **The account manager owns the relation**:
+    (`photo_version` in the API changes with each new photo).
+  - **People's photos** (account managers, users): `config/photos.py` (`PhotoMixin.set_photo`,
+    `photo_response` for GET/POST/DELETE `/<id>/photo/`, `photo_version`). Users' photos live in
+    `users.UserProfile` (`UserProfile.for_user`); anyone signed in can see them, administrators
+    change them. Frontend: `src/components/PhotoField.vue` (form: crops square in the browser,
+    `src/utils/image.ts::squareImage`, 192×192 JPEG; v-model = pending change, applied after
+    saving) and `src/components/PersonAvatar.vue` (circle, initials without a photo; also in
+    the top bar). **The account manager owns the relation**:
     verticals are assigned on the account manager, never on the vertical.
   - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, active flag,
     `primary_account_manager` — required FK, PROTECT — and `secondary_account_managers` — M2M,
@@ -86,9 +93,23 @@ Multi-user web system for **operating lease residual value pricing**
     `PRICE_DOCUMENT_MAX_MB` (25). Deleting a document removes its file; erasing the last version
     of a row removes its documents. List rows carry `documents_count` and `photo_id`.
     Pricing tests share fixtures in `pricing/conftest.py` and helpers in `pricing/testing.py`.
+  - `users/` — user and role management (administrators only): `Role` (name unique
+    case-insensitive, description, `is_system`, `users` M2M → `user.roles`); users can have many
+    roles. System role "Administrator" (`key="administrator"`, created by a migration) cannot be
+    changed or deleted and gives access to everything: check with
+    `users.permissions.is_administrator(user)` / `IsAdministrator` (Django superusers count too) —
+    never `is_staff`. `/api/users/` (password write-only: required on create, optional on edit,
+    Django password validators) and `/api/roles/`. Lock-out rules: nobody deletes/deactivates
+    themselves or removes their own Administrator role; at least one active administrator
+    remains; users with records → 409 (deactivate instead); roles in use → 409.
+    `/api/auth/me/` returns `is_admin` and `roles`.
+    **Showing a user:** always `users.display.display_name(user)` (in serializers
+    `display_name_in(self.context, user)`), never `get_full_name()`/`username` directly — it
+    follows the System settings `user_name_display` (username | first_name | full_name) and
+    `full_name_order` (first_last "First Last" | last_first "Last, First").
   - `system/` — system-wide settings edited by administrators in the app (`SystemSettings`
     singleton, `SystemSettings.current()`), at `/api/system/settings/` (GET: everyone sees what
-    is enabled, e.g. `photo_search_enabled`; PATCH and `test-searxng/`: staff only).
+    is enabled, e.g. `photo_search_enabled`; PATCH and `test-searxng/`: administrators only).
     `searxng_url` turns on photo search. `system/web.py`: SearXNG image search
     (`search_images`; the instance must have `formats: [html, json]`) and `fetch_image` — safe
     download (public addresses only, DNS pinned, redirects re-checked, size limit, real image
@@ -109,11 +130,16 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/stores/preferences.ts` — language/theme in use; saved to the account via `PATCH /api/auth/preferences/`.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — top bar + side icon rail (expands on hover) for authenticated pages.
+    The top bar shows only the signed-in user (photo or initials + name); clicking opens their
+    menu (Sign out). Language and theme are changed in Settings (the language selector stays on
+    the login page only).
     Module pages use `<v-container fluid class="module-page">` (full width, small side margin;
     `src/styles/main.css`).
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
     router and the side menu (`placement: 'system'` puts a module in the bottom group, next to
-    Settings). `account-managers/` is the reference module.
+    Settings; `adminOnly: true` hides it from non-administrators and the router guard refuses
+    its routes). `account-managers/` is the reference module. `users/` (Users and Roles tabs,
+    `?tab=roles`; system roles show translated via `roleText.ts`).
   - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
     listed in `tabs.ts`. A new small table is a new tab here, not a new module.
   - `src/components/ServerCrudTable.vue` — generic CRUD grid (search, New, edit/delete with
@@ -155,8 +181,10 @@ Multi-user web system for **operating lease residual value pricing**
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;
     when changing them, check in a real browser too. A combobox renders an
     `<input type="hidden">` before the visible one (`typeInto` skips it).
-  - `src/stores/systemSettings.ts` — system settings (loaded once); the administrators' card is
-    `src/components/SystemSettingsCard.vue` on the Settings page.
+  - Settings page (`src/views/SettingsView.vue`): two tabs — "User settings" (language, theme;
+    per account) and "System settings" (global, administrators only — `auth.user.is_admin`; `?tab=system`). New
+    global settings go into the System tab as cards like `src/components/SystemSettingsCard.vue`.
+  - `src/stores/systemSettings.ts` — system settings (loaded once).
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
   - `src/components/ConfirmDialog.vue` — generic confirmation dialog.
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.

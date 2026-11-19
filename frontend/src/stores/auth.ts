@@ -7,7 +7,12 @@ export interface User {
   id: number
   username: string
   name: string
-  is_staff: boolean
+  /** Has the Administrator role (or is a Django superuser): can do everything */
+  is_admin: boolean
+  /** Names of the user's roles */
+  roles: string[]
+  /** Photo version (GET /api/users/<id>/photo/?v=…), null without a photo */
+  photo_version: string | null
   preferences: Preferences
 }
 
@@ -38,10 +43,15 @@ export const useAuthStore = defineStore('auth', () => {
     preferences.apply(user.value.preferences)
   }
 
+  /** Read the signed-in user again (e.g. after the way names are shown changed). */
+  async function refresh() {
+    user.value = await api<User>('/auth/me/')
+  }
+
   async function logout() {
     await api('/auth/logout/', { method: 'POST' })
     user.value = null
   }
 
-  return { user, loaded, isAuthenticated, load, login, logout }
+  return { user, loaded, isAuthenticated, load, login, logout, refresh }
 })

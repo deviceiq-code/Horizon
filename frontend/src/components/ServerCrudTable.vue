@@ -40,6 +40,9 @@ const props = defineProps<{
   filters?: Record<string, string | number | boolean | null | undefined>
   /** Remembers in this browser whether the filter row is shown (e.g. "average-prices") */
   filtersStorageKey?: string
+  /** Rows that can be edited / deleted (all when absent); e.g. not a system record */
+  canEdit?: (item: T) => boolean
+  canDelete?: (item: T) => boolean
 }>()
 
 const emit = defineEmits<{ create: []; edit: [item: T]; clearFilters: [] }>()
@@ -252,6 +255,7 @@ defineExpose({ reload: load })
           <!-- Extra actions provided by the page, before edit/delete -->
           <slot name="row-actions" :item="item" />
           <v-btn
+            v-if="!canEdit || canEdit(item)"
             :icon="editIcon ?? 'mdi-pencil-outline'"
             variant="text"
             size="small"
@@ -261,6 +265,7 @@ defineExpose({ reload: load })
             @click="emit('edit', item)"
           />
           <v-btn
+            v-if="!canDelete || canDelete(item)"
             icon="mdi-delete-outline"
             variant="text"
             size="small"

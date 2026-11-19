@@ -666,3 +666,111 @@ msgstr "Solo los administradores pueden cambiar la configuración del sistema."
 #: system
 msgid "Photo search is not set up (Settings → System)."
 msgstr "La búsqueda de fotos no está configurada (Configuración → Sistema)."
+
+#: users
+msgid "key"
+msgstr "clave"
+
+#: users
+msgid "system role"
+msgstr "rol de sistema"
+
+#: users
+msgid "users"
+msgstr "usuarios"
+
+#: users
+msgid "role"
+msgstr "rol"
+
+#: users
+msgid "roles"
+msgstr "roles"
+
+#: users
+msgid "System roles cannot be changed."
+msgstr "Los roles de sistema no se pueden cambiar."
+
+#: users
+msgid "A role with this name already exists."
+msgstr "Ya existe un rol con este nombre."
+
+#: users
+msgid "A user with this username already exists."
+msgstr "Ya existe un usuario con este nombre de usuario."
+
+#: users
+msgid "You cannot deactivate your own user."
+msgstr "No puede desactivar su propio usuario."
+
+#: users
+msgid "You cannot remove the Administrator role from yourself."
+msgstr "No puede quitarse a sí mismo el rol de Administrador."
+
+#: users
+msgid "At least one active administrator must remain."
+msgstr "Debe quedar al menos un administrador activo."
+
+#: users
+msgid "You cannot delete your own user."
+msgstr "No puede eliminar su propio usuario."
+
+#: users
+msgid "This user has records in the system and cannot be deleted. Deactivate it."
+msgstr "Este usuario tiene registros en el sistema y no se puede eliminar. Desactívelo."
+
+#: users
+msgid "System roles cannot be deleted."
+msgstr "Los roles de sistema no se pueden eliminar."
+
+#: users
+msgid "This role is given to users and cannot be deleted."
+msgstr "Este rol está asignado a usuarios y no se puede eliminar."
+
+#: system
+msgid "Username"
+msgstr "Usuario"
+
+#: system
+msgid "First name"
+msgstr "Nombre"
+
+#: system
+msgid "Full name"
+msgstr "Nombre completo"
+
+#: system
+msgid "First Last"
+msgstr "Nombre Apellido"
+
+#: system
+msgid "Last, First"
+msgstr "Apellido, Nombre"
+
+#: system
+msgid "show users by"
+msgstr "mostrar usuarios por"
+
+#: system
+msgid "full name order"
+msgstr "orden del nombre completo"
+
+#: users
+msgid "first name"
+msgstr "nombre"
+
+#: users
+msgid "last name"
+msgstr "apellido"
+
+#: users
+msgid "user profile"
+msgstr "perfil de usuario"
+
+#: users
+msgid "user profiles"
+msgstr "perfiles de usuario"
+
+#: users
+msgid "You do not have permission to perform this action."
+msgstr "No tiene permiso para realizar esta acción."

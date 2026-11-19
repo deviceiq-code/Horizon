@@ -5,9 +5,14 @@ import { deleteErrorMessage } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useServerTable } from '@/composables/useServerTable'
 import { useNotificationsStore } from '@/stores/notifications'
-import AccountManagerAvatar from './AccountManagerAvatar.vue'
+import PersonAvatar from '@/components/PersonAvatar.vue'
 import AccountManagerFormDialog from './AccountManagerFormDialog.vue'
-import { deleteAccountManager, listAccountManagers, type AccountManager } from './api'
+import {
+  accountManagerPhotoUrl,
+  deleteAccountManager,
+  listAccountManagers,
+  type AccountManager,
+} from './api'
 
 /** How many vertical chips to show per row before "+N". */
 const MAX_CHIPS = 3
@@ -139,10 +144,9 @@ async function confirmDelete() {
       >
         <template #[`item.full_name`]="{ item }">
           <div class="d-flex align-center ga-3 py-1">
-            <AccountManagerAvatar
+            <PersonAvatar
               :name="item.full_name"
-              :id="item.id"
-              :photo-version="item.photo_version"
+              :src="item.photo_version ? accountManagerPhotoUrl(item.id, item.photo_version) : null"
               :size="36"
             />
             <span>{{ item.full_name }}</span>

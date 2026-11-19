@@ -24,9 +24,15 @@ def logged_client(client, db):
 @pytest.fixture
 def managers(db):
     return {
-        "ana": AccountManager.objects.create(full_name="Ana Souza", email="ana@example.com"),
-        "bruno": AccountManager.objects.create(full_name="Bruno Lima", email="bruno@example.com"),
-        "carla": AccountManager.objects.create(full_name="Carla Mendes", email="carla@example.com"),
+        "ana": AccountManager.objects.create(
+            first_name="Ana", last_name="Souza", email="ana@example.com"
+        ),
+        "bruno": AccountManager.objects.create(
+            first_name="Bruno", last_name="Lima", email="bruno@example.com"
+        ),
+        "carla": AccountManager.objects.create(
+            first_name="Carla", last_name="Mendes", email="carla@example.com"
+        ),
     }
 
 
@@ -356,7 +362,9 @@ def test_secondary_account_manager_cannot_be_deleted(logged_client, customers, m
 
 
 def test_account_manager_without_customers_can_be_deleted(logged_client, customers):
-    free = AccountManager.objects.create(full_name="Diego Alves", email="diego@example.com")
+    free = AccountManager.objects.create(
+        first_name="Diego", last_name="Alves", email="diego@example.com"
+    )
     assert logged_client.delete(f"/api/account-managers/{free.pk}/").status_code == 204
 
 
