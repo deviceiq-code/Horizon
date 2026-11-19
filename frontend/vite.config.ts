@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   server: {
-    // Em desenvolvimento, /api vai para o Django — mesmo domínio, sem CORS
+    // In development, /api goes to Django — same origin, no CORS
     proxy: {
       '/api': { target: 'http://localhost:8000' },
     },

@@ -1,42 +1,47 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/api'
+import { usePreferencesStore, type Preferences } from '@/stores/preferences'
 
-export interface Usuario {
+export interface User {
   id: number
   username: string
-  nome: string
+  name: string
   is_staff: boolean
+  preferences: Preferences
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const usuario = ref<Usuario | null>(null)
-  const carregado = ref(false)
-  const autenticado = computed(() => usuario.value !== null)
+  const user = ref<User | null>(null)
+  const loaded = ref(false)
+  const isAuthenticated = computed(() => user.value !== null)
+  const preferences = usePreferencesStore()
 
-  /** Busca o cookie CSRF e o usuário da sessão atual (uma vez por carregamento). */
-  async function carregar() {
-    if (carregado.value) return
+  /** Fetch the CSRF cookie and the current session's user (once per page load). */
+  async function load() {
+    if (loaded.value) return
     await api('/auth/csrf/')
     try {
-      usuario.value = await api<Usuario>('/auth/me/')
+      user.value = await api<User>('/auth/me/')
+      preferences.apply(user.value.preferences)
     } catch {
-      usuario.value = null
+      user.value = null
     }
-    carregado.value = true
+    loaded.value = true
   }
 
-  async function entrar(username: string, password: string) {
-    usuario.value = await api<Usuario>('/auth/login/', {
+  async function login(username: string, password: string) {
+    user.value = await api<User>('/auth/login/', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     })
+    preferences.apply(user.value.preferences)
   }
 
-  async function sair() {
+  async function logout() {
     await api('/auth/logout/', { method: 'POST' })
-    usuario.value = null
+    user.value = null
   }
 
-  return { usuario, carregado, autenticado, carregar, entrar, sair }
+  return { user, loaded, isAuthenticated, load, login, logout }
 })

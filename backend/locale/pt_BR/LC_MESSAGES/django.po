@@ -1,0 +1,53 @@
+# Horizon System backend translations — Brazilian Portuguese.
+msgid ""
+msgstr ""
+"Project-Id-Version: horizon\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: accounts/models.py
+msgid "Light"
+msgstr "Claro"
+
+#: accounts/models.py
+msgid "Dark"
+msgstr "Escuro"
+
+#: accounts/models.py
+msgid "Follow system"
+msgstr "Seguir o sistema"
+
+#: accounts/models.py
+msgid "user"
+msgstr "usuário"
+
+#: accounts/models.py
+msgid "language"
+msgstr "idioma"
+
+#: accounts/models.py
+msgid "theme"
+msgstr "tema"
+
+#: accounts/models.py
+msgid "updated at"
+msgstr "atualizado em"
+
+#: accounts/models.py
+msgid "user preferences"
+msgstr "preferências do usuário"
+
+#: accounts/views.py
+msgid "Invalid username or password."
+msgstr "Usuário ou senha inválidos."
+
+#: config/urls.py
+msgid "Horizon System — Administration"
+msgstr "Sistema Horizon — Administração"
+
+#: config/urls.py
+msgid "Horizon System"
+msgstr "Sistema Horizon"

@@ -1,4 +1,4 @@
-"""Configurações do Sistema Horizon. Valores sensíveis vêm do .env na raiz."""
+"""Horizon System settings. Sensitive values come from the .env file at the repository root."""
 
 from pathlib import Path
 
@@ -21,19 +21,23 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Terceiros
+    # Third party
     "rest_framework",
-    # Projeto
-    "contas",
-    "ativos",
+    # Project
+    "accounts",
+    "assets",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Anonymous visitors: language from the Accept-Language header sent by the frontend
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Logged-in users: the language saved in their preferences wins
+    "accounts.middleware.UserLanguageMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -66,7 +70,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "pt-br"
+LANGUAGE_CODE = "en"
+# Supported languages. When adding one, also create:
+#   backend/locale/<locale>/LC_MESSAGES/django.po  and  frontend/src/i18n/locales/<code>.ts
+LANGUAGES = [
+    ("en", "English"),
+    ("pt-br", "Português (Brasil)"),
+    ("es", "Español"),
+]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True
@@ -83,8 +95,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
-    # Decimais trafegam como string para não perder precisão no JavaScript
+    # Decimals travel as strings so JavaScript does not lose precision
     "COERCE_DECIMAL_TO_STRING": True,
 }
 
-SESSION_COOKIE_AGE = 60 * 60 * 10  # 10 horas
+SESSION_COOKIE_AGE = 60 * 60 * 10  # 10 hours

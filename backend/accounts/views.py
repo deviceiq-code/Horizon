@@ -1,0 +1,75 @@
+"""Session authentication and user preferences for the Vue frontend."""
+
+from django.contrib.auth import authenticate, login, logout
+from django.utils import translation
+from django.utils.translation import gettext as _
+from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+
+from .models import UserPreferences
+from .serializers import UserPreferencesSerializer
+
+
+def _user_data(user):
+    preferences = UserPreferences.for_user(user)
+    return {
+        "id": user.id,
+        "username": user.username,
+        "name": user.get_full_name() or user.username,
+        "is_staff": user.is_staff,
+        "preferences": UserPreferencesSerializer(preferences).data,
+    }
+
+
+@ensure_csrf_cookie
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def csrf(request):
+    """Make sure the browser receives the csrftoken cookie."""
+    return Response({"detail": "ok"})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_view(request):
+    user = authenticate(
+        request,
+        username=request.data.get("username", ""),
+        password=request.data.get("password", ""),
+    )
+    if user is None:
+        return Response(
+            {"detail": _("Invalid username or password.")}, status=status.HTTP_400_BAD_REQUEST
+        )
+    login(request, user)
+    return Response(_user_data(user))
+
+
+@api_view(["POST"])
+def logout_view(request):
+    logout(request)
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+def me(request):
+    return Response(_user_data(request.user))
+
+
+@api_view(["GET", "PATCH"])
+def preferences(request):
+    """Read or partially update the logged-in user's preferences."""
+    obj = UserPreferences.for_user(request.user)
+    if request.method == "GET":
+        return Response(UserPreferencesSerializer(obj).data)
+
+    serializer = UserPreferencesSerializer(obj, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    # The response itself is already in the newly chosen language
+    translation.activate(obj.language)
+    request.LANGUAGE_CODE = obj.language
+    return Response(serializer.data)

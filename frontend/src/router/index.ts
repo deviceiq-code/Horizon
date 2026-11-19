@@ -8,23 +8,35 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
-      meta: { publico: true },
+      meta: { public: true },
     },
     {
+      // Authenticated pages share the top bar and the side menu
       path: '/',
-      name: 'home',
-      component: () => import('@/views/HomeView.vue'),
+      component: () => import('@/layouts/MainLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'home',
+          component: () => import('@/views/HomeView.vue'),
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/views/SettingsView.vue'),
+        },
+      ],
     },
   ],
 })
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
-  await auth.carregar()
-  if (!to.meta.publico && !auth.autenticado) {
+  await auth.load()
+  if (!to.meta.public && !auth.isAuthenticated) {
     return { name: 'login', query: { next: to.fullPath } }
   }
-  if (to.name === 'login' && auth.autenticado) {
+  if (to.name === 'login' && auth.isAuthenticated) {
     return { name: 'home' }
   }
 })
