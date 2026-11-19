@@ -22,6 +22,16 @@ Multi-user web system for **operating lease residual value pricing**
   - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, account manager
     FK with PROTECT, active flag). `customers/tax_ids.py` validates CPF and CNPJ, including the
     alphanumeric CNPJ (in force since July 2026). CRUD at `/api/customers/`.
+  - `catalogs/` — small reference tables ("Cadastros"), one model each, under `/api/catalogs/<table>/`.
+    `Vertical` (business vertical): name (unique, case-insensitive), account managers who may work
+    in it (M2M), enabled flag, notes — these apply to all its sub-verticals.
+    `SubVertical`: risk (low/medium/high), allowed terms in months (ArrayField, any whole number
+    1–360) and one recommended term among them. Every vertical has exactly one general
+    sub-vertical ("General", stored with an empty name, shown translated), created with it, never
+    renamed or deleted. The API nests `sub_verticals` in the vertical; sending it replaces the list.
+    Defaults for a new vertical's General (medium; 12/24/36/48/60; recommended 36) live only in
+    `catalogs/models.py` and are served at `/api/catalogs/verticals/defaults/`.
+    DRF 3.18 reports nested list errors by position: `{"sub_verticals": {"1": {"field": [...]}}}`.
   - `config/pagination.py` — default pagination for lists (`?page=`, `?page_size=`, max 200).
   - `config/filters.py` — `NullsLastOrderingFilter` (empty values last in both directions); use it
     when a sortable column can be empty.
@@ -33,7 +43,12 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — top bar + side icon rail (expands on hover) for authenticated pages.
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
-    router and the side menu. `account-managers/` is the reference module.
+    router and the side menu (`placement: 'system'` puts a module in the bottom group, next to
+    Settings). `account-managers/` is the reference module.
+  - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
+    listed in `tabs.ts`. A new small table is a new tab here, not a new module.
+  - `src/modules/account-managers/AccountManagerPicker.vue` — single/multiple account manager
+    picker with server-side search; reuse it wherever a form links to account managers.
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
   - `src/components/ConfirmDialog.vue` — generic confirmation dialog.
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.

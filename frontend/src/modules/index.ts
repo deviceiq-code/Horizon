@@ -6,6 +6,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 
 import accountManagers from './account-managers'
+import catalogs from './catalogs'
 import customers from './customers'
 
 export interface AppModule {
@@ -17,6 +18,8 @@ export interface AppModule {
   titleKey: string
   /** Routes relative to "/" (children of MainLayout) */
   routes: RouteRecordRaw[]
+  /** 'main' (default): business modules at the top of the menu; 'system': bottom group */
+  placement?: 'main' | 'system'
 }
 
-export const MODULES: AppModule[] = [customers, accountManagers]
+export const MODULES: AppModule[] = [customers, accountManagers, catalogs]

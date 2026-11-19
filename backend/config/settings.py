@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",  # ArrayField (e.g. sub-vertical allowed terms)
     # Third party
     "rest_framework",
     # Project
@@ -28,6 +29,7 @@ INSTALLED_APPS = [
     "assets",
     "account_managers",
     "customers",
+    "catalogs",
 ]
 
 MIDDLEWARE = [

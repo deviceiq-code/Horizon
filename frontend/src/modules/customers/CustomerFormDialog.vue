@@ -3,7 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
 import { useValidationRules } from '@/composables/useValidationRules'
-import { listAccountManagers } from '@/modules/account-managers/api'
+import AccountManagerPicker from '@/modules/account-managers/AccountManagerPicker.vue'
+import type { AccountManagerRef } from '@/modules/account-managers/api'
 import { countryOptions } from '@/utils/countries'
 import { createCustomer, updateCustomer, type Customer, type CustomerInput } from './api'
 import { BRAZILIAN_STATES, formatPostalCode, formatTaxId } from './format'
@@ -67,49 +68,6 @@ const isBrazil = computed(() => form.value.country === 'BR')
 const countries = computed(() => countryOptions(locale.value))
 const stateOptions: string[] = [...BRAZILIAN_STATES]
 
-// --- Account manager picker (searches the server as the user types) -------------------------
-
-interface ManagerOption {
-  id: number
-  full_name: string
-}
-
-const managerOptions = ref<ManagerOption[]>([])
-const managerLoading = ref(false)
-let managerTimer: ReturnType<typeof setTimeout> | undefined
-let managerRequest = 0
-
-async function fetchManagers(term: string) {
-  const request = ++managerRequest
-  managerLoading.value = true
-  try {
-    const data = await listAccountManagers({
-      page: 1,
-      pageSize: 20,
-      search: term,
-      ordering: 'full_name',
-    })
-    if (request !== managerRequest) return
-    // Keep the selected manager in the list so its name stays visible
-    const selected = managerOptions.value.find((m) => m.id === form.value.account_manager)
-    const results = data.results.map(({ id, full_name }) => ({ id, full_name }))
-    managerOptions.value =
-      selected && !results.some((m) => m.id === selected.id) ? [selected, ...results] : results
-  } catch {
-    /* keep the current options; the field still works with what is loaded */
-  } finally {
-    if (request === managerRequest) managerLoading.value = false
-  }
-}
-
-function onManagerSearch(term: string | null) {
-  clearTimeout(managerTimer)
-  const selected = managerOptions.value.find((m) => m.id === form.value.account_manager)
-  // Vuetify sets the search text to the selected item's name; no need to search for it
-  if (term && selected && term === selected.full_name) return
-  managerTimer = setTimeout(() => fetchManagers(term ?? ''), 300)
-}
-
 // --- Open / reset ----------------------------------------------------------------------------
 
 /** Editable fields of an existing customer, with documents formatted for reading. */
@@ -134,17 +92,22 @@ function toInput(c: Customer): CustomerInput {
   }
 }
 
+// The account manager picker starts fresh (remounts) every time the dialog opens
+const openCount = ref(0)
+const initialManagers = computed<AccountManagerRef[]>(() => {
+  const c = props.customer
+  return c?.account_manager && c.account_manager_name
+    ? [{ id: c.account_manager, full_name: c.account_manager_name }]
+    : []
+})
+
 watch(open, (isOpen) => {
   if (!isOpen) return
   const c = props.customer
   form.value = c ? toInput(c) : emptyForm()
-  managerOptions.value =
-    c?.account_manager && c.account_manager_name
-      ? [{ id: c.account_manager, full_name: c.account_manager_name }]
-      : []
   fieldErrors.value = {}
   generalError.value = ''
-  fetchManagers('')
+  openCount.value += 1
 })
 
 // --- Save ------------------------------------------------------------------------------------
@@ -369,19 +332,14 @@ function clearError(field: string) {
           </div>
           <v-row dense>
             <v-col cols="12" md="8">
-              <v-autocomplete
+              <AccountManagerPicker
+                :key="openCount"
                 v-model="form.account_manager"
-                :items="managerOptions"
-                item-title="full_name"
-                item-value="id"
+                :initial-options="initialManagers"
                 :label="$t('customers.fields.accountManager')"
-                :loading="managerLoading"
                 :error-messages="fieldErrors.account_manager"
-                :no-data-text="$t('customers.noAccountManagers')"
-                no-filter
-                clearable
+                :no-data-text="$t('accountManagers.noneFound')"
                 data-testid="account-manager"
-                @update:search="onManagerSearch"
                 @update:model-value="clearError('account_manager')"
               />
             </v-col>

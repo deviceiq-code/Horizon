@@ -171,3 +171,111 @@ msgstr "Já existe um cliente com este CPF/CNPJ."
 #: account_managers/views.py
 msgid "This account manager has customers and cannot be deleted."
 msgstr "Este account manager tem clientes vinculados e não pode ser excluído."
+
+#: catalogs/apps.py
+msgid "Catalogs"
+msgstr "Cadastros"
+
+#: catalogs/models.py
+msgid "name"
+msgstr "nome"
+
+#: catalogs/models.py
+msgid "enabled"
+msgstr "habilitada"
+
+#: catalogs/models.py
+msgid "vertical"
+msgstr "vertical"
+
+#: catalogs/models.py
+msgid "verticals"
+msgstr "verticais"
+
+#: catalogs/serializers.py
+msgid "A vertical with this name already exists."
+msgstr "Já existe uma vertical com este nome."
+
+#: catalogs/models.py
+msgid "business vertical"
+msgstr "vertical de negócio"
+
+#: catalogs/models.py
+msgid "business verticals"
+msgstr "verticais de negócio"
+
+#: catalogs/models.py
+msgid "Low"
+msgstr "Baixo"
+
+#: catalogs/models.py
+msgid "Medium"
+msgstr "Médio"
+
+#: catalogs/models.py
+msgid "High"
+msgstr "Alto"
+
+#: catalogs/models.py
+msgid "General"
+msgstr "Geral"
+
+#: catalogs/models.py
+msgid "general"
+msgstr "geral"
+
+#: catalogs/models.py
+msgid "risk"
+msgstr "risco"
+
+#: catalogs/models.py
+msgid "allowed terms (months)"
+msgstr "prazos aceitos (meses)"
+
+#: catalogs/models.py
+msgid "recommended term (months)"
+msgstr "prazo recomendado (meses)"
+
+#: catalogs/models.py
+msgid "sub-vertical"
+msgstr "sub-vertical"
+
+#: catalogs/models.py
+msgid "sub-verticals"
+msgstr "sub-verticais"
+
+#: catalogs/serializers.py
+msgid "This field is required."
+msgstr "Este campo é obrigatório."
+
+#: catalogs/serializers.py
+msgid "The recommended term must be one of the allowed terms."
+msgstr "O prazo recomendado deve estar entre os prazos aceitos."
+
+#: catalogs/serializers.py
+msgid "This name is reserved for the general sub-vertical."
+msgstr "Este nome é reservado para a sub-vertical Geral."
+
+#: catalogs/serializers.py
+msgid "Exactly one general sub-vertical is required."
+msgstr "É necessária exatamente uma sub-vertical Geral."
+
+#: catalogs/serializers.py
+msgid "Sub-vertical names must be unique within the vertical."
+msgstr "Os nomes das sub-verticais devem ser únicos dentro da vertical."
+
+#: catalogs/serializers.py
+msgid "The general sub-vertical cannot be replaced."
+msgstr "A sub-vertical Geral não pode ser substituída."
+
+#: catalogs/serializers.py
+msgid "Unknown sub-vertical."
+msgstr "Sub-vertical desconhecida."
+
+#: catalogs/serializers.py
+msgid "Could not save the sub-verticals. Please try again."
+msgstr "Não foi possível salvar as sub-verticais. Tente novamente."
+
+#: catalogs/admin.py
+msgid "The general sub-vertical cannot be deleted."
+msgstr "A sub-vertical Geral não pode ser excluída."

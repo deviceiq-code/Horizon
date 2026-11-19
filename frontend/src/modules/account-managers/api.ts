@@ -10,6 +10,9 @@ export interface AccountManager {
 
 export type AccountManagerInput = Pick<AccountManager, 'full_name' | 'email'>
 
+/** Minimal reference to an account manager, as other modules display it. */
+export type AccountManagerRef = Pick<AccountManager, 'id' | 'full_name'>
+
 const BASE = '/account-managers/'
 
 export function listAccountManagers(params: ListParams) {

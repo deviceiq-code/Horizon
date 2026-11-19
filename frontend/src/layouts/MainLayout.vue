@@ -10,6 +10,9 @@ const auth = useAuthStore()
 const router = useRouter()
 const { mdAndUp } = useDisplay()
 
+const mainModules = MODULES.filter((m) => (m.placement ?? 'main') === 'main')
+const systemModules = MODULES.filter((m) => m.placement === 'system')
+
 // Desktop: permanent icon rail that expands on hover; the top-left button pins it open.
 // Mobile: hidden drawer that the top-left button opens over the page.
 const drawerOpen = ref(mdAndUp.value)
@@ -63,7 +66,7 @@ async function logout() {
       />
       <v-divider class="my-1" />
       <v-list-item
-        v-for="module in MODULES"
+        v-for="module in mainModules"
         :key="module.name"
         :to="{ name: module.name }"
         :prepend-icon="module.icon"
@@ -73,6 +76,13 @@ async function logout() {
 
     <template #append>
       <v-list nav density="comfortable">
+        <v-list-item
+          v-for="module in systemModules"
+          :key="module.name"
+          :to="{ name: module.name }"
+          :prepend-icon="module.icon"
+          :title="$t(module.titleKey)"
+        />
         <v-list-item
           :to="{ name: 'settings' }"
           prepend-icon="mdi-cog-outline"
