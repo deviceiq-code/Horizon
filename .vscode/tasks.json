@@ -1,0 +1,66 @@
+{
+  // Terminal → Run Task… (or Ctrl+Shift+P → "Tasks: Run Task")
+  // Wrappers around ./dev.sh, which runs the servers in the background.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Horizon: start",
+      "type": "shell",
+      "command": "./dev.sh start",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Horizon: stop",
+      "type": "shell",
+      "command": "./dev.sh stop",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Horizon: restart",
+      "type": "shell",
+      "command": "./dev.sh restart",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Horizon: status",
+      "type": "shell",
+      "command": "./dev.sh status",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Horizon: logs",
+      "type": "shell",
+      "command": "./dev.sh logs",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    // Used by launch.json: frees the port if dev.sh left that server running in the background
+    {
+      "label": "Horizon: stop background backend",
+      "type": "shell",
+      "command": "./dev.sh stop backend",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "hide": true
+    },
+    {
+      "label": "Horizon: stop background frontend",
+      "type": "shell",
+      "command": "./dev.sh stop frontend",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "hide": true
+    }
+  ]
+}

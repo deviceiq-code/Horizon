@@ -29,6 +29,11 @@ uv run python manage.py createsuperuser
 Every command also accepts a single service: `./dev.sh restart backend`.
 PIDs and logs are kept in `.run/`.
 
+In VS Code:
+- **Run → Start Debugging (F5)** with *Horizon (backend + frontend)* runs both under the debugger
+  (breakpoints in Django); the debug toolbar has Restart and Stop.
+- **Terminal → Run Task…** has *Horizon: start / stop / restart / status / logs* (wrappers around `dev.sh`).
+
 To run them in the foreground instead (two terminals):
 ```bash
 cd backend && uv run python manage.py runserver   # API at http://localhost:8000

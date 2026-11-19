@@ -1,0 +1,37 @@
+{
+  // Run and Debug (Ctrl+Shift+D) / Run menu → Start Debugging (F5).
+  // The debug toolbar then has Restart (Ctrl+Shift+F5) and Stop (Shift+F5).
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend (Django)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/manage.py",
+      "args": ["runserver", "127.0.0.1:8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "django": true,
+      "justMyCode": true,
+      "preLaunchTask": "Horizon: stop background backend",
+      "presentation": { "group": "servers", "order": 2 }
+    },
+    {
+      "name": "Frontend (Vite)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev -- --port 5173 --strictPort",
+      "cwd": "${workspaceFolder}/frontend",
+      "preLaunchTask": "Horizon: stop background frontend",
+      "presentation": { "group": "servers", "order": 3 }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Horizon (backend + frontend)",
+      "configurations": ["Backend (Django)", "Frontend (Vite)"],
+      "stopAll": true,
+      "presentation": { "group": "servers", "order": 1 }
+    }
+  ]
+}
