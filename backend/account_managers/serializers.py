@@ -1,3 +1,5 @@
+import posixpath
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -7,6 +9,8 @@ from .models import AccountManager
 class AccountManagerSerializer(serializers.ModelSerializer):
     # Write: list of business vertical IDs. Read: also id + name + enabled, for display.
     verticals_detail = serializers.SerializerMethodField()
+    # Changes with every new photo (null without one); the image is at /<id>/photo/
+    photo_version = serializers.SerializerMethodField()
 
     class Meta:
         model = AccountManager
@@ -16,11 +20,15 @@ class AccountManagerSerializer(serializers.ModelSerializer):
             "email",
             "verticals",
             "verticals_detail",
+            "photo_version",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
         extra_kwargs = {"verticals": {"required": False}}
+
+    def get_photo_version(self, obj) -> str | None:
+        return posixpath.splitext(posixpath.basename(obj.photo.name))[0] if obj.photo else None
 
     def get_verticals_detail(self, obj) -> list[dict]:
         verticals = sorted(obj.verticals.all(), key=lambda v: v.name.lower())

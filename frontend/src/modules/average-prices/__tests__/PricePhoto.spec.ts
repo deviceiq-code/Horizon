@@ -4,6 +4,7 @@ import { h, ref } from 'vue'
 
 import { setLanguage } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useSystemSettingsStore } from '@/stores/systemSettings'
 import { inBody, mountWithPlugins, settle } from '@/test-utils'
 import * as pricesApi from '../api'
 import PricePhoto from '../PricePhoto.vue'
@@ -35,6 +36,7 @@ describe('PricePhoto', () => {
   beforeEach(() => {
     setLanguage('en')
     setActivePinia(createPinia())
+    useSystemSettingsStore().settings = { photo_search_enabled: false }
   })
 
   afterEach(() => {
@@ -90,6 +92,47 @@ describe('PricePhoto', () => {
     await settle()
     expect(inBody('[data-testid="photo-upload"]')).toBeNull()
     expect(inBody('[data-testid="photo-remove"]')).toBeNull()
+    wrapper.unmount()
+  })
+
+  it('offers a file, the address of an image and (when set up) a search', async () => {
+    const { wrapper } = mountPhoto(null)
+    await settle()
+    inBody('[data-testid="photo-upload"]')!.click()
+    await settle()
+    expect(inBody('[data-testid="photo-from-file"]')).not.toBeNull()
+    expect(inBody('[data-testid="photo-from-url"]')).not.toBeNull()
+    expect(inBody('[data-testid="photo-from-search"]')).toBeNull()
+    wrapper.unmount()
+    document.body.innerHTML = ''
+
+    useSystemSettingsStore().settings = { photo_search_enabled: true }
+    const second = mountPhoto(null)
+    await settle()
+    inBody('[data-testid="photo-upload"]')!.click()
+    await settle()
+    expect(inBody('[data-testid="photo-from-search"]')).not.toBeNull()
+    second.wrapper.unmount()
+  })
+
+  it('links to where the photo was found', async () => {
+    const wrapper = mountWithPlugins({
+      render: () =>
+        h(PricePhoto, {
+          rowId: 100,
+          photoId: 31,
+          icon: 'mdi-excavator',
+          title: 'Caterpillar 320 GC',
+          canEdit: true,
+          sourceUrl: 'https://www.cat.com/320',
+        }),
+    })
+    await settle()
+    inBody('[data-testid="photo-thumb"]')!.click()
+    await settle()
+    const link = inBody('[data-testid="photo-source"]') as HTMLAnchorElement
+    expect(link.getAttribute('href')).toBe('https://www.cat.com/320')
+    expect(link.getAttribute('target')).toBe('_blank')
     wrapper.unmount()
   })
 })

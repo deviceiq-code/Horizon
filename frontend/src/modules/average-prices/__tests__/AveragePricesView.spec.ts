@@ -99,6 +99,7 @@ const ROW: pricesApi.AveragePriceDetail = {
   deleted_at: null,
   documents_count: 0,
   photo_id: null,
+  photo_source_url: '',
   curve: Array.from({ length: 25 }, (_, month) => ({
     month,
     value: '1.00',
@@ -221,6 +222,68 @@ describe('AveragePricesView', () => {
     expect(text).toContain('12m · 70.00%')
     expect(text).toContain('24m · 55.00%')
     expect(text).toContain('Ana Souza')
+    wrapper.unmount()
+  })
+
+  // --- Column filters -------------------------------------------------------------------------
+
+  it('filters by the columns: asset class, model, value range and dates', async () => {
+    const wrapper = mountView()
+    await settle()
+    // Off until turned on
+    expect(inBody('[data-testid="filter-row"]')).toBeNull()
+    await click('toggle-filters')
+    expect(inBody('[data-testid="filter-row"]')).not.toBeNull()
+    expect(inBody('[data-testid="clear-filters"]')).toBeNull()
+    const lastFilters = () => prices.listAveragePrices.mock.lastCall![0].filters
+    const pause = () => new Promise((r) => setTimeout(r, 400))
+
+    await typeInto('filter-model', '320')
+    await typeInto('filter-value-min', '90,000.50')
+    await pause()
+    await settle()
+    expect(lastFilters()).toEqual({ model: '320', original_value_min: '90000.50' })
+    expect(prices.listAveragePrices.mock.lastCall![0].page).toBe(1)
+
+    await pickOption('filter-asset-class', 'Excavators — Industry / Yellow line')
+    await typeInto('filter-created-from', '2026-11-01')
+    expect(lastFilters()).toEqual({
+      model: '320',
+      original_value_min: '90000.50',
+      asset_class: 5,
+      created_from: '2026-11-01',
+    })
+
+    // A value that cannot be read is flagged and not sent
+    await typeInto('filter-value-max', 'abc')
+    await pause()
+    await settle()
+    expect(inBody('[data-testid="filter-value-max"]')!.className).toContain('v-input--error')
+    expect(lastFilters()).not.toHaveProperty('original_value_max')
+
+    await click('clear-filters')
+    expect(lastFilters()).toEqual({})
+    expect((inBody('[data-testid="filter-model"] input') as HTMLInputElement).value).toBe('')
+    expect(inBody('[data-testid="clear-filters"]')).toBeNull()
+
+    // Turning the filters off clears them; the choice is remembered in this browser
+    await typeInto('filter-model', '320')
+    await pause()
+    await settle()
+    expect(lastFilters()).toEqual({ model: '320' })
+    await click('toggle-filters')
+    expect(inBody('[data-testid="filter-row"]')).toBeNull()
+    expect(lastFilters()).toEqual({})
+    expect(localStorage.getItem('horizon.filters.average-prices')).toBe('0')
+    wrapper.unmount()
+  })
+
+  it('remembers that the filters were on', async () => {
+    localStorage.setItem('horizon.filters.average-prices', '1')
+    const wrapper = mountView()
+    await settle()
+    expect(inBody('[data-testid="filter-row"]')).not.toBeNull()
+    localStorage.removeItem('horizon.filters.average-prices')
     wrapper.unmount()
   })
 

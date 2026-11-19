@@ -241,6 +241,8 @@ class PriceDocument(models.Model):
     content_type = models.CharField(_("content type"), max_length=100)
     # The photo of the asset (at most one per row) instead of a document
     is_photo = models.BooleanField(_("photo"), default=False)
+    # Where it came from, when downloaded from the internet (page it was found on, or the image)
+    source_url = models.URLField(_("source"), max_length=1000, blank=True)
     uploaded_at = models.DateTimeField(_("uploaded at"), auto_now_add=True)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

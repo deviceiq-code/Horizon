@@ -21,6 +21,7 @@ const page = (results: { id: number; full_name: string }[]) => ({
     email: '',
     verticals: [],
     verticals_detail: [],
+    photo_version: null,
     created_at: '',
     updated_at: '',
   })),

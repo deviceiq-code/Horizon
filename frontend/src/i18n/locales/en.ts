@@ -9,6 +9,9 @@ const en = {
     description: 'Operating lease residual value pricing',
   },
   common: {
+    showFilters: 'Filters',
+    hideFilters: 'Hide filters',
+    clearFilters: 'Clear filters',
     expand: 'Show or hide details',
     close: 'Close',
     logout: 'Sign out',
@@ -53,6 +56,13 @@ const en = {
     title: 'Account Managers',
     new: 'New account manager',
     edit: 'Edit account manager',
+    photo: {
+      add: 'Add photo',
+      change: 'Change photo',
+      remove: 'Remove photo',
+      notImage: 'Choose a JPEG, PNG, WebP or GIF image.',
+      saveError: 'The account manager was saved, but the photo could not be.',
+    },
     fields: {
       id: 'ID',
       fullName: 'Full name',
@@ -335,6 +345,12 @@ const en = {
     deleteVersionConfirm:
       'Delete the version of {date} for good? If it is the current one, the newest version left becomes current. This cannot be undone.',
     versionDeleted: 'Version deleted.',
+    filters: {
+      assetClass: 'Asset class',
+      model: 'Model or manufacturer',
+      from: 'From',
+      to: 'To',
+    },
     photo: {
       add: 'Add photo',
       change: 'Change photo',
@@ -342,6 +358,22 @@ const en = {
       removeConfirm: 'Remove the photo of this asset? The file is removed for good.',
       enlarge: 'Enlarge',
       saved: 'Photo saved.',
+      fromFile: 'Upload from the computer',
+      fromSearch: 'Search on the internet',
+      fromUrl: 'Paste the image address',
+      searchTitle: 'Photos found on the internet',
+      searchQuery: 'Search',
+      searchError: 'The search did not work.',
+      noResults: 'No images found. Try other words.',
+      useThis: 'Use this photo',
+      downloadError: 'Could not download this image. Try another one.',
+      copyrightHint:
+        'Images found on the internet may be protected by copyright: use them as internal reference. The page each one came from is kept.',
+      fromUrlTitle: 'Photo from an image address',
+      fromUrlHint:
+        'In the browser, right-click the image and choose "Copy image address", then paste it here.',
+      imageUrl: 'Image address',
+      source: 'Source',
       removed: 'Photo removed.',
     },
     documents: {
@@ -383,6 +415,21 @@ const en = {
     kinds: {
       text: 'Text',
       number: 'Number',
+    },
+  },
+  system: {
+    saved: 'System settings saved.',
+    title: 'System',
+    subtitle: 'Settings for every user. Only administrators see this section.',
+    searxng: {
+      title: 'Photo search (SearXNG)',
+      hint: 'Address of the SearXNG instance used to find photos of the assets. Leave it empty to turn photo search off. The JSON format must be enabled in its settings.yml.',
+      url: 'SearXNG address',
+      urlHint: 'e.g. http://192.168.0.22:30053',
+      test: 'Test',
+      testOk:
+        'It works, but no images came back. | It works: 1 image found. | It works: {n} images found.',
+      testError: 'Could not search with this address.',
     },
   },
   settings: {

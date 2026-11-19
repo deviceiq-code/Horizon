@@ -1,22 +1,31 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
 import { useValidationRules } from '@/composables/useValidationRules'
 import VerticalPicker from '@/modules/catalogs/verticals/VerticalPicker.vue'
+import { useNotificationsStore } from '@/stores/notifications'
+import { squareImage } from '@/utils/image'
+import AccountManagerAvatar from './AccountManagerAvatar.vue'
 import {
   createAccountManager,
+  deleteAccountManagerPhoto,
   updateAccountManager,
+  uploadAccountManagerPhoto,
   type AccountManager,
   type AccountManagerInput,
 } from './api'
 
-/** Create (manager = null) or edit an account manager and the verticals they work in. */
+/**
+ * Create (manager = null) or edit an account manager, the verticals they work in and their
+ * photo (cropped square in the browser, shown in a circle; sent after the record is saved).
+ */
 const props = defineProps<{ manager: AccountManager | null }>()
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ saved: [manager: AccountManager, created: boolean] }>()
 
 const { t } = useI18n()
+const notifications = useNotificationsStore()
 
 const FIELDS = ['full_name', 'email', 'verticals']
 
@@ -26,6 +35,51 @@ const generalError = ref('')
 const saving = ref(false)
 const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const openCount = ref(0) // remounts the vertical picker on every open
+
+// --- Photo (applied when saving) -------------------------------------------------------------
+
+const photoInput = ref<HTMLInputElement | null>(null)
+const pendingPhoto = ref<File | null>(null)
+const previewUrl = ref<string | null>(null)
+const removePhoto = ref(false)
+const preparingPhoto = ref(false)
+
+function setPreview(file: File | null) {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  previewUrl.value = file ? URL.createObjectURL(file) : null
+}
+
+async function choosePhoto(files: FileList | null) {
+  const file = files?.[0]
+  if (photoInput.value) photoInput.value.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    notifications.notify(t('accountManagers.photo.notImage'), 'error')
+    return
+  }
+  preparingPhoto.value = true
+  try {
+    pendingPhoto.value = await squareImage(file)
+    removePhoto.value = false
+    setPreview(pendingPhoto.value)
+  } catch {
+    notifications.notify(t('accountManagers.photo.notImage'), 'error')
+  } finally {
+    preparingPhoto.value = false
+  }
+}
+
+function clearPhoto() {
+  pendingPhoto.value = null
+  setPreview(null)
+  removePhoto.value = !!props.manager?.photo_version
+}
+
+const hasPhoto = computed(
+  () => !!pendingPhoto.value || (!!props.manager?.photo_version && !removePhoto.value),
+)
+
+onBeforeUnmount(() => setPreview(null))
 
 const isEdit = computed(() => props.manager !== null)
 const initialVerticals = computed(() => props.manager?.verticals_detail ?? [])
@@ -43,7 +97,25 @@ watch(open, (isOpen) => {
   fieldErrors.value = {}
   generalError.value = ''
   openCount.value += 1
+  pendingPhoto.value = null
+  removePhoto.value = false
+  setPreview(null)
 })
+
+/** Send the photo change after the record is saved (a failure keeps the record saved). */
+async function applyPhoto(saved: AccountManager): Promise<AccountManager> {
+  try {
+    if (pendingPhoto.value) return await uploadAccountManagerPhoto(saved.id, pendingPhoto.value)
+    if (removePhoto.value && saved.photo_version) {
+      await deleteAccountManagerPhoto(saved.id)
+      return { ...saved, photo_version: null }
+    }
+  } catch (error) {
+    const messages = error instanceof ApiError ? error.fieldErrors().file : undefined
+    notifications.notify(messages?.join(' ') || t('accountManagers.photo.saveError'), 'error')
+  }
+  return saved
+}
 
 async function submit() {
   const result = await formRef.value?.validate()
@@ -58,9 +130,10 @@ async function submit() {
       email: form.value.email.trim(),
       verticals: form.value.verticals,
     }
-    const saved = props.manager
+    let saved = props.manager
       ? await updateAccountManager(props.manager.id, data)
       : await createAccountManager(data)
+    saved = await applyPhoto(saved)
     emit('saved', saved, !props.manager)
     open.value = false
   } catch (error) {
@@ -81,6 +154,46 @@ async function submit() {
     <v-card :title="isEdit ? $t('accountManagers.edit') : $t('accountManagers.new')">
       <v-form ref="formRef" @submit.prevent="submit">
         <v-card-text>
+          <div class="d-flex align-center ga-4 mb-4" data-testid="photo">
+            <AccountManagerAvatar
+              :name="form.full_name || '?'"
+              :id="manager?.id ?? null"
+              :photo-version="removePhoto ? null : (manager?.photo_version ?? null)"
+              :preview-url="previewUrl"
+              :size="96"
+            />
+            <div class="d-flex flex-column ga-1">
+              <v-btn
+                variant="tonal"
+                size="small"
+                prepend-icon="mdi-camera-outline"
+                :loading="preparingPhoto"
+                data-testid="photo-choose"
+                @click="photoInput?.click()"
+              >
+                {{ $t(hasPhoto ? 'accountManagers.photo.change' : 'accountManagers.photo.add') }}
+              </v-btn>
+              <v-btn
+                v-if="hasPhoto"
+                variant="text"
+                size="small"
+                color="error"
+                prepend-icon="mdi-trash-can-outline"
+                data-testid="photo-remove"
+                @click="clearPhoto"
+              >
+                {{ $t('accountManagers.photo.remove') }}
+              </v-btn>
+              <input
+                ref="photoInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                hidden
+                data-testid="photo-input"
+                @change="choosePhoto(($event.target as HTMLInputElement).files)"
+              />
+            </div>
+          </div>
           <v-text-field
             v-model="form.full_name"
             :label="$t('accountManagers.fields.fullName')"

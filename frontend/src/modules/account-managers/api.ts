@@ -9,6 +9,8 @@ export interface AccountManager {
   verticals: number[]
   /** Same verticals with name and enabled flag, sorted by name (read-only) */
   verticals_detail: VerticalRef[]
+  /** Changes with every new photo; null without one (see accountManagerPhotoUrl) */
+  photo_version: string | null
   created_at: string
   updated_at: string
 }
@@ -34,4 +36,20 @@ export function updateAccountManager(id: number, data: AccountManagerInput) {
 
 export function deleteAccountManager(id: number) {
   return api<void>(`${BASE}${id}/`, { method: 'DELETE' })
+}
+
+/** The photo's address; the version makes the browser fetch a new photo. */
+export function accountManagerPhotoUrl(id: number, version: string) {
+  return `/api${BASE}${id}/photo/?v=${version}`
+}
+
+/** Sets or replaces the photo (send a square picture: utils/image.squareImage). */
+export function uploadAccountManagerPhoto(id: number, file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  return api<AccountManager>(`${BASE}${id}/photo/`, { method: 'POST', body })
+}
+
+export function deleteAccountManagerPhoto(id: number) {
+  return api<void>(`${BASE}${id}/photo/`, { method: 'DELETE' })
 }

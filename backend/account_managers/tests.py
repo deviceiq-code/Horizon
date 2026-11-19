@@ -49,6 +49,7 @@ def test_list_is_paginated_and_ordered_by_name(logged_client, managers):
         "email",
         "verticals",
         "verticals_detail",
+        "photo_version",
         "created_at",
         "updated_at",
     }
@@ -235,3 +236,78 @@ def test_deleting_a_vertical_removes_it_from_account_managers(logged_client, man
     r = logged_client.delete(f"/api/catalogs/verticals/{verticals['industry'].pk}/")
     assert r.status_code == 204
     assert list(managers[1].verticals.all()) == [verticals["it"]]
+
+
+# --- Photo ----------------------------------------------------------------------------------
+
+JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+
+
+@pytest.fixture
+def media(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    return tmp_path
+
+
+def _photo(client, pk, name="ana.jpg", content=JPEG):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    return client.post(f"{URL}{pk}/photo/", {"file": SimpleUploadedFile(name, content)})
+
+
+@pytest.mark.django_db(transaction=True)
+def test_photo_set_replaced_and_removed(logged_client, managers, media):
+    import os
+
+    ana = managers[0]
+    assert logged_client.get(f"{URL}{ana.pk}/photo/").status_code == 404
+    r = _photo(logged_client, ana.pk)
+    assert r.status_code == 201, r.json()
+    first = r.json()["photo_version"]
+    assert first
+    r = logged_client.get(f"{URL}{ana.pk}/photo/")
+    assert (r.status_code, r["Content-Type"]) == (200, "image/jpeg")
+    assert b"".join(r.streaming_content) == JPEG
+    ana.refresh_from_db()
+    first_path = ana.photo.path
+
+    # Replacing gives a new version and removes the old file
+    second = _photo(logged_client, ana.pk, "ana.png", b"\x89PNG").json()["photo_version"]
+    assert second != first
+    assert not os.path.exists(first_path)
+    listed = logged_client.get(URL, {"search": "carla"}).json()["results"][0]
+    assert listed["photo_version"] == second
+
+    ana.refresh_from_db()
+    path = ana.photo.path
+    assert logged_client.delete(f"{URL}{ana.pk}/photo/").status_code == 204
+    assert not os.path.exists(path)
+    assert logged_client.get(f"{URL}{ana.pk}/").json()["photo_version"] is None
+    assert logged_client.delete(f"{URL}{ana.pk}/photo/").status_code == 404
+
+
+def test_photo_must_be_an_image(logged_client, managers, media):
+    r = _photo(logged_client, managers[0].pk, "cv.pdf", b"%PDF")
+    assert r.status_code == 400
+    assert "not accepted" in r.json()["file"][0]
+    assert logged_client.post(f"{URL}{managers[0].pk}/photo/", {}).status_code == 400
+
+
+@pytest.mark.django_db(transaction=True)
+def test_deleting_a_manager_removes_the_photo(logged_client, managers, media):
+    import os
+
+    bruno = managers[1]
+    _photo(logged_client, bruno.pk)
+    bruno.refresh_from_db()
+    path = bruno.photo.path
+    assert logged_client.delete(f"{URL}{bruno.pk}/").status_code == 204
+    assert not os.path.exists(path)
+
+
+def test_editing_keeps_the_photo(logged_client, managers, media):
+    ana = managers[0]
+    version = _photo(logged_client, ana.pk).json()["photo_version"]
+    r = _patch(logged_client, ana.pk, {"full_name": "Ana S. Souza"})
+    assert r.status_code == 200
+    assert r.json()["photo_version"] == version

@@ -3,6 +3,7 @@ tested: which files are accepted, their stored name and how they are served."""
 
 import mimetypes
 import posixpath
+from urllib.parse import unquote, urlsplit
 
 # Office, OpenDocument, PDF, plain text and common images. No archives or executables, and no
 # HTML/SVG (they could run scripts when opened in the browser).
@@ -80,3 +81,12 @@ def content_type_for(name: str) -> str:
 
 def opens_inline(name: str) -> bool:
     return extension(name) in INLINE_EXTENSIONS
+
+
+def photo_name_from_url(url: str, kind: str) -> str:
+    """A file name for a photo downloaded from `url`, with the extension of its real type
+    ("jpg", "png"…): the last part of the address, or "photo"."""
+    path = urlsplit(url).path
+    stem = posixpath.splitext(unquote(posixpath.basename(path)))[0]
+    stem = " ".join(stem.split())[:100] or "photo"
+    return clean_filename(f"{stem}.{kind}")

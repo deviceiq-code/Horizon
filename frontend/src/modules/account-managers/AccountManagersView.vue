@@ -5,6 +5,7 @@ import { deleteErrorMessage } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useServerTable } from '@/composables/useServerTable'
 import { useNotificationsStore } from '@/stores/notifications'
+import AccountManagerAvatar from './AccountManagerAvatar.vue'
 import AccountManagerFormDialog from './AccountManagerFormDialog.vue'
 import { deleteAccountManager, listAccountManagers, type AccountManager } from './api'
 
@@ -94,7 +95,7 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <v-container fluid style="max-width: 1200px">
+  <v-container fluid class="module-page">
     <div class="d-flex flex-wrap align-center ga-3 mb-4">
       <h1 class="text-h5 mr-auto">{{ $t('accountManagers.title') }}</h1>
       <v-text-field
@@ -136,6 +137,17 @@ async function confirmDelete() {
         hover
         @update:options="load"
       >
+        <template #[`item.full_name`]="{ item }">
+          <div class="d-flex align-center ga-3 py-1">
+            <AccountManagerAvatar
+              :name="item.full_name"
+              :id="item.id"
+              :photo-version="item.photo_version"
+              :size="36"
+            />
+            <span>{{ item.full_name }}</span>
+          </div>
+        </template>
         <template #[`item.verticals_detail`]="{ item }">
           <div class="d-flex flex-wrap ga-1 py-1">
             <v-chip

@@ -11,7 +11,9 @@ import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import { formatMoney } from '@/utils/money'
 import AveragePriceDetailDialog from './AveragePriceDetailDialog.vue'
+import AssetClassPicker from '@/modules/catalogs/asset-classes/AssetClassPicker.vue'
 import AveragePriceFormDialog from './AveragePriceFormDialog.vue'
+import { usePriceFilters } from './AveragePriceFilters'
 import PriceVersionsPanel from './PriceVersionsPanel.vue'
 import {
   deleteAveragePrice,
@@ -26,11 +28,17 @@ const notifications = useNotificationsStore()
 const table = ref<{ reload: () => Promise<void> } | null>(null)
 
 const headers = computed(() => [
-  { title: t('averagePrices.fields.assetClass'), key: 'asset_class' },
-  { title: t('averagePrices.fields.model'), key: 'model' },
-  { title: t('averagePrices.fields.originalValue'), key: 'original_value', align: 'end' as const },
+  // Minimum widths leave room for the column filters
+  { title: t('averagePrices.fields.assetClass'), key: 'asset_class', minWidth: '240px' },
+  { title: t('averagePrices.fields.model'), key: 'model', minWidth: '200px' },
+  {
+    title: t('averagePrices.fields.originalValue'),
+    key: 'original_value',
+    align: 'end' as const,
+    minWidth: '220px',
+  },
   { title: t('averagePrices.fields.terms'), key: 'points', sortable: false },
-  { title: t('averagePrices.fields.createdAt'), key: 'created_at', width: 150 },
+  { title: t('averagePrices.fields.createdAt'), key: 'created_at', minWidth: '190px' },
 ])
 
 // --- Create / new version / detail -----------------------------------------------------------
@@ -67,11 +75,21 @@ function onSaved(row: AveragePriceDetail, newVersion: boolean) {
   table.value?.reload()
 }
 
+// --- Column filters --------------------------------------------------------------------------
+
+const {
+  filters,
+  typed,
+  invalid,
+  pickerKey,
+  clear: clearFilters,
+} = usePriceFilters(() => locale.value)
+
 const money = (row: AveragePrice) => formatMoney(row.original_value, row.currency, locale.value)
 </script>
 
 <template>
-  <v-container fluid style="max-width: 1400px">
+  <v-container fluid class="module-page">
     <h1 class="text-h5 mb-1">{{ $t('averagePrices.title') }}</h1>
     <p class="text-medium-emphasis mb-4">{{ $t('averagePrices.subtitle') }}</p>
 
@@ -94,6 +112,9 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       edit-icon="mdi-file-replace-outline"
       :edit-title="$t('averagePrices.newVersion')"
       :expandable="(row: AveragePrice) => row.supersedes !== null"
+      :filters="filters"
+      filters-storage-key="average-prices"
+      @clear-filters="clearFilters"
       @create="openNew"
       @edit="openNewVersion"
     >
@@ -144,6 +165,69 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
         <div class="text-caption text-medium-emphasis">
           <v-icon v-if="item.supersedes" icon="mdi-history" size="x-small" />
           {{ item.created_by_name }}
+        </div>
+      </template>
+      <template #[`filter.asset_class`]>
+        <AssetClassPicker
+          :key="pickerKey"
+          v-model="filters.asset_class"
+          :label="$t('averagePrices.filters.assetClass')"
+          density="compact"
+          hide-details
+          data-testid="filter-asset-class"
+        />
+      </template>
+      <template #[`filter.model`]>
+        <v-text-field
+          v-model="typed.model"
+          :placeholder="$t('averagePrices.filters.model')"
+          prepend-inner-icon="mdi-filter-outline"
+          density="compact"
+          hide-details
+          clearable
+          data-testid="filter-model"
+        />
+      </template>
+      <template #[`filter.original_value`]>
+        <div class="d-flex ga-1">
+          <v-text-field
+            v-model="typed.min"
+            :placeholder="$t('averagePrices.filters.from')"
+            inputmode="decimal"
+            density="compact"
+            hide-details
+            :error="invalid.min"
+            data-testid="filter-value-min"
+          />
+          <v-text-field
+            v-model="typed.max"
+            :placeholder="$t('averagePrices.filters.to')"
+            inputmode="decimal"
+            density="compact"
+            hide-details
+            :error="invalid.max"
+            data-testid="filter-value-max"
+          />
+        </div>
+      </template>
+      <template #[`filter.created_at`]>
+        <div class="d-flex flex-column ga-1">
+          <v-text-field
+            v-model="filters.created_from"
+            type="date"
+            :label="$t('averagePrices.filters.from')"
+            density="compact"
+            hide-details
+            data-testid="filter-created-from"
+          />
+          <v-text-field
+            v-model="filters.created_to"
+            type="date"
+            :label="$t('averagePrices.filters.to')"
+            density="compact"
+            hide-details
+            data-testid="filter-created-to"
+          />
         </div>
       </template>
       <template #expanded-row="{ item }">

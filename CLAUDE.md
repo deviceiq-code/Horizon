@@ -18,8 +18,11 @@ Multi-user web system for **operating lease residual value pricing**
     theme), endpoints under `/api/auth/` (`login/`, `logout/`, `me/`, `preferences/`).
   - `assets/` — domain app (no models yet; business rules to be defined).
   - `account_managers/` — first business module (`AccountManager`: full_name, email unique
-    case-insensitive, `verticals` M2M = the business verticals they work in), CRUD at
-    `/api/account-managers/` (DRF ModelViewSet). **The account manager owns the relation**:
+    case-insensitive, `verticals` M2M = the business verticals they work in, `photo`), CRUD at
+    `/api/account-managers/` (DRF ModelViewSet). Photo: GET/POST/DELETE `/<id>/photo/`
+    (`photo_version` in the API changes with each new photo); the browser crops it square
+    (`src/utils/image.ts::squareImage`, 192×192 JPEG) and it shows in a circle
+    (`AccountManagerAvatar.vue`, initials without a photo). **The account manager owns the relation**:
     verticals are assigned on the account manager, never on the vertical.
   - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, active flag,
     `primary_account_manager` — required FK, PROTECT — and `secondary_account_managers` — M2M,
@@ -76,11 +79,20 @@ Multi-user web system for **operating lease residual value pricing**
     not a version — every version shares `AveragePrice.lineage` (UUID). `/<id>/documents/`
     (GET/POST multipart "file"), `/<id>/documents/<doc>/` (DELETE),
     `/<id>/documents/<doc>/download/` (`?inline=1` for PDF/images); `/<id>/photo/` (GET/POST
-    replaces/DELETE; images only). Files live in `MEDIA_ROOT` (`.env`, default `backend/media`,
+    replaces/DELETE; images only), `POST /<id>/photo/from-url/` ({url, source_url}; the server
+    downloads it), `GET /<id>/photo-suggestions/?q=` (SearXNG). `PriceDocument.source_url` keeps
+    where an internet photo came from (`photo_source_url` in the rows). Files live in `MEDIA_ROOT` (`.env`, default `backend/media`,
     not served publicly — only through the API, logged in), random stored names; size limit
     `PRICE_DOCUMENT_MAX_MB` (25). Deleting a document removes its file; erasing the last version
     of a row removes its documents. List rows carry `documents_count` and `photo_id`.
     Pricing tests share fixtures in `pricing/conftest.py` and helpers in `pricing/testing.py`.
+  - `system/` — system-wide settings edited by administrators in the app (`SystemSettings`
+    singleton, `SystemSettings.current()`), at `/api/system/settings/` (GET: everyone sees what
+    is enabled, e.g. `photo_search_enabled`; PATCH and `test-searxng/`: staff only).
+    `searxng_url` turns on photo search. `system/web.py`: SearXNG image search
+    (`search_images`; the instance must have `formats: [html, json]`) and `fetch_image` — safe
+    download (public addresses only, DNS pinned, redirects re-checked, size limit, real image
+    type by magic bytes). Never fetch user-given URLs any other way.
   - `catalogs/specs.py` — specification templates per asset class (`AssetClass.spec_template`,
     read-only in the asset class API, edited at `/api/catalogs/asset-classes/<id>/spec-template/`;
     fields: label, kind text|number, unit, required) and the snapshot of values stored with each
@@ -97,23 +109,29 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/stores/preferences.ts` — language/theme in use; saved to the account via `PATCH /api/auth/preferences/`.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — top bar + side icon rail (expands on hover) for authenticated pages.
+    Module pages use `<v-container fluid class="module-page">` (full width, small side margin;
+    `src/styles/main.css`).
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
     router and the side menu (`placement: 'system'` puts a module in the bottom group, next to
     Settings). `account-managers/` is the reference module.
   - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
     listed in `tabs.ts`. A new small table is a new tab here, not a new module.
   - `src/components/ServerCrudTable.vue` — generic CRUD grid (search, New, edit/delete with
-    confirmation, notifications; optional `expandable` + `expanded-row` slot); pages pass columns, texts and `item.<key>` cell slots, open
+    confirmation, notifications; optional `expandable` + `expanded-row` slot; column filters:
+    `filters` object + `filter.<key>` slots, a row under the titles turned on/off with the
+    "Filters" button — remembered per grid with `filters-storage-key`, turning off clears them); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
   - `src/modules/average-prices/` — grid (ServerCrudTable; edit = "New version"; delete = all
-    versions; rows with previous versions expand to list all versions and their average), form (asset
+    versions; rows with previous versions expand to list all versions and their average; column
+    filters in `AveragePriceFilters.ts` → `?asset_class=&model=&original_value_min/max=&
+    created_from/to=`), form (asset
     class decides terms and spec fields; values resolved by `/preview/`), detail (terms, monthly
     curve table, history with the average of the versions). `PriceVersionsList.vue` lists
     versions (by date and time, no numbers) and erases one; used in the detail's history and the
     grid's expanded row. Text specification fields use `SpecSuggestField.vue` (combobox with
     server suggestions; new values allowed). Detail: `PricePhoto.vue` (thumbnail in the header,
-    click to enlarge) and `PriceDocuments.vue` ("Documents" tab; drag and drop). File uploads
+    click to enlarge; menu: file, `PhotoSearchDialog.vue`, `PhotoUrlDialog.vue`) and `PriceDocuments.vue` ("Documents" tab; drag and drop). File uploads
     go through `api()` with a `FormData` body. Sizes: `src/utils/bytes.ts`. Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
     UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
   - Decimal inputs (e.g. ratings): text field with `inputmode="decimal"` (not `type="number"`,
@@ -137,6 +155,8 @@ Multi-user web system for **operating lease residual value pricing**
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;
     when changing them, check in a real browser too. A combobox renders an
     `<input type="hidden">` before the visible one (`typeInto` skips it).
+  - `src/stores/systemSettings.ts` — system settings (loaded once); the administrators' card is
+    `src/components/SystemSettingsCard.vue` on the Settings page.
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
   - `src/components/ConfirmDialog.vue` — generic confirmation dialog.
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.

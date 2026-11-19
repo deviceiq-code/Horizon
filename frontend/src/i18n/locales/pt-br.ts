@@ -6,6 +6,9 @@ const ptBR: Messages = {
     description: 'Precificação de residuais de leasing operacional',
   },
   common: {
+    showFilters: 'Filtros',
+    hideFilters: 'Ocultar filtros',
+    clearFilters: 'Limpar filtros',
     expand: 'Mostrar ou ocultar detalhes',
     close: 'Fechar',
     logout: 'Sair',
@@ -50,6 +53,13 @@ const ptBR: Messages = {
     title: 'Account Managers',
     new: 'Novo account manager',
     edit: 'Editar account manager',
+    photo: {
+      add: 'Adicionar foto',
+      change: 'Trocar foto',
+      remove: 'Remover foto',
+      notImage: 'Escolha uma imagem JPEG, PNG, WebP ou GIF.',
+      saveError: 'O account manager foi salvo, mas a foto não.',
+    },
     fields: {
       id: 'ID',
       fullName: 'Nome completo',
@@ -331,6 +341,12 @@ const ptBR: Messages = {
     deleteVersionConfirm:
       'Excluir definitivamente a versão de {date}? Se for a atual, a versão mais recente que restar passa a ser a atual. Esta ação não pode ser desfeita.',
     versionDeleted: 'Versão excluída.',
+    filters: {
+      assetClass: 'Classe de ativo',
+      model: 'Modelo ou fabricante',
+      from: 'De',
+      to: 'Até',
+    },
     photo: {
       add: 'Adicionar foto',
       change: 'Trocar foto',
@@ -338,6 +354,22 @@ const ptBR: Messages = {
       removeConfirm: 'Remover a foto deste bem? O arquivo será removido definitivamente.',
       enlarge: 'Ampliar',
       saved: 'Foto salva.',
+      fromFile: 'Enviar do computador',
+      fromSearch: 'Buscar na internet',
+      fromUrl: 'Colar o endereço da imagem',
+      searchTitle: 'Fotos encontradas na internet',
+      searchQuery: 'Busca',
+      searchError: 'A busca não funcionou.',
+      noResults: 'Nenhuma imagem encontrada. Tente outras palavras.',
+      useThis: 'Usar esta foto',
+      downloadError: 'Não foi possível baixar esta imagem. Tente outra.',
+      copyrightHint:
+        'Imagens da internet podem ter direitos autorais: use-as como referência interna. A página de origem de cada uma fica registrada.',
+      fromUrlTitle: 'Foto a partir do endereço de uma imagem',
+      fromUrlHint:
+        'No navegador, clique com o botão direito na imagem, escolha "Copiar endereço da imagem" e cole aqui.',
+      imageUrl: 'Endereço da imagem',
+      source: 'Origem',
       removed: 'Foto removida.',
     },
     documents: {
@@ -379,6 +411,21 @@ const ptBR: Messages = {
     kinds: {
       text: 'Texto',
       number: 'Número',
+    },
+  },
+  system: {
+    saved: 'Configurações do sistema salvas.',
+    title: 'Sistema',
+    subtitle: 'Configurações para todos os usuários. Só administradores veem esta seção.',
+    searxng: {
+      title: 'Busca de fotos (SearXNG)',
+      hint: 'Endereço da instância do SearXNG usada para encontrar fotos dos bens. Deixe vazio para desligar a busca de fotos. O formato JSON precisa estar habilitado no settings.yml dele.',
+      url: 'Endereço do SearXNG',
+      urlHint: 'ex.: http://192.168.0.22:30053',
+      test: 'Testar',
+      testOk:
+        'Funciona, mas nenhuma imagem voltou. | Funciona: 1 imagem encontrada. | Funciona: {n} imagens encontradas.',
+      testError: 'Não foi possível buscar com este endereço.',
     },
   },
   settings: {

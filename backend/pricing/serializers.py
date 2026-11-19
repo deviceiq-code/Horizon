@@ -45,6 +45,8 @@ class AveragePriceSerializer(serializers.ModelSerializer):
     documents_count = serializers.SerializerMethodField()
     # Id of the photo (changes when replaced; used to refresh the image); annotated
     photo_id = serializers.SerializerMethodField()
+    # Where the photo came from, when downloaded from the internet ("" otherwise)
+    photo_source_url = serializers.SerializerMethodField()
 
     class Meta:
         model = AveragePrice
@@ -68,6 +70,7 @@ class AveragePriceSerializer(serializers.ModelSerializer):
             "deleted_at",
             "documents_count",
             "photo_id",
+            "photo_source_url",
         ]
         read_only_fields = fields
 
@@ -76,6 +79,9 @@ class AveragePriceSerializer(serializers.ModelSerializer):
 
     def get_photo_id(self, obj) -> int | None:
         return getattr(obj, "photo_id", None)
+
+    def get_photo_source_url(self, obj) -> str:
+        return getattr(obj, "photo_source_url", None) or ""
 
     def get_vertical(self, obj) -> dict:
         v = obj.sub_vertical.vertical

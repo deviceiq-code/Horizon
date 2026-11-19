@@ -4,9 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { LANGUAGES } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore, type PreferencesUpdate, type Theme } from '@/stores/preferences'
+import { useAuthStore } from '@/stores/auth'
+import SystemSettingsCard from '@/components/SystemSettingsCard.vue'
 
 const { t } = useI18n()
 const preferences = usePreferencesStore()
+const auth = useAuthStore()
 const notifications = useNotificationsStore()
 
 const saving = ref(false)
@@ -85,5 +88,8 @@ async function save(changes: PreferencesUpdate) {
         </v-btn-toggle>
       </v-card-text>
     </v-card>
+
+    <!-- System-wide settings: administrators only -->
+    <SystemSettingsCard v-if="auth.user?.is_staff" class="mt-4" />
   </v-container>
 </template>

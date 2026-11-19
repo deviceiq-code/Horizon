@@ -73,7 +73,9 @@ const status = computed(() => {
 const documentsCount = computed(() => row.value?.documents_count ?? 0)
 
 function onPhotoChanged(photoId: number | null) {
+  // Reload the row: the photo's source may have changed too
   if (row.value) row.value.photo_id = photoId
+  if (shownId.value !== null) load(shownId.value)
   emit('changed')
 }
 
@@ -108,6 +110,7 @@ async function onVersionDeleted(erased: AveragePrice) {
             :icon="row.asset_class.icon"
             :title="`${row.manufacturer.name} ${row.model}`"
             :can-edit="!row.deleted_at"
+            :source-url="row.photo_source_url"
             class="mr-2"
             @changed="onPhotoChanged"
           />

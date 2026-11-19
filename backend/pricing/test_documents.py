@@ -196,3 +196,121 @@ def test_photo_is_not_a_document(logged_client, price):
 def test_no_photo_changes_on_a_deleted_price(logged_client, price):
     logged_client.delete(f"{URL}{price.pk}/history/")
     assert _photo(logged_client, price.pk).status_code == 409
+
+
+# --- Photo from the internet ------------------------------------------------------------------
+
+JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+
+
+@pytest.fixture
+def searxng(db):
+    from system.models import SystemSettings
+
+    SystemSettings.objects.update_or_create(pk=1, defaults={"searxng_url": "http://searx.lan"})
+
+
+def test_photo_suggestions(logged_client, price, searxng, monkeypatch):
+    calls = []
+
+    def fake_search(base_url, query, limit=24, timeout=15):
+        calls.append((base_url, query))
+        return [
+            {
+                "image": "https://example.com/a.jpg",
+                "thumbnail": "",
+                "title": "A",
+                "source": "",
+                "resolution": "",
+            }
+        ]
+
+    monkeypatch.setattr("pricing.views.search_images", fake_search)
+    r = logged_client.get(f"{URL}{price.pk}/photo-suggestions/")
+    assert r.status_code == 200
+    # Manufacturer, model and asset class by default
+    assert r.json()["query"] == "Caterpillar 320 GC Excavators"
+    assert r.json()["results"][0]["image"] == "https://example.com/a.jpg"
+    r = logged_client.get(f"{URL}{price.pk}/photo-suggestions/", {"q": "  cat   320 "})
+    assert r.json()["query"] == "cat 320"
+    assert calls[-1] == ("http://searx.lan", "cat 320")
+
+
+def test_photo_suggestions_need_searxng(logged_client, price):
+    r = logged_client.get(f"{URL}{price.pk}/photo-suggestions/")
+    assert r.status_code == 409
+    assert "Settings" in r.json()["detail"]
+
+
+def test_photo_suggestions_report_searxng_errors(logged_client, price, searxng, monkeypatch):
+    from system.web import WebError
+
+    def failing(*args, **kwargs):
+        raise WebError("json_disabled")
+
+    monkeypatch.setattr("pricing.views.search_images", failing)
+    r = logged_client.get(f"{URL}{price.pk}/photo-suggestions/")
+    assert r.status_code == 502
+    assert "settings.yml" in r.json()["detail"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_photo_from_url(logged_client, catalog, price, monkeypatch):
+    fetched = []
+
+    def fake_fetch(url, max_bytes, **kwargs):
+        fetched.append((url, max_bytes))
+        return JPEG, "jpg", "https://cdn.example.com/img/5060e%20front.jpeg?w=800"
+
+    monkeypatch.setattr("pricing.views.fetch_image", fake_fetch)
+    _photo(logged_client, price.pk)  # replaced below
+    r = logged_client.post(
+        f"{URL}{price.pk}/photo/from-url/",
+        {"url": "https://example.com/5060e.jpg", "source_url": "https://example.com/tractors"},
+        content_type="application/json",
+    )
+    assert r.status_code == 201, r.json()
+    photo = PriceDocument.objects.get(is_photo=True)
+    assert photo.pk == r.json()["photo_id"]
+    assert (photo.name, photo.content_type, photo.size) == ("5060e front.jpg", "image/jpeg", 36)
+    assert photo.source_url == "https://example.com/tractors"
+    assert fetched == [("https://example.com/5060e.jpg", 25 * 1024 * 1024)]
+    row = logged_client.get(f"{URL}{price.pk}/").json()
+    assert (row["photo_id"], row["photo_source_url"]) == (photo.pk, "https://example.com/tractors")
+    assert b"".join(logged_client.get(f"{URL}{price.pk}/photo/").streaming_content) == JPEG
+
+
+def test_photo_from_url_errors(logged_client, price):
+    # The real download: the local network is refused, and so are non-web addresses
+    for url, message in (
+        ("http://127.0.0.1/a.jpg", "local network"),
+        ("http://192.168.0.22:30053/x.png", "local network"),
+        ("file:///etc/passwd", "http://"),
+        ("", "http://"),
+    ):
+        r = logged_client.post(
+            f"{URL}{price.pk}/photo/from-url/", {"url": url}, content_type="application/json"
+        )
+        assert r.status_code == 400, url
+        assert message in r.json()["url"][0], url
+    assert not PriceDocument.objects.exists()
+
+
+def test_no_photo_from_url_on_a_deleted_price(logged_client, price):
+    logged_client.delete(f"{URL}{price.pk}/history/")
+    r = logged_client.post(
+        f"{URL}{price.pk}/photo/from-url/",
+        {"url": "https://example.com/a.jpg"},
+        content_type="application/json",
+    )
+    assert r.status_code == 409
+
+
+def test_photo_name_from_url():
+    from .documents import photo_name_from_url
+
+    assert (
+        photo_name_from_url("https://a.com/img/5060e%20front.jpeg?x=1", "jpg") == "5060e front.jpg"
+    )
+    assert photo_name_from_url("https://a.com/", "png") == "photo.png"
+    assert photo_name_from_url("https://a.com/image.php", "webp") == "image.webp"

@@ -4,7 +4,7 @@ import { CATALOG_TABS } from './tabs'
 </script>
 
 <template>
-  <v-container fluid style="max-width: 1200px">
+  <v-container fluid class="module-page">
     <h1 class="text-h5 mb-1">{{ $t('catalogs.title') }}</h1>
     <p class="text-medium-emphasis mb-4">{{ $t('catalogs.subtitle') }}</p>
 

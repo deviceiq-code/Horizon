@@ -4,14 +4,17 @@
  * and delete actions, delete confirmation and notifications. The page provides the columns,
  * texts and cell slots (`item.<key>`), opens its own form on `create`/`edit`, and calls the
  * exposed `reload()` after saving. With `expandable`, rows it accepts get an expand toggle and
- * show the `expanded-row` slot ({ item, columns }).
+ * show the `expanded-row` slot ({ item, columns }). Column filters: pass `filters` (sent to the
+ * API as query parameters) and a `filter.<key>` slot per filtered column; they show in a row
+ * under the titles, turned on and off with the "Filters" button (remembered per grid with
+ * `filtersStorageKey`; turning them off clears them).
  */
 import { computed, ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DataTableHeader } from 'vuetify'
 import { deleteErrorMessage, type ListParams, type Paginated } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { useServerTable, type SortItem } from '@/composables/useServerTable'
+import { activeFilters, useServerTable, type SortItem } from '@/composables/useServerTable'
 import { useNotificationsStore } from '@/stores/notifications'
 
 const props = defineProps<{
@@ -33,9 +36,13 @@ const props = defineProps<{
   editTitle?: string
   /** Which rows can be expanded (shows the expanded-row slot); none when absent */
   expandable?: (item: T) => boolean
+  /** Column filters (query parameters); edit them in `filter.<key>` slots */
+  filters?: Record<string, string | number | boolean | null | undefined>
+  /** Remembers in this browser whether the filter row is shown (e.g. "average-prices") */
+  filtersStorageKey?: string
 }>()
 
-const emit = defineEmits<{ create: []; edit: [item: T] }>()
+const emit = defineEmits<{ create: []; edit: [item: T]; clearFilters: [] }>()
 
 const { t } = useI18n()
 const notifications = useNotificationsStore()
@@ -55,6 +62,7 @@ const {
 } = useServerTable(props.fetchPage, {
   sortBy: props.sortBy,
   orderingFields: props.orderingFields,
+  filters: props.filters ? () => props.filters ?? {} : undefined,
 })
 
 // Expanded rows by id, so they stay open when the page reloads
@@ -105,6 +113,30 @@ const slots = useSlots()
 const cellSlots = computed(() =>
   Object.fromEntries(Object.entries(slots).filter(([name]) => name.startsWith('item.'))),
 )
+const hasFilterRow = computed(() => Object.keys(slots).some((name) => name.startsWith('filter.')))
+const filtering = computed(() => Object.keys(activeFilters(props.filters)).length > 0)
+
+// Filter row on/off (a per-browser convenience: storage may be unavailable)
+const storageKey = props.filtersStorageKey ? `horizon.filters.${props.filtersStorageKey}` : null
+function readShown(): boolean {
+  try {
+    return !!storageKey && localStorage.getItem(storageKey) === '1'
+  } catch {
+    return false
+  }
+}
+const filtersShown = ref(readShown())
+
+function toggleFilters() {
+  filtersShown.value = !filtersShown.value
+  // Hidden filters must not keep filtering
+  if (!filtersShown.value && filtering.value) emit('clearFilters')
+  try {
+    if (storageKey) localStorage.setItem(storageKey, filtersShown.value ? '1' : '0')
+  } catch {
+    /* not remembered */
+  }
+}
 
 defineExpose({ reload: load })
 </script>
@@ -124,6 +156,17 @@ defineExpose({ reload: load })
         style="min-width: 260px; max-width: 400px"
         data-testid="search"
       />
+      <v-btn
+        v-if="hasFilterRow"
+        :variant="filtersShown ? 'tonal' : 'text'"
+        :color="filtersShown ? 'primary' : undefined"
+        :prepend-icon="filtersShown ? 'mdi-filter-off-outline' : 'mdi-filter-outline'"
+        :aria-pressed="filtersShown"
+        data-testid="toggle-filters"
+        @click="toggleFilters"
+      >
+        {{ $t(filtersShown ? 'common.hideFilters' : 'common.showFilters') }}
+      </v-btn>
       <v-btn color="primary" prepend-icon="mdi-plus" data-testid="new" @click="emit('create')">
         {{ $t('common.new') }}
       </v-btn>
@@ -175,6 +218,28 @@ defineExpose({ reload: load })
             @click="toggleExpand(internalItem)"
           />
         </template>
+        <!-- Column filters, under the titles -->
+        <template v-if="hasFilterRow && filtersShown" #thead="{ columns }">
+          <thead class="filter-row" data-testid="filter-row">
+            <tr>
+              <th v-for="column in columns" :key="String(column.key)" class="filter-cell">
+                <slot v-if="column.key === 'actions'" name="filter.actions">
+                  <v-btn
+                    v-if="filtering"
+                    variant="text"
+                    size="small"
+                    prepend-icon="mdi-filter-remove-outline"
+                    data-testid="clear-filters"
+                    @click="emit('clearFilters')"
+                  >
+                    {{ $t('common.clearFilters') }}
+                  </v-btn>
+                </slot>
+                <slot v-else :name="`filter.${String(column.key)}`" />
+              </th>
+            </tr>
+          </thead>
+        </template>
         <template v-if="expandable" #expanded-row="{ item, columns }">
           <tr>
             <td :colspan="columns.length" class="bg-surface-light pa-0">
@@ -219,3 +284,13 @@ defineExpose({ reload: load })
     />
   </div>
 </template>
+
+<style scoped>
+.filter-row .filter-cell {
+  height: auto;
+  padding-top: 4px;
+  padding-bottom: 8px;
+  vertical-align: top;
+  font-weight: normal;
+}
+</style>

@@ -606,3 +606,63 @@ msgstr "foto"
 #: pricing
 msgid "The photo of a deleted average price cannot be changed."
 msgstr "A foto de um preço médio excluído não pode ser alterada."
+
+#: system
+msgid "SearXNG URL"
+msgstr "URL do SearXNG"
+
+#: system
+msgid "updated by"
+msgstr "atualizado por"
+
+#: system
+msgid "system settings"
+msgstr "configurações do sistema"
+
+#: system
+msgid "System settings"
+msgstr "Configurações do sistema"
+
+#: system
+msgid "source"
+msgstr "origem"
+
+#: system
+msgid "SearXNG refused the JSON format. Enable it in its settings.yml (search: formats: [html, json])."
+msgstr "O SearXNG recusou o formato JSON. Habilite-o no settings.yml dele (search: formats: [html, json])."
+
+#: system
+msgid "Could not reach the address."
+msgstr "Não foi possível acessar o endereço."
+
+#: system
+msgid "The site answered with an error."
+msgstr "O site respondeu com um erro."
+
+#: system
+msgid "SearXNG did not answer with JSON."
+msgstr "O SearXNG não respondeu em JSON."
+
+#: system
+msgid "Enter a web address starting with http:// or https://."
+msgstr "Informe um endereço web começando com http:// ou https://."
+
+#: system
+msgid "Addresses on the local network are not allowed."
+msgstr "Endereços da rede local não são permitidos."
+
+#: system
+msgid "The address is not a JPEG, PNG, GIF or WebP image."
+msgstr "O endereço não é uma imagem JPEG, PNG, GIF ou WebP."
+
+#: system
+msgid "The image is too large."
+msgstr "A imagem é grande demais."
+
+#: system
+msgid "Only administrators can change the system settings."
+msgstr "Só administradores podem alterar as configurações do sistema."
+
+#: system
+msgid "Photo search is not set up (Settings → System)."
+msgstr "A busca de fotos não está configurada (Configurações → Sistema)."

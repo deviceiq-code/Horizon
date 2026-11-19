@@ -454,3 +454,32 @@ def test_preview_resolves_values_curve_and_warnings(logged_client, db):
 def test_preview_validation(logged_client, db, payload):
     r = logged_client.post(f"{URL}preview/", payload, content_type="application/json")
     assert r.status_code == 400
+
+
+# --- Column filters ----------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("params", "expected"),
+    [
+        ({"model": "320"}, ["320 GC"]),
+        ({"model": "deere"}, ["210 G"]),  # the manufacturer counts too
+        ({"model": "  GC  "}, ["320 GC"]),
+        ({"original_value_min": "95000"}, ["320 GC"]),
+        ({"original_value_max": "90000.00"}, ["210 G"]),
+        ({"original_value_min": "80000", "original_value_max": "95000"}, ["210 G"]),
+        ({"original_value_min": "abc"}, ["210 G", "320 GC"]),  # ignored
+        ({"created_from": "2000-01-01"}, ["210 G", "320 GC"]),
+        ({"created_to": "2000-01-01"}, []),
+        ({"created_from": "not-a-date"}, ["210 G", "320 GC"]),  # ignored
+    ],
+)
+def test_list_column_filters(logged_client, rows, params, expected):
+    results = logged_client.get(URL, {**params, "ordering": "model"}).json()["results"]
+    assert [r["model"] for r in results] == expected
+
+
+def test_list_created_filter_includes_the_whole_day(logged_client, rows):
+    today = timezone.localdate().isoformat()
+    params = {"created_from": today, "created_to": today}
+    assert logged_client.get(URL, params).json()["count"] == 2

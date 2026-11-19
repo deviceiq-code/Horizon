@@ -1,16 +1,19 @@
 <script setup lang="ts">
 /**
  * The asset's photo, small in the detail header (a square showing the whole photo, never
- * cropped; click to enlarge), with change/remove. Without
- * a photo it shows the asset class icon and, when editable, a button to add one. The API
- * decides what is accepted (images up to the size limit).
+ * cropped; click to enlarge), with change/remove. Without a photo it shows the asset class
+ * icon. A photo comes from a file, from a search on the internet (when set up in Settings →
+ * System) or from the address of an image. The API decides what is accepted.
  */
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError, deleteErrorMessage } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useSystemSettingsStore } from '@/stores/systemSettings'
 import { deletePricePhoto, pricePhotoUrl, uploadPricePhoto } from './api'
+import PhotoSearchDialog from './PhotoSearchDialog.vue'
+import PhotoUrlDialog from './PhotoUrlDialog.vue'
 
 const props = defineProps<{
   /** Any version of the row */
@@ -21,6 +24,8 @@ const props = defineProps<{
   /** Alternative text ("Caterpillar 320 GC") */
   title: string
   canEdit: boolean
+  /** Page the photo was found on, when it came from the internet */
+  sourceUrl?: string
 }>()
 const emit = defineEmits<{ changed: [photoId: number | null] }>()
 
@@ -31,6 +36,25 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
 const zoomOpen = ref(false)
 const confirmOpen = ref(false)
+const searchOpen = ref(false)
+const urlOpen = ref(false)
+
+// "Search the internet" only when an administrator set up SearXNG
+const systemSettings = useSystemSettingsStore()
+const searchEnabled = ref(false)
+onMounted(async () => {
+  if (!props.canEdit) return
+  try {
+    searchEnabled.value = (await systemSettings.load()).photo_search_enabled
+  } catch {
+    searchEnabled.value = false
+  }
+})
+
+function onChosen(photoId: number) {
+  notifications.notify(t('averagePrices.photo.saved'))
+  emit('changed', photoId)
+}
 
 async function upload(files: FileList | null) {
   const file = files?.[0]
@@ -92,18 +116,43 @@ async function remove() {
     </v-avatar>
 
     <div v-if="canEdit" class="d-flex">
-      <v-btn
-        :icon="photoId === null ? 'mdi-camera-plus-outline' : 'mdi-camera-retake-outline'"
-        variant="text"
-        size="x-small"
-        :loading="busy"
-        :aria-label="
-          $t(photoId === null ? 'averagePrices.photo.add' : 'averagePrices.photo.change')
-        "
-        :title="$t(photoId === null ? 'averagePrices.photo.add' : 'averagePrices.photo.change')"
-        data-testid="photo-upload"
-        @click="fileInput?.click()"
-      />
+      <v-menu location="bottom start">
+        <template #activator="{ props: menu }">
+          <v-btn
+            v-bind="menu"
+            :icon="photoId === null ? 'mdi-camera-plus-outline' : 'mdi-camera-retake-outline'"
+            variant="text"
+            size="x-small"
+            :loading="busy"
+            :aria-label="
+              $t(photoId === null ? 'averagePrices.photo.add' : 'averagePrices.photo.change')
+            "
+            :title="$t(photoId === null ? 'averagePrices.photo.add' : 'averagePrices.photo.change')"
+            data-testid="photo-upload"
+          />
+        </template>
+        <v-list density="compact">
+          <v-list-item
+            prepend-icon="mdi-upload-outline"
+            :title="$t('averagePrices.photo.fromFile')"
+            data-testid="photo-from-file"
+            @click="fileInput?.click()"
+          />
+          <v-list-item
+            v-if="searchEnabled"
+            prepend-icon="mdi-image-search-outline"
+            :title="$t('averagePrices.photo.fromSearch')"
+            data-testid="photo-from-search"
+            @click="searchOpen = true"
+          />
+          <v-list-item
+            prepend-icon="mdi-link-variant"
+            :title="$t('averagePrices.photo.fromUrl')"
+            data-testid="photo-from-url"
+            @click="urlOpen = true"
+          />
+        </v-list>
+      </v-menu>
       <v-btn
         v-if="photoId !== null"
         icon="mdi-trash-can-outline"
@@ -126,6 +175,9 @@ async function remove() {
       />
     </div>
 
+    <PhotoSearchDialog v-if="canEdit" v-model="searchOpen" :row-id="rowId" @chosen="onChosen" />
+    <PhotoUrlDialog v-if="canEdit" v-model="urlOpen" :row-id="rowId" @chosen="onChosen" />
+
     <v-dialog v-if="photoId !== null" v-model="zoomOpen" max-width="1000">
       <v-card>
         <v-img
@@ -136,6 +188,16 @@ async function remove() {
         />
         <v-card-actions>
           <span class="text-body-2 text-medium-emphasis ml-2">{{ title }}</span>
+          <a
+            v-if="sourceUrl"
+            :href="sourceUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-body-2 ml-3"
+            data-testid="photo-source"
+          >
+            {{ $t('averagePrices.photo.source') }}
+          </a>
           <v-spacer />
           <v-btn variant="text" @click="zoomOpen = false">{{ $t('common.close') }}</v-btn>
         </v-card-actions>

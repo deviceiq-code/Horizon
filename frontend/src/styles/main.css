@@ -1,0 +1,9 @@
+/* Pages of business modules (grids): the whole width, with a small side margin. */
+.module-page {
+  padding: 16px 12px;
+}
+@media (min-width: 1280px) {
+  .module-page {
+    padding-inline: 16px;
+  }
+}

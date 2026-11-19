@@ -42,6 +42,8 @@ export interface AveragePrice {
   documents_count: number
   /** The asset's photo (shared by all versions); changes when replaced */
   photo_id: number | null
+  /** Where the photo was found, when it came from the internet ("" otherwise) */
+  photo_source_url: string
 }
 
 export interface CurvePoint {
@@ -191,4 +193,31 @@ export function uploadPricePhoto(rowId: number, file: File) {
 
 export function deletePricePhoto(rowId: number) {
   return api<void>(`${BASE}${rowId}/photo/`, { method: 'DELETE' })
+}
+
+/** An image found on the internet (SearXNG). */
+export interface PhotoSuggestion {
+  image: string
+  thumbnail: string
+  title: string
+  /** Page the image was found on ("" when unknown) */
+  source: string
+  /** e.g. "1366 x 768" ("" when unknown) */
+  resolution: string
+}
+
+/** Images found for the asset; `query` defaults to manufacturer + model + asset class. */
+export function getPhotoSuggestions(rowId: number, query?: string) {
+  const qs = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : ''
+  return api<{ query: string; results: PhotoSuggestion[] }>(
+    `${BASE}${rowId}/photo-suggestions/${qs}`,
+  )
+}
+
+/** The server downloads the image at `url` and makes it the photo. Errors: {"url": [...]}. */
+export function setPhotoFromUrl(rowId: number, url: string, sourceUrl = '') {
+  return api<{ photo_id: number }>(`${BASE}${rowId}/photo/from-url/`, {
+    method: 'POST',
+    body: JSON.stringify({ url, source_url: sourceUrl }),
+  })
 }

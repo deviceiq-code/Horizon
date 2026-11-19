@@ -101,7 +101,7 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <v-container fluid style="max-width: 1400px">
+  <v-container fluid class="module-page">
     <div class="d-flex flex-wrap align-center ga-3 mb-4">
       <h1 class="text-h5 mr-auto">{{ $t('customers.title') }}</h1>
       <v-text-field

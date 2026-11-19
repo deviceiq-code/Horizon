@@ -14,6 +14,22 @@ export interface ServerTableOptions {
   pageSize?: number
   /** Wait this long after the user stops typing before searching */
   searchDelayMs?: number
+  /**
+   * Column filters, sent as query parameters (empty values are left out). Any change goes back
+   * to the first page and reloads.
+   */
+  filters?: () => Record<string, string | number | boolean | null | undefined>
+}
+
+/** The filters with a value (what is sent to the API). */
+export function activeFilters(
+  filters: Record<string, string | number | boolean | null | undefined> | undefined,
+): Record<string, string | number | boolean> {
+  return Object.fromEntries(
+    Object.entries(filters ?? {}).filter(
+      ([, value]) => value !== null && value !== undefined && value !== '',
+    ),
+  ) as Record<string, string | number | boolean>
 }
 
 /**
@@ -46,6 +62,17 @@ export function useServerTable<T>(
 
   let lastRequest = 0
 
+  // Filters changed: back to the first page (the table reloads when the page changes)
+  if (options.filters) {
+    watch(
+      () => JSON.stringify(activeFilters(options.filters?.())),
+      () => {
+        if (page.value !== 1) page.value = 1
+        else load()
+      },
+    )
+  }
+
   async function load() {
     const request = ++lastRequest
     const sort = sortBy.value[0]
@@ -57,6 +84,7 @@ export function useServerTable<T>(
         page: page.value,
         pageSize: itemsPerPage.value,
         search: search.value,
+        ...(options.filters ? { filters: activeFilters(options.filters()) } : {}),
         ordering: field ? `${sort?.order === 'desc' ? '-' : ''}${field}` : undefined,
       })
       if (request !== lastRequest) return // a newer request already answered

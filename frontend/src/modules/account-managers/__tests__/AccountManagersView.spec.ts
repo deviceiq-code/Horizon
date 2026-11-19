@@ -14,6 +14,15 @@ vi.mock('../api', () => ({
   createAccountManager: vi.fn<typeof managersApi.createAccountManager>(),
   updateAccountManager: vi.fn<typeof managersApi.updateAccountManager>(),
   deleteAccountManager: vi.fn<typeof managersApi.deleteAccountManager>(),
+  uploadAccountManagerPhoto: vi.fn<typeof managersApi.uploadAccountManagerPhoto>(),
+  deleteAccountManagerPhoto: vi.fn<typeof managersApi.deleteAccountManagerPhoto>(),
+  accountManagerPhotoUrl: (id: number, version: string) => `/photo/${id}?v=${version}`,
+}))
+// Canvas is not available here: the crop is checked in the browser
+vi.mock('@/utils/image', () => ({
+  squareImage: vi.fn<(file: File) => Promise<File>>(
+    async (file) => new File([file], 'square.jpg', { type: 'image/jpeg' }),
+  ),
 }))
 vi.mock('@/modules/catalogs/verticals/api', () => ({
   listVerticals: vi.fn<typeof verticalsApi.listVerticals>(),
@@ -35,6 +44,7 @@ const ANA: managersApi.AccountManager = {
     vertical(3, 'IT'),
     vertical(4, 'Mining', false),
   ],
+  photo_version: null,
   created_at: '',
   updated_at: '',
 }
@@ -256,6 +266,99 @@ describe('AccountManagersView', () => {
     expect(document.body.textContent).toContain(
       'An account manager with this email already exists.',
     )
+    wrapper.unmount()
+  })
+
+  // --- Photo ---------------------------------------------------------------------------------
+
+  it('shows the photo in a circle, or the initials', async () => {
+    api.listAccountManagers.mockResolvedValue({
+      count: 2,
+      next: null,
+      previous: null,
+      results: [
+        { ...ANA, photo_version: 'abc' },
+        { ...ANA, id: 2, full_name: 'Bruno Lima' },
+      ],
+    })
+    const wrapper = mountView()
+    await settle()
+    const avatars = wrapper.findAll('tbody [data-testid="avatar"]')
+    expect(avatars[0]!.find('img').attributes('src')).toBe('/photo/1?v=abc')
+    expect(avatars[0]!.classes()).toContain('v-avatar')
+    expect(avatars[1]!.text()).toBe('BL')
+    wrapper.unmount()
+  })
+
+  it('sends the photo chosen in the form after creating the account manager', async () => {
+    // Not in jsdom: the preview of the chosen picture
+    URL.createObjectURL = vi.fn<(obj: Blob) => string>(() => 'blob:preview')
+    URL.revokeObjectURL = vi.fn<(url: string) => void>()
+    const created = { ...ANA, id: 3, full_name: 'Carla' }
+    api.createAccountManager.mockResolvedValue(created)
+    api.uploadAccountManagerPhoto.mockResolvedValue({ ...created, photo_version: 'new' })
+    const wrapper = mountView()
+    await settle()
+
+    await wrapper.find('[data-testid="new"]').trigger('click')
+    await settle()
+    await typeInto('full-name', 'Carla')
+    await typeInto('email', 'carla@example.com')
+    const input = inBody('[data-testid="photo-input"]') as HTMLInputElement
+    const picture = new File(['jpeg'], 'carla.png', { type: 'image/png' })
+    Object.defineProperty(input, 'files', { value: [picture], configurable: true })
+    input.dispatchEvent(new Event('change'))
+    await settle()
+    expect(
+      inBody('[data-testid="photo"] [data-testid="avatar-photo"] img')!.getAttribute('src'),
+    ).toBe('blob:preview')
+
+    inBody('[data-testid="save"]')!.click()
+    await settle()
+    expect(api.uploadAccountManagerPhoto).toHaveBeenCalledTimes(1)
+    const [id, sent] = api.uploadAccountManagerPhoto.mock.calls[0]!
+    expect(id).toBe(3)
+    expect((sent as File).name).toBe('square.jpg')
+    wrapper.unmount()
+  })
+
+  it('removes the photo when saving after "Remove photo"', async () => {
+    const withPhoto = { ...ANA, photo_version: 'abc' }
+    api.listAccountManagers.mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [withPhoto],
+    })
+    api.updateAccountManager.mockResolvedValue(withPhoto)
+    api.deleteAccountManagerPhoto.mockResolvedValue(undefined)
+    const wrapper = mountView()
+    await settle()
+
+    await wrapper.find('[data-testid="edit"]').trigger('click')
+    await settle()
+    inBody('[data-testid="photo-remove"]')!.click()
+    await settle()
+    // Initials while the removal is pending
+    expect(inBody('[data-testid="photo"] [data-testid="avatar-photo"]')).toBeNull()
+    inBody('[data-testid="save"]')!.click()
+    await settle()
+    expect(api.deleteAccountManagerPhoto).toHaveBeenCalledWith(1)
+    expect(api.uploadAccountManagerPhoto).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('editing without touching the photo does not send it', async () => {
+    api.updateAccountManager.mockResolvedValue(ANA)
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('[data-testid="edit"]').trigger('click')
+    await settle()
+    inBody('[data-testid="save"]')!.click()
+    await settle()
+    expect(api.updateAccountManager).toHaveBeenCalled()
+    expect(api.uploadAccountManagerPhoto).not.toHaveBeenCalled()
+    expect(api.deleteAccountManagerPhoto).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 })
