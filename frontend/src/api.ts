@@ -37,15 +37,21 @@ export interface ListParams {
   search?: string
   /** Field name, prefixed with "-" for descending (e.g. "-email") */
   ordering?: string
+  /** Endpoint-specific filters, sent as they are (e.g. { is_enabled: true }) */
+  filters?: Record<string, string | number | boolean>
 }
 
 /** Query string for a list endpoint, in the backend's parameter names. */
 export function listQuery(params: ListParams): string {
+  const filters = Object.fromEntries(
+    Object.entries(params.filters ?? {}).map(([key, value]) => [key, String(value)]),
+  )
   return queryString({
     page: params.page,
     page_size: params.pageSize,
     search: params.search?.trim(),
     ordering: params.ordering,
+    ...filters,
   })
 }
 

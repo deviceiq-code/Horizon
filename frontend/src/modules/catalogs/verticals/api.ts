@@ -21,9 +21,10 @@ export interface SubVertical {
 export interface Vertical {
   id: number
   name: string
-  /** IDs of the account managers who may work in this vertical (all sub-verticals) */
-  account_managers: number[]
-  /** Same managers with names, sorted by name (read-only) */
+  /**
+   * Account managers who work in this vertical, sorted by name. Read-only: they are assigned
+   * on the account manager (AccountManager.verticals).
+   */
   account_managers_detail: AccountManagerRef[]
   is_enabled: boolean
   notes: string
@@ -34,10 +35,10 @@ export interface Vertical {
 }
 
 /** Sending sub_verticals replaces the whole list (it must include the general one). */
-export type VerticalInput = Pick<
-  Vertical,
-  'name' | 'account_managers' | 'is_enabled' | 'notes' | 'sub_verticals'
->
+export type VerticalInput = Pick<Vertical, 'name' | 'is_enabled' | 'notes' | 'sub_verticals'>
+
+/** Minimal reference to a vertical, as other modules display it. */
+export type VerticalRef = Pick<Vertical, 'id' | 'name' | 'is_enabled'>
 
 /** Initial values for the general sub-vertical of a new vertical (defined by the backend). */
 export interface SubVerticalDefaults {

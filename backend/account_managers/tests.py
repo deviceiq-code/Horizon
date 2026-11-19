@@ -43,7 +43,15 @@ def test_list_is_paginated_and_ordered_by_name(logged_client, managers):
     data = logged_client.get(URL).json()
     assert data["count"] == 3
     assert [m["full_name"] for m in data["results"]] == ["Ana Souza", "Bruno Lima", "Carla Mendes"]
-    assert set(data["results"][0]) == {"id", "full_name", "email", "created_at", "updated_at"}
+    assert set(data["results"][0]) == {
+        "id",
+        "full_name",
+        "email",
+        "verticals",
+        "verticals_detail",
+        "created_at",
+        "updated_at",
+    }
 
 
 @pytest.mark.parametrize(
@@ -135,3 +143,95 @@ def test_validation_messages_follow_user_language(logged_client, managers):
     )
     r = _post(logged_client, {"full_name": "Other Ana", "email": "ana@example.com"})
     assert r.json()["email"] == ["Já existe um account manager com este e-mail."]
+
+
+# --- Business verticals the account manager works in ----------------------------------------
+
+
+@pytest.fixture
+def verticals(db):
+    from catalogs.models import SubVertical, Vertical
+
+    def make(name, **fields):
+        vertical = Vertical.objects.create(name=name, **fields)
+        SubVertical.objects.create(vertical=vertical, **SubVertical.general_defaults())
+        return vertical
+
+    return {
+        "industry": make("Industry"),
+        "it": make("IT"),
+        "agro": make("Agribusiness", is_enabled=False),
+    }
+
+
+def test_create_with_verticals(logged_client, verticals):
+    r = _post(
+        logged_client,
+        {
+            "full_name": "Diego Alves",
+            "email": "diego@example.com",
+            "verticals": [verticals["it"].pk, verticals["industry"].pk],
+        },
+    )
+    assert r.status_code == 201, r.json()
+    manager = AccountManager.objects.get(pk=r.json()["id"])
+    assert set(manager.verticals.all()) == {verticals["it"], verticals["industry"]}
+    # Detail sorted by name, with the enabled flag
+    assert r.json()["verticals_detail"] == [
+        {"id": verticals["industry"].pk, "name": "Industry", "is_enabled": True},
+        {"id": verticals["it"].pk, "name": "IT", "is_enabled": True},
+    ]
+
+
+def test_create_without_verticals(logged_client, db):
+    r = _post(logged_client, {"full_name": "Diego Alves", "email": "diego@example.com"})
+    assert r.status_code == 201
+    assert r.json()["verticals"] == []
+
+
+def test_update_replaces_verticals(logged_client, managers, verticals):
+    ana = managers[1]
+    ana.verticals.set([verticals["industry"], verticals["it"]])
+    r = _patch(logged_client, ana.pk, {"verticals": [verticals["agro"].pk]})
+    assert r.status_code == 200
+    assert list(ana.verticals.all()) == [verticals["agro"]]
+
+
+def test_update_without_verticals_keeps_them(logged_client, managers, verticals):
+    ana = managers[1]
+    ana.verticals.set([verticals["industry"]])
+    assert _patch(logged_client, ana.pk, {"full_name": "Ana S."}).status_code == 200
+    assert list(ana.verticals.all()) == [verticals["industry"]]
+
+
+def test_unknown_vertical_is_rejected(logged_client, db):
+    r = _post(
+        logged_client,
+        {"full_name": "Diego Alves", "email": "diego@example.com", "verticals": [999999]},
+    )
+    assert r.status_code == 400
+    assert "verticals" in r.json()
+
+
+def test_search_by_vertical_name(logged_client, managers, verticals):
+    managers[1].verticals.set([verticals["industry"]])
+    managers[2].verticals.set([verticals["industry"], verticals["it"]])
+    results = logged_client.get(URL, {"search": "industry"}).json()["results"]
+    assert [m["full_name"] for m in results] == ["Ana Souza", "Bruno Lima"]  # each once
+
+
+def test_vertical_shows_its_account_managers(logged_client, managers, verticals):
+    managers[0].verticals.set([verticals["it"]])
+    managers[1].verticals.set([verticals["it"]])
+    r = logged_client.get(f"/api/catalogs/verticals/{verticals['it'].pk}/")
+    assert [m["full_name"] for m in r.json()["account_managers_detail"]] == [
+        "Ana Souza",
+        "Carla Mendes",
+    ]
+
+
+def test_deleting_a_vertical_removes_it_from_account_managers(logged_client, managers, verticals):
+    managers[1].verticals.set([verticals["industry"], verticals["it"]])
+    r = logged_client.delete(f"/api/catalogs/verticals/{verticals['industry'].pk}/")
+    assert r.status_code == 204
+    assert list(managers[1].verticals.all()) == [verticals["it"]]

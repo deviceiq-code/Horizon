@@ -1,15 +1,23 @@
 import { describe, expect, it } from 'vitest'
 
-import { keepRecommended, normalizeTerms } from '../verticals/terms'
+import { keepRecommended, parseTerm } from '../verticals/terms'
 
-describe('normalizeTerms', () => {
-  it('accepts any whole number of months, sorted and without duplicates', () => {
-    expect(normalizeTerms([36, '12', ' 18 ', 12, 60], 360)).toEqual([12, 18, 36, 60])
+describe('parseTerm', () => {
+  it.each([
+    ['18', 18],
+    [' 36 ', 36],
+    ['1', 1],
+    ['360', 360],
+  ])('accepts %j → %d', (text, months) => {
+    expect(parseTerm(text, 360)).toBe(months)
   })
 
-  it('drops values that are not valid terms', () => {
-    expect(normalizeTerms(['abc', '', 0, -12, 12.5, '24', 361, 360], 360)).toEqual([24, 360])
-  })
+  it.each(['', '  ', '0', '361', '12.5', '-12', '+12', '1e2', 'abc', '12 months'])(
+    'rejects %j',
+    (text) => {
+      expect(parseTerm(text, 360)).toBeNull()
+    },
+  )
 })
 
 describe('keepRecommended', () => {

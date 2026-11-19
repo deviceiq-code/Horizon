@@ -1,12 +1,12 @@
 /**
- * Turn what the user typed/picked in the terms field into a clean list of months:
- * whole numbers from 1 to `max`, without duplicates, ascending. Anything else is dropped.
+ * A term typed by the user, in months: a whole number from 1 to `max`, else null.
+ * Accepts surrounding spaces ("  18 "), rejects decimals, signs and text.
  */
-export function normalizeTerms(values: readonly (string | number)[], max: number): number[] {
-  const months = values
-    .map((v) => (typeof v === 'number' ? v : Number(String(v).trim())))
-    .filter((n) => Number.isInteger(n) && n >= 1 && n <= max)
-  return [...new Set(months)].sort((a, b) => a - b)
+export function parseTerm(text: string, max: number): number | null {
+  const trimmed = text.trim()
+  if (!/^\d+$/.test(trimmed)) return null
+  const months = Number(trimmed)
+  return months >= 1 && months <= max ? months : null
 }
 
 /**

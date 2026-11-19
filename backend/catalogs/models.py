@@ -7,22 +7,15 @@ from django.utils import translation
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
-from account_managers.models import AccountManager
-
 
 class Vertical(models.Model):
-    """A business vertical (industry segment) and the account managers who may work in it.
+    """A business vertical (industry segment), split into sub-verticals.
 
-    Account managers, the enabled flag and notes apply to all of its sub-verticals.
+    The enabled flag and notes apply to all of its sub-verticals. Which account managers work
+    in it is set on the account manager (AccountManager.verticals; here: `account_managers`).
     """
 
     name = models.CharField(_("name"), max_length=100)
-    account_managers = models.ManyToManyField(
-        AccountManager,
-        blank=True,
-        related_name="verticals",
-        verbose_name=_("account managers"),
-    )
     is_enabled = models.BooleanField(_("enabled"), default=True)
     notes = models.TextField(_("notes"), blank=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)

@@ -16,7 +16,14 @@ const page = (results: { id: number; full_name: string }[]) => ({
   count: results.length,
   next: null,
   previous: null,
-  results: results.map((r) => ({ ...r, email: '', created_at: '', updated_at: '' })),
+  results: results.map((r) => ({
+    ...r,
+    email: '',
+    verticals: [],
+    verticals_detail: [],
+    created_at: '',
+    updated_at: '',
+  })),
 })
 
 /** Host component so v-model works as in a real form. */

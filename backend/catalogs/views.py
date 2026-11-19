@@ -15,8 +15,11 @@ from .serializers import VerticalSerializer
 class VerticalViewSet(viewsets.ModelViewSet):
     """CRUD for business verticals, with their sub-verticals nested.
 
-    List supports ?search= (vertical, sub-vertical or account manager name), ?ordering= (id,
-    name, is_enabled), ?page= and ?page_size=.
+    List supports ?search= (vertical, sub-vertical or account manager name), ?is_enabled=true
+    or false, ?ordering= (id, name, is_enabled), ?page= and ?page_size=.
+
+    Account managers are read-only here (`account_managers_detail`); they are assigned on the
+    account manager (/api/account-managers/, field "verticals").
 
     Writes: "sub_verticals" is optional. When sent, it replaces the whole list (items with "id"
     are updated, items without it are created, missing ones are deleted) and must contain the
@@ -29,6 +32,13 @@ class VerticalViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "sub_verticals__name", "account_managers__full_name"]
     ordering_fields = ["id", "name", "is_enabled"]
     ordering = ["name"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        enabled = self.request.query_params.get("is_enabled", "").lower()
+        if enabled in ("true", "false"):
+            queryset = queryset.filter(is_enabled=enabled == "true")
+        return queryset
 
     @action(detail=False, methods=["get"])
     def defaults(self, request):

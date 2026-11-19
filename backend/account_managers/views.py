@@ -8,16 +8,16 @@ from .serializers import AccountManagerSerializer
 
 
 class AccountManagerViewSet(viewsets.ModelViewSet):
-    """CRUD for account managers.
+    """CRUD for account managers, including the business verticals they work in.
 
-    List supports ?search= (name or email), ?ordering= (id, full_name, email; prefix "-"
-    for descending), ?page= and ?page_size=.
+    List supports ?search= (name, email or vertical name), ?ordering= (id, full_name, email;
+    prefix "-" for descending), ?page= and ?page_size=.
     """
 
-    queryset = AccountManager.objects.all()
+    queryset = AccountManager.objects.prefetch_related("verticals")
     serializer_class = AccountManagerSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["full_name", "email"]
+    search_fields = ["full_name", "email", "verticals__name"]
     ordering_fields = ["id", "full_name", "email"]
     ordering = ["full_name"]
 

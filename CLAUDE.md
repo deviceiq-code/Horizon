@@ -18,13 +18,16 @@ Multi-user web system for **operating lease residual value pricing**
     theme), endpoints under `/api/auth/` (`login/`, `logout/`, `me/`, `preferences/`).
   - `assets/` — domain app (no models yet; business rules to be defined).
   - `account_managers/` — first business module (`AccountManager`: full_name, email unique
-    case-insensitive), CRUD at `/api/account-managers/` (DRF ModelViewSet).
+    case-insensitive, `verticals` M2M = the business verticals they work in), CRUD at
+    `/api/account-managers/` (DRF ModelViewSet). **The account manager owns the relation**:
+    verticals are assigned on the account manager, never on the vertical.
   - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, account manager
     FK with PROTECT, active flag). `customers/tax_ids.py` validates CPF and CNPJ, including the
     alphanumeric CNPJ (in force since July 2026). CRUD at `/api/customers/`.
   - `catalogs/` — small reference tables ("Cadastros"), one model each, under `/api/catalogs/<table>/`.
-    `Vertical` (business vertical): name (unique, case-insensitive), account managers who may work
-    in it (M2M), enabled flag, notes — these apply to all its sub-verticals.
+    `Vertical` (business vertical): name (unique, case-insensitive), enabled flag, notes — these
+    apply to all its sub-verticals. Its account managers are read-only here
+    (`account_managers_detail`, reverse of `AccountManager.verticals`). `?is_enabled=true` filters.
     `SubVertical`: risk (low/medium/high), allowed terms in months (ArrayField, any whole number
     1–360) and one recommended term among them. Every vertical has exactly one general
     sub-vertical ("General", stored with an empty name, shown translated), created with it, never
@@ -47,8 +50,13 @@ Multi-user web system for **operating lease residual value pricing**
     Settings). `account-managers/` is the reference module.
   - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
     listed in `tabs.ts`. A new small table is a new tab here, not a new module.
-  - `src/modules/account-managers/AccountManagerPicker.vue` — single/multiple account manager
-    picker with server-side search; reuse it wherever a form links to account managers.
+  - `src/components/RemoteAutocomplete.vue` — generic single/multiple picker with server-side
+    search; module pickers wrap it: `AccountManagerPicker.vue`, `VerticalPicker.vue` (enabled only).
+    Multiple mode has per-chip X only (no "clear all") and clears the typed text after each pick.
+  - `src/modules/catalogs/verticals/TermsField.vue` — list of terms in months as chips with
+    "Add term" (type months, Enter adds, Esc cancels).
+  - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;
+    when changing them, check in a real browser too.
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
   - `src/components/ConfirmDialog.vue` — generic confirmation dialog.
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.

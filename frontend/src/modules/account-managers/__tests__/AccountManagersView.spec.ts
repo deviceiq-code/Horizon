@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api'
 import { setLanguage } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
+import * as verticalsApi from '@/modules/catalogs/verticals/api'
 import { inBody, mountWithPlugins, settle, typeInto } from '@/test-utils'
 import * as managersApi from '../api'
 import AccountManagersView from '../AccountManagersView.vue'
@@ -14,17 +15,37 @@ vi.mock('../api', () => ({
   updateAccountManager: vi.fn<typeof managersApi.updateAccountManager>(),
   deleteAccountManager: vi.fn<typeof managersApi.deleteAccountManager>(),
 }))
+vi.mock('@/modules/catalogs/verticals/api', () => ({
+  listVerticals: vi.fn<typeof verticalsApi.listVerticals>(),
+}))
 
 const api = vi.mocked(managersApi)
+const verticals = vi.mocked(verticalsApi)
 
-const ANA = {
+const vertical = (id: number, name: string, is_enabled = true) => ({ id, name, is_enabled })
+
+const ANA: managersApi.AccountManager = {
   id: 1,
   full_name: 'Ana Souza',
   email: 'ana@example.com',
+  verticals: [1, 2, 3, 4],
+  verticals_detail: [
+    vertical(1, 'Health'),
+    vertical(2, 'Industry'),
+    vertical(3, 'IT'),
+    vertical(4, 'Mining', false),
+  ],
   created_at: '',
   updated_at: '',
 }
-const BRUNO = { ...ANA, id: 2, full_name: 'Bruno Lima', email: 'bruno@corp.com' }
+const BRUNO: managersApi.AccountManager = {
+  ...ANA,
+  id: 2,
+  full_name: 'Bruno Lima',
+  email: 'bruno@corp.com',
+  verticals: [],
+  verticals_detail: [],
+}
 
 const mountView = () => mountWithPlugins(AccountManagersView)
 
@@ -37,6 +58,12 @@ describe('AccountManagersView', () => {
       next: null,
       previous: null,
       results: [ANA, BRUNO],
+    })
+    verticals.listVerticals.mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
     })
   })
 
@@ -59,6 +86,50 @@ describe('AccountManagersView', () => {
     expect(text).toContain('Ana Souza')
     expect(text).toContain('bruno@corp.com')
     expect(wrapper.findAll('tbody tr')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
+  it('shows the verticals each account manager works in', async () => {
+    const wrapper = mountView()
+    await settle()
+
+    const [ana, bruno] = wrapper.findAll('tbody tr').map((r) => r.text())
+    expect(ana).toContain('Health')
+    expect(ana).toContain('IT')
+    expect(ana).not.toContain('Mining') // beyond the first 3 chips…
+    expect(ana).toContain('+1') // …summarized
+    expect(bruno).toContain('—')
+    wrapper.unmount()
+  })
+
+  it('the form offers only enabled verticals and shows the selected ones', async () => {
+    verticals.listVerticals.mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [
+        {
+          ...vertical(5, 'Agribusiness'),
+          account_managers_detail: [],
+          notes: '',
+          sub_verticals: [],
+          created_at: '',
+          updated_at: '',
+        },
+      ],
+    })
+    const wrapper = mountView()
+    await settle()
+
+    await wrapper.findAll('[data-testid="edit"]')[0]!.trigger('click')
+    await settle()
+
+    expect(verticals.listVerticals).toHaveBeenCalledWith(
+      expect.objectContaining({ filters: { is_enabled: true } }),
+    )
+    const field = inBody('[data-testid="verticals"]')!.textContent
+    expect(field).toContain('Health')
+    expect(field).toContain('Mining (Disabled)') // already assigned, though disabled since
     wrapper.unmount()
   })
 
@@ -139,6 +210,7 @@ describe('AccountManagersView', () => {
     expect(api.createAccountManager).toHaveBeenCalledWith({
       full_name: 'Carla',
       email: 'carla@example.com',
+      verticals: [],
     })
     expect(useNotificationsStore().text).toBe('Account manager created.')
     wrapper.unmount()
@@ -179,6 +251,7 @@ describe('AccountManagersView', () => {
     expect(api.updateAccountManager).toHaveBeenCalledWith(1, {
       full_name: 'Ana Souza',
       email: 'ana@example.com',
+      verticals: [1, 2, 3, 4], // kept as they were
     })
     expect(document.body.textContent).toContain(
       'An account manager with this email already exists.',

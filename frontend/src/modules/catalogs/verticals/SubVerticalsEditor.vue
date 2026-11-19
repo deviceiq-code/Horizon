@@ -7,12 +7,12 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { RISKS, type SubVertical } from './api'
-import { keepRecommended, normalizeTerms } from './terms'
+import { keepRecommended } from './terms'
+import TermsField from './TermsField.vue'
 
 const items = defineModel<SubVertical[]>({ required: true })
-const props = defineProps<{
-  /** Offered in the terms field (the user may type any other number of months) */
-  suggestedTerms: number[]
+defineProps<{
+  /** Longest term accepted, in months */
   maxTerm: number
   /** Field errors per row, by position */
   rowErrors: Record<number, Record<string, string[]>>
@@ -29,7 +29,6 @@ const riskOptions = computed(() =>
   RISKS.map((r) => ({ value: r, title: t(`verticals.risk.${r}`) })),
 )
 
-const termRules = [(v: unknown[]) => (v?.length ?? 0) > 0 || t('validation.required')]
 const recommendedRules = [(v: number | null) => v !== null || t('validation.required')]
 
 // Stable keys for rows (new rows have no id yet)
@@ -40,17 +39,13 @@ function keyOf(sub: SubVertical) {
   return keys.get(sub)!
 }
 
-function termOptions(sub: SubVertical) {
-  return [...new Set([...props.suggestedTerms, ...sub.allowed_terms])].sort((a, b) => a - b)
-}
-
 function recommendedOptions(sub: SubVertical) {
   return sub.allowed_terms.map((n) => ({ value: n, title: t('verticals.months', n) }))
 }
 
-function setTerms(index: number, values: (string | number)[]) {
+function setTerms(index: number, terms: number[]) {
   const sub = items.value[index]!
-  sub.allowed_terms = normalizeTerms(values, props.maxTerm)
+  sub.allowed_terms = terms
   // The recommended term must stay among the allowed ones
   sub.recommended_term = keepRecommended(sub.allowed_terms, sub.recommended_term)
   emit('edited', index, 'allowed_terms')
@@ -103,7 +98,7 @@ function remove(index: number) {
       :data-testid="`sub-vertical-${index}`"
     >
       <v-row dense>
-        <v-col cols="12" md="3">
+        <v-col cols="12" md="4">
           <v-text-field
             v-if="sub.is_general"
             :model-value="$t('verticals.general')"
@@ -125,7 +120,7 @@ function remove(index: number) {
             @update:model-value="update(index, 'name', $event)"
           />
         </v-col>
-        <v-col cols="12" sm="4" md="2">
+        <v-col cols="12" sm="5" md="3">
           <v-select
             :model-value="sub.risk"
             :items="riskOptions"
@@ -136,22 +131,7 @@ function remove(index: number) {
             @update:model-value="update(index, 'risk', $event)"
           />
         </v-col>
-        <v-col cols="12" sm="8" md="4">
-          <v-combobox
-            :model-value="sub.allowed_terms"
-            :items="termOptions(sub)"
-            :label="$t('verticals.fields.allowedTerms')"
-            :rules="termRules"
-            :error-messages="rowErrors[index]?.allowed_terms"
-            :disabled="disabled"
-            multiple
-            chips
-            closable-chips
-            data-testid="sub-terms"
-            @update:model-value="setTerms(index, $event)"
-          />
-        </v-col>
-        <v-col cols="10" sm="6" md="2">
+        <v-col cols="10" sm="6" md="4">
           <v-select
             :model-value="sub.recommended_term"
             :items="recommendedOptions(sub)"
@@ -163,10 +143,11 @@ function remove(index: number) {
             @update:model-value="update(index, 'recommended_term', $event)"
           />
         </v-col>
-        <v-col cols="2" sm="6" md="1" class="d-flex justify-end align-start pt-3">
+        <v-col cols="2" sm="1" md="1" class="d-flex justify-end align-start pt-3">
           <v-btn
             v-if="!sub.is_general"
-            icon="mdi-close"
+            icon="mdi-delete-outline"
+            color="error"
             variant="text"
             size="small"
             :disabled="disabled"
@@ -174,6 +155,17 @@ function remove(index: number) {
             :title="$t('verticals.removeSubVertical')"
             data-testid="sub-remove"
             @click="remove(index)"
+          />
+        </v-col>
+        <v-col cols="12">
+          <TermsField
+            :model-value="sub.allowed_terms"
+            :label="$t('verticals.fields.allowedTerms')"
+            :max="maxTerm"
+            :error-messages="rowErrors[index]?.allowed_terms"
+            :disabled="disabled"
+            data-testid="sub-terms"
+            @update:model-value="setTerms(index, $event)"
           />
         </v-col>
       </v-row>

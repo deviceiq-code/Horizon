@@ -74,7 +74,15 @@ describe('CustomersView', () => {
       next: null,
       previous: null,
       results: [
-        { id: 7, full_name: 'Ana Souza', email: 'ana@example.com', created_at: '', updated_at: '' },
+        {
+          id: 7,
+          full_name: 'Ana Souza',
+          email: 'ana@example.com',
+          verticals: [],
+          verticals_detail: [],
+          created_at: '',
+          updated_at: '',
+        },
       ],
     })
   })

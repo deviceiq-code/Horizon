@@ -149,12 +149,33 @@ def test_search(logged_client, verticals, term, expected):
 # --- Create ----------------------------------------------------------------------------------
 
 
-def test_create_without_sub_verticals_gets_general_with_defaults(logged_client, managers):
-    r = _post(logged_client, {"name": "Health", "account_managers": [managers["carla"].pk]})
+def test_create_without_sub_verticals_gets_general_with_defaults(logged_client):
+    r = _post(logged_client, {"name": "Health"})
     assert r.status_code == 201, r.json()
     vertical = Vertical.objects.get(pk=r.json()["id"])
     assert vertical.is_enabled is True
     assert _subs(vertical) == [("General", True, "medium", [12, 24, 36, 48, 60], 36)]
+
+
+def test_account_managers_are_not_set_through_the_vertical(logged_client, verticals, managers):
+    # The relation belongs to the account manager: here it is read-only and ignored on write
+    r = _post(logged_client, {"name": "Health", "account_managers": [managers["carla"].pk]})
+    assert r.status_code == 201
+    assert Vertical.objects.get(pk=r.json()["id"]).account_managers.count() == 0
+
+    industry = verticals["industry"]
+    r = _patch(logged_client, industry.pk, {"account_managers": []})
+    assert r.status_code == 200
+    assert industry.account_managers.count() == 2
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("true", ["Industry", "Mining"]), ("false", ["IT"]), ("", ["Industry", "IT", "Mining"])],
+)
+def test_filter_by_enabled(logged_client, verticals, value, expected):
+    results = logged_client.get(URL, {"is_enabled": value}).json()["results"]
+    assert [v["name"] for v in results] == expected
 
 
 def test_create_with_sub_verticals(logged_client):

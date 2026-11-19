@@ -35,8 +35,12 @@ export default createVuetify({
       },
     },
   },
+  // Same look for every form field
   defaults: {
     VTextField: { variant: 'outlined', density: 'comfortable' },
     VSelect: { variant: 'outlined', density: 'comfortable' },
+    VAutocomplete: { variant: 'outlined', density: 'comfortable' },
+    VCombobox: { variant: 'outlined', density: 'comfortable' },
+    VTextarea: { variant: 'outlined', density: 'comfortable' },
   },
 })

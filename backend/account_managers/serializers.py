@@ -5,10 +5,26 @@ from .models import AccountManager
 
 
 class AccountManagerSerializer(serializers.ModelSerializer):
+    # Write: list of business vertical IDs. Read: also id + name + enabled, for display.
+    verticals_detail = serializers.SerializerMethodField()
+
     class Meta:
         model = AccountManager
-        fields = ["id", "full_name", "email", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "full_name",
+            "email",
+            "verticals",
+            "verticals_detail",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {"verticals": {"required": False}}
+
+    def get_verticals_detail(self, obj) -> list[dict]:
+        verticals = sorted(obj.verticals.all(), key=lambda v: v.name.lower())
+        return [{"id": v.id, "name": v.name, "is_enabled": v.is_enabled} for v in verticals]
 
     def validate_full_name(self, value):
         value = " ".join(value.split())

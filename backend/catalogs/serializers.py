@@ -54,7 +54,8 @@ class SubVerticalSerializer(serializers.ModelSerializer):
 
 
 class VerticalSerializer(serializers.ModelSerializer):
-    # Write: list of account manager IDs. Read: also id + name, for display.
+    # Read-only: the account managers who work in this vertical. They are assigned on the
+    # account manager (AccountManager.verticals), not here.
     account_managers_detail = serializers.SerializerMethodField()
     sub_verticals = SubVerticalSerializer(many=True, required=False)
 
@@ -63,7 +64,6 @@ class VerticalSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "account_managers",
             "account_managers_detail",
             "is_enabled",
             "notes",
@@ -118,10 +118,8 @@ class VerticalSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         sub_verticals = validated_data.pop("sub_verticals", None)
-        managers = validated_data.pop("account_managers", [])
         with transaction.atomic():
             vertical = Vertical.objects.create(**validated_data)
-            vertical.account_managers.set(managers)
             if sub_verticals is None:
                 sub_verticals = [SubVertical.general_defaults()]
             for item in sub_verticals:

@@ -8,6 +8,9 @@ import { useNotificationsStore } from '@/stores/notifications'
 import AccountManagerFormDialog from './AccountManagerFormDialog.vue'
 import { deleteAccountManager, listAccountManagers, type AccountManager } from './api'
 
+/** How many vertical chips to show per row before "+N". */
+const MAX_CHIPS = 3
+
 const { t } = useI18n()
 const notifications = useNotificationsStore()
 
@@ -31,6 +34,7 @@ const headers = computed(() => [
   { title: t('accountManagers.fields.id'), key: 'id', width: 100 },
   { title: t('accountManagers.fields.fullName'), key: 'full_name' },
   { title: t('accountManagers.fields.email'), key: 'email' },
+  { title: t('accountManagers.fields.verticals'), key: 'verticals_detail', sortable: false },
   {
     title: t('common.actions'),
     key: 'actions',
@@ -132,6 +136,34 @@ async function confirmDelete() {
         hover
         @update:options="load"
       >
+        <template #[`item.verticals_detail`]="{ item }">
+          <div class="d-flex flex-wrap ga-1 py-1">
+            <v-chip
+              v-for="vertical in item.verticals_detail.slice(0, MAX_CHIPS)"
+              :key="vertical.id"
+              size="small"
+              :variant="vertical.is_enabled ? 'tonal' : 'outlined'"
+              :title="vertical.is_enabled ? undefined : $t('verticals.status.disabled')"
+              :class="{ 'text-disabled': !vertical.is_enabled }"
+            >
+              {{ vertical.name }}
+            </v-chip>
+            <v-chip
+              v-if="item.verticals_detail.length > MAX_CHIPS"
+              size="small"
+              variant="text"
+              :title="
+                item.verticals_detail
+                  .slice(MAX_CHIPS)
+                  .map((v) => v.name)
+                  .join(', ')
+              "
+            >
+              +{{ item.verticals_detail.length - MAX_CHIPS }}
+            </v-chip>
+            <span v-if="!item.verticals_detail.length" class="text-medium-emphasis">—</span>
+          </div>
+        </template>
         <template #[`item.actions`]="{ item }">
           <v-btn
             icon="mdi-pencil-outline"

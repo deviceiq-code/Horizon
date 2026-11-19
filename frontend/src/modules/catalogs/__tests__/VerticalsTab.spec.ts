@@ -36,7 +36,6 @@ const DEFAULTS: verticalsApi.SubVerticalDefaults = {
 const INDUSTRY: verticalsApi.Vertical = {
   id: 1,
   name: 'Industry',
-  account_managers: [1, 2, 3, 4, 5],
   account_managers_detail: [
     manager(1, 'Ana Souza'),
     manager(2, 'Bruno Lima'),
@@ -71,7 +70,6 @@ const MINING: verticalsApi.Vertical = {
   ...INDUSTRY,
   id: 2,
   name: 'Mining',
-  account_managers: [],
   account_managers_detail: [],
   is_enabled: false,
   notes: '',
@@ -167,7 +165,6 @@ describe('VerticalsTab', () => {
 
     expect(api.createVertical).toHaveBeenCalledWith({
       name: 'IT',
-      account_managers: [],
       is_enabled: true,
       notes: '',
       sub_verticals: [
@@ -226,6 +223,26 @@ describe('VerticalsTab', () => {
     wrapper.unmount()
   })
 
+  it('requires at least one allowed term', async () => {
+    const wrapper = mountTab()
+    await settle()
+
+    await openNew(wrapper)
+    await typeInto('name', 'IT')
+    // Remove every term of General
+    while (inBody('[data-testid="sub-vertical-0"] [data-testid="term-chip"] .v-chip__close')) {
+      inBody('[data-testid="sub-vertical-0"] [data-testid="term-chip"] .v-chip__close')!.click()
+      await settle()
+    }
+    await click('save')
+
+    expect(api.createVertical).not.toHaveBeenCalled()
+    expect(
+      inBody('[data-testid="sub-vertical-0"] [data-testid="sub-terms"]')!.textContent,
+    ).toContain('This field is required.')
+    wrapper.unmount()
+  })
+
   it('the General sub-vertical cannot be renamed or removed', async () => {
     const wrapper = mountTab()
     await settle()
@@ -246,15 +263,14 @@ describe('VerticalsTab', () => {
     await settle()
 
     await openEdit(wrapper, 0)
-    const dialog = inBody('.v-dialog')!.textContent
-    expect(dialog).toContain('Ana Souza') // selected managers show as chips
-    expect(dialog).toContain('Elisa Rocha')
+    // Account managers are assigned on the account manager, not in this form
+    expect(inBody('[data-testid="account-managers"]')).toBeNull()
+    expect(inBody('.v-dialog')!.textContent).not.toContain('Ana Souza')
     await typeInto('name', 'Industry & Manufacturing')
     await click('save')
 
     expect(api.updateVertical).toHaveBeenCalledWith(1, {
       name: 'Industry & Manufacturing',
-      account_managers: [1, 2, 3, 4, 5],
       is_enabled: true,
       notes: 'Factories and plants.',
       sub_verticals: INDUSTRY.sub_verticals,

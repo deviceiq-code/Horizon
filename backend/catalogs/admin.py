@@ -28,7 +28,6 @@ class VerticalAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "is_enabled", "updated_at"]
     list_filter = ["is_enabled"]
     search_fields = ["name"]
-    filter_horizontal = ["account_managers"]
     readonly_fields = ["created_at", "updated_at"]
     inlines = [SubVerticalInline]
 

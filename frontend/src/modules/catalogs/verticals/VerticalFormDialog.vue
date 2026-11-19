@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
 import { useValidationRules } from '@/composables/useValidationRules'
-import AccountManagerPicker from '@/modules/account-managers/AccountManagerPicker.vue'
 import SubVerticalsEditor from './SubVerticalsEditor.vue'
 import {
   createVertical,
@@ -24,11 +23,10 @@ const emit = defineEmits<{ saved: [vertical: Vertical, created: boolean] }>()
 const { t } = useI18n()
 const rules = useValidationRules()
 
-const FIELDS = ['name', 'account_managers', 'is_enabled', 'notes']
+const FIELDS = ['name', 'is_enabled', 'notes']
 
 const form = ref<VerticalInput>({
   name: '',
-  account_managers: [],
   is_enabled: true,
   notes: '',
   sub_verticals: [],
@@ -41,10 +39,8 @@ const saving = ref(false)
 const loadingDefaults = ref(false)
 const defaults = ref<SubVerticalDefaults | null>(null)
 const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
-const openCount = ref(0) // remounts the account manager picker on every open
 
 const isEdit = computed(() => props.vertical !== null)
-const initialManagers = computed(() => props.vertical?.account_managers_detail ?? [])
 const busy = computed(() => saving.value || loadingDefaults.value)
 
 function copySubVertical(s: SubVertical): SubVertical {
@@ -63,12 +59,10 @@ watch(open, async (isOpen) => {
   subRowErrors.value = {}
   subListErrors.value = []
   generalError.value = ''
-  openCount.value += 1
 
   const v = props.vertical
   form.value = {
     name: v?.name ?? '',
-    account_managers: v ? [...v.account_managers] : [],
     is_enabled: v?.is_enabled ?? true,
     notes: v?.notes ?? '',
     sub_verticals: v ? v.sub_verticals.map(copySubVertical) : [],
@@ -192,19 +186,6 @@ function clearError(field: string) {
               />
             </v-col>
             <v-col cols="12">
-              <AccountManagerPicker
-                :key="openCount"
-                v-model="form.account_managers"
-                multiple
-                :initial-options="initialManagers"
-                :label="$t('verticals.fields.accountManagers')"
-                :error-messages="fieldErrors.account_managers"
-                :no-data-text="$t('accountManagers.noneFound')"
-                data-testid="account-managers"
-                @update:model-value="clearError('account_managers')"
-              />
-            </v-col>
-            <v-col cols="12">
               <v-textarea
                 v-model="form.notes"
                 :label="$t('verticals.fields.notes')"
@@ -225,7 +206,6 @@ function clearError(field: string) {
           <SubVerticalsEditor
             v-else-if="defaults"
             v-model="form.sub_verticals"
-            :suggested-terms="defaults.allowed_terms"
             :max-term="defaults.max_term_months"
             :row-errors="subRowErrors"
             :list-errors="subListErrors"
