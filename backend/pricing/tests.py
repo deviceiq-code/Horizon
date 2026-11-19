@@ -1,77 +1,8 @@
 import pytest
-from django.contrib.auth import get_user_model
+from django.utils import timezone
 
-from catalogs.models import AssetClass, Manufacturer, SubVertical, Vertical
-
-from .models import AveragePrice
-
-URL = "/api/average-prices/"
-
-TEMPLATE = [
-    {"key": "hours", "label": "Operating hours", "kind": "number", "unit": "h", "required": True},
-    {"key": "tracks", "label": "Undercarriage", "kind": "text", "unit": "", "required": False},
-]
-
-
-@pytest.fixture
-def user(db):
-    return get_user_model().objects.create_user(
-        "tester", password="strong-password-123", first_name="Ana", last_name="Souza"
-    )
-
-
-@pytest.fixture
-def logged_client(client, user):
-    client.force_login(user)
-    return client
-
-
-@pytest.fixture
-def catalog(db):
-    industry = Vertical.objects.create(name="Industry")
-    SubVertical.objects.create(vertical=industry, **SubVertical.general_defaults())
-    yellow = SubVertical.objects.create(
-        vertical=industry,
-        name="Yellow line",
-        risk="high",
-        allowed_terms=[12, 24, 36],
-        recommended_term=24,
-    )
-    excavators = AssetClass.objects.create(
-        name="Excavators", sub_vertical=yellow, spec_template=TEMPLATE
-    )
-    cat = Manufacturer.objects.create(name="Caterpillar")
-    deere = Manufacturer.objects.create(name="John Deere")
-    return {"yellow": yellow, "excavators": excavators, "cat": cat, "deere": deere}
-
-
-def _payload(catalog, **overrides):
-    return {
-        "asset_class": catalog["excavators"].pk,
-        "manufacturer": catalog["cat"].pk,
-        "model": " 320 GC ",
-        "description": "Hydraulic excavator, 20 t class.",
-        "specs": {"hours": "2.500".replace(".", ""), "tracks": "Steel"},
-        "original_value": "100000.00",
-        "points": [
-            {"term_months": 12, "mode": "percent", "amount": "70"},
-            {"term_months": 24, "mode": "value", "amount": "55000"},
-            {"term_months": 36, "mode": "percent", "amount": "42.5"},
-        ],
-        **overrides,
-    }
-
-
-def _post(client, data):
-    return client.post(URL, data, content_type="application/json")
-
-
-@pytest.fixture
-def price(logged_client, catalog):
-    r = _post(logged_client, _payload(catalog))
-    assert r.status_code == 201, r.json()
-    return AveragePrice.objects.get(pk=r.json()["id"])
-
+from .models import AveragePrice, PricePoint
+from .testing import TEMPLATE, URL, _new_version, _payload, _post
 
 # --- Create ----------------------------------------------------------------------------------
 
@@ -196,7 +127,6 @@ def test_point_validation(logged_client, catalog, point, field):
     ("overrides", "field"),
     [
         ({"model": "  "}, "model"),
-        ({"description": ""}, "description"),
         ({"original_value": "0"}, "original_value"),
         ({"original_value": "-10"}, "original_value"),
         ({"currency": "USD"}, "currency"),  # only BRL for now
@@ -208,6 +138,18 @@ def test_field_validation(logged_client, catalog, overrides, field):
     r = _post(logged_client, _payload(catalog, **overrides))
     assert r.status_code == 400
     assert field in r.json()
+
+
+@pytest.mark.parametrize("description", ["", "   ", None])
+def test_description_is_optional(logged_client, catalog, description):
+    payload = _payload(catalog)
+    if description is None:
+        del payload["description"]
+    else:
+        payload["description"] = description
+    r = _post(logged_client, payload)
+    assert r.status_code == 201, r.json()
+    assert AveragePrice.objects.get(pk=r.json()["id"]).description == ""
 
 
 def test_specs_follow_the_asset_class_template(logged_client, catalog):
@@ -272,7 +214,7 @@ def test_history_lists_every_version_newest_first(logged_client, catalog, price)
         logged_client, _payload(catalog, original_value="120000", supersedes=second.json()["id"])
     )
     for row_id in (price.pk, third.json()["id"]):  # same answer from any version
-        history = logged_client.get(f"{URL}{row_id}/history/").json()
+        history = logged_client.get(f"{URL}{row_id}/history/").json()["versions"]
         assert [h["original_value"] for h in history] == ["120000.00", "110000.00", "100000.00"]
         assert [h["is_current"] for h in history] == [True, False, False]
 
@@ -284,22 +226,126 @@ def test_only_the_current_version_gets_a_new_version(logged_client, catalog, pri
     assert "supersedes" in r.json()
 
 
-# --- Delete keeps history --------------------------------------------------------------------
+# --- Delete -------------------------------------------------------------------------------
 
 
-def test_delete_hides_but_keeps_the_row(logged_client, price, user):
+def _history(client, row_id):
+    return client.get(f"{URL}{row_id}/history/").json()
+
+
+def _versions(client, row_id):
+    return [(h["original_value"], h["is_current"]) for h in _history(client, row_id)["versions"]]
+
+
+def test_deleting_the_only_version_erases_the_row(logged_client, price):
     assert logged_client.delete(f"{URL}{price.pk}/").status_code == 204
+    assert not AveragePrice.objects.filter(pk=price.pk).exists()
+    assert PricePoint.objects.count() == 0
     assert logged_client.get(URL).json()["count"] == 0
-    price.refresh_from_db()
-    assert price.deleted_at is not None
-    assert price.deleted_by == user
-    assert logged_client.get(f"{URL}{price.pk}/").json()["deleted_at"] is not None
 
 
-def test_deleted_or_old_versions_cannot_be_deleted_or_versioned(logged_client, catalog, price):
-    logged_client.delete(f"{URL}{price.pk}/")
-    assert logged_client.delete(f"{URL}{price.pk}/").status_code == 409
-    assert _post(logged_client, _payload(catalog, supersedes=price.pk)).status_code == 400
+def test_deleting_the_current_version_makes_the_newest_left_current(logged_client, catalog, price):
+    second = _new_version(logged_client, catalog, price.pk, "110000")
+    third = _new_version(logged_client, catalog, second, "120000")
+    assert logged_client.delete(f"{URL}{third}/").status_code == 204
+    assert not AveragePrice.objects.filter(pk=third).exists()
+    assert _versions(logged_client, price.pk) == [("110000.00", True), ("100000.00", False)]
+    assert [r["id"] for r in logged_client.get(URL).json()["results"]] == [second]
+
+
+def test_deleting_a_middle_version_relinks_the_others(logged_client, catalog, price):
+    second = _new_version(logged_client, catalog, price.pk, "110000")
+    third = _new_version(logged_client, catalog, second, "120000")
+    assert logged_client.delete(f"{URL}{second}/").status_code == 204
+    assert AveragePrice.objects.get(pk=third).supersedes_id == price.pk
+    for row_id in (price.pk, third):
+        assert _versions(logged_client, row_id) == [("120000.00", True), ("100000.00", False)]
+
+
+def test_deleting_the_oldest_version(logged_client, catalog, price):
+    second = _new_version(logged_client, catalog, price.pk, "110000")
+    assert logged_client.delete(f"{URL}{price.pk}/").status_code == 204
+    assert AveragePrice.objects.get(pk=second).supersedes_id is None
+    assert _versions(logged_client, second) == [("110000.00", True)]
+
+
+def test_new_version_after_deleting_the_newest(logged_client, catalog, price):
+    second = _new_version(logged_client, catalog, price.pk, "110000")
+    logged_client.delete(f"{URL}{second}/")  # price is current again
+    third = _new_version(logged_client, catalog, price.pk, "130000")
+    assert _versions(logged_client, third) == [("130000.00", True), ("100000.00", False)]
+
+
+def test_delete_all_versions_hides_them(logged_client, catalog, price, user):
+    second = _new_version(logged_client, catalog, price.pk, "110000")
+    assert logged_client.delete(f"{URL}{second}/history/").status_code == 204
+    assert logged_client.get(URL).json()["count"] == 0
+    rows = AveragePrice.objects.filter(pk__in=[price.pk, second])
+    assert all(r.deleted_at and r.deleted_by == user and not r.is_current for r in rows)
+    assert logged_client.delete(f"{URL}{price.pk}/history/").status_code == 409
+    # Hidden rows cannot get new versions
+    assert _post(logged_client, _payload(catalog, supersedes=second)).status_code == 400
+
+
+def test_hidden_versions_leave_the_history_of_a_listed_row(logged_client, catalog, price, user):
+    # Left by the former per-version delete, which only hid the version
+    second = _new_version(logged_client, catalog, price.pk, "110000")
+    AveragePrice.objects.filter(pk=price.pk).update(deleted_at=timezone.now(), deleted_by=user)
+    history = _history(logged_client, second)
+    assert _versions(logged_client, second) == [("110000.00", True)]
+    assert history["average"]["count"] == 1
+
+
+# --- Average of the versions ----------------------------------------------------------------
+
+
+def test_history_average(logged_client, catalog, price):
+    # price: 100,000; 12 m = 70% (70,000); 24 m = 55,000 (55%) — see _payload
+    second = _new_version(logged_client, catalog, price.pk, "120000")
+    average = _history(logged_client, second)["average"]
+    assert average["count"] == 2
+    assert average["original_value"] == "110000.00"
+    first_12 = price.points.get(term_months=12)
+    second_points = {p.term_months: p for p in AveragePrice.objects.get(pk=second).points.all()}
+    expected_12 = (first_12.value + second_points[12].value) / 2
+    assert average["points"][0]["term_months"] == 12
+    assert average["points"][0]["value"] == f"{expected_12:.2f}"
+    assert average["points"][0]["count"] == 2
+
+
+def test_history_average_of_a_single_version(logged_client, price):
+    average = _history(logged_client, price.pk)["average"]
+    assert average["count"] == 1
+    assert average["original_value"] == "100000.00"
+
+
+# --- Specification suggestions --------------------------------------------------------------
+
+SUGGESTIONS = f"{URL}spec-suggestions/"
+
+
+def test_spec_suggestions(logged_client, catalog):
+    for hours in ("2500", "2500", "1800"):
+        assert _post(logged_client, _payload(catalog, specs={"hours": hours})).status_code == 201
+    excavators = catalog["excavators"].pk
+    r = logged_client.get(SUGGESTIONS, {"asset_class": excavators, "key": "hours"})
+    assert r.json() == ["2500", "1800"]  # most used first
+    r = logged_client.get(SUGGESTIONS, {"asset_class": excavators, "key": "hours", "search": "18"})
+    assert r.json() == ["1800"]
+    # Other asset classes and unknown keys: nothing
+    r = logged_client.get(SUGGESTIONS, {"asset_class": excavators, "key": "nope"})
+    assert r.json() == []
+
+
+def test_spec_suggestions_skip_hidden_prices(logged_client, catalog, price):
+    logged_client.delete(f"{URL}{price.pk}/history/")
+    r = logged_client.get(SUGGESTIONS, {"asset_class": catalog["excavators"].pk, "key": "hours"})
+    assert r.json() == []
+
+
+def test_spec_suggestions_need_asset_class_and_key(logged_client):
+    assert logged_client.get(SUGGESTIONS, {"key": "hours"}).status_code == 400
+    assert logged_client.get(SUGGESTIONS, {"asset_class": "1"}).status_code == 400
 
 
 # --- List ------------------------------------------------------------------------------------
@@ -344,8 +390,8 @@ def test_asset_class_and_manufacturer_in_use_cannot_be_deleted(logged_client, pr
     assert r.json()["detail"] == "This asset class is used in average prices and cannot be deleted."
     r = logged_client.delete(f"/api/catalogs/manufacturers/{catalog['cat'].pk}/")
     assert r.status_code == 409
-    # Even when the price was deleted (it stays as history)
-    logged_client.delete(f"{URL}{price.pk}/")
+    # Even when the price was deleted from the list (hidden, kept in the database)
+    logged_client.delete(f"{URL}{price.pk}/history/")
     assert (
         logged_client.delete(f"/api/catalogs/manufacturers/{catalog['cat'].pk}/").status_code == 409
     )

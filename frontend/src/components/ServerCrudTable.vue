@@ -3,7 +3,8 @@
  * Standard CRUD grid: search box + "New" button, server-side paginated/sorted table with edit
  * and delete actions, delete confirmation and notifications. The page provides the columns,
  * texts and cell slots (`item.<key>`), opens its own form on `create`/`edit`, and calls the
- * exposed `reload()` after saving.
+ * exposed `reload()` after saving. With `expandable`, rows it accepts get an expand toggle and
+ * show the `expanded-row` slot ({ item, columns }).
  */
 import { computed, ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -30,6 +31,8 @@ const props = defineProps<{
   /** Edit button look (e.g. "New version" where rows are never edited in place) */
   editIcon?: string
   editTitle?: string
+  /** Which rows can be expanded (shows the expanded-row slot); none when absent */
+  expandable?: (item: T) => boolean
 }>()
 
 const emit = defineEmits<{ create: []; edit: [item: T] }>()
@@ -54,7 +57,11 @@ const {
   orderingFields: props.orderingFields,
 })
 
+// Expanded rows by id, so they stay open when the page reloads
+const expanded = ref<string[]>([])
+
 const allHeaders = computed(() => [
+  ...(props.expandable ? [{ title: '', key: 'data-table-expand', width: 48 }] : []),
   ...props.headers,
   {
     title: t('common.actions'),
@@ -141,6 +148,9 @@ defineExpose({ reload: load })
         :search="search"
         :items-per-page-options="[10, 25, 50, 100]"
         :no-data-text="search ? noResultsText : emptyText"
+        v-model:expanded="expanded"
+        item-value="id"
+        :show-expand="!!expandable"
         must-sort
         hover
         @update:options="load"
@@ -148,6 +158,29 @@ defineExpose({ reload: load })
         <!-- Cell slots provided by the page (item.<key>) -->
         <template v-for="(_, name) in cellSlots" #[name]="slotProps">
           <slot :name="name" v-bind="slotProps ?? {}" />
+        </template>
+
+        <template
+          v-if="expandable"
+          #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }"
+        >
+          <v-btn
+            v-if="expandable(item)"
+            :icon="isExpanded(internalItem) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+            variant="text"
+            size="small"
+            :aria-label="$t('common.expand')"
+            :aria-expanded="isExpanded(internalItem)"
+            data-testid="expand"
+            @click="toggleExpand(internalItem)"
+          />
+        </template>
+        <template v-if="expandable" #expanded-row="{ item, columns }">
+          <tr>
+            <td :colspan="columns.length" class="bg-surface-light pa-0">
+              <slot name="expanded-row" :item="item" :columns="columns" />
+            </td>
+          </tr>
         </template>
 
         <template #[`item.actions`]="{ item }">

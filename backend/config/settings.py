@@ -91,6 +91,12 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Uploaded files (e.g. average price documents). Not served publicly: downloads go through the
+# API, which requires login.
+MEDIA_ROOT = env.path("MEDIA_ROOT", default=str(BASE_DIR / "media"))
+MEDIA_URL = "media/"
+PRICE_DOCUMENT_MAX_MB = env.int("PRICE_DOCUMENT_MAX_MB", default=25)
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {

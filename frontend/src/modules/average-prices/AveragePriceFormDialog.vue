@@ -302,7 +302,6 @@ async function submit() {
                 :label="$t('averagePrices.fields.description')"
                 :hint="$t('averagePrices.descriptionHint')"
                 persistent-hint
-                :rules="[rules.required]"
                 :error-messages="fieldErrors.description"
                 rows="3"
                 auto-grow
@@ -315,7 +314,12 @@ async function submit() {
           <template v-if="subVertical">
             <div class="text-subtitle-1 mt-4">{{ $t('averagePrices.sections.specs') }}</div>
             <p class="text-body-2 text-medium-emphasis mb-2">{{ subVertical.label }}</p>
-            <SpecValuesInput v-model="specs" :template="template" :errors="specErrors" />
+            <SpecValuesInput
+              v-model="specs"
+              :template="template"
+              :asset-class-id="assetClass?.id ?? null"
+              :errors="specErrors"
+            />
           </template>
 
           <!-- Values -->

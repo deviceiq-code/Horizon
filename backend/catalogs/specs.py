@@ -11,6 +11,8 @@ later template changes never alter past records. Pure functions; no database.
 
 import re
 import unicodedata
+from collections import Counter
+from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
 
 KINDS = ("text", "number")
@@ -117,3 +119,38 @@ def snapshot_values(
     if errors:
         raise SpecError(errors)
     return snapshot
+
+
+def _fold(text: str) -> str:
+    """Lowercase without accents, for comparing values ("Câmbio" == "cambio")."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def suggest_values(
+    snapshots: Iterable[list[dict]], key: str, search: str = "", limit: int = 20
+) -> list[str]:
+    """Values already used for a template field, to offer while typing.
+
+    `snapshots`: stored specs of several records. Values that differ only in case or accents
+    count as one, shown with their most used spelling. Every word typed in `search` must appear.
+    Most used first, then alphabetically.
+    """
+    words = _fold(search).split()
+    spellings: dict[str, Counter[str]] = {}
+    for snapshot in snapshots:
+        for item in snapshot or []:
+            if item.get("key") != key:
+                continue
+            value = " ".join(str(item.get("value") or "").split())
+            if not value:
+                continue
+            folded = _fold(value)
+            if all(word in folded for word in words):
+                spellings.setdefault(folded, Counter())[value] += 1
+    ranked = sorted(
+        spellings.values(),
+        key=lambda counts: (-sum(counts.values()), _fold(counts.most_common(1)[0][0])),
+    )
+    # most_common keeps the first spelling seen on ties
+    return [counts.most_common(1)[0][0] for counts in ranked[:limit]]

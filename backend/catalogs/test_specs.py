@@ -1,6 +1,6 @@
 import pytest
 
-from .specs import SpecError, normalize_template, slugify_key, snapshot_values
+from .specs import SpecError, normalize_template, slugify_key, snapshot_values, suggest_values
 
 MSG = {
     "blank_label": "blank",
@@ -100,3 +100,39 @@ def test_snapshot_values_errors(values, error):
 
 def test_empty_template_accepts_no_values():
     assert snapshot_values([], {}, MSG) == []
+
+
+# --- Suggestions --------------------------------------------------------------------------------
+
+
+def _snap(**values):
+    return [{"key": key, "value": value} for key, value in values.items()]
+
+
+def test_suggest_values_most_used_first_and_merged_spellings():
+    snapshots = [
+        _snap(cpu="Intel Core Ultra 7 155H"),
+        _snap(cpu="intel core  ultra 7 155h"),
+        _snap(cpu="Intel Core Ultra 7 155H"),
+        _snap(cpu="Intel Core i7"),
+        _snap(cpu="AMD Ryzen 7", ram="16"),
+        _snap(cpu=""),
+        None,
+    ]
+    assert suggest_values(snapshots, "cpu") == [
+        "Intel Core Ultra 7 155H",
+        "AMD Ryzen 7",
+        "Intel Core i7",
+    ]
+
+
+def test_suggest_values_search_every_word_ignoring_case_and_accents():
+    snapshots = [_snap(gear="Câmbio automático"), _snap(gear="Câmbio manual")]
+    assert suggest_values(snapshots, "gear", "cambio AUTO") == ["Câmbio automático"]
+    assert suggest_values(snapshots, "gear", "manual") == ["Câmbio manual"]
+    assert suggest_values(snapshots, "other") == []
+
+
+def test_suggest_values_limit():
+    snapshots = [_snap(cpu=f"CPU {n:02}") for n in range(30)]
+    assert len(suggest_values(snapshots, "cpu", limit=20)) == 20

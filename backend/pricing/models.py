@@ -1,17 +1,21 @@
 """Average prices: market value estimates of assets over time (12, 24, 36… months).
 
 Rows are immutable records. "Editing" creates a new row (a new version, with a new creation
-date) that supersedes the previous one; deleting only hides the row. Nothing is ever lost, so
-past values stay available. Each row keeps a snapshot of what it was based on (terms of the
+date) that supersedes the previous one, so past values stay available. A single version can be
+erased from the history; deleting the whole row only hides it. The current version is always the
+newest one not deleted. Each row keeps a snapshot of what it was based on (terms of the
 sub-vertical, specification template of the asset class), so later changes to catalogs
 never alter history.
 """
 
+import posixpath
+import uuid
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from catalogs.models import AssetClass, Manufacturer, SubVertical
@@ -56,7 +60,7 @@ class AveragePrice(models.Model):
         verbose_name=_("manufacturer"),
     )
     model = models.CharField(_("model"), max_length=150)
-    description = models.TextField(_("description"))
+    description = models.TextField(_("description"), blank=True)
     # Values for the asset class's specification template, with the template as it was
     # (see catalogs.specs.snapshot_values)
     specs = models.JSONField(_("specifications"), default=list, blank=True)
@@ -79,6 +83,8 @@ class AveragePrice(models.Model):
         verbose_name=_("previous version"),
     )
     is_current = models.BooleanField(_("current version"), default=True)
+    # Shared by every version of the row (documents belong to it, not to one version)
+    lineage = models.UUIDField(_("lineage"), default=uuid.uuid4, editable=False, db_index=True)
 
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     created_by = models.ForeignKey(
@@ -124,6 +130,55 @@ class AveragePrice(models.Model):
     def increasing_terms(self) -> list[int]:
         return increasing_terms(self.original_value, self.anchors())
 
+    def delete_version(self) -> None:
+        """Erase this version for good (with its values). The versions around it are linked
+        together and the newest one left becomes the current one; erasing the only version
+        erases the row."""
+        with transaction.atomic():
+            chain = self._lock_chain()
+            mine = next(row for row in chain if row.pk == self.pk)
+            newer = next((row for row in chain if row.supersedes_id == self.pk), None)
+            if newer is not None:
+                # One-to-one link: detach first, then link the newer one to the older one
+                older_id = mine.supersedes_id
+                mine.supersedes = None
+                mine.save(update_fields=["supersedes"])
+                newer.supersedes_id = older_id
+                newer.save(update_fields=["supersedes"])
+            mine.delete()
+            left = [row for row in chain if row is not mine]
+            self._update_current(left)
+            if not left:
+                # Nothing left of the row: its documents go too
+                for document in PriceDocument.objects.filter(lineage=self.lineage):
+                    document.delete()
+
+    def delete_all_versions(self, user) -> None:
+        """Hide every version of the row (kept in the database; it leaves the list)."""
+        with transaction.atomic():
+            chain = self._lock_chain()
+            now = timezone.now()
+            for row in chain:
+                if row.deleted_at is None:
+                    row.deleted_at = now
+                    row.deleted_by = user
+            AveragePrice.objects.bulk_update(chain, ["deleted_at", "deleted_by"])
+            self._update_current(chain)
+
+    def _lock_chain(self) -> list["AveragePrice"]:
+        # Lock every version so a new version or another delete cannot interleave
+        ids = [version.pk for version in self.versions()]
+        return list(AveragePrice.objects.select_for_update().filter(pk__in=ids).order_by("id"))
+
+    @staticmethod
+    def _update_current(chain: list["AveragePrice"]) -> None:
+        """The current version is always the newest one not deleted."""
+        standing = [row for row in chain if row.deleted_at is None]
+        newest = max(standing, key=lambda row: (row.created_at, row.pk), default=None)
+        for row in chain:
+            row.is_current = row is newest
+        AveragePrice.objects.bulk_update(chain, ["is_current"])
+
     def versions(self) -> list["AveragePrice"]:
         """Every version of this row, newest first (including this one)."""
         newest = self
@@ -167,3 +222,45 @@ class PricePoint(models.Model):
     @property
     def percent(self) -> Decimal:
         return percent_of(self.average_price.original_value, self.value)
+
+
+def _document_path(instance: "PriceDocument", filename: str) -> str:
+    # Random stored name (the original one is kept in `name`), one folder per row
+    ext = posixpath.splitext(filename)[1].lower()
+    return f"price-documents/{instance.lineage}/{uuid.uuid4().hex}{ext}"
+
+
+class PriceDocument(models.Model):
+    """A file about the priced asset (catalog, brochure, spec sheet…) or its photo, shared by
+    every version of the row. Deleting it also removes the stored file."""
+
+    lineage = models.UUIDField(_("lineage"), db_index=True)
+    file = models.FileField(_("file"), upload_to=_document_path, max_length=255)
+    name = models.CharField(_("name"), max_length=255)
+    size = models.PositiveBigIntegerField(_("size (bytes)"))
+    content_type = models.CharField(_("content type"), max_length=100)
+    # The photo of the asset (at most one per row) instead of a document
+    is_photo = models.BooleanField(_("photo"), default=False)
+    uploaded_at = models.DateTimeField(_("uploaded at"), auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        related_name="+",
+        verbose_name=_("uploaded by"),
+    )
+
+    class Meta:
+        verbose_name = _("document")
+        verbose_name_plural = _("documents")
+        ordering = ["-uploaded_at", "-id"]
+
+    def __str__(self):
+        return self.name
+
+    def delete(self, *args, **kwargs):
+        storage, path = self.file.storage, self.file.name
+        result = super().delete(*args, **kwargs)
+        # Remove the file only once the deletion is committed
+        transaction.on_commit(lambda: storage.delete(path))
+        return result

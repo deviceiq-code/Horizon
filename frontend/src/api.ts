@@ -80,7 +80,8 @@ function readCookie(name: string): string | null {
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
   const method = (options.method ?? 'GET').toUpperCase()
   const headers = new Headers(options.headers)
-  if (options.body && !headers.has('Content-Type')) {
+  // FormData (file uploads) gets its multipart Content-Type from the browser
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
   // Backend messages in the UI language (for logged-in users the saved language wins)

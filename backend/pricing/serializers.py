@@ -9,7 +9,8 @@ from catalogs.serializers import spec_messages, sub_vertical_label
 from catalogs.specs import SpecError, snapshot_values
 
 from .curves import anchor_value, increasing_terms, monthly_curve, percent_of
-from .models import AnchorMode, AveragePrice, Currency, PricePoint
+from .documents import opens_inline
+from .models import AnchorMode, AveragePrice, Currency, PriceDocument, PricePoint
 
 MAX_PERCENT = 999
 CENTS = Decimal("0.01")
@@ -40,6 +41,10 @@ class AveragePriceSerializer(serializers.ModelSerializer):
     points = PricePointSerializer(many=True, read_only=True)
     increasing_terms = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    # Documents of the row (all versions); annotated by the viewset
+    documents_count = serializers.SerializerMethodField()
+    # Id of the photo (changes when replaced; used to refresh the image); annotated
+    photo_id = serializers.SerializerMethodField()
 
     class Meta:
         model = AveragePrice
@@ -61,8 +66,16 @@ class AveragePriceSerializer(serializers.ModelSerializer):
             "created_at",
             "created_by_name",
             "deleted_at",
+            "documents_count",
+            "photo_id",
         ]
         read_only_fields = fields
+
+    def get_documents_count(self, obj) -> int:
+        return getattr(obj, "documents_count", 0) or 0
+
+    def get_photo_id(self, obj) -> int | None:
+        return getattr(obj, "photo_id", None)
 
     def get_vertical(self, obj) -> dict:
         v = obj.sub_vertical.vertical
@@ -133,7 +146,7 @@ class AveragePriceCreateSerializer(serializers.Serializer):
     )
     manufacturer = serializers.PrimaryKeyRelatedField(queryset=Manufacturer.objects.all())
     model = serializers.CharField(max_length=150)
-    description = serializers.CharField()
+    description = serializers.CharField(required=False, allow_blank=True, default="")
     specs = serializers.DictField(required=False, default=dict)
     currency = serializers.ChoiceField(choices=Currency.choices, default=Currency.BRL)
     original_value = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=CENTS)
@@ -150,10 +163,7 @@ class AveragePriceCreateSerializer(serializers.Serializer):
         return value
 
     def validate_description(self, value):
-        value = (value or "").strip()
-        if not value:
-            raise serializers.ValidationError(_("This field may not be blank."))
-        return value
+        return (value or "").strip()
 
     def validate_asset_class(self, value):
         if not value.is_enabled:
@@ -221,9 +231,15 @@ class AveragePriceCreateSerializer(serializers.Serializer):
                     )
                 previous.is_current = False
                 previous.save(update_fields=["is_current"])
+                # Newer versions may have been deleted: the new one goes after the newest of all
+                newest = AveragePrice.objects.select_for_update().get(pk=previous.versions()[0].pk)
+            else:
+                newest = None
             row = AveragePrice.objects.create(
                 **validated_data,
-                supersedes=previous,
+                supersedes=newest,
+                # A new version keeps the row's documents
+                **({"lineage": previous.lineage} if previous is not None else {}),
                 created_by=self.context["request"].user,
             )
             PricePoint.objects.bulk_create(
@@ -237,6 +253,52 @@ class AveragePriceCreateSerializer(serializers.Serializer):
                 for p in points
             )
         return row
+
+
+# --- Documents --------------------------------------------------------------------------------
+
+
+class PriceDocumentSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+    opens_inline = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PriceDocument
+        fields = [
+            "id",
+            "name",
+            "size",
+            "content_type",
+            "opens_inline",
+            "uploaded_at",
+            "uploaded_by_name",
+        ]
+        read_only_fields = fields
+
+    def get_uploaded_by_name(self, obj) -> str | None:
+        user = obj.uploaded_by
+        return (user.get_full_name() or user.username) if user else None
+
+    def get_opens_inline(self, obj) -> bool:
+        return opens_inline(obj.name)
+
+
+# --- Average of the versions (read-only) ----------------------------------------------------
+
+
+class AverageTermSerializer(serializers.Serializer):
+    term_months = serializers.IntegerField()
+    value = serializers.DecimalField(max_digits=14, decimal_places=2)
+    percent = serializers.DecimalField(max_digits=8, decimal_places=2)
+    count = serializers.IntegerField()
+
+
+class VersionsAverageSerializer(serializers.Serializer):
+    """pricing.averages.VersionsAverage"""
+
+    count = serializers.IntegerField()
+    original_value = serializers.DecimalField(max_digits=14, decimal_places=2)
+    points = AverageTermSerializer(many=True)
 
 
 # --- Preview (nothing is saved) --------------------------------------------------------------

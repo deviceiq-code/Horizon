@@ -493,8 +493,8 @@ msgid "Fill in exactly these terms (months): %(terms)s."
 msgstr "Complete exactamente estos plazos (meses): %(terms)s."
 
 #: pricing/views.py
-msgid "Only the current version of an average price can be deleted."
-msgstr "Solo la versión actual de un precio promedio se puede eliminar."
+msgid "This average price was already deleted."
+msgstr "Este precio promedio ya fue eliminado."
 
 #: catalogs/models.py
 msgid "specification template"
@@ -535,3 +535,74 @@ msgstr "Esta clase de activo se usa en precios promedio y no se puede eliminar."
 #: pricing/serializers.py
 msgid "Each term may appear only once."
 msgstr "Cada plazo puede aparecer solo una vez."
+
+#: pricing/views.py
+msgid "Give the asset class and the field key."
+msgstr "Indique la clase de activo y la clave del campo."
+
+#: pricing
+msgid "lineage"
+msgstr "linaje"
+
+#: pricing
+msgid "file"
+msgstr "archivo"
+
+#: pricing
+msgid "size (bytes)"
+msgstr "tamaño (bytes)"
+
+#: pricing
+msgid "content type"
+msgstr "tipo de contenido"
+
+#: pricing
+msgid "uploaded at"
+msgstr "subido el"
+
+#: pricing
+msgid "uploaded by"
+msgstr "subido por"
+
+#: pricing
+msgid "document"
+msgstr "documento"
+
+#: pricing
+msgid "documents"
+msgstr "documentos"
+
+#: pricing
+msgid "Documents cannot be added to a deleted average price."
+msgstr "No se pueden agregar documentos a un precio promedio eliminado."
+
+#: pricing
+msgid "Choose a file to upload."
+msgstr "Elija un archivo para subir."
+
+#: pricing
+#, python-format
+msgid "This type of file is not accepted. Accepted: %(types)s."
+msgstr "Este tipo de archivo no se acepta. Aceptados: %(types)s."
+
+#: pricing
+#, python-format
+msgid "The file is too large (maximum %(max)s MB)."
+msgstr "El archivo es demasiado grande (máximo %(max)s MB)."
+
+#: pricing
+msgid "The file is empty."
+msgstr "El archivo está vacío."
+
+#: pricing
+#, python-format
+msgid "An average price can have at most %(max)s documents."
+msgstr "Un precio promedio puede tener como máximo %(max)s documentos."
+
+#: pricing
+msgid "photo"
+msgstr "foto"
+
+#: pricing
+msgid "The photo of a deleted average price cannot be changed."
+msgstr "La foto de un precio promedio eliminado no se puede cambiar."

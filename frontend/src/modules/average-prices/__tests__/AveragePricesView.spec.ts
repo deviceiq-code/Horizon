@@ -15,7 +15,9 @@ vi.mock('../api', () => ({
   getAveragePriceHistory: vi.fn<typeof pricesApi.getAveragePriceHistory>(),
   createAveragePrice: vi.fn<typeof pricesApi.createAveragePrice>(),
   deleteAveragePrice: vi.fn<typeof pricesApi.deleteAveragePrice>(),
+  deleteAveragePriceVersion: vi.fn<typeof pricesApi.deleteAveragePriceVersion>(),
   previewAveragePrice: vi.fn<typeof pricesApi.previewAveragePrice>(),
+  getSpecSuggestions: vi.fn<typeof pricesApi.getSpecSuggestions>(),
 }))
 vi.mock('@/modules/catalogs/asset-classes/api', () => ({
   listAssetClasses: vi.fn<typeof assetClassesApi.listAssetClasses>(),
@@ -39,6 +41,14 @@ const HOURS = {
   required: true,
 }
 
+const TRACKS = {
+  key: 'tracks',
+  label: 'Undercarriage',
+  kind: 'text' as const,
+  unit: '',
+  required: false,
+}
+
 const EXCAVATORS: assetClassesApi.AssetClass = {
   id: 5,
   name: 'Excavators',
@@ -60,7 +70,7 @@ const EXCAVATORS: assetClassesApi.AssetClass = {
   remarketing_average: '3.00',
   keywords: [],
   notes: '',
-  spec_template: [HOURS],
+  spec_template: [HOURS, TRACKS],
   is_enabled: true,
   created_at: '',
   updated_at: '',
@@ -87,6 +97,8 @@ const ROW: pricesApi.AveragePriceDetail = {
   created_at: '2026-11-19T15:00:00Z',
   created_by_name: 'Ana Souza',
   deleted_at: null,
+  documents_count: 0,
+  photo_id: null,
   curve: Array.from({ length: 25 }, (_, month) => ({
     month,
     value: '1.00',
@@ -104,18 +116,27 @@ const OLD_VERSION: pricesApi.AveragePrice = {
 
 const mountView = () => mountWithPlugins(AveragePricesView)
 
+/** Confirm in the dialog that is open (other confirmation dialogs may stay in the DOM). */
+async function confirmOpenDialog() {
+  inBody('.v-overlay--active [data-testid="confirm-button"]')!.click()
+  await settle()
+}
+
 async function waitPreview() {
   await new Promise((r) => setTimeout(r, 450)) // preview is debounced (400 ms)
   await settle()
 }
 
-async function fillNew(wrapper: ReturnType<typeof mountView>) {
+async function fillNew(
+  wrapper: ReturnType<typeof mountView>,
+  description = 'Hydraulic excavator.',
+) {
   await wrapper.find('[data-testid="new"]').trigger('click')
   await settle()
   await pickOption('asset-class', 'Excavators — Industry / Yellow line')
   await pickOption('manufacturer', 'Caterpillar')
   await typeInto('model', ' 320 GC ')
-  await typeInto('description', 'Hydraulic excavator.')
+  if (description) await typeInto('description', description)
   await typeInto('spec-hours', '2,500')
   await typeInto('original-value', '100,000.00')
   const amounts = document.body.querySelectorAll<HTMLInputElement>(
@@ -138,7 +159,18 @@ describe('AveragePricesView', () => {
     setActivePinia(createPinia())
     prices.listAveragePrices.mockResolvedValue(page([ROW]))
     prices.getAveragePrice.mockResolvedValue(ROW)
-    prices.getAveragePriceHistory.mockResolvedValue([ROW, OLD_VERSION])
+    prices.getAveragePriceHistory.mockResolvedValue({
+      versions: [ROW, OLD_VERSION],
+      average: {
+        count: 2,
+        original_value: '97500.00',
+        points: [
+          { term_months: 12, value: '68000.00', percent: '69.74', count: 2 },
+          { term_months: 24, value: '55000.00', percent: '57.89', count: 1 },
+        ],
+      },
+    })
+    prices.getSpecSuggestions.mockResolvedValue(['Steel', 'Steel with rubber pads'])
     prices.previewAveragePrice.mockResolvedValue({
       points: [
         { term_months: 12, value: '70000.00', percent: '70.00' },
@@ -200,6 +232,12 @@ describe('AveragePricesView', () => {
     await settle()
 
     await fillNew(wrapper)
+    // Text specification: values already used are offered while typing
+    await typeInto('spec-tracks', 'ste')
+    await new Promise((r) => setTimeout(r, 300)) // debounced
+    await settle()
+    expect(prices.getSpecSuggestions).toHaveBeenLastCalledWith(5, 'tracks', 'ste')
+    await pickOption('spec-tracks', 'Steel')
     // Terms of the sub-vertical (12 and 24) and its template field are shown
     expect(inBody('[data-testid="term-12"]')).not.toBeNull()
     expect(inBody('[data-testid="term-36"]')).toBeNull()
@@ -222,7 +260,7 @@ describe('AveragePricesView', () => {
       manufacturer: 7,
       model: '320 GC',
       description: 'Hydraulic excavator.',
-      specs: { hours: '2500' },
+      specs: { hours: '2500', tracks: 'Steel' },
       currency: 'BRL',
       original_value: '100000.00',
       points: [
@@ -255,6 +293,20 @@ describe('AveragePricesView', () => {
     )
     await click('save')
     expect(prices.createAveragePrice).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('saves without a detailed description (optional)', async () => {
+    prices.createAveragePrice.mockResolvedValue({ ...ROW, id: 101, description: '' })
+    const wrapper = mountView()
+    await settle()
+
+    await fillNew(wrapper, '')
+    await waitPreview()
+    await click('save')
+    expect(prices.createAveragePrice).toHaveBeenCalledWith(
+      expect.objectContaining({ description: '' }),
+    )
     wrapper.unmount()
   })
 
@@ -324,8 +376,8 @@ describe('AveragePricesView', () => {
     await click('tab-history')
     const items = document.body.querySelectorAll<HTMLElement>('[data-testid="history-item"]')
     expect(items).toHaveLength(2)
-    expect(items[0]!.textContent).toContain('Version 2')
-    expect(items[1]!.textContent).toContain('Version 1')
+    expect(items[0]!.textContent).toContain('11/19/2026')
+    expect(items[0]!.textContent).not.toContain('Version')
 
     // Open the previous version
     prices.getAveragePrice.mockResolvedValue({ ...ROW, ...OLD_VERSION, curve: ROW.curve })
@@ -340,18 +392,133 @@ describe('AveragePricesView', () => {
 
   // --- Delete --------------------------------------------------------------------------------
 
-  it('deletes (hides) a row, which stays in the history', async () => {
+  it('deletes a row with all its versions (kept as history)', async () => {
     prices.deleteAveragePrice.mockResolvedValue(undefined)
     const wrapper = mountView()
     await settle()
 
     await wrapper.find('[data-testid="delete"]').trigger('click')
     await settle()
-    expect(document.body.textContent).toContain('stays in the history')
-    await click('confirm-button')
+    expect(document.body.textContent).toContain('and all its versions')
+    await confirmOpenDialog()
 
     expect(prices.deleteAveragePrice).toHaveBeenCalledWith(100)
-    expect(useNotificationsStore().text).toBe('Average price deleted (kept in the history).')
+    expect(useNotificationsStore().text).toBe(
+      'Average price deleted with all its versions (kept as history).',
+    )
+    wrapper.unmount()
+  })
+
+  // --- Previous versions in the grid ---------------------------------------------------------
+
+  it('expands a row to show all its versions, their average, and delete one', async () => {
+    const SINGLE = { ...ROW, id: 200, supersedes: null }
+    prices.listAveragePrices.mockResolvedValue(page([ROW, SINGLE]))
+    prices.deleteAveragePriceVersion.mockResolvedValue(undefined)
+    const wrapper = mountView()
+    await settle()
+
+    // Only rows with previous versions can expand
+    const toggles = wrapper.findAll('[data-testid="expand"]')
+    expect(toggles).toHaveLength(1)
+    await toggles[0]!.trigger('click')
+    await settle()
+
+    expect(prices.getAveragePriceHistory).toHaveBeenCalledWith(100)
+    const panel = inBody('[data-testid="versions-panel"]')!
+    expect(panel.textContent).toContain('All versions (2)')
+    // Every version, the current one included
+    const items = panel.querySelectorAll<HTMLElement>('[data-testid="history-item"]')
+    expect(items).toHaveLength(2)
+    expect(items[0]!.textContent).toContain('Current')
+    expect(items[1]!.textContent).toMatch(/95,000\.00/)
+    expect(items[1]!.textContent).toContain('12m · 70.00%')
+    // And their average
+    expect(panel.querySelector('[data-testid="history-average"]')!.textContent).toContain(
+      'Average of the history (2 versions)',
+    )
+
+    prices.getAveragePriceHistory.mockResolvedValue({ versions: [ROW], average: null })
+    prices.listAveragePrices.mockClear()
+    items[1]!.querySelector<HTMLElement>('[data-testid="delete-version"]')!.click()
+    await settle()
+    expect(document.body.textContent).toContain('Delete the version of 11/19/2026')
+    expect(document.body.textContent).toContain('cannot be undone')
+    await confirmOpenDialog()
+
+    expect(prices.deleteAveragePriceVersion).toHaveBeenCalledWith(90)
+    expect(useNotificationsStore().text).toBe('Version deleted.')
+    // Erased: gone from the list (not marked as deleted); no average with one version left
+    const after = inBody('[data-testid="versions-panel"]')!
+    expect(after.querySelectorAll('[data-testid="history-item"]')).toHaveLength(1)
+    expect(after.querySelector('[data-testid="history-average"]')).toBeNull()
+    expect(prices.listAveragePrices).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('shows the average of all versions in the history', async () => {
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('[data-testid="view"]').trigger('click')
+    await settle()
+    await click('tab-history')
+
+    const average = inBody('[data-testid="history-average"]')!
+    expect(average.textContent).toContain('Average of the history (2 versions)')
+    expect(average.textContent).toMatch(/R\$\s?97,500\.00/)
+    const points = average.querySelectorAll<HTMLElement>('[data-testid="average-point"]')
+    expect(points[0]!.textContent).toMatch(/12 months\s*R\$\s?68,000\.00\s*· 69.74%/)
+    // Term only in some versions: marked, with the explanation on hover
+    expect(points[1]!.getAttribute('title')).toBe('Only 1 of the 2 versions have this term')
+    wrapper.unmount()
+  })
+
+  it('erasing the version shown in the detail shows the newest one left', async () => {
+    prices.deleteAveragePriceVersion.mockResolvedValue(undefined)
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('[data-testid="view"]').trigger('click')
+    await settle()
+    await click('tab-history')
+
+    prices.getAveragePrice.mockResolvedValue({
+      ...ROW,
+      ...OLD_VERSION,
+      is_current: true,
+      curve: [],
+    })
+    prices.getAveragePriceHistory.mockResolvedValue({
+      versions: [{ ...OLD_VERSION, is_current: true }],
+      average: null,
+    })
+    prices.listAveragePrices.mockClear()
+    inBody('[data-testid="detail-history"] [data-testid="delete-version"]')!.click()
+    await settle()
+    await confirmOpenDialog()
+
+    expect(prices.deleteAveragePriceVersion).toHaveBeenCalledWith(100)
+    expect(prices.getAveragePrice).toHaveBeenLastCalledWith(90)
+    expect(prices.listAveragePrices).toHaveBeenCalled()
+    expect(inBody('[data-testid="detail-original"]')!.textContent).toMatch(/95,000\.00/)
+    expect(inBody('[data-testid="history-average"]')).toBeNull() // a single version left
+    wrapper.unmount()
+  })
+
+  it('erasing the only version closes the detail', async () => {
+    prices.deleteAveragePriceVersion.mockResolvedValue(undefined)
+    prices.getAveragePriceHistory.mockResolvedValue({ versions: [ROW], average: null })
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('[data-testid="view"]').trigger('click')
+    await settle()
+    await click('tab-history')
+
+    inBody('[data-testid="detail-history"] [data-testid="delete-version"]')!.click()
+    await settle()
+    await confirmOpenDialog()
+
+    expect(prices.deleteAveragePriceVersion).toHaveBeenCalledWith(100)
+    expect(inBody('.v-overlay--active [data-testid="detail-original"]')).toBeNull()
     wrapper.unmount()
   })
 })

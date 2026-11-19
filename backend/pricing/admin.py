@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AveragePrice, PricePoint
+from .models import AveragePrice, PriceDocument, PricePoint
 
 
 class PricePointInline(admin.TabularInline):
@@ -38,4 +38,18 @@ class AveragePriceAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PriceDocument)
+class PriceDocumentAdmin(admin.ModelAdmin):
+    """Read-only: documents are added and removed in the app."""
+
+    list_display = ["id", "name", "size", "content_type", "lineage", "uploaded_at", "uploaded_by"]
+    search_fields = ["name"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False

@@ -31,7 +31,8 @@ export async function settle() {
  * validation race and report stale errors.
  */
 export async function typeInto(testId: string, value: string) {
-  const input = (inBody(`[data-testid="${testId}"] input`) ??
+  // Skip hidden inputs (comboboxes keep their form value in one)
+  const input = (inBody(`[data-testid="${testId}"] input:not([type="hidden"])`) ??
     inBody(`[data-testid="${testId}"] textarea:not(.v-textarea__sizer)`)) as HTMLInputElement
   input.value = value
   input.dispatchEvent(new Event('input'))

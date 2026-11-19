@@ -55,15 +55,32 @@ Multi-user web system for **operating lease residual value pricing**
     `/api/catalogs/sub-verticals/` lists sub-verticals as picker options ("Vertical / Sub").
   - `pricing/` — **Average Prices** (core module), `/api/average-prices/`. `AveragePrice` rows are
     **immutable**: no PUT/PATCH; a change is a new row with `supersedes=<id>` (the old one gets
-    `is_current=False` and stays as history); DELETE only sets `deleted_at`/`deleted_by`. Each row
+    `is_current=False` and stays as history). `DELETE /<id>/` erases one version for good
+    (`AveragePrice.delete_version`: relinks the chain); `DELETE /<id>/history/` (the grid's
+    delete) only hides every version (`deleted_at`/`deleted_by`). The current version is always
+    the newest one not deleted. `GET /<id>/history/` returns `{versions, average}` (hidden versions
+    are left out while the row is listed); the average of the versions is `pricing/averages.py`
+    (pure, tested).
+    Each row
     snapshots what it was based on: `sub_vertical` (from the asset class), `specs` (template
     fields + values), and `PricePoint`s for exactly the sub-vertical's `allowed_terms` at creation
     (each entered as `value` or `percent` of `original_value`; `value` is resolved and stored).
     `currency` per row (only BRL for now). Monthly curve: `pricing/curves.py` (pure, tested):
     month 0 = original value, straight lines between terms, stops at the last term; terms worth
     more than the previous point are only a warning (`increasing_terms`). `POST /preview/`
-    resolves typed values (the form never computes prices); `GET /<id>/history/` lists versions.
+    resolves typed values (the form never computes prices). `GET /spec-suggestions/?asset_class=
+    &key=&search=` offers specification values already used in that asset class
+    (`catalogs/specs.py::suggest_values`: case/accent-insensitive, most used first).
     Catalog items used in prices cannot be deleted (409), even if the price was deleted.
+    **Documents and photo** (`PriceDocument`, rules in `pricing/documents.py`): belong to the row,
+    not a version — every version shares `AveragePrice.lineage` (UUID). `/<id>/documents/`
+    (GET/POST multipart "file"), `/<id>/documents/<doc>/` (DELETE),
+    `/<id>/documents/<doc>/download/` (`?inline=1` for PDF/images); `/<id>/photo/` (GET/POST
+    replaces/DELETE; images only). Files live in `MEDIA_ROOT` (`.env`, default `backend/media`,
+    not served publicly — only through the API, logged in), random stored names; size limit
+    `PRICE_DOCUMENT_MAX_MB` (25). Deleting a document removes its file; erasing the last version
+    of a row removes its documents. List rows carry `documents_count` and `photo_id`.
+    Pricing tests share fixtures in `pricing/conftest.py` and helpers in `pricing/testing.py`.
   - `catalogs/specs.py` — specification templates per asset class (`AssetClass.spec_template`,
     read-only in the asset class API, edited at `/api/catalogs/asset-classes/<id>/spec-template/`;
     fields: label, kind text|number, unit, required) and the snapshot of values stored with each
@@ -86,12 +103,18 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
     listed in `tabs.ts`. A new small table is a new tab here, not a new module.
   - `src/components/ServerCrudTable.vue` — generic CRUD grid (search, New, edit/delete with
-    confirmation, notifications); pages pass columns, texts and `item.<key>` cell slots, open
+    confirmation, notifications; optional `expandable` + `expanded-row` slot); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
-  - `src/modules/average-prices/` — grid (ServerCrudTable; edit = "New version"), form (asset
+  - `src/modules/average-prices/` — grid (ServerCrudTable; edit = "New version"; delete = all
+    versions; rows with previous versions expand to list all versions and their average), form (asset
     class decides terms and spec fields; values resolved by `/preview/`), detail (terms, monthly
-    curve table, history). Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
+    curve table, history with the average of the versions). `PriceVersionsList.vue` lists
+    versions (by date and time, no numbers) and erases one; used in the detail's history and the
+    grid's expanded row. Text specification fields use `SpecSuggestField.vue` (combobox with
+    server suggestions; new values allowed). Detail: `PricePhoto.vue` (thumbnail in the header,
+    click to enlarge) and `PriceDocuments.vue` ("Documents" tab; drag and drop). File uploads
+    go through `api()` with a `FormData` body. Sizes: `src/utils/bytes.ts`. Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
     UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
   - Decimal inputs (e.g. ratings): text field with `inputmode="decimal"` (not `type="number"`,
     which drops "7,5" in some browsers), `rules.decimalRange(min, max, places)`, and
@@ -112,7 +135,8 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/modules/catalogs/verticals/TermsField.vue` — list of terms in months as chips with
     "Add term" (type months, Enter adds, Esc cancels).
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;
-    when changing them, check in a real browser too.
+    when changing them, check in a real browser too. A combobox renders an
+    `<input type="hidden">` before the visible one (`typeInto` skips it).
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
   - `src/components/ConfirmDialog.vue` — generic confirmation dialog.
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.

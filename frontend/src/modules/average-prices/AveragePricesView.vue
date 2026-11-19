@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * Average prices: market value estimates of assets at each term. Rows are never edited:
- * "New version" creates a new row and keeps the previous one in the history; deleting hides
- * the row (also kept).
+ * "New version" creates a new row and keeps the previous one in the history. Rows with previous
+ * versions expand to list them; a version can be deleted there or in the detail (the newest
+ * one left becomes current). Deleting from the grid hides every version (all kept).
  */
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,6 +12,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { formatMoney } from '@/utils/money'
 import AveragePriceDetailDialog from './AveragePriceDetailDialog.vue'
 import AveragePriceFormDialog from './AveragePriceFormDialog.vue'
+import PriceVersionsPanel from './PriceVersionsPanel.vue'
 import {
   deleteAveragePrice,
   listAveragePrices,
@@ -91,6 +93,7 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       :deleted-text="$t('averagePrices.deleted')"
       edit-icon="mdi-file-replace-outline"
       :edit-title="$t('averagePrices.newVersion')"
+      :expandable="(row: AveragePrice) => row.supersedes !== null"
       @create="openNew"
       @edit="openNewVersion"
     >
@@ -107,7 +110,17 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       </template>
       <template #[`item.model`]="{ item }">
         <div class="font-weight-medium">{{ item.model }}</div>
-        <div class="text-caption text-medium-emphasis">{{ item.manufacturer.name }}</div>
+        <div class="text-caption text-medium-emphasis">
+          {{ item.manufacturer.name }}
+          <span
+            v-if="item.documents_count"
+            class="ml-1 text-no-wrap"
+            :title="$t('averagePrices.documents.title', item.documents_count)"
+            data-testid="documents-count"
+          >
+            <v-icon icon="mdi-paperclip" size="x-small" />{{ item.documents_count }}
+          </span>
+        </div>
       </template>
       <template #[`item.original_value`]="{ item }">
         <span class="text-no-wrap">{{ money(item) }}</span>
@@ -133,6 +146,9 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
           {{ item.created_by_name }}
         </div>
       </template>
+      <template #expanded-row="{ item }">
+        <PriceVersionsPanel :row="item" @open="openDetail" @deleted="table?.reload()" />
+      </template>
       <template #row-actions="{ item }">
         <v-btn
           icon="mdi-eye-outline"
@@ -151,6 +167,7 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       v-model="detailOpen"
       :row-id="detailId"
       @new-version="openNewVersion"
+      @changed="table?.reload()"
     />
   </v-container>
 </template>

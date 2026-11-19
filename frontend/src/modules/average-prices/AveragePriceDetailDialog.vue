@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * One average price: what is priced, its values per term, the monthly curve (computed by the
- * API) and every version of the row. Any version can be opened from the history.
+ * API) and every version of the row with their average (also computed by the API). Any version
+ * can be opened or erased from the history.
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,20 +12,26 @@ import {
   getAveragePriceHistory,
   type AveragePrice,
   type AveragePriceDetail,
+  type VersionsAverage,
 } from './api'
+import PriceDocuments from './PriceDocuments.vue'
+import PricePhoto from './PricePhoto.vue'
+import PriceVersionsList from './PriceVersionsList.vue'
+import VersionsAverageCard from './VersionsAverageCard.vue'
 
 const props = defineProps<{ rowId: number | null }>()
 const open = defineModel<boolean>({ required: true })
-const emit = defineEmits<{ newVersion: [row: AveragePrice] }>()
+const emit = defineEmits<{ newVersion: [row: AveragePrice]; changed: [] }>()
 
 const { t, locale, n, d } = useI18n()
 
 const shownId = ref<number | null>(null)
 const row = ref<AveragePriceDetail | null>(null)
 const history = ref<AveragePrice[]>([])
+const average = ref<VersionsAverage | null>(null)
 const loading = ref(false)
 const loadError = ref(false)
-const tab = ref<'terms' | 'curve' | 'history'>('terms')
+const tab = ref<'terms' | 'curve' | 'history' | 'documents'>('terms')
 
 async function load(id: number) {
   shownId.value = id
@@ -33,7 +40,8 @@ async function load(id: number) {
   try {
     const [detail, versions] = await Promise.all([getAveragePrice(id), getAveragePriceHistory(id)])
     row.value = detail
-    history.value = versions
+    history.value = versions.versions
+    average.value = versions.average
   } catch {
     loadError.value = true
   } finally {
@@ -45,6 +53,7 @@ watch(open, (isOpen) => {
   if (!isOpen || props.rowId === null) return
   row.value = null
   history.value = []
+  average.value = null
   tab.value = 'terms'
   load(props.rowId)
 })
@@ -60,8 +69,31 @@ const status = computed(() => {
   return { color: 'success', text: t('averagePrices.status.current') }
 })
 
-const versionNumber = (version: AveragePrice) =>
-  history.value.length - history.value.findIndex((v) => v.id === version.id)
+// Documents belong to the row (every version); the grid shows how many
+const documentsCount = computed(() => row.value?.documents_count ?? 0)
+
+function onPhotoChanged(photoId: number | null) {
+  if (row.value) row.value.photo_id = photoId
+  emit('changed')
+}
+
+function onDocumentsChanged(count: number) {
+  if (row.value) row.value.documents_count = count
+  emit('changed')
+}
+
+// Erasing a version may change which one is current: refresh this view and the grid. If the
+// version shown was erased, show the newest one left (or close when none is left).
+async function onVersionDeleted(erased: AveragePrice) {
+  emit('changed')
+  const left = history.value.filter((version) => version.id !== erased.id)
+  const next = erased.id === shownId.value ? left[0]?.id : shownId.value
+  if (next === undefined || next === null) {
+    open.value = false
+    return
+  }
+  await load(next)
+}
 </script>
 
 <template>
@@ -69,9 +101,16 @@ const versionNumber = (version: AveragePrice) =>
     <v-card>
       <v-card-item>
         <template v-if="row" #prepend>
-          <v-avatar color="primary" variant="tonal" size="48" rounded>
-            <v-icon :icon="row.asset_class.icon" />
-          </v-avatar>
+          <PricePhoto
+            :key="row.id"
+            :row-id="row.id"
+            :photo-id="row.photo_id"
+            :icon="row.asset_class.icon"
+            :title="`${row.manufacturer.name} ${row.model}`"
+            :can-edit="!row.deleted_at"
+            class="mr-2"
+            @changed="onPhotoChanged"
+          />
         </template>
         <v-card-title>
           <span v-if="row">{{ row.manufacturer.name }} {{ row.model }}</span>
@@ -120,10 +159,12 @@ const versionNumber = (version: AveragePrice) =>
               <div>{{ row.manufacturer.name }}</div>
             </v-col>
           </v-row>
-          <div class="text-caption text-medium-emphasis">
-            {{ $t('averagePrices.fields.description') }}
-          </div>
-          <p class="mb-3" style="white-space: pre-line">{{ row.description }}</p>
+          <template v-if="row.description">
+            <div class="text-caption text-medium-emphasis">
+              {{ $t('averagePrices.fields.description') }}
+            </div>
+            <p class="mb-3" style="white-space: pre-line">{{ row.description }}</p>
+          </template>
           <div
             v-if="row.specs.length"
             class="d-flex flex-wrap ga-2 mb-4"
@@ -153,6 +194,9 @@ const versionNumber = (version: AveragePrice) =>
             }}</v-tab>
             <v-tab value="history" data-testid="tab-history">
               {{ $t('averagePrices.tabs.history', history.length) }}
+            </v-tab>
+            <v-tab value="documents" data-testid="tab-documents">
+              {{ $t('averagePrices.documents.title', documentsCount) }}
             </v-tab>
           </v-tabs>
 
@@ -208,48 +252,27 @@ const versionNumber = (version: AveragePrice) =>
             </v-window-item>
 
             <v-window-item value="history">
-              <v-list density="compact" data-testid="detail-history">
-                <v-list-item
-                  v-for="version in history"
-                  :key="version.id"
-                  :active="version.id === shownId"
-                  color="primary"
-                  data-testid="history-item"
-                  @click="version.id !== shownId && load(version.id)"
-                >
-                  <v-list-item-title>
-                    {{ $t('averagePrices.version', { n: versionNumber(version) }) }} ·
-                    {{ dateTime(version.created_at) }}
-                    <span v-if="version.created_by_name" class="text-medium-emphasis">
-                      · {{ version.created_by_name }}
-                    </span>
-                  </v-list-item-title>
-                  <v-list-item-subtitle>
-                    {{ version.manufacturer.name }} {{ version.model }} ·
-                    {{ money(version.original_value) }}
-                  </v-list-item-subtitle>
-                  <template #append>
-                    <v-chip
-                      v-if="version.deleted_at"
-                      color="error"
-                      size="x-small"
-                      variant="tonal"
-                      label
-                    >
-                      {{ $t('averagePrices.status.deleted') }}
-                    </v-chip>
-                    <v-chip
-                      v-else-if="version.is_current"
-                      color="success"
-                      size="x-small"
-                      variant="tonal"
-                      label
-                    >
-                      {{ $t('averagePrices.status.current') }}
-                    </v-chip>
-                  </template>
-                </v-list-item>
-              </v-list>
+              <VersionsAverageCard
+                v-if="average && average.count > 1"
+                :average="average"
+                :currency="row.currency"
+                class="mb-3"
+              />
+              <PriceVersionsList
+                :versions="history"
+                :active-id="shownId"
+                data-testid="detail-history"
+                @open="load($event.id)"
+                @deleted="onVersionDeleted"
+              />
+            </v-window-item>
+            <v-window-item value="documents">
+              <PriceDocuments
+                :key="row.id"
+                :row-id="row.id"
+                :can-edit="!row.deleted_at"
+                @changed="onDocumentsChanged"
+              />
             </v-window-item>
           </v-window>
         </template>
