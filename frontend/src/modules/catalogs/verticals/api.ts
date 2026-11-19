@@ -49,6 +49,9 @@ export interface SubVerticalOption {
   /** "Industry / Yellow line" */
   label: string
   vertical: VerticalRef
+  /** Terms (months) prices must be given for, and the recommended one */
+  allowed_terms: number[]
+  recommended_term: number
 }
 
 /** Sub-verticals of every vertical, ordered by vertical (General first). */

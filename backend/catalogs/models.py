@@ -234,6 +234,8 @@ class AssetClass(models.Model):
         verbose_name=_("keywords"),
     )
     notes = models.TextField(_("notes"), blank=True)
+    # Specification fields every priced asset of this class describes (see catalogs/specs.py)
+    spec_template = models.JSONField(_("specification template"), default=list, blank=True)
     is_enabled = models.BooleanField(_("enabled"), default=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)

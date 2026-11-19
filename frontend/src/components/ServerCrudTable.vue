@@ -5,7 +5,7 @@
  * texts and cell slots (`item.<key>`), opens its own form on `create`/`edit`, and calls the
  * exposed `reload()` after saving.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DataTableHeader } from 'vuetify'
 import { deleteErrorMessage, type ListParams, type Paginated } from '@/api'
@@ -27,6 +27,9 @@ const props = defineProps<{
   deleteTitle: string
   deleteMessage: (item: T) => string
   deletedText: string
+  /** Edit button look (e.g. "New version" where rows are never edited in place) */
+  editIcon?: string
+  editTitle?: string
 }>()
 
 const emit = defineEmits<{ create: []; edit: [item: T] }>()
@@ -58,7 +61,8 @@ const allHeaders = computed(() => [
     key: 'actions',
     sortable: false,
     align: 'end' as const,
-    width: 120,
+    minWidth: '120px',
+    nowrap: true,
   },
 ])
 
@@ -88,6 +92,12 @@ async function confirmDelete() {
     deleteInProgress.value = false
   }
 }
+
+// Only item.<key> cell slots go to the table (row-actions is used above)
+const slots = useSlots()
+const cellSlots = computed(() =>
+  Object.fromEntries(Object.entries(slots).filter(([name]) => name.startsWith('item.'))),
+)
 
 defineExpose({ reload: load })
 </script>
@@ -136,17 +146,19 @@ defineExpose({ reload: load })
         @update:options="load"
       >
         <!-- Cell slots provided by the page (item.<key>) -->
-        <template v-for="(_, name) in $slots" #[name]="slotProps">
+        <template v-for="(_, name) in cellSlots" #[name]="slotProps">
           <slot :name="name" v-bind="slotProps ?? {}" />
         </template>
 
         <template #[`item.actions`]="{ item }">
+          <!-- Extra actions provided by the page, before edit/delete -->
+          <slot name="row-actions" :item="item" />
           <v-btn
-            icon="mdi-pencil-outline"
+            :icon="editIcon ?? 'mdi-pencil-outline'"
             variant="text"
             size="small"
-            :aria-label="$t('common.edit')"
-            :title="$t('common.edit')"
+            :aria-label="editTitle ?? $t('common.edit')"
+            :title="editTitle ?? $t('common.edit')"
             data-testid="edit"
             @click="emit('edit', item)"
           />

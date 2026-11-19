@@ -53,6 +53,22 @@ Multi-user web system for **operating lease residual value pricing**
     ratings, keywords (ArrayField, lowercase, unique, max 30 × 50 chars; searchable), notes,
     enabled.
     `/api/catalogs/sub-verticals/` lists sub-verticals as picker options ("Vertical / Sub").
+  - `pricing/` — **Average Prices** (core module), `/api/average-prices/`. `AveragePrice` rows are
+    **immutable**: no PUT/PATCH; a change is a new row with `supersedes=<id>` (the old one gets
+    `is_current=False` and stays as history); DELETE only sets `deleted_at`/`deleted_by`. Each row
+    snapshots what it was based on: `sub_vertical` (from the asset class), `specs` (template
+    fields + values), and `PricePoint`s for exactly the sub-vertical's `allowed_terms` at creation
+    (each entered as `value` or `percent` of `original_value`; `value` is resolved and stored).
+    `currency` per row (only BRL for now). Monthly curve: `pricing/curves.py` (pure, tested):
+    month 0 = original value, straight lines between terms, stops at the last term; terms worth
+    more than the previous point are only a warning (`increasing_terms`). `POST /preview/`
+    resolves typed values (the form never computes prices); `GET /<id>/history/` lists versions.
+    Catalog items used in prices cannot be deleted (409), even if the price was deleted.
+  - `catalogs/specs.py` — specification templates per asset class (`AssetClass.spec_template`,
+    read-only in the asset class API, edited at `/api/catalogs/asset-classes/<id>/spec-template/`;
+    fields: label, kind text|number, unit, required) and the snapshot of values stored with each
+    price. In the UI: `asset-classes/SpecTemplateDialog.vue`, opened from a row action of the
+    Asset classes grid.
   - `config/filters.py` — `EnabledFilter` (`?is_enabled=true|false`) for any model with `is_enabled`.
   - `config/pagination.py` — default pagination for lists (`?page=`, `?page_size=`, max 200).
   - `config/filters.py` — `NullsLastOrderingFilter` (empty values last in both directions); use it
@@ -73,6 +89,10 @@ Multi-user web system for **operating lease residual value pricing**
     confirmation, notifications); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
+  - `src/modules/average-prices/` — grid (ServerCrudTable; edit = "New version"), form (asset
+    class decides terms and spec fields; values resolved by `/preview/`), detail (terms, monthly
+    curve table, history). Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
+    UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
   - Decimal inputs (e.g. ratings): text field with `inputmode="decimal"` (not `type="number"`,
     which drops "7,5" in some browsers), `rules.decimalRange(min, max, places)`, and
     `normalizeDecimal()` (src/utils/decimal.ts) before sending. Display with `$n(value, 'rating')`.

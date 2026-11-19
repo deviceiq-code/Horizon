@@ -6,6 +6,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 
 import accountManagers from './account-managers'
+import averagePrices from './average-prices'
 import catalogs from './catalogs'
 import customers from './customers'
 
@@ -22,4 +23,4 @@ export interface AppModule {
   placement?: 'main' | 'system'
 }
 
-export const MODULES: AppModule[] = [customers, accountManagers, catalogs]
+export const MODULES: AppModule[] = [averagePrices, customers, accountManagers, catalogs]

@@ -248,6 +248,8 @@ def test_sub_vertical_options(logged_client, subs):
         "is_general": False,
         "label": "Industry / Yellow line",
         "vertical": {"id": subs["yellow"].vertical_id, "name": "Industry", "is_enabled": True},
+        "allowed_terms": [24, 36],
+        "recommended_term": 24,
     }
 
 
@@ -542,3 +544,78 @@ def test_search_by_keyword(logged_client, asset_classes):
     for term in ("escavad", "HIDRÁULICA"):
         results = logged_client.get(ASSET_CLASSES, {"search": term}).json()["results"]
         assert [a["name"] for a in results] == ["Excavators"], term
+
+
+# --- Specification templates (per asset class) ----------------------------------------------
+
+
+def _template_url(asset_class):
+    return f"/api/catalogs/asset-classes/{asset_class.pk}/spec-template/"
+
+
+def test_spec_template_starts_empty(logged_client, asset_classes):
+    assert logged_client.get(_template_url(asset_classes[0])).json() == {"fields": []}
+
+
+def test_save_spec_template(logged_client, asset_classes):
+    excavators = asset_classes[0]
+    fields = [
+        {"label": "Operating hours", "kind": "number", "unit": "h", "required": True},
+        {"label": " Undercarriage ", "kind": "text"},
+    ]
+    r = logged_client.put(
+        _template_url(excavators), {"fields": fields}, content_type="application/json"
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json()["fields"] == [
+        {
+            "key": "operating_hours",
+            "label": "Operating hours",
+            "kind": "number",
+            "unit": "h",
+            "required": True,
+        },
+        {
+            "key": "undercarriage",
+            "label": "Undercarriage",
+            "kind": "text",
+            "unit": "",
+            "required": False,
+        },
+    ]
+    excavators.refresh_from_db()
+    assert len(excavators.spec_template) == 2
+    # Returned with the asset class (read-only there)
+    listed = logged_client.get(ASSET_CLASSES, {"search": "excavators"}).json()["results"][0]
+    assert listed["spec_template"][0]["key"] == "operating_hours"
+
+
+def test_spec_template_validation(logged_client, asset_classes):
+    r = logged_client.put(
+        _template_url(asset_classes[0]),
+        {"fields": [{"label": "Hours"}, {"label": "hours"}, {"label": "X", "kind": "date"}]},
+        content_type="application/json",
+    )
+    assert r.status_code == 400
+    assert set(r.json()["fields"]) == {"1", "2"}
+
+
+def test_editing_an_asset_class_keeps_its_spec_template(logged_client, asset_classes):
+    excavators = asset_classes[0]
+    template = [{"key": "h", "label": "H", "kind": "number", "unit": "", "required": False}]
+    excavators.spec_template = template
+    excavators.save()
+    # The template is read-only in the asset class itself
+    r = _patch(
+        logged_client, ASSET_CLASSES, excavators.pk, {"name": "Excavators", "spec_template": []}
+    )
+    assert r.status_code == 200, r.json()
+    excavators.refresh_from_db()
+    assert excavators.spec_template == template
+
+
+def test_sub_verticals_have_no_spec_template(logged_client, subs):
+    option = logged_client.get("/api/catalogs/sub-verticals/").json()["results"][0]
+    assert "spec_template" not in option
+    r = logged_client.get(f"/api/catalogs/sub-verticals/{subs['yellow'].pk}/spec-template/")
+    assert r.status_code == 404

@@ -5,6 +5,7 @@ import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import EnabledChip from '../EnabledChip.vue'
 import AssetClassFormDialog from './AssetClassFormDialog.vue'
+import SpecTemplateDialog from './SpecTemplateDialog.vue'
 import RemarketingAverage from '../remarketing/RemarketingAverage.vue'
 import { deleteAssetClass, listAssetClasses, REMARKETING_RATINGS, type AssetClass } from './api'
 
@@ -34,6 +35,16 @@ function onSaved(_assetClass: AssetClass, created: boolean) {
   notifications.notify(t(created ? 'assetClasses.created' : 'assetClasses.updated'))
   table.value?.reload()
 }
+
+// --- Specification template ------------------------------------------------------------------
+
+const templateOpen = ref(false)
+const templateOf = ref<AssetClass | null>(null)
+
+function openTemplate(assetClass: AssetClass) {
+  templateOf.value = assetClass
+  templateOpen.value = true
+}
 </script>
 
 <template>
@@ -56,6 +67,26 @@ function onSaved(_assetClass: AssetClass, created: boolean) {
     @create="openForm(null)"
     @edit="openForm"
   >
+    <template #row-actions="{ item }">
+      <v-btn
+        icon
+        variant="text"
+        size="small"
+        :aria-label="$t('specTemplate.title')"
+        :title="$t('specTemplate.fieldCount', item.spec_template.length)"
+        data-testid="edit-spec-template"
+        @click="openTemplate(item)"
+      >
+        <v-badge
+          :content="item.spec_template.length"
+          :model-value="item.spec_template.length > 0"
+          color="primary"
+          floating
+        >
+          <v-icon icon="mdi-format-list-checks" />
+        </v-badge>
+      </v-btn>
+    </template>
     <template #[`item.name`]="{ item }">
       <div class="d-flex align-center ga-3 py-2">
         <v-avatar color="primary" variant="tonal" size="36" rounded>
@@ -103,4 +134,10 @@ function onSaved(_assetClass: AssetClass, created: boolean) {
   </ServerCrudTable>
 
   <AssetClassFormDialog v-model="formOpen" :asset-class="editing" @saved="onSaved" />
+  <SpecTemplateDialog
+    v-model="templateOpen"
+    :asset-class-id="templateOf?.id ?? null"
+    :label="templateOf ? `${templateOf.name} — ${templateOf.sub_vertical_detail.label}` : ''"
+    @saved="table?.reload()"
+  />
 </template>

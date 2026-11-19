@@ -383,3 +383,155 @@ msgstr "qualidade dos produtos"
 #: catalogs/models.py
 msgid "after-sales service"
 msgstr "pós-venda"
+
+#: pricing/apps.py
+msgid "Average prices"
+msgstr "Average prices"
+
+#: pricing/models.py
+msgid "Fixed value"
+msgstr "Valor fixo"
+
+#: pricing/models.py
+msgid "Percentage of the original value"
+msgstr "Percentual do valor original"
+
+#: pricing/models.py
+msgid "model"
+msgstr "modelo"
+
+#: pricing/models.py
+msgid "description"
+msgstr "descrição"
+
+#: pricing/models.py
+msgid "specifications"
+msgstr "especificações"
+
+#: pricing/models.py
+msgid "currency"
+msgstr "moeda"
+
+#: pricing/models.py
+msgid "original value"
+msgstr "valor original"
+
+#: pricing/models.py
+msgid "previous version"
+msgstr "versão anterior"
+
+#: pricing/models.py
+msgid "current version"
+msgstr "versão atual"
+
+#: pricing/models.py
+msgid "created by"
+msgstr "criado por"
+
+#: pricing/models.py
+msgid "deleted at"
+msgstr "excluído em"
+
+#: pricing/models.py
+msgid "deleted by"
+msgstr "excluído por"
+
+#: pricing/models.py
+msgid "average price"
+msgstr "average price"
+
+#: pricing/models.py
+msgid "average prices"
+msgstr "average prices"
+
+#: pricing/models.py
+msgid "term (months)"
+msgstr "prazo (meses)"
+
+#: pricing/models.py
+msgid "entered as"
+msgstr "informado como"
+
+#: pricing/models.py
+msgid "amount"
+msgstr "quantia"
+
+#: pricing/models.py
+msgid "value"
+msgstr "valor"
+
+#: pricing/models.py
+msgid "price point"
+msgstr "ponto de preço"
+
+#: pricing/models.py
+msgid "price points"
+msgstr "pontos de preço"
+
+#: pricing/serializers.py
+msgid "Enter a percentage up to %(max)d%%."
+msgstr "Informe um percentual de até %(max)d%%."
+
+#: pricing/serializers.py
+msgid "Use at most 2 decimal places for values."
+msgstr "Use no máximo 2 casas decimais em valores."
+
+#: pricing/serializers.py
+msgid "This asset class is disabled."
+msgstr "Esta classe de ativo está desabilitada."
+
+#: pricing/serializers.py
+msgid "This manufacturer is disabled."
+msgstr "Este fabricante está desabilitado."
+
+#: pricing/serializers.py
+msgid "Only the current version of an average price can get a new version."
+msgstr "Somente a versão atual de um average price pode ganhar uma nova versão."
+
+#: pricing/serializers.py
+msgid "Fill in exactly these terms (months): %(terms)s."
+msgstr "Preencha exatamente estes prazos (meses): %(terms)s."
+
+#: pricing/views.py
+msgid "Only the current version of an average price can be deleted."
+msgstr "Somente a versão atual de um average price pode ser excluída."
+
+#: catalogs/models.py
+msgid "specification template"
+msgstr "template de especificações"
+
+#: catalogs/serializers.py
+msgid "Field names must be unique within the template."
+msgstr "Os nomes dos campos devem ser únicos no template."
+
+#: catalogs/serializers.py
+msgid "Choose text or number."
+msgstr "Escolha texto ou número."
+
+#: catalogs/serializers.py
+msgid "Use at most %(max)d fields."
+msgstr "Use no máximo %(max)d campos."
+
+#: catalogs/serializers.py
+msgid "Too long."
+msgstr "Muito longo."
+
+#: catalogs/serializers.py
+msgid "Enter a number."
+msgstr "Informe um número."
+
+#: catalogs/serializers.py
+msgid "This field is not part of the template."
+msgstr "Este campo não faz parte do template."
+
+#: catalogs/views.py
+msgid "This manufacturer is used in average prices and cannot be deleted."
+msgstr "Este fabricante é usado em average prices e não pode ser excluído."
+
+#: catalogs/views.py
+msgid "This asset class is used in average prices and cannot be deleted."
+msgstr "Esta classe de ativo é usada em average prices e não pode ser excluída."
+
+#: pricing/serializers.py
+msgid "Each term may appear only once."
+msgstr "Cada prazo pode aparecer só uma vez."

@@ -50,6 +50,8 @@ const numberFormats = {
   percent: { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 },
   /** 0–10 ratings, always with one decimal: 7.5 / 7,5 */
   rating: { style: 'decimal', minimumFractionDigits: 1, maximumFractionDigits: 1 },
+  /** A percentage already in 0–100 scale ("68.75" → 68,75), shown next to a % sign */
+  percentValue: { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 },
 } as const
 
 export function isSupportedLanguage(code: string): code is Language {

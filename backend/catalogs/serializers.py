@@ -17,6 +17,7 @@ from .models import (
     Vertical,
     general_names,
 )
+from .specs import MAX_FIELDS, SpecError, normalize_template
 
 
 def _collapse_spaces(value: str) -> str:
@@ -34,7 +35,14 @@ class SubVerticalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SubVertical
-        fields = ["id", "name", "is_general", "risk", "allowed_terms", "recommended_term"]
+        fields = [
+            "id",
+            "name",
+            "is_general",
+            "risk",
+            "allowed_terms",
+            "recommended_term",
+        ]
         extra_kwargs = {"name": {"required": False, "allow_blank": True}}
 
     def validate(self, attrs):
@@ -232,7 +240,7 @@ def sub_vertical_label(sub) -> str:
 
 
 class SubVerticalOptionSerializer(serializers.ModelSerializer):
-    """A sub-vertical as offered by pickers (e.g. the asset class form)."""
+    """A sub-vertical as offered by pickers and forms (asset classes, average prices)."""
 
     name = serializers.CharField(source="display_name")
     label = serializers.SerializerMethodField()
@@ -240,7 +248,15 @@ class SubVerticalOptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SubVertical
-        fields = ["id", "name", "is_general", "label", "vertical"]
+        fields = [
+            "id",
+            "name",
+            "is_general",
+            "label",
+            "vertical",
+            "allowed_terms",
+            "recommended_term",
+        ]
 
     def get_label(self, obj) -> str:
         return sub_vertical_label(obj)
@@ -275,11 +291,13 @@ class AssetClassSerializer(serializers.ModelSerializer):
             "remarketing_average",
             "keywords",
             "notes",
+            "spec_template",
             "is_enabled",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        # The template is edited through /api/catalogs/asset-classes/<id>/spec-template/
+        read_only_fields = ["id", "spec_template", "created_at", "updated_at"]
         # Not filled in = 0 stars (model default); null is not accepted
         extra_kwargs = {field: {"allow_null": False} for field in REMARKETING_RATINGS}
         # Uniqueness of the name within the sub-vertical is checked in validate() (friendlier)
@@ -330,3 +348,32 @@ class AssetClassSerializer(serializers.ModelSerializer):
                     {"name": [_("This sub-vertical already has an asset class with this name.")]}
                 )
         return attrs
+
+
+# --- Specification templates -----------------------------------------------------------------
+
+
+def spec_messages() -> dict[str, str]:
+    """Translated texts for catalogs.specs (built per request, in the user's language)."""
+    return {
+        "blank_label": _("This field may not be blank."),
+        "duplicate_label": _("Field names must be unique within the template."),
+        "invalid_kind": _("Choose text or number."),
+        "too_many": _("Use at most %(max)d fields.") % {"max": MAX_FIELDS},
+        "too_long": _("Too long."),
+        "required": _("This field is required."),
+        "invalid_number": _("Enter a number."),
+        "unknown_field": _("This field is not part of the template."),
+    }
+
+
+class SpecTemplateSerializer(serializers.Serializer):
+    """The whole template of an asset class; saving replaces it."""
+
+    fields = serializers.ListField(child=serializers.DictField(), allow_empty=True)
+
+    def validate_fields(self, value):
+        try:
+            return normalize_template(value, spec_messages())
+        except SpecError as exc:
+            raise serializers.ValidationError(exc.errors) from exc

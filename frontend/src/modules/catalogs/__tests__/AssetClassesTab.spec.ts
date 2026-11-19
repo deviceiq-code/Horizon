@@ -15,6 +15,8 @@ vi.mock('../asset-classes/api', async (importOriginal) => ({
   createAssetClass: vi.fn<typeof assetClassesApi.createAssetClass>(),
   updateAssetClass: vi.fn<typeof assetClassesApi.updateAssetClass>(),
   deleteAssetClass: vi.fn<typeof assetClassesApi.deleteAssetClass>(),
+  getSpecTemplate: vi.fn<typeof assetClassesApi.getSpecTemplate>(),
+  saveSpecTemplate: vi.fn<typeof assetClassesApi.saveSpecTemplate>(),
 }))
 vi.mock('../verticals/api', () => ({
   listSubVerticals: vi.fn<typeof verticalsApi.listSubVerticals>(),
@@ -31,6 +33,8 @@ const sub = (id: number, name: string, vertical: typeof INDUSTRY, is_general = f
   is_general,
   label: `${vertical.name} / ${name}`,
   vertical,
+  allowed_terms: [12, 24, 36],
+  recommended_term: 24,
 })
 const INDUSTRY_GENERAL = sub(10, 'General', INDUSTRY, true)
 const YELLOW_LINE = sub(11, 'Yellow line', INDUSTRY)
@@ -49,6 +53,9 @@ const EXCAVATORS: assetClassesApi.AssetClass = {
   remarketing_average: '3.25',
   keywords: ['escavadeira', 'hidráulica'],
   notes: 'Crawler and wheeled.',
+  spec_template: [
+    { key: 'hours', label: 'Operating hours', kind: 'number', unit: 'h', required: true },
+  ],
   is_enabled: true,
   created_at: '',
   updated_at: '',
@@ -68,6 +75,7 @@ const DRILLS: assetClassesApi.AssetClass = {
   remarketing_average: '0.00',
   keywords: [],
   notes: '',
+  spec_template: [],
   is_enabled: false,
 }
 
@@ -139,6 +147,27 @@ describe('AssetClassesTab', () => {
     expect(drills).toContain('Mining / General')
     expect(drills).toContain('(Disabled)')
     expect(drills).toContain('Disabled')
+    wrapper.unmount()
+  })
+
+  it('opens the specification template of a class and reloads after saving', async () => {
+    api.getSpecTemplate.mockResolvedValue({ fields: EXCAVATORS.spec_template })
+    api.saveSpecTemplate.mockResolvedValue({ fields: EXCAVATORS.spec_template })
+    const wrapper = mountTab()
+    await settle()
+
+    const buttons = wrapper.findAll('[data-testid="edit-spec-template"]')
+    expect(buttons[1]!.attributes('title')).toBe('1 field')
+    expect(buttons[0]!.attributes('title')).toBe('No fields')
+    await buttons[1]!.trigger('click')
+    await settle()
+
+    expect(api.getSpecTemplate).toHaveBeenCalledWith(100)
+    expect(document.body.textContent).toContain('Excavators — Industry / Yellow line')
+    api.listAssetClasses.mockClear()
+    await click('save')
+    expect(api.saveSpecTemplate).toHaveBeenCalledWith(100, EXCAVATORS.spec_template)
+    expect(api.listAssetClasses).toHaveBeenCalled()
     wrapper.unmount()
   })
 

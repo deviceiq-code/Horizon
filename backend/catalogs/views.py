@@ -13,6 +13,7 @@ from django.db.models import (
     Value,
 )
 from django.utils.translation import gettext as _
+from django.utils.translation import gettext_noop
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -34,6 +35,7 @@ from .models import (
 from .serializers import (
     AssetClassSerializer,
     ManufacturerSerializer,
+    SpecTemplateSerializer,
     SubVerticalOptionSerializer,
     VerticalSerializer,
 )
@@ -82,6 +84,18 @@ class VerticalViewSet(viewsets.ModelViewSet):
         )
 
 
+class RefuseDeletingWhenInUse:
+    """DELETE answers 409 with `in_use_message` when other records protect the row."""
+
+    in_use_message = ""
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response({"detail": _(self.in_use_message)}, status=status.HTTP_409_CONFLICT)
+
+
 def with_remarketing_score(queryset, fields):
     """Annotate `remarketing_score`: the average of the star ratings, for sorting in the database.
 
@@ -96,7 +110,7 @@ def with_remarketing_score(queryset, fields):
     )
 
 
-class ManufacturerViewSet(viewsets.ModelViewSet):
+class ManufacturerViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for manufacturers.
 
     List supports ?search= (name), ?is_enabled=true or false, ?ordering= (id, name, the three
@@ -104,6 +118,9 @@ class ManufacturerViewSet(viewsets.ModelViewSet):
     """
 
     queryset = with_remarketing_score(Manufacturer.objects.all(), MANUFACTURER_RATINGS)
+    in_use_message = gettext_noop(
+        "This manufacturer is used in average prices and cannot be deleted."
+    )
     serializer_class = ManufacturerSerializer
     filter_backends = [EnabledFilter, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name"]
@@ -158,7 +175,7 @@ class AssetClassSearchFilter(filters.SearchFilter):
         )
 
 
-class AssetClassViewSet(viewsets.ModelViewSet):
+class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for asset classes.
 
     List supports ?search= (name, keyword, sub-vertical or vertical name), ?vertical=<id>,
@@ -169,6 +186,9 @@ class AssetClassViewSet(viewsets.ModelViewSet):
 
     queryset = with_remarketing_score(
         AssetClass.objects.select_related("sub_vertical__vertical"), REMARKETING_RATINGS
+    )
+    in_use_message = gettext_noop(
+        "This asset class is used in average prices and cannot be deleted."
     )
     serializer_class = AssetClassSerializer
     filter_backends = [EnabledFilter, AssetClassSearchFilter, NullsLastOrderingFilter]
@@ -182,6 +202,17 @@ class AssetClassViewSet(viewsets.ModelViewSet):
         "is_enabled",
     ]
     ordering = ["name"]
+
+    @action(detail=True, methods=["get", "put"], url_path="spec-template")
+    def spec_template(self, request, pk=None):
+        """GET the asset class's specification template; PUT {"fields": [...]} replaces it."""
+        asset_class = self.get_object()
+        if request.method == "PUT":
+            serializer = SpecTemplateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            asset_class.spec_template = serializer.validated_data["fields"]
+            asset_class.save(update_fields=["spec_template", "updated_at"])
+        return Response({"fields": asset_class.spec_template})
 
     def get_queryset(self):
         queryset = super().get_queryset()
