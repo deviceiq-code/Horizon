@@ -1,4 +1,5 @@
 import { useI18n } from 'vue-i18n'
+import { isDecimalInRange } from '@/utils/decimal'
 
 type Rule = (value: string | null | undefined) => true | string
 
@@ -20,5 +21,13 @@ export function useValidationRules() {
     (v) =>
       (v ?? '').length <= max || t('validation.maxLength', { max })
 
-  return { required, email, maxLength }
+  /** Number from min to max with at most `places` decimals. Empty is accepted (use required). */
+  const decimalRange =
+    (min: number, max: number, places: number): Rule =>
+    (v) =>
+      !String(v ?? '').trim() ||
+      isDecimalInRange(String(v), min, max, places) ||
+      t('validation.decimalRange', { min, max, places })
+
+  return { required, email, maxLength, decimalRange }
 }

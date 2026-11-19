@@ -48,6 +48,8 @@ const datetimeFormats = {
 const numberFormats = {
   decimal: { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 },
   percent: { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 },
+  /** 0–10 ratings, always with one decimal: 7.5 / 7,5 */
+  rating: { style: 'decimal', minimumFractionDigits: 1, maximumFractionDigits: 1 },
 } as const
 
 export function isSupportedLanguage(code: string): code is Language {

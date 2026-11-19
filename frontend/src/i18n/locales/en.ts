@@ -26,6 +26,7 @@ const en = {
     required: 'This field is required.',
     email: 'Enter a valid email address.',
     maxLength: 'Use at most {max} characters.',
+    decimalRange: 'Enter a number from {min} to {max} with up to {places} decimal place(s).',
   },
   language: {
     select: 'Select language',
@@ -116,6 +117,98 @@ const en = {
   catalogs: {
     title: 'Catalogs',
     subtitle: 'Reference data used across the system.',
+    fields: {
+      id: 'ID',
+      enabled: 'Enabled',
+      status: 'Status',
+    },
+    status: {
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+    },
+    remarketing: {
+      average: 'Average',
+    },
+  },
+  manufacturers: {
+    title: 'Manufacturers',
+    new: 'New manufacturer',
+    edit: 'Edit manufacturer',
+    fields: {
+      name: 'Manufacturer name',
+    },
+    remarketing: {
+      title: 'Remarketing rating',
+      subtitle:
+        'How the brand performs in the used-equipment market. 0 to 5 stars, half stars allowed; ratings not filled in count as 0 stars.',
+      reputation: {
+        label: 'Reputation',
+        hint: 'How well the brand is accepted in the secondary market: 0 not accepted · 5 very well ranked',
+      },
+      product_quality: {
+        label: 'Product quality',
+        hint: '0 very poor · 5 excellent',
+      },
+      after_sales: {
+        label: 'After-sales service',
+        hint: '0 very poor · 5 excellent',
+      },
+    },
+    searchPlaceholder: 'Search by name',
+    empty: 'No manufacturers yet.',
+    noResults: 'No manufacturers match your search.',
+    created: 'Manufacturer created.',
+    updated: 'Manufacturer updated.',
+    deleted: 'Manufacturer deleted.',
+    deleteTitle: 'Delete manufacturer',
+    deleteConfirm: 'Delete "{name}"? This cannot be undone.',
+  },
+  assetClasses: {
+    title: 'Asset classes',
+    new: 'New asset class',
+    edit: 'Edit asset class',
+    fields: {
+      name: 'Asset class name',
+      icon: 'Icon',
+      subVertical: 'Business vertical / sub-vertical',
+      keywords: 'Keywords (used to relate assets)',
+      notes: 'Notes',
+    },
+    chooseIcon: 'Choose icon',
+    remarketing: {
+      title: 'Remarketing rating',
+      subtitle:
+        'How this asset class performs in the used-equipment market. 0 to 5 stars, half stars allowed; ratings not filled in count as 0 stars (click the selected star again to go back to 0).',
+      liquidity: {
+        label: 'Liquidity',
+        hint: 'How easy it is to sell used: 0 no demand · 5 sells easily',
+      },
+      value_retention: {
+        label: 'Value retention',
+        hint: 'How it keeps its value over time: 0 loses a lot · 5 keeps it well',
+      },
+      technology_renewal: {
+        label: 'Technology renewal',
+        hint: 'How fast its technology renews: 0 rarely · 5 very fast',
+      },
+      usage_breadth: {
+        label: 'Usage breadth',
+        hint: 'How broad its use and applications are: 0 very narrow · 5 very broad',
+      },
+    },
+    keywords: {
+      placeholder: 'Add keyword (Enter or comma)',
+      remove: 'Remove keyword {keyword}',
+      tooMany: 'Use at most {max} keywords.',
+    },
+    searchPlaceholder: 'Search by name, keyword, vertical or sub-vertical',
+    empty: 'No asset classes yet.',
+    noResults: 'No asset classes match your search.',
+    created: 'Asset class created.',
+    updated: 'Asset class updated.',
+    deleted: 'Asset class deleted.',
+    deleteTitle: 'Delete asset class',
+    deleteConfirm: 'Delete "{name}"? This cannot be undone.',
   },
   verticals: {
     title: 'Business verticals',

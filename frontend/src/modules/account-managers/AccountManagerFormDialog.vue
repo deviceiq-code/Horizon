@@ -104,6 +104,7 @@ async function submit() {
           <VerticalPicker
             :key="openCount"
             v-model="form.verticals"
+            multiple
             :initial-options="initialVerticals"
             :label="$t('accountManagers.fields.verticals')"
             :error-messages="fieldErrors.verticals"

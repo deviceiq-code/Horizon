@@ -1,0 +1,62 @@
+import { api, listQuery, type ListParams, type Paginated } from '@/api'
+import type { SubVerticalOption } from '../verticals/api'
+
+/** The four ratings that make up the remarketing rating (0–5 stars, half steps). */
+export const REMARKETING_RATINGS = [
+  'liquidity',
+  'value_retention',
+  'technology_renewal',
+  'usage_breadth',
+] as const
+
+export type RemarketingRating = (typeof REMARKETING_RATINGS)[number]
+
+export interface AssetClass {
+  id: number
+  name: string
+  /** MDI icon name, e.g. "mdi-forklift" */
+  icon: string
+  /** Sub-vertical id (required) */
+  sub_vertical: number
+  /** The sub-vertical with its label ("Industry / Yellow line") and vertical (read-only) */
+  sub_vertical_detail: SubVerticalOption
+  /** 0–5 stars as decimal strings ("3.5"); not filled in = "0.0" */
+  liquidity: string
+  value_retention: string
+  technology_renewal: string
+  usage_breadth: string
+  /** Average of the four ratings, computed by the API ("3.13"); read-only */
+  remarketing_average: string
+  /** Lowercase, no duplicates */
+  keywords: string[]
+  notes: string
+  is_enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type AssetClassInput = Pick<
+  AssetClass,
+  'name' | 'icon' | RemarketingRating | 'keywords' | 'notes' | 'is_enabled'
+> & {
+  /** null only while editing a new asset class */
+  sub_vertical: number | null
+}
+
+const BASE = '/catalogs/asset-classes/'
+
+export function listAssetClasses(params: ListParams) {
+  return api<Paginated<AssetClass>>(BASE + listQuery(params))
+}
+
+export function createAssetClass(data: AssetClassInput) {
+  return api<AssetClass>(BASE, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updateAssetClass(id: number, data: AssetClassInput) {
+  return api<AssetClass>(`${BASE}${id}/`, { method: 'PATCH', body: JSON.stringify(data) })
+}
+
+export function deleteAssetClass(id: number) {
+  return api<void>(`${BASE}${id}/`, { method: 'DELETE' })
+}

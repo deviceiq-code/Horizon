@@ -37,6 +37,23 @@ Multi-user web system for **operating lease residual value pricing**
     Defaults for a new vertical's General (medium; 12/24/36/48/60; recommended 36) live only in
     `catalogs/models.py` and are served at `/api/catalogs/verticals/defaults/`.
     DRF 3.18 reports nested list errors by position: `{"sub_verticals": {"1": {"field": [...]}}}`.
+    `Manufacturer` and `AssetClass` feed the upcoming asset lists, at
+    `/api/catalogs/manufacturers/` and `/api/catalogs/asset-classes/`.
+    **Remarketing rating** (both): 0–5 star ratings in half steps (`DecimalField(2, 1)`, default 0
+    — not filled in = 0 stars, never null). Manufacturer: reputation, product_quality,
+    after_sales. AssetClass: liquidity, value_retention, technology_renewal, usage_breadth.
+    Their simple average is `catalogs/ratings.py::average_stars` (pure function, 2 places, half
+    up), returned read-only as `remarketing_average` and sortable as `?ordering=remarketing_score`
+    (DB annotation with the same formula). Pending decision: whether technology_renewal (5 = fast
+    renewal, usually bad for remarketing) should count inverted, and weights.
+    `Manufacturer`: name (unique), ratings, enabled.
+    `AssetClass`: name (unique per sub-vertical), icon (`mdi-*`; offered list in the frontend's
+    `asset-classes/icons.ts`), `sub_vertical` FK with PROTECT (only sub-verticals of enabled
+    verticals can be assigned; a sub-vertical/vertical with asset classes cannot be removed),
+    ratings, keywords (ArrayField, lowercase, unique, max 30 × 50 chars; searchable), notes,
+    enabled.
+    `/api/catalogs/sub-verticals/` lists sub-verticals as picker options ("Vertical / Sub").
+  - `config/filters.py` — `EnabledFilter` (`?is_enabled=true|false`) for any model with `is_enabled`.
   - `config/pagination.py` — default pagination for lists (`?page=`, `?page_size=`, max 200).
   - `config/filters.py` — `NullsLastOrderingFilter` (empty values last in both directions); use it
     when a sortable column can be empty.
@@ -52,11 +69,26 @@ Multi-user web system for **operating lease residual value pricing**
     Settings). `account-managers/` is the reference module.
   - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
     listed in `tabs.ts`. A new small table is a new tab here, not a new module.
+  - `src/components/ServerCrudTable.vue` — generic CRUD grid (search, New, edit/delete with
+    confirmation, notifications); pages pass columns, texts and `item.<key>` cell slots, open
+    their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
+    simple CRUD pages (Manufacturers and Asset classes do).
+  - Decimal inputs (e.g. ratings): text field with `inputmode="decimal"` (not `type="number"`,
+    which drops "7,5" in some browsers), `rules.decimalRange(min, max, places)`, and
+    `normalizeDecimal()` (src/utils/decimal.ts) before sending. Display with `$n(value, 'rating')`.
   - `src/components/RemoteAutocomplete.vue` — generic single/multiple picker with server-side
-    search; module pickers wrap it: `AccountManagerPicker.vue`, `VerticalPicker.vue` (enabled only).
+    search; module pickers wrap it: `AccountManagerPicker.vue`, `VerticalPicker.vue` (enabled only),
+    `SubVerticalPicker.vue` ("Vertical / Sub-vertical", enabled verticals only).
     Multiple mode has per-chip X only (no "clear all") and clears the typed text after each pick.
     `exclude` hides records chosen elsewhere (e.g. the primary account manager in the secondaries);
     `rules` makes it required. Tests pick options with `pickOption`/`openDropdown` (test-utils).
+  - Remarketing UI (`src/modules/catalogs/remarketing/`): `RemarketingEditor.vue` (star inputs +
+    live average preview, display only — the API's `remarketing_average` is authoritative),
+    `StarRatingInput.vue` (v-rating, half stars, clicking the selected star again sets 0),
+    `RemarketingAverage.vue` (average stars + number; hover shows each rating). In jsdom, v-rating
+    is clicked through its labels (order 0, 0.5, 1 … 5 → index = value × 2).
+  - Asset class form pieces (`src/modules/catalogs/asset-classes/`): `IconPicker.vue`,
+    `KeywordsField.vue` (Enter/comma adds).
   - `src/modules/catalogs/verticals/TermsField.vue` — list of terms in months as chips with
     "Add term" (type months, Enter adds, Esc cancels).
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;

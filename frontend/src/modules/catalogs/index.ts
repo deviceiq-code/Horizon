@@ -20,6 +20,16 @@ const catalogs: AppModule = {
           name: 'catalogs-verticals',
           component: () => import('./verticals/VerticalsTab.vue'),
         },
+        {
+          path: 'asset-classes',
+          name: 'catalogs-asset-classes',
+          component: () => import('./asset-classes/AssetClassesTab.vue'),
+        },
+        {
+          path: 'manufacturers',
+          name: 'catalogs-manufacturers',
+          component: () => import('./manufacturers/ManufacturersTab.vue'),
+        },
       ],
     },
   ],

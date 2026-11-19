@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
 from django.utils.translation import gettext_lazy as _
 
-from .models import SubVertical, Vertical
+from .models import AssetClass, Manufacturer, SubVertical, Vertical
 
 
 class SubVerticalFormSet(BaseInlineFormSet):
@@ -37,3 +37,38 @@ class VerticalAdmin(admin.ModelAdmin):
         vertical = form.instance
         if not vertical.sub_verticals.filter(is_general=True).exists():
             SubVertical.objects.create(vertical=vertical, **SubVertical.general_defaults())
+
+
+@admin.register(Manufacturer)
+class ManufacturerAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "name",
+        "reputation",
+        "product_quality",
+        "after_sales",
+        "remarketing_average",
+        "is_enabled",
+    ]
+    list_filter = ["is_enabled"]
+    search_fields = ["name"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(AssetClass)
+class AssetClassAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "name",
+        "sub_vertical",
+        "liquidity",
+        "value_retention",
+        "technology_renewal",
+        "usage_breadth",
+        "remarketing_average",
+        "is_enabled",
+    ]
+    list_filter = ["is_enabled", "sub_vertical__vertical"]
+    search_fields = ["name", "sub_vertical__name", "sub_vertical__vertical__name"]
+    list_select_related = ["sub_vertical__vertical"]
+    readonly_fields = ["created_at", "updated_at"]

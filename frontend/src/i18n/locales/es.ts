@@ -23,6 +23,7 @@ const es: Messages = {
     required: 'Este campo es obligatorio.',
     email: 'Introduzca un correo electrónico válido.',
     maxLength: 'Use como máximo {max} caracteres.',
+    decimalRange: 'Introduzca un número de {min} a {max} con hasta {places} decimal(es).',
   },
   language: {
     select: 'Seleccionar idioma',
@@ -113,6 +114,98 @@ const es: Messages = {
   catalogs: {
     title: 'Catálogos',
     subtitle: 'Datos de referencia utilizados en todo el sistema.',
+    fields: {
+      id: 'ID',
+      enabled: 'Habilitado',
+      status: 'Estado',
+    },
+    status: {
+      enabled: 'Habilitado',
+      disabled: 'Deshabilitado',
+    },
+    remarketing: {
+      average: 'Promedio',
+    },
+  },
+  manufacturers: {
+    title: 'Fabricantes',
+    new: 'Nuevo fabricante',
+    edit: 'Editar fabricante',
+    fields: {
+      name: 'Nombre del fabricante',
+    },
+    remarketing: {
+      title: 'Calificación de remarketing',
+      subtitle:
+        'Cómo se comporta la marca en el mercado de usados. De 0 a 5 estrellas, con medias estrellas; las calificaciones sin completar cuentan como 0 estrellas.',
+      reputation: {
+        label: 'Reputación',
+        hint: 'Aceptación de la marca en el mercado secundario: 0 no aceptada · 5 muy bien posicionada',
+      },
+      product_quality: {
+        label: 'Calidad de los productos',
+        hint: '0 muy mala · 5 excelente',
+      },
+      after_sales: {
+        label: 'Posventa',
+        hint: '0 muy mala · 5 excelente',
+      },
+    },
+    searchPlaceholder: 'Buscar por nombre',
+    empty: 'Todavía no hay fabricantes.',
+    noResults: 'Ningún fabricante coincide con la búsqueda.',
+    created: 'Fabricante creado.',
+    updated: 'Fabricante actualizado.',
+    deleted: 'Fabricante eliminado.',
+    deleteTitle: 'Eliminar fabricante',
+    deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
+  },
+  assetClasses: {
+    title: 'Clases de activo',
+    new: 'Nueva clase de activo',
+    edit: 'Editar clase de activo',
+    fields: {
+      name: 'Nombre de la clase de activo',
+      icon: 'Icono',
+      subVertical: 'Vertical de negocio / subvertical',
+      keywords: 'Palabras clave (para relacionar bienes)',
+      notes: 'Observaciones',
+    },
+    chooseIcon: 'Elegir icono',
+    remarketing: {
+      title: 'Calificación de remarketing',
+      subtitle:
+        'Cómo se comporta esta clase de bienes en el mercado de usados. De 0 a 5 estrellas, con medias estrellas; las calificaciones sin completar cuentan como 0 estrellas (haga clic de nuevo en la estrella seleccionada para volver a 0).',
+      liquidity: {
+        label: 'Liquidez',
+        hint: 'Facilidad para vender el bien usado: 0 sin demanda · 5 se vende fácil',
+      },
+      value_retention: {
+        label: 'Retención de valor',
+        hint: 'Cuánto valor pierde con el tiempo: 0 pierde mucho · 5 lo mantiene bien',
+      },
+      technology_renewal: {
+        label: 'Renovación tecnológica',
+        hint: 'Velocidad de renovación de la tecnología: 0 rara vez · 5 muy rápido',
+      },
+      usage_breadth: {
+        label: 'Amplitud de uso',
+        hint: 'Amplitud de uso y aplicación: 0 muy restringido · 5 muy amplio',
+      },
+    },
+    keywords: {
+      placeholder: 'Agregar palabra clave (Enter o coma)',
+      remove: 'Quitar palabra clave {keyword}',
+      tooMany: 'Use como máximo {max} palabras clave.',
+    },
+    searchPlaceholder: 'Buscar por nombre, palabra clave, vertical o subvertical',
+    empty: 'Todavía no hay clases de activo.',
+    noResults: 'Ninguna clase de activo coincide con la búsqueda.',
+    created: 'Clase de activo creada.',
+    updated: 'Clase de activo actualizada.',
+    deleted: 'Clase de activo eliminada.',
+    deleteTitle: 'Eliminar clase de activo',
+    deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
   },
   verticals: {
     title: 'Verticales de negocio',

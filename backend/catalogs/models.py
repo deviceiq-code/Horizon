@@ -1,11 +1,17 @@
 """Reference data ("catalogs"): small tables used across the system, e.g. business verticals."""
 
+from decimal import Decimal
+
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils import translation
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
+
+from .ratings import STARS_MAX, STARS_MIN, average_stars, is_half_star
 
 
 class Vertical(models.Model):
@@ -116,3 +122,136 @@ class SubVertical(models.Model):
             "allowed_terms": list(DEFAULT_TERMS),
             "recommended_term": DEFAULT_RECOMMENDED_TERM,
         }
+
+
+# --- Asset lists: manufacturers and asset classes ----------------------------------------------
+
+# Remarketing ratings: 0–5 stars in half-star steps (e.g. 3.5). Not filled in = 0 stars.
+# Their average is computed by catalogs.ratings.average_stars (not stored).
+MANUFACTURER_RATINGS = ["reputation", "product_quality", "after_sales"]
+REMARKETING_RATINGS = ["liquidity", "value_retention", "technology_renewal", "usage_breadth"]
+DEFAULT_ASSET_ICON = "mdi-cube-outline"
+MAX_KEYWORDS = 30
+MAX_KEYWORD_LENGTH = 50
+
+
+def validate_half_star(value):
+    if value is not None and not is_half_star(value):
+        raise ValidationError(_("Use whole or half stars (e.g. 3.5)."))
+
+
+def star_rating_field(verbose_name):
+    """0–5 stars in half steps; 0 when not filled in."""
+    return models.DecimalField(
+        verbose_name,
+        max_digits=2,
+        decimal_places=1,
+        default=Decimal("0"),
+        validators=[
+            MinValueValidator(STARS_MIN),
+            MaxValueValidator(STARS_MAX),
+            validate_half_star,
+        ],
+    )
+
+
+def stars_range_constraints(prefix, fields):
+    return [
+        models.CheckConstraint(
+            condition=models.Q(**{f"{field}__gte": STARS_MIN, f"{field}__lte": STARS_MAX}),
+            name=f"{prefix}_{field}_range",
+        )
+        for field in fields
+    ]
+
+
+class Manufacturer(models.Model):
+    """A maker of leased assets (e.g. a tractor or server brand).
+
+    Its remarketing rating — how the brand performs in the used-equipment market — is made of
+    three 0–5 star ratings:
+
+    - reputation: how well the brand is accepted in the secondary market (0 not accepted,
+      5 very well ranked);
+    - product_quality: 0 very poor, 5 excellent;
+    - after_sales: after-sales service, 0 very poor, 5 excellent.
+    """
+
+    name = models.CharField(_("name"), max_length=100)
+    reputation = star_rating_field(_("reputation"))
+    product_quality = star_rating_field(_("product quality"))
+    after_sales = star_rating_field(_("after-sales service"))
+    is_enabled = models.BooleanField(_("enabled"), default=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("manufacturer")
+        verbose_name_plural = _("manufacturers")
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="manufacturer_unique_name"),
+            *stars_range_constraints("manufacturer", MANUFACTURER_RATINGS),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def remarketing_average(self):
+        return average_stars(getattr(self, field) for field in MANUFACTURER_RATINGS)
+
+
+class AssetClass(models.Model):
+    """A kind of leased asset within a sub-vertical (e.g. Industry / Yellow line / Excavators).
+
+    The name is unique within its sub-vertical. The remarketing rating — how the class performs
+    in the used-equipment market — is made of four 0–5 star ratings:
+
+    - liquidity: how easily it sells used (0 no demand, 5 sells easily);
+    - value_retention: how well it keeps its value over time (0 loses a lot, 5 keeps it well);
+    - technology_renewal: how fast its technology renews (0 rarely, 5 very fast);
+    - usage_breadth: how broad its use and applications are (0 very narrow, 5 very broad).
+    """
+
+    name = models.CharField(_("name"), max_length=100)
+    icon = models.CharField(_("icon"), max_length=60, default=DEFAULT_ASSET_ICON)
+    sub_vertical = models.ForeignKey(
+        SubVertical,
+        on_delete=models.PROTECT,  # a sub-vertical (or vertical) with asset classes stays
+        related_name="asset_classes",
+        verbose_name=_("sub-vertical"),
+    )
+    liquidity = star_rating_field(_("liquidity"))
+    value_retention = star_rating_field(_("value retention"))
+    technology_renewal = star_rating_field(_("technology renewal"))
+    usage_breadth = star_rating_field(_("usage breadth"))
+    # Words used to relate assets to this class (lowercase, no duplicates)
+    keywords = ArrayField(
+        models.CharField(max_length=MAX_KEYWORD_LENGTH),
+        default=list,
+        blank=True,
+        verbose_name=_("keywords"),
+    )
+    notes = models.TextField(_("notes"), blank=True)
+    is_enabled = models.BooleanField(_("enabled"), default=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("asset class")
+        verbose_name_plural = _("asset classes")
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                "sub_vertical", Lower("name"), name="asset_class_unique_name_per_sub_vertical"
+            ),
+            *stars_range_constraints("asset_class", REMARKETING_RATINGS),
+        ]
+
+    def __str__(self):
+        return f"{self.sub_vertical} / {self.name}"
+
+    @property
+    def remarketing_average(self):
+        return average_stars(getattr(self, field) for field in REMARKETING_RATINGS)

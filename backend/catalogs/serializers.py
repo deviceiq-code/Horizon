@@ -1,8 +1,22 @@
+import re
+
 from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from .models import MAX_TERM_MONTHS, SubVertical, Vertical, general_names
+from .models import (
+    MANUFACTURER_RATINGS,
+    MAX_KEYWORD_LENGTH,
+    MAX_KEYWORDS,
+    MAX_TERM_MONTHS,
+    REMARKETING_RATINGS,
+    AssetClass,
+    Manufacturer,
+    SubVertical,
+    Vertical,
+    general_names,
+)
 
 
 def _collapse_spaces(value: str) -> str:
@@ -148,7 +162,20 @@ class VerticalSerializer(serializers.ModelSerializer):
         # Delete first, so a removed name can be reused by a new sub-vertical
         for sub_id, sub in existing.items():
             if sub_id not in kept_ids and not sub.is_general:
-                sub.delete()
+                try:
+                    sub.delete()
+                except ProtectedError as exc:
+                    raise serializers.ValidationError(
+                        {
+                            "sub_verticals": [
+                                _(
+                                    'The sub-vertical "%(name)s" has asset classes and '
+                                    "cannot be removed."
+                                )
+                                % {"name": sub.name}
+                            ]
+                        }
+                    ) from exc
         for item in items:
             sub_id = item.pop("id", None)
             if sub_id is None:
@@ -159,3 +186,147 @@ class VerticalSerializer(serializers.ModelSerializer):
             for field, value in item.items():
                 setattr(sub, field, value)
             sub.save()
+
+
+# --- Asset lists ------------------------------------------------------------------------------
+
+
+def remarketing_average_field():
+    """Read-only average of the star ratings (catalogs.ratings.average_stars), e.g. "3.13"."""
+    return serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
+
+
+class ManufacturerSerializer(serializers.ModelSerializer):
+    remarketing_average = remarketing_average_field()
+
+    class Meta:
+        model = Manufacturer
+        fields = [
+            "id",
+            "name",
+            *MANUFACTURER_RATINGS,
+            "remarketing_average",
+            "is_enabled",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        # Not filled in = 0 stars (model default); null is not accepted
+        extra_kwargs = {field: {"allow_null": False} for field in MANUFACTURER_RATINGS}
+
+    def validate_name(self, value):
+        value = _collapse_spaces(value)
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        duplicates = Manufacturer.objects.filter(name__iexact=value)
+        if self.instance is not None:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError(_("A manufacturer with this name already exists."))
+        return value
+
+
+def sub_vertical_label(sub) -> str:
+    """ "Industry / Yellow line"; the general one shows translated ("Industry / General")."""
+    return f"{sub.vertical.name} / {sub.display_name}"
+
+
+class SubVerticalOptionSerializer(serializers.ModelSerializer):
+    """A sub-vertical as offered by pickers (e.g. the asset class form)."""
+
+    name = serializers.CharField(source="display_name")
+    label = serializers.SerializerMethodField()
+    vertical = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubVertical
+        fields = ["id", "name", "is_general", "label", "vertical"]
+
+    def get_label(self, obj) -> str:
+        return sub_vertical_label(obj)
+
+    def get_vertical(self, obj) -> dict:
+        v = obj.vertical
+        return {"id": v.id, "name": v.name, "is_enabled": v.is_enabled}
+
+
+_ICON = re.compile(r"^mdi-[a-z0-9]+(-[a-z0-9]+)*$")
+
+
+class AssetClassSerializer(serializers.ModelSerializer):
+    # Read-only: the sub-vertical with its label and vertical, for display
+    sub_vertical_detail = SubVerticalOptionSerializer(source="sub_vertical", read_only=True)
+    remarketing_average = remarketing_average_field()
+    # Blank entries are accepted here and dropped by validate_keywords
+    keywords = serializers.ListField(
+        child=serializers.CharField(max_length=MAX_KEYWORD_LENGTH, allow_blank=True),
+        required=False,
+    )
+
+    class Meta:
+        model = AssetClass
+        fields = [
+            "id",
+            "name",
+            "icon",
+            "sub_vertical",
+            "sub_vertical_detail",
+            *REMARKETING_RATINGS,
+            "remarketing_average",
+            "keywords",
+            "notes",
+            "is_enabled",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        # Not filled in = 0 stars (model default); null is not accepted
+        extra_kwargs = {field: {"allow_null": False} for field in REMARKETING_RATINGS}
+        # Uniqueness of the name within the sub-vertical is checked in validate() (friendlier)
+        validators = []
+
+    def validate_name(self, value):
+        value = _collapse_spaces(value)
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        return value
+
+    def validate_icon(self, value):
+        value = (value or "").strip()
+        if not _ICON.match(value):
+            raise serializers.ValidationError(_("Choose an icon from the list."))
+        return value
+
+    def validate_keywords(self, value):
+        """Lowercase, single spaces, no blanks or duplicates (case-insensitive), in order."""
+        keywords = []
+        for keyword in value:
+            keyword = _collapse_spaces(keyword).lower()
+            if keyword and keyword not in keywords:
+                keywords.append(keyword)
+        if len(keywords) > MAX_KEYWORDS:
+            raise serializers.ValidationError(
+                _("Use at most %(max)d keywords.") % {"max": MAX_KEYWORDS}
+            )
+        return keywords
+
+    def validate_sub_vertical(self, value):
+        # Only sub-verticals of enabled verticals can be assigned; keeping one whose vertical
+        # was disabled since is fine
+        unchanged = self.instance is not None and self.instance.sub_vertical_id == value.id
+        if not value.vertical.is_enabled and not unchanged:
+            raise serializers.ValidationError(_("This business vertical is disabled."))
+        return value
+
+    def validate(self, attrs):
+        name = attrs.get("name", getattr(self.instance, "name", None))
+        sub_vertical = attrs.get("sub_vertical", getattr(self.instance, "sub_vertical", None))
+        if name and sub_vertical:
+            duplicates = AssetClass.objects.filter(sub_vertical=sub_vertical, name__iexact=name)
+            if self.instance is not None:
+                duplicates = duplicates.exclude(pk=self.instance.pk)
+            if duplicates.exists():
+                raise serializers.ValidationError(
+                    {"name": [_("This sub-vertical already has an asset class with this name.")]}
+                )
+        return attrs

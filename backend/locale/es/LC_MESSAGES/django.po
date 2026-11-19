@@ -291,3 +291,95 @@ msgstr "gestores de cuenta secundarios"
 #: customers/serializers.py
 msgid "The primary account manager cannot also be a secondary one."
 msgstr "El gestor de cuenta principal no puede ser también secundario."
+
+#: catalogs/models.py
+msgid "rating"
+msgstr "calificación"
+
+#: catalogs/models.py
+msgid "manufacturer"
+msgstr "fabricante"
+
+#: catalogs/models.py
+msgid "manufacturers"
+msgstr "fabricantes"
+
+#: catalogs/models.py
+msgid "asset class"
+msgstr "clase de activo"
+
+#: catalogs/models.py
+msgid "asset classes"
+msgstr "clases de activo"
+
+#: catalogs/serializers.py
+msgid "A manufacturer with this name already exists."
+msgstr "Ya existe un fabricante con este nombre."
+
+#: catalogs/serializers.py
+msgid "This business vertical is disabled."
+msgstr "Esta vertical de negocio está deshabilitada."
+
+#: catalogs/serializers.py
+msgid "This vertical already has an asset class with this name."
+msgstr "Esta vertical ya tiene una clase de activo con este nombre."
+
+#: catalogs/views.py
+msgid "This vertical has asset classes and cannot be deleted."
+msgstr "Esta vertical tiene clases de activo y no se puede eliminar."
+
+#: catalogs/models.py
+msgid "Use whole or half stars (e.g. 3.5)."
+msgstr "Use estrellas enteras o medias (p. ej., 3,5)."
+
+#: catalogs/models.py
+msgid "icon"
+msgstr "icono"
+
+#: catalogs/models.py
+msgid "liquidity"
+msgstr "liquidez"
+
+#: catalogs/models.py
+msgid "value retention"
+msgstr "retención de valor"
+
+#: catalogs/models.py
+msgid "technology renewal"
+msgstr "renovación tecnológica"
+
+#: catalogs/models.py
+msgid "usage breadth"
+msgstr "amplitud de uso"
+
+#: catalogs/serializers.py
+msgid "The sub-vertical \"%(name)s\" has asset classes and cannot be removed."
+msgstr "La subvertical \"%(name)s\" tiene clases de activo y no se puede quitar."
+
+#: catalogs/serializers.py
+msgid "Choose an icon from the list."
+msgstr "Elija un icono de la lista."
+
+#: catalogs/serializers.py
+msgid "This sub-vertical already has an asset class with this name."
+msgstr "Esta subvertical ya tiene una clase de activo con este nombre."
+
+#: catalogs/models.py
+msgid "keywords"
+msgstr "palabras clave"
+
+#: catalogs/serializers.py
+msgid "Use at most %(max)d keywords."
+msgstr "Use como máximo %(max)d palabras clave."
+
+#: catalogs/models.py
+msgid "reputation"
+msgstr "reputación"
+
+#: catalogs/models.py
+msgid "product quality"
+msgstr "calidad de los productos"
+
+#: catalogs/models.py
+msgid "after-sales service"
+msgstr "posventa"

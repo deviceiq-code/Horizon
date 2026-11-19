@@ -1,5 +1,15 @@
 from django.db.models import F
-from rest_framework.filters import OrderingFilter
+from rest_framework.filters import BaseFilterBackend, OrderingFilter
+
+
+class EnabledFilter(BaseFilterBackend):
+    """?is_enabled=true|false keeps only enabled or disabled records (any other value: all)."""
+
+    def filter_queryset(self, request, queryset, view):
+        value = request.query_params.get("is_enabled", "").lower()
+        if value in ("true", "false"):
+            return queryset.filter(is_enabled=value == "true")
+        return queryset
 
 
 class NullsLastOrderingFilter(OrderingFilter):

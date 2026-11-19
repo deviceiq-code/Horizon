@@ -1,22 +1,25 @@
 <script setup lang="ts">
 /**
- * Pick several business verticals (v-model: id[]). Offers only enabled verticals, searching the
- * server as the user types; verticals already selected stay listed even if disabled since.
- * Pass `initialOptions` with the currently selected ones. Remount it (via :key) to start fresh.
+ * Pick one business vertical (v-model: id | null) or several (multiple; v-model: id[]).
+ * Offers only enabled verticals, searching the server as the user types; verticals already
+ * selected stay listed (marked) even if disabled since. Pass `initialOptions` with the current
+ * selection. Remount it (via :key) to start fresh.
  */
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import RemoteAutocomplete, { type RemoteOption } from '@/components/RemoteAutocomplete.vue'
 import { listVerticals, type VerticalRef } from './api'
 
-const model = defineModel<number[]>({ required: true })
+const model = defineModel<number | number[] | null>({ required: true })
 const props = withDefaults(
   defineProps<{
     label: string
+    multiple?: boolean
     initialOptions?: VerticalRef[]
+    rules?: ((value: unknown) => true | string)[]
     errorMessages?: string[]
   }>(),
-  { initialOptions: () => [], errorMessages: undefined },
+  { multiple: false, initialOptions: () => [], rules: () => [], errorMessages: undefined },
 )
 
 const { t } = useI18n()
@@ -44,8 +47,9 @@ async function search(term: string) {
     v-model="model"
     :label="label"
     :search="search"
-    multiple
+    :multiple="multiple"
     :initial-options="initial"
+    :rules="rules"
     :error-messages="errorMessages"
     :no-data-text="t('verticals.noneFound')"
   />

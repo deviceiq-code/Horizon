@@ -40,6 +40,22 @@ export type VerticalInput = Pick<Vertical, 'name' | 'is_enabled' | 'notes' | 'su
 /** Minimal reference to a vertical, as other modules display it. */
 export type VerticalRef = Pick<Vertical, 'id' | 'name' | 'is_enabled'>
 
+/** A sub-vertical as offered by pickers (/api/catalogs/sub-verticals/). */
+export interface SubVerticalOption {
+  id: number
+  /** Translated "General" for the general sub-vertical */
+  name: string
+  is_general: boolean
+  /** "Industry / Yellow line" */
+  label: string
+  vertical: VerticalRef
+}
+
+/** Sub-verticals of every vertical, ordered by vertical (General first). */
+export function listSubVerticals(params: ListParams) {
+  return api<Paginated<SubVerticalOption>>('/catalogs/sub-verticals/' + listQuery(params))
+}
+
 /** Initial values for the general sub-vertical of a new vertical (defined by the backend). */
 export interface SubVerticalDefaults {
   risk: Risk
