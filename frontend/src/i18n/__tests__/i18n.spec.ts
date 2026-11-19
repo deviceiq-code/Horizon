@@ -6,6 +6,7 @@ import { LANGUAGES, detectLanguage, normalizeLanguage } from '@/i18n'
 import en from '@/i18n/locales/en'
 import es from '@/i18n/locales/es'
 import ptBR from '@/i18n/locales/pt-br'
+import { MODULES } from '@/modules'
 
 // Vitest runs with frontend/ as the working directory (vitest.config.ts → root)
 const SRC_ROOT = resolve('src')
@@ -43,6 +44,11 @@ describe('translation files', () => {
     }
     expect(used.size).toBeGreaterThan(0)
     const missing = [...used].filter((k) => !reference.includes(k))
+    expect(missing).toEqual([])
+  })
+
+  it('every module title key exists (keys passed as variables are not found above)', () => {
+    const missing = MODULES.map((m) => m.titleKey).filter((k) => !reference.includes(k))
     expect(missing).toEqual([])
   })
 

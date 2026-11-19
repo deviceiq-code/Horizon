@@ -1,15 +1,28 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import LanguageSelector from '@/components/LanguageSelector.vue'
+import { MODULES } from '@/modules'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
 const { mdAndUp } = useDisplay()
 
-const menuOpen = ref(mdAndUp.value)
+// Desktop: permanent icon rail that expands on hover; the top-left button pins it open.
+// Mobile: hidden drawer that the top-left button opens over the page.
+const drawerOpen = ref(mdAndUp.value)
+const rail = ref(true)
+
+watch(mdAndUp, (desktop) => {
+  drawerOpen.value = desktop
+})
+
+function toggleMenu() {
+  if (mdAndUp.value) rail.value = !rail.value
+  else drawerOpen.value = !drawerOpen.value
+}
 
 async function logout() {
   await auth.logout()
@@ -20,7 +33,7 @@ async function logout() {
 <template>
   <v-app-bar color="primary" density="comfortable">
     <template #prepend>
-      <v-app-bar-nav-icon :aria-label="$t('menu.open')" @click="menuOpen = !menuOpen" />
+      <v-app-bar-nav-icon :aria-label="$t('menu.open')" @click="toggleMenu" />
     </template>
     <v-app-bar-title>{{ $t('app.name') }}</v-app-bar-title>
     <template #append>
@@ -34,7 +47,13 @@ async function logout() {
     </template>
   </v-app-bar>
 
-  <v-navigation-drawer v-model="menuOpen" :temporary="!mdAndUp">
+  <v-navigation-drawer
+    v-model="drawerOpen"
+    :rail="mdAndUp && rail"
+    :expand-on-hover="mdAndUp && rail"
+    :temporary="!mdAndUp"
+    :permanent="mdAndUp"
+  >
     <v-list nav density="comfortable">
       <v-list-item
         :to="{ name: 'home' }"
@@ -42,12 +61,25 @@ async function logout() {
         prepend-icon="mdi-home-outline"
         :title="$t('menu.home')"
       />
+      <v-divider class="my-1" />
       <v-list-item
-        :to="{ name: 'settings' }"
-        prepend-icon="mdi-cog-outline"
-        :title="$t('menu.settings')"
+        v-for="module in MODULES"
+        :key="module.name"
+        :to="{ name: module.name }"
+        :prepend-icon="module.icon"
+        :title="$t(module.titleKey)"
       />
     </v-list>
+
+    <template #append>
+      <v-list nav density="comfortable">
+        <v-list-item
+          :to="{ name: 'settings' }"
+          prepend-icon="mdi-cog-outline"
+          :title="$t('menu.settings')"
+        />
+      </v-list>
+    </template>
   </v-navigation-drawer>
 
   <v-main>

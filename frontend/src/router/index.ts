@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { MODULES } from '@/modules'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -20,6 +21,7 @@ const router = createRouter({
           name: 'home',
           component: () => import('@/views/HomeView.vue'),
         },
+        ...MODULES.flatMap((module) => module.routes),
         {
           path: 'settings',
           name: 'settings',

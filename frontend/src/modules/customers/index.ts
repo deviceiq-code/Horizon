@@ -1,0 +1,16 @@
+import type { AppModule } from '@/modules'
+
+const customers: AppModule = {
+  name: 'customers',
+  icon: 'mdi-domain',
+  titleKey: 'customers.title',
+  routes: [
+    {
+      path: 'customers',
+      name: 'customers',
+      component: () => import('./CustomersView.vue'),
+    },
+  ],
+}
+
+export default customers

@@ -51,3 +51,123 @@ msgstr "Sistema Horizon — Administração"
 #: config/urls.py
 msgid "Horizon System"
 msgstr "Sistema Horizon"
+
+#: account_managers/apps.py
+msgid "Account managers"
+msgstr "Account managers"
+
+#: account_managers/models.py
+msgid "full name"
+msgstr "nome completo"
+
+#: account_managers/models.py
+msgid "email"
+msgstr "e-mail"
+
+#: account_managers/models.py
+msgid "created at"
+msgstr "criado em"
+
+#: account_managers/models.py
+msgid "account manager"
+msgstr "account manager"
+
+#: account_managers/models.py
+msgid "account managers"
+msgstr "account managers"
+
+#: account_managers/serializers.py
+msgid "An account manager with this email already exists."
+msgstr "Já existe um account manager com este e-mail."
+
+#: customers/apps.py
+msgid "Customers"
+msgstr "Clientes"
+
+#: customers/models.py
+msgid "legal name"
+msgstr "razão social"
+
+#: customers/models.py
+msgid "trade name"
+msgstr "nome fantasia"
+
+#: customers/models.py
+msgid "tax ID"
+msgstr "CPF/CNPJ"
+
+#: customers/models.py
+msgid "country"
+msgstr "país"
+
+#: customers/models.py
+msgid "phone"
+msgstr "telefone"
+
+#: customers/models.py
+msgid "postal code"
+msgstr "CEP"
+
+#: customers/models.py
+msgid "street"
+msgstr "logradouro"
+
+#: customers/models.py
+msgid "number"
+msgstr "número"
+
+#: customers/models.py
+msgid "complement"
+msgstr "complemento"
+
+#: customers/models.py
+msgid "district"
+msgstr "bairro"
+
+#: customers/models.py
+msgid "city"
+msgstr "cidade"
+
+#: customers/models.py
+msgid "state"
+msgstr "UF"
+
+#: customers/models.py
+msgid "active"
+msgstr "ativo"
+
+#: customers/models.py
+msgid "notes"
+msgstr "observações"
+
+#: customers/models.py
+msgid "customer"
+msgstr "cliente"
+
+#: customers/models.py
+msgid "customers"
+msgstr "clientes"
+
+#: customers/serializers.py
+msgid "Enter a two-letter country code (ISO 3166-1)."
+msgstr "Informe o código do país com duas letras (ISO 3166-1)."
+
+#: customers/serializers.py
+msgid "Enter a valid CPF or CNPJ."
+msgstr "Informe um CPF ou CNPJ válido."
+
+#: customers/serializers.py
+msgid "Enter a valid CEP (8 digits)."
+msgstr "Informe um CEP válido (8 dígitos)."
+
+#: customers/serializers.py
+msgid "Enter a valid Brazilian state (e.g. SP)."
+msgstr "Informe uma UF válida (ex.: SP)."
+
+#: customers/serializers.py
+msgid "A customer with this tax ID already exists."
+msgstr "Já existe um cliente com este CPF/CNPJ."
+
+#: account_managers/views.py
+msgid "This account manager has customers and cannot be deleted."
+msgstr "Este account manager tem clientes vinculados e não pode ser excluído."

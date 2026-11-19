@@ -26,6 +26,8 @@ INSTALLED_APPS = [
     # Project
     "accounts",
     "assets",
+    "account_managers",
+    "customers",
 ]
 
 MIDDLEWARE = [
@@ -95,6 +97,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_PAGINATION_CLASS": "config.pagination.StandardPagination",
     # Decimals travel as strings so JavaScript does not lose precision
     "COERCE_DECIMAL_TO_STRING": True,
 }

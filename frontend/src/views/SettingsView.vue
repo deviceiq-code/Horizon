@@ -2,13 +2,14 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LANGUAGES } from '@/i18n'
+import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore, type PreferencesUpdate, type Theme } from '@/stores/preferences'
 
 const { t } = useI18n()
 const preferences = usePreferencesStore()
+const notifications = useNotificationsStore()
 
 const saving = ref(false)
-const notice = ref({ visible: false, text: '', color: 'success' })
 
 const THEMES: { value: Theme; icon: string }[] = [
   { value: 'light', icon: 'mdi-white-balance-sunny' },
@@ -21,9 +22,9 @@ async function save(changes: PreferencesUpdate) {
   saving.value = true
   try {
     await preferences.save(changes)
-    notice.value = { visible: true, text: t('settings.saved'), color: 'success' }
+    notifications.notify(t('settings.saved'))
   } catch {
-    notice.value = { visible: true, text: t('settings.saveError'), color: 'error' }
+    notifications.notify(t('settings.saveError'), 'error')
   } finally {
     saving.value = false
   }
@@ -84,9 +85,5 @@ async function save(changes: PreferencesUpdate) {
         </v-btn-toggle>
       </v-card-text>
     </v-card>
-
-    <v-snackbar v-model="notice.visible" :color="notice.color" :timeout="2500">
-      {{ notice.text }}
-    </v-snackbar>
   </v-container>
 </template>

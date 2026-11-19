@@ -17,13 +17,28 @@ Multi-user web system for **operating lease residual value pricing**
   - `accounts/` — session authentication and user preferences (`UserPreferences`: language and
     theme), endpoints under `/api/auth/` (`login/`, `logout/`, `me/`, `preferences/`).
   - `assets/` — domain app (no models yet; business rules to be defined).
+  - `account_managers/` — first business module (`AccountManager`: full_name, email unique
+    case-insensitive), CRUD at `/api/account-managers/` (DRF ModelViewSet).
+  - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, account manager
+    FK with PROTECT, active flag). `customers/tax_ids.py` validates CPF and CNPJ, including the
+    alphanumeric CNPJ (in force since July 2026). CRUD at `/api/customers/`.
+  - `config/pagination.py` — default pagination for lists (`?page=`, `?page_size=`, max 200).
+  - `config/filters.py` — `NullsLastOrderingFilter` (empty values last in both directions); use it
+    when a sortable column can be empty.
   - `locale/` — backend translations (`<locale>/LC_MESSAGES/django.po` + versioned `.mo`).
 - `frontend/` — Vue 3 + TypeScript + Vite + Vuetify 4 (Material Design, MDI icons) + Pinia + Vue Router + vue-i18n.
   - `src/api.ts` — HTTP client (sends session cookie, X-CSRFToken and Accept-Language headers).
   - `src/stores/auth.ts` — logged-in user state.
   - `src/stores/preferences.ts` — language/theme in use; saved to the account via `PATCH /api/auth/preferences/`.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
-  - `src/layouts/MainLayout.vue` — top bar + side menu for authenticated pages.
+  - `src/layouts/MainLayout.vue` — top bar + side icon rail (expands on hover) for authenticated pages.
+  - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
+    router and the side menu. `account-managers/` is the reference module.
+  - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
+  - `src/components/ConfirmDialog.vue` — generic confirmation dialog.
+  - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.
+  - `src/composables/useValidationRules.ts` — translated field rules (required, email, maxLength).
+  - `src/utils/countries.ts` — ISO country codes; names via `Intl.DisplayNames` in the UI language.
   - In dev, Vite proxies `/api` to `http://localhost:8000`.
 - Database: PostgreSQL 17 on the homelab (`TrueNAS-1:5432`, database `horizon_dev`).
   The test database (`test_horizon_dev`) is created/dropped by pytest-django.
@@ -41,6 +56,18 @@ Multi-user web system for **operating lease residual value pricing**
 - All residual calculation rules live in pure backend functions (e.g. `assets/calculations.py`),
   with unit tests. The frontend never recalculates prices on its own.
 - API: DRF with session authentication; everything requires login by default (`IsAuthenticated`).
+- **New business module** (follow `account_managers` / `src/modules/account-managers/`):
+  - Backend: own Django app with model + serializer (normalize/validate input there) + ModelViewSet
+    with `SearchFilter`/`OrderingFilter`, router under `/api/<module>/`, admin, tests, translations.
+    Foreign keys to other modules use `on_delete=PROTECT`; the referenced module's viewset turns
+    `ProtectedError` into HTTP 409 with a translated `detail` (see `AccountManagerViewSet.destroy`).
+  - Frontend: `src/modules/<module>/` with `index.ts` (AppModule: route name, `mdi-*` icon,
+    `titleKey`), `api.ts` (uses `listQuery`/`ListParams`), list view with `useServerTable` +
+    `v-data-table-server`, and a form dialog with `useValidationRules`; register it in `MODULES`.
+    Delete errors go through `deleteErrorMessage` (shows the server's 409 reason).
+    Translation keys in a `<module>` section.
+  - Component tests mount Vuetify via `src/test-utils.ts` (`mountWithPlugins`, `typeInto`, `click`);
+    always let Vue settle between inputs (firing them together makes Vuetify validation race).
 - Never commit `.env` or passwords. New settings go into `.env.example`.
 - Before finishing a task: run tests, ruff, lint and type-check.
 - **Internationalization** (en default, pt-br, es — Django-style lowercase codes):

@@ -8,4 +8,6 @@ admin.site.site_title = _("Horizon System")
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
+    path("api/account-managers/", include("account_managers.urls")),
+    path("api/customers/", include("customers.urls")),
 ]
