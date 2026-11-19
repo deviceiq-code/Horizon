@@ -1,4 +1,4 @@
-"""Configurações do Sistema Horizon. Valores sensíveis vêm do arquivo .env na raiz do repositório."""
+"""Configurações do Sistema Horizon. Valores sensíveis vêm do .env na raiz."""
 
 from pathlib import Path
 

@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import InputText from 'primevue/inputtext'
-import Message from 'primevue/message'
-import Password from 'primevue/password'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -14,6 +9,7 @@ const route = useRoute()
 
 const username = ref('')
 const password = ref('')
+const mostrarSenha = ref(false)
 const erro = ref('')
 const carregando = ref(false)
 
@@ -33,51 +29,48 @@ async function entrar() {
 </script>
 
 <template>
-  <main class="login">
-    <Card class="cartao">
-      <template #title>Sistema Horizon</template>
-      <template #subtitle>Precificação de residuais de leasing operacional</template>
-      <template #content>
-        <form class="formulario" @submit.prevent="entrar">
-          <label for="usuario">Usuário</label>
-          <InputText id="usuario" v-model="username" autocomplete="username" autofocus fluid />
+  <v-main class="d-flex align-center justify-center pa-4">
+    <v-card width="400" max-width="100%" elevation="4" class="pa-2">
+      <v-card-item>
+        <v-card-title class="text-h5">Sistema Horizon</v-card-title>
+        <v-card-subtitle>Precificação de residuais de leasing operacional</v-card-subtitle>
+      </v-card-item>
 
-          <label for="senha">Senha</label>
-          <Password
+      <v-card-text>
+        <v-form @submit.prevent="entrar">
+          <v-text-field
+            v-model="username"
+            label="Usuário"
+            prepend-inner-icon="mdi-account"
+            autocomplete="username"
+            autofocus
+          />
+          <v-text-field
             v-model="password"
-            input-id="senha"
-            :feedback="false"
-            :input-props="{ autocomplete: 'current-password' }"
-            toggle-mask
-            fluid
+            label="Senha"
+            prepend-inner-icon="mdi-lock"
+            :type="mostrarSenha ? 'text' : 'password'"
+            :append-inner-icon="mostrarSenha ? 'mdi-eye-off' : 'mdi-eye'"
+            autocomplete="current-password"
+            @click:append-inner="mostrarSenha = !mostrarSenha"
           />
 
-          <Message v-if="erro" severity="error" size="small" variant="simple">{{ erro }}</Message>
+          <v-alert v-if="erro" type="error" variant="tonal" density="compact" class="mb-4">
+            {{ erro }}
+          </v-alert>
 
-          <Button type="submit" label="Entrar" icon="pi pi-sign-in" :loading="carregando" fluid />
-        </form>
-      </template>
-    </Card>
-  </main>
+          <v-btn
+            type="submit"
+            color="primary"
+            size="large"
+            block
+            prepend-icon="mdi-login"
+            :loading="carregando"
+          >
+            Entrar
+          </v-btn>
+        </v-form>
+      </v-card-text>
+    </v-card>
+  </v-main>
 </template>
-
-<style scoped>
-.login {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-}
-.cartao {
-  width: 100%;
-  max-width: 400px;
-}
-.formulario {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-.formulario button {
-  margin-top: 0.8rem;
-}
-</style>

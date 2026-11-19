@@ -10,7 +10,7 @@ Idioma do projeto: **português do Brasil** — nomes de domínio, mensagens, co
   - `config/` — settings, urls. Configuração via `.env` na raiz (django-environ).
   - `contas/` — autenticação por sessão (endpoints em `/api/auth/`).
   - `ativos/` — app do domínio (ainda sem modelos; regras de negócio a definir).
-- `frontend/` — Vue 3 + TypeScript + Vite + PrimeVue (Aura) + Pinia + Vue Router.
+- `frontend/` — Vue 3 + TypeScript + Vite + Vuetify 4 (Material Design, ícones MDI) + Pinia + Vue Router.
   - `src/api.ts` — cliente HTTP (envia cookie de sessão e cabeçalho X-CSRFToken).
   - `src/stores/auth.ts` — estado do usuário logado.
   - Em dev, o Vite faz proxy de `/api` para `http://localhost:8000`.
@@ -30,3 +30,6 @@ Idioma do projeto: **português do Brasil** — nomes de domínio, mensagens, co
 - API: DRF com autenticação por sessão; tudo exige login por padrão (`IsAuthenticated`).
 - Nunca commitar `.env` nem senhas. Configurações novas vão no `.env.example`.
 - Antes de concluir uma tarefa: rodar testes, ruff, lint e type-check.
+- UI: somente bibliotecas open-source sem chave de licença (MIT/Apache/BSD). Componentes do
+  **Vuetify** (auto-import via `vite-plugin-vuetify`), ícones `mdi-*`, tema em `src/plugins/vuetify.ts`.
+  **Não usar PrimeVue/PrimeUI** — licença comercial a partir da v5.

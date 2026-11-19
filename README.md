@@ -5,7 +5,7 @@ Sistema web para precificação de residuais de leasing operacional.
 ## Stack
 - **Backend:** Django 5.2 LTS + Django REST Framework (Python 3.13, gerenciado com `uv`)
 - **Banco:** PostgreSQL 17 no homelab (`TrueNAS-1:5432`, banco `horizon_dev`)
-- **Frontend:** Vue 3 + TypeScript + Vite + PrimeVue (tema Aura) + Pinia
+- **Frontend:** Vue 3 + TypeScript + Vite + Vuetify 4 (ícones MDI) + Pinia
 
 ## Primeira execução
 ```bash
