@@ -18,13 +18,21 @@ uv run python manage.py migrate
 uv run python manage.py createsuperuser
 ```
 
-## Day to day (two terminals)
+## Day to day
 ```bash
-# Terminal 1 — API at http://localhost:8000
-cd backend && uv run python manage.py runserver
+./dev.sh start      # start backend and frontend in the background
+./dev.sh status     # is everything up?
+./dev.sh logs       # follow both logs (Ctrl+C leaves; servers keep running)
+./dev.sh restart    # stop + start
+./dev.sh stop       # stop both
+```
+Every command also accepts a single service: `./dev.sh restart backend`.
+PIDs and logs are kept in `.run/`.
 
-# Terminal 2 — UI at http://localhost:5173
-cd frontend && npm run dev
+To run them in the foreground instead (two terminals):
+```bash
+cd backend && uv run python manage.py runserver   # API at http://localhost:8000
+cd frontend && npm run dev                        # UI at http://localhost:5173
 ```
 - Application: http://localhost:5173
 - Django admin: http://localhost:8000/admin

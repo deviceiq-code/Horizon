@@ -1,4 +1,4 @@
-# Segredos
+# Secrets
 .env
 
 # Python
@@ -15,7 +15,10 @@ node_modules/
 frontend/dist/
 *.local
 
-# Editores / SO
+# Dev server PIDs and logs (dev.sh)
+.run/
+
+# Editors / OS
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json

@@ -29,6 +29,8 @@ Multi-user web system for **operating lease residual value pricing**
   The test database (`test_horizon_dev`) is created/dropped by pytest-django.
 
 ## Commands
+- Dev servers (both, in background): `./dev.sh start|stop|restart|status|logs [backend|frontend]`
+  — PIDs/logs in `.run/`. Stop the servers you started before finishing a task.
 - Backend: `cd backend && uv run python manage.py runserver` | `uv run pytest` | `uv run ruff check . && uv run ruff format .`
 - Migrations: `uv run python manage.py makemigrations && uv run python manage.py migrate`
 - Frontend: `cd frontend && npm run dev` | `npm run test:unit -- --run` | `npm run lint` | `npm run type-check`
