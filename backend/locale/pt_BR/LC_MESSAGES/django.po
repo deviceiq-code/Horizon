@@ -774,3 +774,32 @@ msgstr "perfis de usuário"
 #: users
 msgid "You do not have permission to perform this action."
 msgstr "Você não tem permissão para executar esta ação."
+
+#: catalogs
+msgid "Choose a valid type."
+msgstr "Escolha um tipo válido."
+
+#: catalogs
+msgid "Add at least one item to the list."
+msgstr "Adicione pelo menos um item à lista."
+
+#: catalogs
+msgid "The list items must be unique."
+msgstr "Os itens da lista não podem se repetir."
+
+#: catalogs
+#, python-format
+msgid "Use at most %(max)d items."
+msgstr "Use no máximo %(max)d itens."
+
+#: catalogs
+msgid "Choose yes or no."
+msgstr "Escolha sim ou não."
+
+#: catalogs
+msgid "Choose an item from the list."
+msgstr "Escolha um item da lista."
+
+#: catalogs
+msgid "Choose from 0 to 5 stars, in half steps."
+msgstr "Escolha de 0 a 5 estrelas, de meia em meia."

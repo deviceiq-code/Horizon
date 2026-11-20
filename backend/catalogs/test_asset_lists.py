@@ -574,6 +574,7 @@ def test_save_spec_template(logged_client, asset_classes):
             "kind": "number",
             "unit": "h",
             "required": True,
+            "options": [],
         },
         {
             "key": "undercarriage",
@@ -581,6 +582,7 @@ def test_save_spec_template(logged_client, asset_classes):
             "kind": "text",
             "unit": "",
             "required": False,
+            "options": [],
         },
     ]
     excavators.refresh_from_db()

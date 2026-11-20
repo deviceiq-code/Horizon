@@ -15,6 +15,7 @@ import {
   type VersionsAverage,
 } from './api'
 import PriceDocuments from './PriceDocuments.vue'
+import { specText } from './specText'
 import PricePhoto from './PricePhoto.vue'
 import PriceVersionsList from './PriceVersionsList.vue'
 import VersionsAverageCard from './VersionsAverageCard.vue'
@@ -175,8 +176,7 @@ async function onVersionDeleted(erased: AveragePrice) {
           >
             <v-chip v-for="spec in row.specs" :key="spec.key" size="small" variant="outlined">
               <span class="text-medium-emphasis mr-1">{{ spec.label }}:</span>
-              <span class="font-weight-medium">{{ spec.value || '—' }}</span>
-              <span v-if="spec.value && spec.unit" class="ml-1">{{ spec.unit }}</span>
+              <span class="font-weight-medium">{{ specText(spec, t, n) }}</span>
             </v-chip>
           </div>
 

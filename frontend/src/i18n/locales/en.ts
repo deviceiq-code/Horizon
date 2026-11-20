@@ -16,6 +16,8 @@ const en = {
     saveError: 'The record was saved, but the photo could not be.',
   },
   common: {
+    yes: 'Yes',
+    no: 'No',
     showFilters: 'Filters',
     hideFilters: 'Hide filters',
     clearFilters: 'Clear filters',
@@ -409,15 +411,20 @@ const en = {
     unitPlaceholder: 'e.g. h, kg, GB',
     fieldCount: 'No fields | 1 field | {n} fields',
     saved: 'Template saved.',
+    optionsHint: 'Type an item and press Enter (or separate several with commas).',
     fields: {
       label: 'Field name',
       kind: 'Type',
       unit: 'Unit',
       required: 'Required',
+      options: 'List items',
     },
     kinds: {
       text: 'Text',
       number: 'Number',
+      boolean: 'Yes / No',
+      choice: 'List',
+      rating: 'Rating (stars)',
     },
   },
   users: {

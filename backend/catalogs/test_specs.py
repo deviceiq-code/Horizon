@@ -3,6 +3,12 @@ import pytest
 from .specs import SpecError, normalize_template, slugify_key, snapshot_values, suggest_values
 
 MSG = {
+    "no_options": "no_options",
+    "duplicate_option": "duplicate_option",
+    "too_many_options": "too_many_options",
+    "invalid_boolean": "invalid_boolean",
+    "invalid_choice": "invalid_choice",
+    "invalid_rating": "invalid_rating",
     "blank_label": "blank",
     "duplicate_label": "duplicate",
     "invalid_kind": "kind",
@@ -46,8 +52,16 @@ def test_normalize_template_cleans_and_generates_keys():
             "kind": "number",
             "unit": "h",
             "required": True,
+            "options": [],
         },
-        {"key": "memoria", "label": "Memória", "kind": "text", "unit": "", "required": False},
+        {
+            "key": "memoria",
+            "label": "Memória",
+            "kind": "text",
+            "unit": "",
+            "required": False,
+            "options": [],
+        },
     ]
 
 
@@ -136,3 +150,79 @@ def test_suggest_values_search_every_word_ignoring_case_and_accents():
 def test_suggest_values_limit():
     snapshots = [_snap(cpu=f"CPU {n:02}") for n in range(30)]
     assert len(suggest_values(snapshots, "cpu", limit=20)) == 20
+
+
+# --- Yes/no, list and rating fields -------------------------------------------------------------
+
+
+def test_choice_fields_keep_their_list():
+    result = normalize_template(
+        [
+            {"label": "Fuel", "kind": "choice", "options": [" Diesel ", "", "Electric  car"]},
+            {"label": "Cab", "kind": "boolean", "unit": "ignored", "options": ["x"]},
+            {"label": "Condition", "kind": "rating"},
+        ],
+        MSG,
+    )
+    assert [(f["kind"], f["options"], f["unit"]) for f in result] == [
+        ("choice", ["Diesel", "Electric car"], ""),
+        ("boolean", [], ""),  # no unit nor list for other kinds
+        ("rating", [], ""),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("options", "error"),
+    [
+        ([], "no_options"),
+        (["  "], "no_options"),
+        (["Diesel", "diesel"], "duplicate_option"),
+        ([f"o{n}" for n in range(51)], "too_many_options"),
+        (["x" * 101], "too long"),
+    ],
+)
+def test_choice_field_errors(options, error):
+    with pytest.raises(SpecError) as exc:
+        normalize_template([{"label": "Fuel", "kind": "choice", "options": options}], MSG)
+    assert error in exc.value.errors["0"]
+
+
+TYPED = normalize_template(
+    [
+        {"label": "Cab", "kind": "boolean", "required": True},
+        {"label": "Fuel", "kind": "choice", "options": ["Diesel", "Electric"]},
+        {"label": "Condition", "kind": "rating"},
+    ],
+    {**MSG},
+)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ({"cab": True, "fuel": "electric", "condition": "4"}, ["true", "Electric", "4"]),
+        ({"cab": "Não", "fuel": "", "condition": "3,5"}, ["false", "", "3.5"]),
+        ({"cab": "yes", "condition": 0}, ["true", "", "0"]),
+        ({"cab": "false", "condition": "5.0"}, ["false", "", "5"]),
+    ],
+)
+def test_snapshot_of_typed_values(values, expected):
+    assert [f["value"] for f in snapshot_values(TYPED, values, MSG)] == expected
+
+
+@pytest.mark.parametrize(
+    ("values", "key", "error"),
+    [
+        ({}, "cab", "required"),
+        ({"cab": "maybe"}, "cab", "invalid_boolean"),
+        ({"cab": "yes", "fuel": "Gas"}, "fuel", "invalid_choice"),
+        ({"cab": "yes", "condition": "6"}, "condition", "invalid_rating"),
+        ({"cab": "yes", "condition": "-1"}, "condition", "invalid_rating"),
+        ({"cab": "yes", "condition": "3.3"}, "condition", "invalid_rating"),
+        ({"cab": "yes", "condition": "a lot"}, "condition", "invalid_rating"),
+    ],
+)
+def test_typed_value_errors(values, key, error):
+    with pytest.raises(SpecError) as exc:
+        snapshot_values(TYPED, values, MSG)
+    assert exc.value.errors[key] == [error]

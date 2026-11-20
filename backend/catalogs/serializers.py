@@ -17,7 +17,7 @@ from .models import (
     Vertical,
     general_names,
 )
-from .specs import MAX_FIELDS, SpecError, normalize_template
+from .specs import MAX_FIELDS, MAX_OPTIONS, SpecError, normalize_template
 
 
 def _collapse_spaces(value: str) -> str:
@@ -358,7 +358,13 @@ def spec_messages() -> dict[str, str]:
     return {
         "blank_label": _("This field may not be blank."),
         "duplicate_label": _("Field names must be unique within the template."),
-        "invalid_kind": _("Choose text or number."),
+        "invalid_kind": _("Choose a valid type."),
+        "no_options": _("Add at least one item to the list."),
+        "duplicate_option": _("The list items must be unique."),
+        "too_many_options": _("Use at most %(max)d items.") % {"max": MAX_OPTIONS},
+        "invalid_boolean": _("Choose yes or no."),
+        "invalid_choice": _("Choose an item from the list."),
+        "invalid_rating": _("Choose from 0 to 5 stars, in half steps."),
         "too_many": _("Use at most %(max)d fields.") % {"max": MAX_FIELDS},
         "too_long": _("Too long."),
         "required": _("This field is required."),

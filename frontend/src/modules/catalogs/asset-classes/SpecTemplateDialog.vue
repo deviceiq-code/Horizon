@@ -9,7 +9,8 @@ import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { useNotificationsStore } from '@/stores/notifications'
-import { getSpecTemplate, saveSpecTemplate, type SpecField } from './api'
+import ListItemsField from '@/components/ListItemsField.vue'
+import { getSpecTemplate, SPEC_KINDS, saveSpecTemplate, type SpecField } from './api'
 
 const props = defineProps<{ assetClassId: number | null; label: string }>()
 const open = defineModel<boolean>({ required: true })
@@ -26,10 +27,7 @@ const loading = ref(false)
 const saving = ref(false)
 const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 
-const kinds = [
-  { value: 'text', titleKey: 'specTemplate.kinds.text' },
-  { value: 'number', titleKey: 'specTemplate.kinds.number' },
-]
+const kinds = SPEC_KINDS.map((kind) => ({ value: kind, titleKey: `specTemplate.kinds.${kind}` }))
 
 watch(open, async (isOpen) => {
   if (!isOpen || props.assetClassId === null) return
@@ -46,7 +44,10 @@ watch(open, async (isOpen) => {
 })
 
 function add() {
-  fields.value = [...fields.value, { key: '', label: '', kind: 'text', unit: '', required: false }]
+  fields.value = [
+    ...fields.value,
+    { key: '', label: '', kind: 'text', unit: '', required: false, options: [] },
+  ]
 }
 
 function remove(index: number) {
@@ -94,7 +95,7 @@ async function submit() {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="860" scrollable :persistent="saving">
+  <v-dialog v-model="open" max-width="1200" scrollable :persistent="saving">
     <v-card :title="$t('specTemplate.title')" :subtitle="label">
       <v-form
         ref="formRef"
@@ -129,7 +130,7 @@ async function submit() {
             :data-testid="`spec-field-${index}`"
           >
             <v-row dense>
-              <v-col cols="12" md="5">
+              <v-col cols="12" md="4">
                 <v-text-field
                   v-model="field.label"
                   :label="$t('specTemplate.fields.label')"
@@ -139,7 +140,7 @@ async function submit() {
                   data-testid="spec-label"
                 />
               </v-col>
-              <v-col cols="6" md="2">
+              <v-col cols="6" md="3">
                 <v-select
                   v-model="field.kind"
                   :items="kinds.map((k) => ({ value: k.value, title: $t(k.titleKey) }))"
@@ -148,7 +149,9 @@ async function submit() {
                 />
               </v-col>
               <v-col cols="6" md="2">
+                <!-- Only numbers have a unit -->
                 <v-text-field
+                  v-if="field.kind === 'number'"
                   v-model="field.unit"
                   :label="$t('specTemplate.fields.unit')"
                   :placeholder="$t('specTemplate.unitPlaceholder')"
@@ -196,6 +199,15 @@ async function submit() {
                   :title="$t('specTemplate.remove')"
                   data-testid="spec-remove"
                   @click="remove(index)"
+                />
+              </v-col>
+              <!-- The items a "choice" field offers -->
+              <v-col v-if="field.kind === 'choice'" cols="12" class="pb-2">
+                <ListItemsField
+                  v-model="field.options"
+                  :label="$t('specTemplate.fields.options')"
+                  :hint="$t('specTemplate.optionsHint')"
+                  data-testid="spec-options"
                 />
               </v-col>
             </v-row>

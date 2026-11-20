@@ -54,7 +54,14 @@ const EXCAVATORS: assetClassesApi.AssetClass = {
   keywords: ['escavadeira', 'hidráulica'],
   notes: 'Crawler and wheeled.',
   spec_template: [
-    { key: 'hours', label: 'Operating hours', kind: 'number', unit: 'h', required: true },
+    {
+      key: 'hours',
+      label: 'Operating hours',
+      kind: 'number',
+      unit: 'h',
+      required: true,
+      options: [],
+    },
   ],
   is_enabled: true,
   created_at: '',

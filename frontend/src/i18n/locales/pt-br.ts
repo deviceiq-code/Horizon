@@ -13,6 +13,8 @@ const ptBR: Messages = {
     saveError: 'O registro foi salvo, mas a foto não.',
   },
   common: {
+    yes: 'Sim',
+    no: 'Não',
     showFilters: 'Filtros',
     hideFilters: 'Ocultar filtros',
     clearFilters: 'Limpar filtros',
@@ -405,15 +407,20 @@ const ptBR: Messages = {
     unitPlaceholder: 'ex.: h, kg, GB',
     fieldCount: 'Nenhum campo | 1 campo | {n} campos',
     saved: 'Template salvo.',
+    optionsHint: 'Digite um item e tecle Enter (ou separe vários por vírgula).',
     fields: {
       label: 'Nome do campo',
       kind: 'Tipo',
       unit: 'Unidade',
       required: 'Obrigatório',
+      options: 'Itens da lista',
     },
     kinds: {
       text: 'Texto',
       number: 'Número',
+      boolean: 'Sim / Não',
+      choice: 'Lista',
+      rating: 'Avaliação (estrelas)',
     },
   },
   users: {

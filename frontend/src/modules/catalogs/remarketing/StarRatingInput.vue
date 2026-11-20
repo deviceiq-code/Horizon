@@ -15,8 +15,9 @@ withDefaults(
     hint?: string
     errorMessages?: string[]
     disabled?: boolean
+    rules?: ((value: string) => true | string)[]
   }>(),
-  { hint: undefined, errorMessages: undefined, disabled: false },
+  { hint: undefined, errorMessages: undefined, disabled: false, rules: () => [] },
 )
 
 const { n } = useI18n()
@@ -31,6 +32,7 @@ const stars = computed<number>({
   <v-input
     :model-value="model"
     :error-messages="errorMessages"
+    :rules="rules"
     :hint="hint"
     persistent-hint
     :disabled="disabled"

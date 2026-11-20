@@ -13,6 +13,8 @@ const es: Messages = {
     saveError: 'El registro se guardó, pero la foto no.',
   },
   common: {
+    yes: 'Sí',
+    no: 'No',
     showFilters: 'Filtros',
     hideFilters: 'Ocultar filtros',
     clearFilters: 'Borrar filtros',
@@ -405,15 +407,20 @@ const es: Messages = {
     unitPlaceholder: 'p. ej., h, kg, GB',
     fieldCount: 'Sin campos | 1 campo | {n} campos',
     saved: 'Plantilla guardada.',
+    optionsHint: 'Escriba un elemento y presione Enter (o separe varios con comas).',
     fields: {
       label: 'Nombre del campo',
       kind: 'Tipo',
       unit: 'Unidad',
       required: 'Obligatorio',
+      options: 'Elementos de la lista',
     },
     kinds: {
       text: 'Texto',
       number: 'Número',
+      boolean: 'Sí / No',
+      choice: 'Lista',
+      rating: 'Valoración (estrellas)',
     },
   },
   users: {

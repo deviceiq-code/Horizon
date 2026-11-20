@@ -116,7 +116,9 @@ Multi-user web system for **operating lease residual value pricing**
     type by magic bytes). Never fetch user-given URLs any other way.
   - `catalogs/specs.py` — specification templates per asset class (`AssetClass.spec_template`,
     read-only in the asset class API, edited at `/api/catalogs/asset-classes/<id>/spec-template/`;
-    fields: label, kind text|number, unit, required) and the snapshot of values stored with each
+    fields: label, kind text|number|boolean|choice|rating, unit (numbers only), required, options
+    (choice only); values stored as text — booleans "true"/"false", choices as written in the
+    template, ratings 0–5 in half steps "3.5") and the snapshot of values stored with each
     price. In the UI: `asset-classes/SpecTemplateDialog.vue`, opened from a row action of the
     Asset classes grid.
   - `config/filters.py` — `EnabledFilter` (`?is_enabled=true|false`) for any model with `is_enabled`.

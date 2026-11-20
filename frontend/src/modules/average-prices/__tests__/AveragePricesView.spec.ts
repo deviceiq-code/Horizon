@@ -39,6 +39,7 @@ const HOURS = {
   kind: 'number' as const,
   unit: 'h',
   required: true,
+  options: [],
 }
 
 const TRACKS = {
@@ -47,6 +48,7 @@ const TRACKS = {
   kind: 'text' as const,
   unit: '',
   required: false,
+  options: [],
 }
 
 const EXCAVATORS: assetClassesApi.AssetClass = {

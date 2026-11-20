@@ -3,7 +3,11 @@
 A template is a list of fields, e.g. for the asset class Excavators:
 
     [{"key": "operating_hours", "label": "Operating hours", "kind": "number", "unit": "h",
-      "required": True}, ...]
+      "required": True, "options": []}, ...]
+
+Kinds: text, number (with a unit), boolean (yes/no), choice (one of the template's `options`)
+and rating (0–5 stars in half steps). Values are always stored as text: numbers "2500.5",
+booleans "true"/"false", choices the option as written in the template, ratings "3.5".
 
 An asset (e.g. an average price row) stores a *snapshot*: each field with the value given, so
 later template changes never alter past records. Pure functions; no database.
@@ -15,8 +19,11 @@ from collections import Counter
 from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
 
-KINDS = ("text", "number")
+KINDS = ("text", "number", "boolean", "choice", "rating")
 MAX_FIELDS = 30
+MAX_OPTIONS = 50
+MAX_OPTION = 100
+RATING_MAX = Decimal(5)
 MAX_LABEL = 60
 MAX_UNIT = 20
 MAX_TEXT_VALUE = 200
@@ -41,7 +48,7 @@ def normalize_template(fields: list[dict], messages: dict[str, str]) -> list[dic
     key), otherwise generated from the label. Raises SpecError with messages per position.
 
     `messages` provides the (translated) texts: blank_label, duplicate_label, invalid_kind,
-    too_many, too_long.
+    too_many, too_long, no_options, duplicate_option, too_many_options.
     """
     if len(fields) > MAX_FIELDS:
         raise SpecError({"__all__": [messages["too_many"]]})
@@ -62,6 +69,17 @@ def normalize_template(fields: list[dict], messages: dict[str, str]) -> list[dic
             problems.append(messages["too_long"])
         if kind not in KINDS:
             problems.append(messages["invalid_kind"])
+        options = _clean_options(field.get("options")) if kind == "choice" else []
+        if kind == "choice":
+            folded = [option.casefold() for option in options]
+            if not options:
+                problems.append(messages["no_options"])
+            elif len(set(folded)) != len(folded):
+                problems.append(messages["duplicate_option"])
+            if len(options) > MAX_OPTIONS:
+                problems.append(messages["too_many_options"])
+            if any(len(option) > MAX_OPTION for option in options):
+                problems.append(messages["too_long"])
         if problems:
             errors[str(index)] = problems
             continue
@@ -76,13 +94,26 @@ def normalize_template(fields: list[dict], messages: dict[str, str]) -> list[dic
                 "key": key,
                 "label": label,
                 "kind": kind,
-                "unit": unit,
+                # Only numbers have a unit
+                "unit": unit if kind == "number" else "",
                 "required": bool(field.get("required", False)),
+                "options": options,
             }
         )
     if errors:
         raise SpecError(errors)
     return result
+
+
+def _clean_options(raw) -> list[str]:
+    """The list items of a choice field: single spaces, blanks dropped, order kept."""
+    if not isinstance(raw, list):
+        return []
+    return [text for text in (" ".join(str(item).split()) for item in raw) if text]
+
+
+TRUE_WORDS = {"true", "yes", "1", "sim", "si", "y"}
+FALSE_WORDS = {"false", "no", "0", "nao", "não", "n"}
 
 
 def snapshot_values(
@@ -92,7 +123,7 @@ def snapshot_values(
 
     Empty values are allowed for optional fields (kept as ""). Numbers are stored as decimal
     strings ("2500.5"); comma or dot accepted. `messages`: required, invalid_number, too_long,
-    unknown_field.
+    unknown_field, invalid_boolean, invalid_choice, invalid_rating.
     """
     known = {field["key"] for field in template}
     errors: dict[str, list[str]] = {
@@ -113,6 +144,31 @@ def snapshot_values(
                 text = format(number.normalize(), "f")
             except InvalidOperation:
                 errors[field["key"]] = [messages["invalid_number"]]
+        elif field["kind"] == "boolean":
+            word = text.casefold()
+            if word in TRUE_WORDS:
+                text = "true"
+            elif word in FALSE_WORDS:
+                text = "false"
+            else:
+                errors[field["key"]] = [messages["invalid_boolean"]]
+        elif field["kind"] == "choice":
+            # The option as written in the template (typed in any letter case)
+            match = next(
+                (o for o in field.get("options", []) if o.casefold() == text.casefold()), None
+            )
+            if match is None:
+                errors[field["key"]] = [messages["invalid_choice"]]
+            else:
+                text = match
+        elif field["kind"] == "rating":
+            try:
+                stars = Decimal(text.replace(",", "."))
+                if not (0 <= stars <= RATING_MAX) or (stars * 2) % 1 != 0:
+                    raise InvalidOperation
+                text = format(stars.normalize(), "f")
+            except InvalidOperation:
+                errors[field["key"]] = [messages["invalid_rating"]]
         elif len(text) > MAX_TEXT_VALUE:
             errors[field["key"]] = [messages["too_long"]]
         snapshot.append({**field, "value": text})
