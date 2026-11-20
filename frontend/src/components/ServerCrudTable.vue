@@ -40,6 +40,8 @@ const props = defineProps<{
   filters?: Record<string, string | number | boolean | null | undefined>
   /** Remembers in this browser whether the filter row is shown (e.g. "average-prices") */
   filtersStorageKey?: string
+  /** Show the filter row from the start (e.g. the page was opened with a filter) */
+  showFiltersAtStart?: boolean
   /** Rows that can be edited / deleted (all when absent); e.g. not a system record */
   canEdit?: (item: T) => boolean
   canDelete?: (item: T) => boolean
@@ -128,7 +130,7 @@ function readShown(): boolean {
     return false
   }
 }
-const filtersShown = ref(readShown())
+const filtersShown = ref(readShown() || !!props.showFiltersAtStart)
 
 function toggleFilters() {
   filtersShown.value = !filtersShown.value

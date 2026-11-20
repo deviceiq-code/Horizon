@@ -37,3 +37,22 @@ def display_name_in(context: dict, user) -> str | None:
     if "name_format" not in context:
         context["name_format"] = name_format()
     return display_name(user, context["name_format"])
+
+
+def full_name_in(context: dict, user) -> str:
+    """The user's full name in the order set in the system settings (always the full name, e.g.
+    for account managers in lists); read once per serializer tree."""
+    if "name_format" not in context:
+        context["name_format"] = name_format()
+    return format_user_name(
+        user.username,
+        user.first_name,
+        user.last_name,
+        UserNameDisplay.FULL_NAME,
+        context["name_format"][1],
+    )
+
+
+def person_ref(context: dict, user) -> dict:
+    """{"id", "full_name"} of a user, as other modules show account managers."""
+    return {"id": user.id, "full_name": full_name_in(context, user)}

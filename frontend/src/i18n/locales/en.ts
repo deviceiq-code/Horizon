@@ -461,7 +461,40 @@ const en = {
     edit: 'Edit User',
     you: 'You',
     never: 'Never',
+    formTabs: {
+      account: 'Account',
+      personal: 'Personal Data',
+      employment: 'Employment',
+      accountManager: 'Account Manager',
+    },
+    documentTypes: {
+      cpf: 'CPF',
+      rg: 'RG',
+      national_id: 'National ID',
+      passport: 'Passport',
+      other: 'Other',
+    },
+    verticalsHint: 'Business verticals this account manager works in. None is allowed.',
+    noPassword: 'No Password',
+    noPasswordHint: 'Cannot sign in until an administrator sets a password.',
+    filters: {
+      role: 'Role',
+      all: 'All',
+    },
     fields: {
+      idDocumentType: 'Document Type',
+      idDocumentNumber: 'Document Number',
+      nationality: 'Nationality',
+      birthDate: 'Birth Date',
+      employeeNumber: 'Employee Number',
+      jobTitle: 'Job Title',
+      department: 'Department',
+      workLocation: 'Work Location',
+      manager: 'Manager',
+      hireDate: 'Hire Date',
+      phone: 'Phone',
+      mobilePhone: 'Mobile Phone',
+      verticals: 'Business Verticals',
       username: 'Username',
       firstName: 'First Name',
       lastName: 'Last Name',
@@ -491,6 +524,10 @@ const en = {
     deleteConfirm:
       'Delete the user "{name}"? Users with records in the system can only be deactivated.',
     systemRoles: {
+      account_manager: {
+        name: 'Account Manager',
+        description: 'Can be the account manager of customers.',
+      },
       administrator: {
         name: 'Administrator',
         description: 'Full access to the system.',

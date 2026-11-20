@@ -7,7 +7,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { suiteApp, type AppId } from '@/apps'
 
-import accountManagers from './account-managers'
 import averagePrices from './average-prices'
 import catalogs from './catalogs'
 import customers from './customers'
@@ -34,14 +33,7 @@ export function visibleModules(isAdmin: boolean): AppModule[] {
   return MODULES.filter((module) => isAdmin || !module.adminOnly)
 }
 
-export const MODULES: AppModule[] = [
-  averagePrices,
-  customers,
-  accountManagers,
-  catalogs,
-  users,
-  systemSettings,
-]
+export const MODULES: AppModule[] = [averagePrices, customers, catalogs, users, systemSettings]
 
 /** Modules of an app the user can open, in menu order. */
 export function appModules(app: AppId | undefined, isAdmin: boolean): AppModule[] {

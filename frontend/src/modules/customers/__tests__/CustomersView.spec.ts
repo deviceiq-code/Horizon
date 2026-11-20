@@ -158,7 +158,7 @@ describe('CustomersView', () => {
     await settle()
 
     expect(api.listCustomers).toHaveBeenLastCalledWith(
-      expect.objectContaining({ ordering: 'primary_account_manager__full_name' }),
+      expect.objectContaining({ ordering: 'primary_account_manager__first_name' }),
     )
     wrapper.unmount()
   })

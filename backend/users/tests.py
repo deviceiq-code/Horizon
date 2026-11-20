@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from .models import Role
+from .models import Role, UserProfile
 from .permissions import is_administrator
 
 User = get_user_model()
@@ -203,6 +203,7 @@ def test_roles_crud(admin_client, analyst_role, admin):
     assert _post(admin_client, ROLES, {"name": "pricing TEAM"}).status_code == 400
     listed = admin_client.get(ROLES).json()["results"]
     assert [(x["name"], x["users_count"]) for x in listed] == [
+        ("Account Manager", 0),
         ("Administrator", 1),
         ("Analyst", 0),
         ("Pricing team", 0),
@@ -315,7 +316,7 @@ def test_user_photos(admin_client, admin, client, media):
     assert client.delete(f"{USERS}{bruno.pk}/photo/").status_code == 403
 
     # Deleting the user removes the file
-    path = bruno.profile.photo.path
+    path = UserProfile.objects.get(user=bruno).photo.path
     assert os.path.exists(path)
     client.force_login(admin)
     assert client.delete(f"{USERS}{bruno.pk}/").status_code == 204
@@ -326,3 +327,190 @@ def test_user_photo_must_be_an_image(admin_client, admin, media):
     r = _photo(admin_client, admin.pk, b"%PDF", "cv.pdf")
     assert r.status_code == 400
     assert admin_client.get("/api/auth/me/").json()["photo_version"] is None
+
+
+# --- Employee data and account managers -----------------------------------------------------
+
+
+@pytest.fixture
+def industry(db):
+    from catalogs.models import SubVertical, Vertical
+
+    vertical = Vertical.objects.create(name="Industry")
+    SubVertical.objects.create(vertical=vertical, **SubVertical.general_defaults())
+    return vertical
+
+
+EMPLOYEE = {
+    "id_document_type": "cpf",
+    "id_document_number": "529.982.247-25",
+    "employee_number": " E-1042 ",
+    "nationality": "br",
+    "birth_date": "1990-05-17",
+    "job_title": "Account  Manager",
+    "department": "Sales",
+    "work_location": "São Paulo",
+    "hire_date": "2020-02-03",
+    "phone": "+55 11 3000-0000",
+    "mobile_phone": "+55 11 99999-0000",
+}
+
+
+def test_account_manager_is_a_system_role(admin_client):
+    role = Role.account_manager()
+    assert (role.name, role.is_system) == ("Account Manager", True)
+    r = admin_client.delete(f"{ROLES}{role.pk}/")
+    assert r.status_code == 409
+
+
+def test_employee_data_is_saved_with_the_user(admin_client, admin, industry):
+    r = _post(
+        admin_client,
+        USERS,
+        {
+            "username": "carla",
+            "first_name": "Carla",
+            "last_name": "Mendes",
+            "password": STRONG,
+            "roles": [Role.account_manager().pk],
+            "manager": admin.pk,
+            "verticals": [industry.pk],
+            **EMPLOYEE,
+        },
+    )
+    assert r.status_code == 201, r.json()
+    data = r.json()
+    assert (data["id_document_type"], data["id_document_number"]) == ("cpf", "52998224725")
+    assert (data["employee_number"], data["nationality"]) == ("E-1042", "BR")
+    assert (data["job_title"], data["department"]) == ("Account Manager", "Sales")
+    assert (data["birth_date"], data["hire_date"]) == ("1990-05-17", "2020-02-03")
+    assert (data["manager"], data["manager_name"]) == (admin.pk, "Ana Souza")
+    assert data["verticals_detail"] == [{"id": industry.pk, "name": "Industry", "is_enabled": True}]
+    assert data["has_password"] is True
+    carla = User.objects.get(username="carla")
+    assert carla.profile.employee_number == "E-1042"
+    # Edit only some fields: the others stay
+    r = _patch(admin_client, f"{USERS}{carla.pk}/", {"department": "Key Accounts"})
+    assert r.status_code == 200
+    assert (r.json()["department"], r.json()["job_title"]) == ("Key Accounts", "Account Manager")
+
+
+@pytest.mark.parametrize(
+    ("data", "field"),
+    [
+        ({"id_document_type": "cpf", "id_document_number": "111.111.111-11"}, "id_document_number"),
+        ({"id_document_number": "123"}, "id_document_type"),
+        ({"id_document_type": "passport"}, "id_document_number"),
+        ({"nationality": "Brazil"}, "nationality"),
+        ({"birth_date": "2999-01-01"}, "birth_date"),
+        ({"birth_date": "1990-01-01", "hire_date": "1980-01-01"}, "hire_date"),
+        ({"id_document_type": "unknown", "id_document_number": "1"}, "id_document_type"),
+    ],
+)
+def test_employee_data_validation(admin_client, data, field):
+    r = _post(admin_client, USERS, {"username": "x", "password": STRONG, **data})
+    assert r.status_code == 400
+    assert field in r.json(), r.json()
+
+
+def test_documents_and_employee_numbers_are_not_repeated(admin_client, admin):
+    _patch(admin_client, f"{USERS}{admin.pk}/", {**EMPLOYEE})
+    r = _post(
+        admin_client,
+        USERS,
+        {
+            "username": "x",
+            "password": STRONG,
+            "id_document_type": "cpf",
+            "id_document_number": "52998224725",
+            "employee_number": "e-1042",
+        },
+    )
+    assert r.status_code == 400
+    assert set(r.json()) == {"id_document_number", "employee_number"}
+
+
+def test_nobody_is_their_own_manager(admin_client, admin):
+    r = _patch(admin_client, f"{USERS}{admin.pk}/", {"manager": admin.pk})
+    assert r.status_code == 400
+    assert "manager" in r.json()
+
+
+def test_verticals_only_for_account_managers(admin_client, industry):
+    bruno = User.objects.create_user("bruno", password=STRONG)
+    r = _patch(admin_client, f"{USERS}{bruno.pk}/", {"verticals": [industry.pk]})
+    assert r.json()["verticals_detail"] == []  # not an account manager
+    r = _patch(
+        admin_client,
+        f"{USERS}{bruno.pk}/",
+        {"roles": [Role.account_manager().pk], "verticals": [industry.pk]},
+    )
+    assert [v["name"] for v in r.json()["verticals_detail"]] == ["Industry"]
+    # An account manager may work in no vertical at all
+    r = _patch(admin_client, f"{USERS}{bruno.pk}/", {"verticals": []})
+    assert r.json()["verticals_detail"] == []
+    # Losing the role clears them
+    _patch(admin_client, f"{USERS}{bruno.pk}/", {"verticals": [industry.pk]})
+    r = _patch(admin_client, f"{USERS}{bruno.pk}/", {"roles": []})
+    assert r.json()["verticals_detail"] == []
+
+
+def test_users_filtered_by_role(admin_client):
+    from .testing import make_account_manager
+
+    make_account_manager("Bruno", "Lima", "bruno@example.com")
+    r = admin_client.get(USERS, {"role": "account_manager"})
+    assert [u["username"] for u in r.json()["results"]] == ["bruno"]
+    r = admin_client.get(USERS, {"role": Role.administrator().pk})
+    assert [u["username"] for u in r.json()["results"]] == ["ana"]
+
+
+def _customer(primary, secondaries=()):
+    from customers.models import Customer
+
+    customer = Customer.objects.create(
+        name="Acme", tax_id="11222333000181", primary_account_manager=primary
+    )
+    customer.secondary_account_managers.set(secondaries)
+    return customer
+
+
+def test_account_managers_of_customers_keep_the_role_and_cannot_be_deleted(admin_client):
+    from .testing import make_account_manager
+
+    bruno = make_account_manager("Bruno", "Lima", "bruno@example.com")
+    carla = make_account_manager("Carla", "Mendes", "carla@example.com")
+    _customer(bruno, [carla])
+    for user in (bruno, carla):
+        r = _patch(admin_client, f"{USERS}{user.pk}/", {"roles": []})
+        assert r.status_code == 409
+        assert "Account Manager role" in r.json()["detail"]
+        assert admin_client.delete(f"{USERS}{user.pk}/").status_code == 409
+    # Deactivating is fine (their records stay)
+    assert _patch(admin_client, f"{USERS}{bruno.pk}/", {"is_active": False}).status_code == 200
+
+
+def test_account_manager_list_for_everyone(client, db, industry):
+    from .testing import make_account_manager
+
+    bruno = make_account_manager("Bruno", "Lima", "bruno@example.com", [industry])
+    carla = make_account_manager("Carla", "Mendes", "carla@example.com")
+    carla.is_active = False
+    carla.save()
+    User.objects.create_user("plain", password=STRONG)
+    client.force_login(User.objects.create_user("viewer", password=STRONG))
+    data = client.get("/api/account-managers/").json()
+    assert [m["full_name"] for m in data["results"]] == ["Bruno Lima"]  # active, with the role
+    assert data["results"][0]["verticals_detail"][0]["name"] == "Industry"
+    r = client.get("/api/account-managers/", {"vertical": industry.pk, "search": "lima"})
+    assert [m["id"] for m in r.json()["results"]] == [bruno.pk]
+    # Read-only
+    assert client.post("/api/account-managers/", {}).status_code == 405
+
+
+def test_users_without_a_password_are_flagged(admin_client):
+    bruno = User.objects.create_user("bruno")
+    bruno.set_unusable_password()
+    bruno.save()
+    r = admin_client.get(f"{USERS}{bruno.pk}/")
+    assert r.json()["has_password"] is False

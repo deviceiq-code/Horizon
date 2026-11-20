@@ -5,6 +5,9 @@ from django.db.models import ProtectedError
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from users.display import person_ref
+from users.models import ACCOUNT_MANAGER
+
 from .models import (
     MANUFACTURER_RATINGS,
     MAX_KEYWORD_LENGTH,
@@ -76,8 +79,8 @@ class SubVerticalSerializer(serializers.ModelSerializer):
 
 
 class VerticalSerializer(serializers.ModelSerializer):
-    # Read-only: the account managers who work in this vertical. They are assigned on the
-    # account manager (AccountManager.verticals), not here.
+    # Read-only: the account managers who work in this vertical. Administrators assign them on
+    # the user (Users → the user's verticals), not here.
     account_managers_detail = serializers.SerializerMethodField()
     sub_verticals = SubVerticalSerializer(many=True, required=False)
 
@@ -96,8 +99,13 @@ class VerticalSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def get_account_managers_detail(self, obj) -> list[dict]:
-        managers = sorted(obj.account_managers.all(), key=lambda m: m.full_name.lower())
-        return [{"id": m.id, "full_name": m.full_name} for m in managers]
+        refs = [
+            person_ref(self.context, profile.user)
+            for profile in obj.account_manager_profiles.all()
+            if profile.user.is_active
+            and any(role.key == ACCOUNT_MANAGER for role in profile.user.roles.all())
+        ]
+        return sorted(refs, key=lambda ref: ref["full_name"].lower())
 
     def validate_name(self, value):
         value = _collapse_spaces(value)

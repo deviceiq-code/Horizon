@@ -58,17 +58,12 @@ describe('suite apps and routes', () => {
     expect(appModules('pricing', false).map((m) => m.name)).toEqual(['average-prices'])
     expect(appModules('admin', true).map((m) => m.name)).toEqual([
       'customers',
-      'account-managers',
       'catalogs',
       'users',
       'system-settings',
     ])
     // Users and System Settings are for administrators
-    expect(appModules('admin', false).map((m) => m.name)).toEqual([
-      'customers',
-      'account-managers',
-      'catalogs',
-    ])
+    expect(appModules('admin', false).map((m) => m.name)).toEqual(['customers', 'catalogs'])
     setLanguage('en')
   })
 })

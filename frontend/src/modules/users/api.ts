@@ -30,13 +30,64 @@ export interface User {
   roles_detail: RoleRef[]
   /** Changes with every new photo; null without one (see userPhotoUrl) */
   photo_version: string | null
+  /** False for users without a password yet (e.g. former account managers): cannot sign in */
+  has_password: boolean
+  // Employee data
+  id_document_type: IdDocumentType | ''
+  /** Letters and digits only (e.g. CPF "52998224725") */
+  id_document_number: string
+  employee_number: string
+  /** ISO 3166-1 alpha-2 */
+  nationality: string
+  /** YYYY-MM-DD */
+  birth_date: string | null
+  job_title: string
+  department: string
+  work_location: string
+  /** Manager's user id */
+  manager: number | null
+  manager_name: string | null
+  hire_date: string | null
+  phone: string
+  mobile_phone: string
+  /** Business verticals an account manager works in (only with the Account Manager role) */
+  verticals: number[]
+  verticals_detail: { id: number; name: string; is_enabled: boolean }[]
   last_login: string | null
   date_joined: string
 }
 
+export const ID_DOCUMENT_TYPES = ['cpf', 'rg', 'national_id', 'passport', 'other'] as const
+export type IdDocumentType = (typeof ID_DOCUMENT_TYPES)[number]
+
+/** Key of the system role that lets a user be a customer's account manager. */
+export const ACCOUNT_MANAGER_ROLE = 'account_manager'
+
+export const EMPLOYEE_FIELDS = [
+  'id_document_type',
+  'id_document_number',
+  'employee_number',
+  'nationality',
+  'birth_date',
+  'job_title',
+  'department',
+  'work_location',
+  'manager',
+  'hire_date',
+  'phone',
+  'mobile_phone',
+  'verticals',
+] as const
+
 export type UserInput = Pick<
   User,
-  'username' | 'first_name' | 'last_name' | 'email' | 'is_active' | 'roles'
+  | 'username'
+  | 'first_name'
+  | 'last_name'
+  | 'email'
+  | 'is_active'
+  | 'roles'
+  | (typeof EMPLOYEE_FIELDS)[number]
 > & {
   /** Required when creating; when editing, empty keeps the current password */
   password?: string

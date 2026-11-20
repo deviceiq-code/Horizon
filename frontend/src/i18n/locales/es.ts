@@ -459,7 +459,41 @@ const es: Messages = {
     edit: 'Editar Usuario',
     you: 'Usted',
     never: 'Nunca',
+    formTabs: {
+      account: 'Cuenta',
+      personal: 'Datos Personales',
+      employment: 'Vínculo Laboral',
+      accountManager: 'Account Manager',
+    },
+    documentTypes: {
+      cpf: 'CPF',
+      rg: 'RG',
+      national_id: 'Documento Nacional',
+      passport: 'Pasaporte',
+      other: 'Otro',
+    },
+    verticalsHint:
+      'Verticales de negocio en las que trabaja este gestor de cuenta. Puede no tener ninguna.',
+    noPassword: 'Sin Contraseña',
+    noPasswordHint: 'No puede ingresar hasta que un administrador defina una contraseña.',
+    filters: {
+      role: 'Rol',
+      all: 'Todos',
+    },
     fields: {
+      idDocumentType: 'Tipo de Documento',
+      idDocumentNumber: 'Número de Documento',
+      nationality: 'Nacionalidad',
+      birthDate: 'Fecha de Nacimiento',
+      employeeNumber: 'Número de Empleado',
+      jobTitle: 'Cargo',
+      department: 'Departamento',
+      workLocation: 'Lugar de Trabajo',
+      manager: 'Responsable',
+      hireDate: 'Fecha de Contratación',
+      phone: 'Teléfono',
+      mobilePhone: 'Celular',
+      verticals: 'Verticales de Negocio',
       username: 'Usuario',
       firstName: 'Nombre',
       lastName: 'Apellido',
@@ -489,6 +523,10 @@ const es: Messages = {
     deleteConfirm:
       '¿Eliminar el usuario "{name}"? Los usuarios con registros en el sistema solo se pueden desactivar.',
     systemRoles: {
+      account_manager: {
+        name: 'Account Manager',
+        description: 'Puede ser gestor de cuenta de clientes.',
+      },
       administrator: {
         name: 'Administrador',
         description: 'Acceso total al sistema.',

@@ -13,9 +13,9 @@ from rest_framework.response import Response
 from config.filters import NullsLastOrderingFilter
 from config.photos import photo_response
 
-from .models import ADMINISTRATOR, Role, UserProfile
+from .models import ACCOUNT_MANAGER, ADMINISTRATOR, Role, UserProfile, is_account_manager
 from .permissions import IsAdministrator, is_administrator
-from .serializers import RoleSerializer, UserSerializer
+from .serializers import AccountManagerSerializer, RoleSerializer, UserSerializer
 
 User = get_user_model()
 
@@ -38,9 +38,13 @@ class UserViewSet(viewsets.ModelViewSet):
     ?ordering= (username, first_name, last_name, email, last_login, date_joined). Nobody can
     delete or deactivate themselves or take the Administrator role from themselves, and at
     least one active administrator always remains. Users with records (prices, documents…)
-    cannot be deleted: deactivate them instead. Photo: GET/POST/DELETE /<id>/photo/."""
+    cannot be deleted: deactivate them instead; nor can account managers of customers, who also
+    keep the Account Manager role. ?role=<id or system key>. Photo: GET/POST/DELETE
+    /<id>/photo/."""
 
-    queryset = User.objects.prefetch_related("roles").select_related("profile")
+    queryset = User.objects.prefetch_related("roles", "profile__verticals").select_related(
+        "profile__manager"
+    )
     serializer_class = UserSerializer
     permission_classes = [IsAdministrator]
     filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
@@ -65,9 +69,16 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        active = self.request.query_params.get("is_active")
+        params = self.request.query_params
+        active = params.get("is_active")
         if active in ("true", "false"):
             queryset = queryset.filter(is_active=active == "true")
+        # ?role=<id> or a system role's key (e.g. "account_manager")
+        role = params.get("role", "")
+        if role.isdigit():
+            queryset = queryset.filter(roles__id=int(role))
+        elif role:
+            queryset = queryset.filter(roles__key=role)
         return queryset.distinct()
 
     def perform_update(self, serializer):
@@ -75,6 +86,16 @@ class UserViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
         is_self = user.pk == self.request.user.pk
         losing_admin = "roles" in data and not any(r.key == ADMINISTRATOR for r in data["roles"])
+        losing_manager = "roles" in data and not any(
+            r.key == ACCOUNT_MANAGER for r in data["roles"]
+        )
+        if losing_manager and is_account_manager(user) and _has_customers(user):
+            raise _Refused(
+                _(
+                    "This user is the account manager of customers and must keep the Account "
+                    "Manager role. Change those customers first."
+                )
+            )
         deactivating = data.get("is_active") is False
         if is_self and deactivating:
             raise _Refused(_("You cannot deactivate your own user."))
@@ -96,6 +117,10 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         if user.pk == request.user.pk:
             return _conflict(_("You cannot delete your own user."))
+        if _has_customers(user):
+            return _conflict(
+                _("This user has records in the system and cannot be deleted. Deactivate it.")
+            )
         try:
             with transaction.atomic():
                 user.delete()
@@ -126,6 +151,35 @@ class UserViewSet(viewsets.ModelViewSet):
         )
 
 
+def _has_customers(user) -> bool:
+    """Primary or secondary account manager of any customer."""
+    return user.primary_customers.exists() or user.secondary_customers.exists()
+
+
+class AccountManagerViewSet(viewsets.ReadOnlyModelViewSet):
+    """Account managers (active users with the "Account Manager" role) for pickers and lists,
+    to everyone signed in. ?search= (name, email, vertical), ?vertical=<id>, ?ordering=
+    (first_name, last_name, email). They are managed in Users (administrators)."""
+
+    serializer_class = AccountManagerSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["first_name", "last_name", "email", "profile__verticals__name"]
+    ordering_fields = ["first_name", "last_name", "email"]
+    ordering = ["first_name", "last_name"]
+
+    def get_queryset(self):
+        queryset = (
+            User.objects.filter(is_active=True, roles__key=ACCOUNT_MANAGER)
+            .select_related("profile")
+            .prefetch_related("profile__verticals")
+        )
+        vertical = self.request.query_params.get("vertical", "")
+        if vertical.isdigit():
+            queryset = queryset.filter(profile__verticals__id=int(vertical))
+        return queryset.distinct()
+
+
 class _Refused(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -134,8 +188,8 @@ class _Refused(Exception):
 
 class RoleViewSet(viewsets.ModelViewSet):
     """Roles users can have. ?search= (name, description), ?ordering= (name, users_count).
-    System roles (Administrator) cannot be changed or deleted; roles with users cannot be
-    deleted."""
+    System roles (Administrator, Account Manager) cannot be changed or deleted; roles with
+    users cannot be deleted."""
 
     queryset = Role.objects.annotate(users_count=Count("users", distinct=True))
     serializer_class = RoleSerializer

@@ -55,10 +55,17 @@ class VerticalViewSet(viewsets.ModelViewSet):
     general sub-vertical exactly once. When omitted on create, the general one gets defaults.
     """
 
-    queryset = Vertical.objects.prefetch_related("account_managers", "sub_verticals")
+    queryset = Vertical.objects.prefetch_related(
+        "account_manager_profiles__user__roles", "sub_verticals"
+    )
     serializer_class = VerticalSerializer
     filter_backends = [EnabledFilter, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "sub_verticals__name", "account_managers__full_name"]
+    search_fields = [
+        "name",
+        "sub_verticals__name",
+        "account_manager_profiles__user__first_name",
+        "account_manager_profiles__user__last_name",
+    ]
     ordering_fields = ["id", "name", "is_enabled"]
     ordering = ["name"]
 

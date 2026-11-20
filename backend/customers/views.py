@@ -37,8 +37,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
         "trade_name",
         "email",
         "city",
-        "primary_account_manager__full_name",
-        "secondary_account_managers__full_name",
+        "primary_account_manager__first_name",
+        "primary_account_manager__last_name",
+        "secondary_account_managers__first_name",
+        "secondary_account_managers__last_name",
     ]
     ordering_fields = [
         "id",
@@ -48,6 +50,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
         "city",
         "state",
         "is_active",
-        "primary_account_manager__full_name",
+        "primary_account_manager__first_name",
     ]
     ordering = ["name"]

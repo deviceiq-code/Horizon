@@ -28,7 +28,7 @@ const {
   reloadAfterDelete,
 } = useServerTable(listCustomers, {
   sortBy: [{ key: 'name', order: 'asc' }],
-  orderingFields: { primary_account_manager_name: 'primary_account_manager__full_name' },
+  orderingFields: { primary_account_manager_name: 'primary_account_manager__first_name' },
 })
 
 const headers = computed(() => [

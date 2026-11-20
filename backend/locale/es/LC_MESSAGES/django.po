@@ -807,3 +807,103 @@ msgstr "Elija de 0 a 5 estrellas, de media en media."
 #: accounts
 msgid "color theme"
 msgstr "tema de colores"
+
+#: users
+msgid "identity document type"
+msgstr "tipo de documento de identidad"
+
+#: users
+msgid "identity document number"
+msgstr "número del documento de identidad"
+
+#: users
+msgid "employee number"
+msgstr "número de empleado"
+
+#: users
+msgid "nationality"
+msgstr "nacionalidad"
+
+#: users
+msgid "birth date"
+msgstr "fecha de nacimiento"
+
+#: users
+msgid "job title"
+msgstr "cargo"
+
+#: users
+msgid "department"
+msgstr "departamento"
+
+#: users
+msgid "work location"
+msgstr "lugar de trabajo"
+
+#: users
+msgid "manager"
+msgstr "responsable"
+
+#: users
+msgid "hire date"
+msgstr "fecha de contratación"
+
+#: users
+msgid "mobile phone"
+msgstr "celular"
+
+#: users
+msgid "National ID"
+msgstr "Documento nacional"
+
+#: users
+msgid "Passport"
+msgstr "Pasaporte"
+
+#: users
+msgid "Other"
+msgstr "Otro"
+
+#: users
+msgid "Choose the document type."
+msgstr "Elija el tipo de documento."
+
+#: users
+msgid "Enter the document number."
+msgstr "Indique el número del documento."
+
+#: users
+msgid "Invalid CPF."
+msgstr "CPF inválido."
+
+#: users
+msgid "Another user has this document."
+msgstr "Otro usuario ya tiene este documento."
+
+#: users
+msgid "Another user has this employee number."
+msgstr "Otro usuario ya tiene este número de empleado."
+
+#: users
+msgid "Choose a country."
+msgstr "Elija un país."
+
+#: users
+msgid "The birth date must be in the past."
+msgstr "La fecha de nacimiento debe estar en el pasado."
+
+#: users
+msgid "The hire date cannot be before the birth date."
+msgstr "La fecha de contratación no puede ser anterior a la fecha de nacimiento."
+
+#: users
+msgid "A user cannot be their own manager."
+msgstr "Un usuario no puede ser su propio responsable."
+
+#: users
+msgid "This user is not an account manager."
+msgstr "Este usuario no es gestor de cuenta."
+
+#: users
+msgid "This user is the account manager of customers and must keep the Account Manager role. Change those customers first."
+msgstr "Este usuario es gestor de cuenta de clientes y debe mantener el rol Account Manager. Cambie esos clientes primero."

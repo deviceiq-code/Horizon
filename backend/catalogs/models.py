@@ -18,7 +18,7 @@ class Vertical(models.Model):
     """A business vertical (industry segment), split into sub-verticals.
 
     The enabled flag and notes apply to all of its sub-verticals. Which account managers work
-    in it is set on the account manager (AccountManager.verticals; here: `account_managers`).
+    in it is set on the user (UserProfile.verticals; here: `account_manager_profiles`).
     """
 
     name = models.CharField(_("name"), max_length=100)

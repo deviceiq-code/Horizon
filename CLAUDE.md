@@ -17,12 +17,14 @@ Multi-user web system for **operating lease residual value pricing**
   - `accounts/` — session authentication and user preferences (`UserPreferences`: language and
     theme), endpoints under `/api/auth/` (`login/`, `logout/`, `me/`, `preferences/`).
   - `assets/` — domain app (no models yet; business rules to be defined).
-  - `account_managers/` — first business module (`AccountManager`: first_name, last_name
-    (optional), `full_name` — "First Last", composed on save, read-only in the API, used for
-    search/sorting and by other modules —, email unique case-insensitive, `verticals` M2M = the
-    business verticals they work in, `photo`), CRUD at
-    `/api/account-managers/` (DRF ModelViewSet). Photo: GET/POST/DELETE `/<id>/photo/`
-    (`photo_version` in the API changes with each new photo).
+  - **Account managers are users** with the system role "Account Manager" (`users`,
+    `ACCOUNT_MANAGER`); administrators manage them in Users (no separate screen; the former
+    address opens Users filtered by that role). The business verticals they work in are on the
+    user's profile (`UserProfile.verticals`, set by administrators; none is allowed; cleared
+    when the role is removed). `GET /api/account-managers/` is a read-only list (active users
+    with the role) for pickers, to everyone signed in. A user who is a customer's account
+    manager cannot be deleted nor lose the role (409). The `account_managers` app only keeps
+    the migrations of the former table (converted to users).
   - **People's photos** (account managers, users): `config/photos.py` (`PhotoMixin.set_photo`,
     `photo_response` for GET/POST/DELETE `/<id>/photo/`, `photo_version`). Users' photos live in
     `users.UserProfile` (`UserProfile.for_user`); anyone signed in can see them, administrators
@@ -32,14 +34,13 @@ Multi-user web system for **operating lease residual value pricing**
     the top bar). **The account manager owns the relation**:
     verticals are assigned on the account manager, never on the vertical.
   - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, active flag,
-    `primary_account_manager` — required FK, PROTECT — and `secondary_account_managers` — M2M,
-    never including the primary). An account manager who is primary or secondary of any customer
-    cannot be deleted (409; secondaries checked in `AccountManagerViewSet.destroy`). `customers/tax_ids.py` validates CPF and CNPJ, including the
+    `primary_account_manager` — required FK to a user with the Account Manager role, PROTECT —
+    and `secondary_account_managers` — M2M of such users, never including the primary). `customers/tax_ids.py` validates CPF and CNPJ, including the
     alphanumeric CNPJ (in force since July 2026). CRUD at `/api/customers/`.
   - `catalogs/` — small reference tables ("Cadastros"), one model each, under `/api/catalogs/<table>/`.
     `Vertical` (business vertical): name (unique, case-insensitive), enabled flag, notes — these
     apply to all its sub-verticals. Its account managers are read-only here
-    (`account_managers_detail`, reverse of `AccountManager.verticals`). `?is_enabled=true` filters.
+    (`account_managers_detail`: users with the Account Manager role whose profile lists the vertical). `?is_enabled=true` filters.
     `SubVertical`: risk (low/medium/high), allowed terms in months (ArrayField, any whole number
     1–360) and one recommended term among them. Every vertical has exactly one general
     sub-vertical ("General", stored with an empty name, shown translated), created with it, never
@@ -102,7 +103,13 @@ Multi-user web system for **operating lease residual value pricing**
     Django password validators) and `/api/roles/`. Lock-out rules: nobody deletes/deactivates
     themselves or removes their own Administrator role; at least one active administrator
     remains; users with records → 409 (deactivate instead); roles in use → 409.
-    `/api/auth/me/` returns `is_admin` and `roles`.
+    `/api/auth/me/` returns `is_admin` and `roles`. Employee data lives in `UserProfile` (one per
+    user, created with it): identity document (type cpf|rg|national_id|passport|other + number,
+    CPF validated, unique), employee number (optional, unique), nationality (ISO 3166-1),
+    birth date, job title, department, work location, manager (user), hire date, phones;
+    `UserSerializer` reads/writes them as flat fields. Users without a password yet
+    (`has_password` false) cannot sign in until an administrator sets one. The user form has
+    tabs (Account, Personal Data, Employment, Account Manager).
     **Showing a user:** always `users.display.display_name(user)` (in serializers
     `display_name_in(self.context, user)`), never `get_full_name()`/`username` directly — it
     follows the System settings `user_name_display` (username | first_name | full_name) and
@@ -222,11 +229,11 @@ Multi-user web system for **operating lease residual value pricing**
 - All residual calculation rules live in pure backend functions (e.g. `assets/calculations.py`),
   with unit tests. The frontend never recalculates prices on its own.
 - API: DRF with session authentication; everything requires login by default (`IsAuthenticated`).
-- **New business module** (follow `account_managers` / `src/modules/account-managers/`):
+- **New business module** (follow `customers` / `src/modules/customers/`):
   - Backend: own Django app with model + serializer (normalize/validate input there) + ModelViewSet
     with `SearchFilter`/`OrderingFilter`, router under `/api/<module>/`, admin, tests, translations.
     Foreign keys to other modules use `on_delete=PROTECT`; the referenced module's viewset turns
-    `ProtectedError` into HTTP 409 with a translated `detail` (see `AccountManagerViewSet.destroy`).
+    `ProtectedError` into HTTP 409 with a translated `detail` (see `UserViewSet.destroy`).
   - Frontend: `src/modules/<module>/` with `index.ts` (AppModule: route name, `mdi-*` icon,
     `titleKey`), `api.ts` (uses `listQuery`/`ListParams`), list view with `useServerTable` +
     `v-data-table-server`, and a form dialog with `useValidationRules`; register it in `MODULES`.

@@ -3,6 +3,9 @@ import re
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from users.display import full_name_in, person_ref
+from users.models import is_account_manager
+
 from .models import Customer
 from .tax_ids import brazilian_tax_id_kind, normalize_tax_id
 
@@ -56,11 +59,21 @@ class CustomerSerializer(serializers.ModelSerializer):
         validators = []
 
     def get_primary_account_manager_name(self, obj) -> str:
-        return obj.primary_account_manager.full_name
+        return full_name_in(self.context, obj.primary_account_manager)
 
     def get_secondary_account_managers_detail(self, obj) -> list[dict]:
-        managers = sorted(obj.secondary_account_managers.all(), key=lambda m: m.full_name.lower())
-        return [{"id": m.id, "full_name": m.full_name} for m in managers]
+        refs = [person_ref(self.context, m) for m in obj.secondary_account_managers.all()]
+        return sorted(refs, key=lambda ref: ref["full_name"].lower())
+
+    def validate_primary_account_manager(self, value):
+        if not is_account_manager(value):
+            raise serializers.ValidationError(_("This user is not an account manager."))
+        return value
+
+    def validate_secondary_account_managers(self, value):
+        if any(not is_account_manager(user) for user in value):
+            raise serializers.ValidationError(_("This user is not an account manager."))
+        return value
 
     # --- Field normalization ------------------------------------------------------------------
 

@@ -807,3 +807,103 @@ msgstr "Escolha de 0 a 5 estrelas, de meia em meia."
 #: accounts
 msgid "color theme"
 msgstr "tema de cores"
+
+#: users
+msgid "identity document type"
+msgstr "tipo de documento de identificação"
+
+#: users
+msgid "identity document number"
+msgstr "número do documento de identificação"
+
+#: users
+msgid "employee number"
+msgstr "número de funcionário"
+
+#: users
+msgid "nationality"
+msgstr "nacionalidade"
+
+#: users
+msgid "birth date"
+msgstr "data de nascimento"
+
+#: users
+msgid "job title"
+msgstr "cargo"
+
+#: users
+msgid "department"
+msgstr "departamento"
+
+#: users
+msgid "work location"
+msgstr "local de trabalho"
+
+#: users
+msgid "manager"
+msgstr "gestor"
+
+#: users
+msgid "hire date"
+msgstr "data de admissão"
+
+#: users
+msgid "mobile phone"
+msgstr "celular"
+
+#: users
+msgid "National ID"
+msgstr "Documento nacional"
+
+#: users
+msgid "Passport"
+msgstr "Passaporte"
+
+#: users
+msgid "Other"
+msgstr "Outro"
+
+#: users
+msgid "Choose the document type."
+msgstr "Escolha o tipo de documento."
+
+#: users
+msgid "Enter the document number."
+msgstr "Informe o número do documento."
+
+#: users
+msgid "Invalid CPF."
+msgstr "CPF inválido."
+
+#: users
+msgid "Another user has this document."
+msgstr "Outro usuário já tem este documento."
+
+#: users
+msgid "Another user has this employee number."
+msgstr "Outro usuário já tem este número de funcionário."
+
+#: users
+msgid "Choose a country."
+msgstr "Escolha um país."
+
+#: users
+msgid "The birth date must be in the past."
+msgstr "A data de nascimento precisa estar no passado."
+
+#: users
+msgid "The hire date cannot be before the birth date."
+msgstr "A data de admissão não pode ser anterior à data de nascimento."
+
+#: users
+msgid "A user cannot be their own manager."
+msgstr "Um usuário não pode ser gestor de si mesmo."
+
+#: users
+msgid "This user is not an account manager."
+msgstr "Este usuário não é account manager."
+
+#: users
+msgid "This user is the account manager of customers and must keep the Account Manager role. Change those customers first."
+msgstr "Este usuário é account manager de clientes e precisa manter o papel Account Manager. Altere esses clientes antes."

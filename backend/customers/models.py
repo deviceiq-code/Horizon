@@ -1,7 +1,6 @@
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-
-from account_managers.models import AccountManager
 
 
 class Customer(models.Model):
@@ -28,16 +27,16 @@ class Customer(models.Model):
     city = models.CharField(_("city"), max_length=100, blank=True)
     state = models.CharField(_("state"), max_length=50, blank=True)
 
-    # Relationship: exactly one primary account manager and any number of secondary ones.
-    # An account manager linked to customers (either way) cannot be deleted.
+    # Relationship: exactly one primary account manager and any number of secondary ones —
+    # users with the "Account Manager" role. Such a user cannot be deleted nor lose the role.
     primary_account_manager = models.ForeignKey(
-        AccountManager,
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="primary_customers",
         verbose_name=_("primary account manager"),
     )
     secondary_account_managers = models.ManyToManyField(
-        AccountManager,
+        settings.AUTH_USER_MODEL,
         blank=True,
         related_name="secondary_customers",
         verbose_name=_("secondary account managers"),

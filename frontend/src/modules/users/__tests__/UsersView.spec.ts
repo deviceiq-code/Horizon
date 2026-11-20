@@ -14,6 +14,8 @@ import UsersView from '../UsersView.vue'
 
 vi.mock('../api', () => ({
   listUsers: vi.fn<typeof usersApi.listUsers>(),
+  ID_DOCUMENT_TYPES: ['cpf', 'rg', 'national_id', 'passport', 'other'],
+  ACCOUNT_MANAGER_ROLE: 'account_manager',
   createUser: vi.fn<typeof usersApi.createUser>(),
   updateUser: vi.fn<typeof usersApi.updateUser>(),
   deleteUser: vi.fn<typeof usersApi.deleteUser>(),
@@ -66,6 +68,22 @@ const FERNANDO: usersApi.User = {
   roles: [1],
   roles_detail: [{ id: 1, key: 'administrator', name: 'Administrator', is_system: true }],
   photo_version: null,
+  has_password: true,
+  id_document_type: '',
+  id_document_number: '',
+  employee_number: '',
+  nationality: '',
+  birth_date: null,
+  job_title: '',
+  department: '',
+  work_location: '',
+  manager: null,
+  manager_name: null,
+  hire_date: null,
+  phone: '',
+  mobile_phone: '',
+  verticals: [],
+  verticals_detail: [],
   last_login: '2026-11-19T15:00:00Z',
   date_joined: '',
 }
@@ -80,6 +98,15 @@ const BRUNO: usersApi.User = {
   roles: [2],
   roles_detail: [{ id: 2, key: '', name: 'Analyst', is_system: false }],
   last_login: null,
+}
+
+const AM_ROLE: usersApi.Role = {
+  ...ADMIN_ROLE,
+  id: 3,
+  key: 'account_manager',
+  name: 'Account Manager',
+  description: 'Can be the account manager of customers.',
+  users_count: 0,
 }
 
 async function mountView(path = '/users') {
@@ -174,15 +201,20 @@ describe('UsersView', () => {
     await typeInto('password-confirm', 'Horizon-pass-2026')
     await click('save')
 
-    expect(api.createUser).toHaveBeenCalledWith({
-      username: 'carla',
-      first_name: 'Carla',
-      last_name: '',
-      email: 'carla@example.com',
-      is_active: true,
-      roles: [2],
-      password: 'Horizon-pass-2026',
-    })
+    expect(api.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: 'carla',
+        first_name: 'Carla',
+        last_name: '',
+        email: 'carla@example.com',
+        is_active: true,
+        roles: [2],
+        password: 'Horizon-pass-2026',
+        employee_number: '',
+        birth_date: null,
+        verticals: [],
+      }),
+    )
     expect(useNotificationsStore().text).toBe('User created.')
     wrapper.unmount()
   })
@@ -289,6 +321,78 @@ describe('UsersView', () => {
     expect(api.uploadUserPhoto.mock.calls[0]![0]).toBe(10)
     expect((api.uploadUserPhoto.mock.calls[0]![1] as File).name).toBe('square.jpg')
     expect(refresh).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  // --- Employee data and account managers ----------------------------------------------------
+
+  it('the form has Account, Personal Data and Employment tabs; Account Manager with the role', async () => {
+    api.allRoles.mockResolvedValue([ADMIN_ROLE, ANALYST, AM_ROLE])
+    api.createUser.mockResolvedValue({ ...BRUNO, id: 12 })
+    const { wrapper } = await mountView()
+    await click('new')
+    expect(inBody('[data-testid="tab-personal"]')!.textContent).toContain('Personal Data')
+    expect(inBody('[data-testid="tab-employment"]')!.textContent).toContain('Employment')
+    expect(inBody('[data-testid="tab-account-manager"]')).toBeNull()
+
+    await typeInto('username', 'carla')
+    await typeInto('password', 'Horizon-pass-2026')
+    await typeInto('password-confirm', 'Horizon-pass-2026')
+    // The Account Manager role brings its tab
+    inBody('[data-testid="roles"] .v-field')!.dispatchEvent(
+      new MouseEvent('mousedown', { bubbles: true }),
+    )
+    await settle()
+    ;[...document.body.querySelectorAll<HTMLElement>('.v-overlay--active .v-list-item')]
+      .find((el) => el.textContent?.trim() === 'Account Manager')!
+      .click()
+    await settle()
+    expect(inBody('[data-testid="tab-account-manager"]')).not.toBeNull()
+
+    await click('tab-personal')
+    await typeInto('id-document-number', '529.982.247-25')
+    await click('tab-employment')
+    await typeInto('employee-number', 'E-1042')
+    await typeInto('job-title', 'Account Manager')
+    await click('save')
+
+    expect(api.createUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: 'carla',
+        roles: [3],
+        id_document_number: '529.982.247-25',
+        employee_number: 'E-1042',
+        job_title: 'Account Manager',
+      }),
+    )
+    wrapper.unmount()
+  })
+
+  it('shows the server error on its field and opens its tab', async () => {
+    api.createUser.mockRejectedValue(
+      new ApiError(400, 'Bad Request', { id_document_number: ['Invalid CPF.'] }),
+    )
+    const { wrapper } = await mountView()
+    await click('new')
+    await typeInto('username', 'carla')
+    await typeInto('password', 'Horizon-pass-2026')
+    await typeInto('password-confirm', 'Horizon-pass-2026')
+    await click('save')
+    // The Personal Data tab is shown with the message
+    expect(inBody('[data-testid="tab-personal"]')!.className).toContain('v-tab--selected')
+    expect(inBody('[data-testid="id-document-number"]')!.textContent).toContain('Invalid CPF.')
+    wrapper.unmount()
+  })
+
+  it('filters by role (opened with ?role=account_manager) and flags users without a password', async () => {
+    api.allRoles.mockResolvedValue([ADMIN_ROLE, ANALYST, AM_ROLE])
+    api.listUsers.mockResolvedValue(page([{ ...BRUNO, has_password: false, job_title: 'Analyst' }]))
+    const { wrapper } = await mountView('/users?role=account_manager')
+    expect(api.listUsers.mock.lastCall![0].filters).toEqual({ role: 'account_manager' })
+    expect(inBody('[data-testid="filter-row"]')).not.toBeNull()
+    const row = document.body.querySelector('tbody tr')!.textContent!
+    expect(row).toContain('No Password')
+    expect(row).toContain('Analyst')
     wrapper.unmount()
   })
 })

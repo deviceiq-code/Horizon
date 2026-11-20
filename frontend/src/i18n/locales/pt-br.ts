@@ -457,7 +457,40 @@ const ptBR: Messages = {
     edit: 'Editar Usuário',
     you: 'Você',
     never: 'Nunca',
+    formTabs: {
+      account: 'Conta',
+      personal: 'Dados Pessoais',
+      employment: 'Vínculo',
+      accountManager: 'Account Manager',
+    },
+    documentTypes: {
+      cpf: 'CPF',
+      rg: 'RG',
+      national_id: 'Documento Nacional',
+      passport: 'Passaporte',
+      other: 'Outro',
+    },
+    verticalsHint: 'Verticais de negócio em que este account manager atua. Pode ficar sem nenhuma.',
+    noPassword: 'Sem Senha',
+    noPasswordHint: 'Não consegue entrar até um administrador definir uma senha.',
+    filters: {
+      role: 'Papel',
+      all: 'Todos',
+    },
     fields: {
+      idDocumentType: 'Tipo de Documento',
+      idDocumentNumber: 'Número do Documento',
+      nationality: 'Nacionalidade',
+      birthDate: 'Data de Nascimento',
+      employeeNumber: 'Número de Funcionário',
+      jobTitle: 'Cargo',
+      department: 'Departamento',
+      workLocation: 'Local de Trabalho',
+      manager: 'Gestor',
+      hireDate: 'Data de Admissão',
+      phone: 'Telefone',
+      mobilePhone: 'Celular',
+      verticals: 'Verticais de Negócio',
       username: 'Login',
       firstName: 'Nome',
       lastName: 'Sobrenome',
@@ -487,6 +520,10 @@ const ptBR: Messages = {
     deleteConfirm:
       'Excluir o usuário "{name}"? Usuários com registros no sistema só podem ser desativados.',
     systemRoles: {
+      account_manager: {
+        name: 'Account Manager',
+        description: 'Pode ser account manager de clientes.',
+      },
       administrator: {
         name: 'Administrador',
         description: 'Acesso total ao sistema.',

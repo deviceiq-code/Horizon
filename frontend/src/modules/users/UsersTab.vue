@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import UserFormDialog from './UserFormDialog.vue'
-import { deleteUser, listUsers, userPhotoUrl, type User } from './api'
+import { allRoles, deleteUser, listUsers, userPhotoUrl, type Role, type User } from './api'
 import { roleName } from './roleText'
 
 const { t, d } = useI18n()
@@ -14,6 +15,35 @@ const auth = useAuthStore()
 const notifications = useNotificationsStore()
 
 const table = ref<{ reload: () => Promise<void> } | null>(null)
+const route = useRoute()
+
+// --- Column filters (?role= in the address opens them, e.g. from the former Account Managers)
+
+const initialRole = typeof route.query.role === 'string' ? route.query.role : null
+const filters = reactive<Record<string, string | null>>({ role: initialRole, is_active: null })
+const roles = ref<Role[]>([])
+onMounted(async () => {
+  try {
+    roles.value = await allRoles()
+  } catch {
+    roles.value = []
+  }
+})
+// System roles by their key (stable), the others by id
+const roleOptions = computed(() =>
+  roles.value.map((role) => ({
+    value: role.is_system && role.key ? role.key : String(role.id),
+    title: roleName(role, t),
+  })),
+)
+const statusOptions = computed(() => [
+  { value: 'true', title: t('users.status.active') },
+  { value: 'false', title: t('users.status.inactive') },
+])
+function clearFilters() {
+  filters.role = null
+  filters.is_active = null
+}
 
 const headers = computed(() => [
   { title: t('users.fields.username'), key: 'username' },
@@ -55,12 +85,50 @@ const isMe = (user: User) => user.id === auth.user?.id
     :delete-message="(u: User) => $t('users.deleteConfirm', { name: u.username })"
     :deleted-text="$t('users.deleted')"
     :can-delete="(u: User) => !isMe(u)"
+    :filters="filters"
+    filters-storage-key="users"
+    :show-filters-at-start="!!initialRole"
+    @clear-filters="clearFilters"
     @create="openForm(null)"
     @edit="openForm"
   >
+    <template #[`filter.roles_detail`]>
+      <v-select
+        v-model="filters.role"
+        :items="roleOptions"
+        :placeholder="$t('users.filters.role')"
+        density="compact"
+        hide-details
+        clearable
+        data-testid="filter-role"
+      />
+    </template>
+    <template #[`filter.is_active`]>
+      <v-select
+        v-model="filters.is_active"
+        :items="statusOptions"
+        :placeholder="$t('users.filters.all')"
+        density="compact"
+        hide-details
+        clearable
+        data-testid="filter-status"
+      />
+    </template>
     <template #[`item.username`]="{ item }">
       <span class="font-weight-medium">{{ item.username }}</span>
       <v-chip v-if="isMe(item)" size="x-small" class="ml-2" label>{{ $t('users.you') }}</v-chip>
+      <v-chip
+        v-if="!item.has_password"
+        size="x-small"
+        color="warning"
+        variant="tonal"
+        class="ml-2"
+        :title="$t('users.noPasswordHint')"
+        label
+        data-testid="no-password"
+      >
+        {{ $t('users.noPassword') }}
+      </v-chip>
     </template>
     <template #[`item.first_name`]="{ item }">
       <div class="d-flex align-center ga-3 py-1">
@@ -69,7 +137,12 @@ const isMe = (user: User) => user.id === auth.user?.id
           :src="item.photo_version ? userPhotoUrl(item.id, item.photo_version) : null"
           :size="36"
         />
-        <span>{{ item.full_name }}</span>
+        <div>
+          <div>{{ item.full_name }}</div>
+          <div v-if="item.job_title" class="text-caption text-medium-emphasis">
+            {{ item.job_title }}
+          </div>
+        </div>
       </div>
     </template>
     <template #[`item.roles_detail`]="{ item }">

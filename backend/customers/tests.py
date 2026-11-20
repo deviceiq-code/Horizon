@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from account_managers.models import AccountManager
+from users.testing import make_account_manager
 
 from .models import Customer
 from .tax_ids import brazilian_tax_id_kind, is_valid_cnpj, is_valid_cpf, normalize_tax_id
@@ -24,15 +24,9 @@ def logged_client(client, db):
 @pytest.fixture
 def managers(db):
     return {
-        "ana": AccountManager.objects.create(
-            first_name="Ana", last_name="Souza", email="ana@example.com"
-        ),
-        "bruno": AccountManager.objects.create(
-            first_name="Bruno", last_name="Lima", email="bruno@example.com"
-        ),
-        "carla": AccountManager.objects.create(
-            first_name="Carla", last_name="Mendes", email="carla@example.com"
-        ),
+        "ana": make_account_manager("Ana", "Souza", "ana@example.com"),
+        "bruno": make_account_manager("Bruno", "Lima", "bruno@example.com"),
+        "carla": make_account_manager("Carla", "Mendes", "carla@example.com"),
     }
 
 
@@ -153,7 +147,7 @@ def test_search(logged_client, customers, term, expected):
 
 
 def test_ordering_by_primary_account_manager(logged_client, customers):
-    results = logged_client.get(URL, {"ordering": "-primary_account_manager__full_name"}).json()[
+    results = logged_client.get(URL, {"ordering": "-primary_account_manager__first_name"}).json()[
         "results"
     ]
     assert [c["primary_account_manager_name"] for c in results] == [
@@ -342,30 +336,21 @@ def test_delete(logged_client, customers):
     assert Customer.objects.count() == 2
 
 
-# --- Deleting account managers ---------------------------------------------------------------
+# --- Account managers are users with the role ----------------------------------------------
 
 
-def test_primary_account_manager_cannot_be_deleted(logged_client, customers, managers):
-    r = logged_client.delete(f"/api/account-managers/{managers['ana'].pk}/")
-    assert r.status_code == 409
-    assert r.json()["detail"] == "This account manager has customers and cannot be deleted."
-    assert AccountManager.objects.filter(pk=managers["ana"].pk).exists()
+def test_only_account_managers_can_be_chosen(logged_client, customers, managers):
+    from django.contrib.auth import get_user_model
 
-
-def test_secondary_account_manager_cannot_be_deleted(logged_client, customers, managers):
-    # Carla is primary of Maria: make her only a secondary somewhere
-    customers[2].primary_account_manager = managers["bruno"]
-    customers[2].save()
-    r = logged_client.delete(f"/api/account-managers/{managers['carla'].pk}/")
-    assert r.status_code == 409
-    assert customers[0].secondary_account_managers.filter(pk=managers["carla"].pk).exists()
-
-
-def test_account_manager_without_customers_can_be_deleted(logged_client, customers):
-    free = AccountManager.objects.create(
-        first_name="Diego", last_name="Alves", email="diego@example.com"
+    plain = get_user_model().objects.create_user("plain", password="Plain-user-2026")
+    r = logged_client.patch(
+        f"{URL}{customers[0].pk}/",
+        {"primary_account_manager": plain.pk, "secondary_account_managers": [plain.pk]},
+        content_type="application/json",
     )
-    assert logged_client.delete(f"/api/account-managers/{free.pk}/").status_code == 204
+    assert r.status_code == 400
+    assert r.json()["primary_account_manager"] == ["This user is not an account manager."]
+    assert r.json()["secondary_account_managers"] == ["This user is not an account manager."]
 
 
 def test_validation_messages_follow_user_language(logged_client, managers):

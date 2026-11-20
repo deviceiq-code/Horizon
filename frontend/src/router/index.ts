@@ -23,6 +23,11 @@ const router = createRouter({
         },
         // Every module under its app's prefix ("/pricing/...", "/admin/...")
         ...moduleRoutes(),
+        // Account managers became users with the "Account Manager" role
+        ...['account-managers', 'admin/account-managers'].map((path) => ({
+          path,
+          redirect: { name: 'users', query: { role: 'account_manager' } },
+        })),
         {
           path: 'settings',
           name: 'settings',

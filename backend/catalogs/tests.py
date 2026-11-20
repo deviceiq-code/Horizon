@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from account_managers.models import AccountManager
+from users.testing import make_account_manager
 
 from .models import SubVertical, Vertical
 
@@ -18,15 +18,9 @@ def logged_client(client, db):
 @pytest.fixture
 def managers(db):
     return {
-        "ana": AccountManager.objects.create(
-            first_name="Ana", last_name="Souza", email="ana@example.com"
-        ),
-        "bruno": AccountManager.objects.create(
-            first_name="Bruno", last_name="Lima", email="bruno@example.com"
-        ),
-        "carla": AccountManager.objects.create(
-            first_name="Carla", last_name="Mendes", email="carla@example.com"
-        ),
+        "ana": make_account_manager("Ana", "Souza", "ana@example.com"),
+        "bruno": make_account_manager("Bruno", "Lima", "bruno@example.com"),
+        "carla": make_account_manager("Carla", "Mendes", "carla@example.com"),
     }
 
 
@@ -52,7 +46,8 @@ def _sub(name, **overrides):
 
 def _create_vertical(name, sub_verticals=(), managers=(), **fields):
     vertical = Vertical.objects.create(name=name, **fields)
-    vertical.account_managers.set(managers)
+    for manager in managers:
+        manager.profile.verticals.add(vertical)
     SubVertical.objects.create(vertical=vertical, **SubVertical.general_defaults())
     for sub in sub_verticals:
         SubVertical.objects.create(vertical=vertical, **sub)
@@ -167,12 +162,12 @@ def test_account_managers_are_not_set_through_the_vertical(logged_client, vertic
     # The relation belongs to the account manager: here it is read-only and ignored on write
     r = _post(logged_client, {"name": "Health", "account_managers": [managers["carla"].pk]})
     assert r.status_code == 201
-    assert Vertical.objects.get(pk=r.json()["id"]).account_managers.count() == 0
+    assert Vertical.objects.get(pk=r.json()["id"]).account_manager_profiles.count() == 0
 
     industry = verticals["industry"]
     r = _patch(logged_client, industry.pk, {"account_managers": []})
     assert r.status_code == 200
-    assert industry.account_managers.count() == 2
+    assert industry.account_manager_profiles.count() == 2
 
 
 @pytest.mark.parametrize(
@@ -355,16 +350,28 @@ def test_failed_update_changes_nothing(logged_client, verticals):
 # --- Delete ----------------------------------------------------------------------------------
 
 
-def test_delete_removes_sub_verticals(logged_client, verticals):
+def test_delete_removes_sub_verticals(logged_client, verticals, managers):
     assert logged_client.delete(f"{URL}{verticals['industry'].pk}/").status_code == 204
     assert not SubVertical.objects.filter(vertical_id=verticals["industry"].pk).exists()
-    assert AccountManager.objects.count() == 3
+    # The account managers (users) stay
+    assert all(
+        manager.__class__.objects.filter(pk=manager.pk).exists() for manager in managers.values()
+    )
 
 
-def test_deleting_an_account_manager_removes_it_from_verticals(logged_client, verticals, managers):
-    r = logged_client.delete(f"/api/account-managers/{managers['ana'].pk}/")
-    assert r.status_code == 204
-    assert [m.full_name for m in verticals["industry"].account_managers.all()] == ["Bruno Lima"]
+def test_only_active_account_managers_are_listed(logged_client, verticals, managers):
+    def listed():
+        rows = logged_client.get(URL, {"search": "industry"}).json()["results"]
+        return [m["full_name"] for m in rows[0]["account_managers_detail"]]
+
+    assert listed() == ["Ana Souza", "Bruno Lima"]
+    # A deactivated user, or one who is no longer an account manager, is not shown
+    managers["ana"].is_active = False
+    managers["ana"].save()
+    from users.models import Role
+
+    Role.account_manager().users.remove(managers["bruno"])
+    assert listed() == []
 
 
 # --- Translations ----------------------------------------------------------------------------
