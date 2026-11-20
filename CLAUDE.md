@@ -94,6 +94,19 @@ Multi-user web system for **operating lease residual value pricing**
     `PRICE_DOCUMENT_MAX_MB` (25). Deleting a document removes its file; erasing the last version
     of a row removes its documents. List rows carry `documents_count` and `photo_id`.
     Pricing tests share fixtures in `pricing/conftest.py` and helpers in `pricing/testing.py`.
+  - `efmv/` — **eFMV Analyses** (Pricing), `/api/efmv-analyses/`. `EfmvAnalysis`: code
+    `EFMV-<year>-<NNNN>` (year + sequence, next number per year), account manager (user with the
+    role; must be the customer's primary or secondary), customer, created by/at; ≥ 1
+    `EfmvScenario` (name unique per analysis case-insensitively, term 1–360 months, scope) with
+    `EfmvScenarioItem`s (an average price's `lineage` — the **current** version always counts —
+    and a quantity; no repeated price). Writes are nested (`scenarios` replaces them all); a
+    term beyond an asset's curve (its last term) is refused per item. Figures come only from
+    `efmv/calculations.py` (pure, tested): LO = Σ quantity × original value; HW/SW/SV shares of
+    the LO with 2 places (Average Prices are hardware; SW and SV to come); eFMV at EOL (%, 2
+    places) not computed yet (null). `POST /scenario-preview/` gives the figures of a scenario
+    being edited; deleted prices and items out of the curve are flagged and left out of them.
+    `?search=` also finds a code. Customers: `?account_manager=<user id>` (primary or
+    secondary) and `?is_active=`.
   - `users/` — user and role management (administrators only): `Role` (name unique
     case-insensitive, description, `is_system`, `users` M2M → `user.roles`); users can have many
     roles. System role "Administrator" (`key="administrator"`, created by a migration) cannot be
@@ -183,6 +196,12 @@ Multi-user web system for **operating lease residual value pricing**
     click to enlarge; menu: file, `PhotoSearchDialog.vue`, `PhotoUrlDialog.vue`) and `PriceDocuments.vue` ("Documents" tab; drag and drop). File uploads
     go through `api()` with a `FormData` body. Sizes: `src/utils/bytes.ts`. Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
     UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
+  - `src/modules/efmv-analyses/` — list (ServerCrudTable) and a page per analysis
+    (`/pricing/efmv-analyses/new`, `/:id`; child routes of a RouterView parent): account
+    manager (the user by default when they have the role), `CustomerPicker.vue` (customers of
+    that account manager), `ScenarioCard.vue` (assets via `AveragePricePicker.vue`, figures
+    from `/scenario-preview/` after each change, `ScenarioTotalsBar.vue`); form state in
+    `draft.ts`.
   - Decimal inputs (e.g. ratings): text field with `inputmode="decimal"` (not `type="number"`,
     which drops "7,5" in some browsers), `rules.decimalRange(min, max, places)`, and
     `normalizeDecimal()` (src/utils/decimal.ts) before sending. Display with `$n(value, 'rating')`.

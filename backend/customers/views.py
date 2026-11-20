@@ -24,7 +24,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     """CRUD for customers.
 
     List supports ?search= (name, trade name, tax ID, email, city, primary or secondary
-    account manager), ?ordering=, ?page= and ?page_size=.
+    account manager), ?account_manager=<user id> (primary or secondary), ?is_active=true|false,
+    ?ordering=, ?page= and ?page_size=.
     """
 
     queryset = Customer.objects.select_related("primary_account_manager").prefetch_related(
@@ -53,3 +54,17 @@ class CustomerViewSet(viewsets.ModelViewSet):
         "primary_account_manager__first_name",
     ]
     ordering = ["name"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        manager = params.get("account_manager", "")
+        if manager.isdigit():
+            queryset = queryset.filter(
+                Q(primary_account_manager_id=int(manager))
+                | Q(secondary_account_managers__id=int(manager))
+            ).distinct()
+        active = params.get("is_active")
+        if active in ("true", "false"):
+            queryset = queryset.filter(is_active=active == "true")
+        return queryset

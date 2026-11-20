@@ -907,3 +907,83 @@ msgstr "Este usuario no es gestor de cuenta."
 #: users
 msgid "This user is the account manager of customers and must keep the Account Manager role. Change those customers first."
 msgstr "Este usuario es gestor de cuenta de clientes y debe mantener el rol Account Manager. Cambie esos clientes primero."
+
+#: efmv
+msgid "Add at least one scenario."
+msgstr "Agregue al menos un escenario."
+
+#: efmv
+msgid "analysis"
+msgstr "análisis"
+
+#: efmv
+msgid "Could not create the analysis. Try again."
+msgstr "No se pudo crear el análisis. Inténtelo de nuevo."
+
+#: efmv
+msgid "eFMV analyses"
+msgstr "análisis de eFMV"
+
+#: efmv
+msgid "eFMV analysis"
+msgstr "análisis de eFMV"
+
+#: efmv
+msgid "position"
+msgstr "posición"
+
+#: efmv
+msgid "quantity"
+msgstr "cantidad"
+
+#: efmv
+msgid "scenario"
+msgstr "escenario"
+
+#: efmv
+msgid "scenario asset"
+msgstr "bien del escenario"
+
+#: efmv
+msgid "scenario assets"
+msgstr "bienes del escenario"
+
+#: efmv
+msgid "Scenario names must be different."
+msgstr "Los nombres de los escenarios deben ser distintos."
+
+#: efmv
+msgid "scenarios"
+msgstr "escenarios"
+
+#: efmv
+msgid "scope"
+msgstr "alcance"
+
+#: efmv
+msgid "sequence"
+msgstr "secuencia"
+
+#: efmv
+msgid "This account manager does not serve this customer."
+msgstr "Este gestor de cuenta no atiende a este cliente."
+
+#: efmv
+msgid "This asset is already in the scenario."
+msgstr "Este bien ya está en el escenario."
+
+#: efmv
+msgid "This average price was deleted."
+msgstr "Este precio promedio fue eliminado."
+
+#: efmv
+msgid "This field may not be blank."
+msgstr "Este campo no puede estar en blanco."
+
+#: efmv
+msgid "year"
+msgstr "año"
+
+#: efmv
+msgid "The value curve of this asset goes up to %(last)s months; the scenario is %(term)s months."
+msgstr "La curva de valor de este bien llega hasta %(last)s meses; el escenario es de %(term)s meses."

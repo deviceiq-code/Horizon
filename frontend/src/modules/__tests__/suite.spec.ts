@@ -32,6 +32,9 @@ describe('suite apps and routes', () => {
       expect(router.resolve({ name: module.name }).path.startsWith(`/${app.path}/`)).toBe(true)
     }
     expect(router.resolve({ name: 'average-prices' }).path).toBe('/pricing/average-prices')
+    expect(router.resolve({ name: 'efmv-analysis', params: { id: 3 } }).path).toBe(
+      '/pricing/efmv-analyses/3',
+    )
     expect(router.resolve({ name: 'catalogs-asset-classes' }).path).toBe(
       '/admin/catalogs/asset-classes',
     )
@@ -56,7 +59,10 @@ describe('suite apps and routes', () => {
       'Partners and Alliances',
       'Administração',
     ])
-    expect(appModules('pricing', false).map((m) => m.name)).toEqual(['average-prices'])
+    expect(appModules('pricing', false).map((m) => m.name)).toEqual([
+      'average-prices',
+      'efmv-analyses',
+    ])
     expect(appModules('admin', true).map((m) => m.name)).toEqual([
       'customers',
       'catalogs',
