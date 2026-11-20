@@ -99,8 +99,9 @@ Multi-user web system for **operating lease residual value pricing**
     role; must be the customer's primary or secondary), customer, created by/at; ≥ 1
     `EfmvScenario` (name unique per analysis case-insensitively, term 1–360 months, scope) with
     `EfmvScenarioItem`s (an average price's `lineage` — the **current** version always counts —,
-    a quantity and a `unit_value` **typed by the analyst**, never taken from Average Prices;
-    no repeated price). Each item is placed against the current average price's value
+    a quantity and a `unit_value` typed by the analyst — when not typed, the current average
+    price's value counts (`value_from_price` in previews) and is stored on save; no repeated
+    price). Items carry the price's `specs` for display. Each item is placed against the current average price's value
     (`pricing/positioning.py`, pure: `variation_percent` and `price_position` → below /
     slightly_below / compatible / slightly_above / above, compared at 2 places, inclusive
     limits) and flagged `expired` when that version is older than the validity; the analysis
@@ -216,8 +217,8 @@ Multi-user web system for **operating lease residual value pricing**
     `ScenarioTotalsBar.vue` on top; assets grid below — "+ Row" adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
-    number, Quantity, asset, typed Unit Value, Average Prices value (expired flag), Position,
-    total; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
+    number, Quantity, asset (class · specifications · price date or expired flag), Unit Value
+    (the average price's value as placeholder; empty = that value), Position, total; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
     row adds one), remove buttons appear on hover and are out of the Tab order; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and

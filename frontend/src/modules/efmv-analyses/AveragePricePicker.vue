@@ -8,7 +8,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import RemoteAutocomplete, { type RemoteOption } from '@/components/RemoteAutocomplete.vue'
 import { listAveragePrices, type AveragePrice } from '@/modules/average-prices/api'
-import { specText } from '@/modules/average-prices/specText'
+import { specSummary } from '@/modules/average-prices/specText'
 
 defineProps<{ label: string; exclude: number[] }>()
 const emit = defineEmits<{ pick: [id: number] }>()
@@ -17,13 +17,8 @@ const { t, n } = useI18n()
 
 /** "320 GC (2500 h, Steel, Cab: Yes)": the filled specifications, in template order. */
 function optionTitle(row: AveragePrice): string {
-  const specs = row.specs
-    .filter((spec) => spec.value)
-    .map((spec) =>
-      // A bare "Yes"/"No" says nothing without its label
-      spec.kind === 'boolean' ? `${spec.label}: ${specText(spec, t, n)}` : specText(spec, t, n),
-    )
-  return specs.length ? `${row.model} (${specs.join(', ')})` : row.model
+  const specs = specSummary(row.specs, t, n)
+  return specs ? `${row.model} (${specs})` : row.model
 }
 
 const selected = ref<number | null>(null)

@@ -110,6 +110,10 @@ def test_create_with_totals(logged_client, managers, customers, prices):
     assert scenario["name"] == "Base" and scenario["term_months"] == 24
     assert [i["line_total"] for i in scenario["items"]] == ["200000.00", "50000.00"]
     assert scenario["items"][0]["terms"] == [12, 24, 36]
+    assert [(spec["key"], spec["value"]) for spec in scenario["items"][0]["specs"]] == [
+        ("hours", "2500"),
+        ("tracks", "Steel"),
+    ]
     assert scenario["totals"] == {
         "lo": "250000.00",
         "efmv_percent": None,
@@ -263,9 +267,14 @@ def test_scenario_preview(logged_client, prices):
     assert post_preview.status_code == 200, r.json()
     data = r.json()
     assert [i["out_of_curve"] for i in data["items"]] == [False, True, False]
-    assert data["totals"]["lo"] == "107000.00"
-    assert [i["position"] for i in data["items"]] == ["slightly_above", "compatible", None]
-    assert data["items"][2]["line_total"] is None
+    assert data["totals"]["lo"] == "207000.00"
+    # Not typed: the average price's value counts (shown as such)
+    assert [i["position"] for i in data["items"]] == ["slightly_above", "compatible", "compatible"]
+    assert (data["items"][2]["unit_value"], data["items"][2]["value_from_price"]) == (
+        "100000.00",
+        True,
+    )
+    assert data["items"][2]["line_total"] == "100000.00"
 
 
 def test_price_in_an_analysis_is_kept(logged_client, managers, customers, prices):
@@ -284,12 +293,20 @@ def test_customers_filtered_by_account_manager(logged_client, managers, customer
     assert names({"account_manager": managers["ana"].pk, "is_active": "true"}) == ["Beta S.A."]
 
 
-def test_unit_value_is_required(logged_client, managers, customers, prices):
+def test_without_a_typed_value_the_average_price_counts(
+    logged_client, managers, customers, prices, catalog
+):
     data = body(managers, customers, prices)
     del data["scenarios"][0]["items"][0]["unit_value"]
+    data["scenarios"][0]["items"][1]["unit_value"] = None
     r = post(logged_client, data)
-    assert r.status_code == 400
-    assert "unit_value" in r.json()["scenarios"]["0"]["items"]["0"]
+    assert r.status_code == 201, r.json()
+    items = r.json()["scenarios"][0]["items"]
+    assert [i["unit_value"] for i in items] == ["100000.00", "50000.00"]
+    # Stored: a newer average price does not change it
+    _new_version(logged_client, catalog, prices["excavator"], "120000.00")
+    item = logged_client.get(f"{URL}{r.json()['id']}/").json()["scenarios"][0]["items"][0]
+    assert (item["unit_value"], item["value_from_price"]) == ("100000.00", False)
 
 
 def test_position_follows_the_control_panel(logged_client, managers, customers, prices):

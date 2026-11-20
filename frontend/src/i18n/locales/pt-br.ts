@@ -189,7 +189,7 @@ const ptBR: Messages = {
     },
     item: {
       position: 'Posicionamento',
-      historical: 'Average Prices',
+      unitValueHint: 'Deixe vazio para usar o valor do Average Prices (mostrado em cinza).',
       unitValueRule: 'Informe um valor maior que zero.',
       pricedOn: 'cotado em {date}',
       expired: 'Preço Vencido',
@@ -201,7 +201,6 @@ const ptBR: Messages = {
       quantity: 'Quantidade',
       total: 'Total',
       remove: 'Remover bem',
-      curveUpTo: 'curva até {months} meses',
       deleted: 'Este preço médio foi excluído; será removido ao salvar.',
       outOfCurve: 'A curva de valor não chega a {term} meses; altere o prazo ou remova o bem.',
     },

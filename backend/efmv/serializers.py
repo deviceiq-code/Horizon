@@ -40,6 +40,8 @@ def asset_detail(row: AveragePrice) -> dict:
         "asset_class": {"name": row.asset_class.name, "icon": row.asset_class.icon},
         "manufacturer": row.manufacturer.name,
         "model": row.model,
+        # Template fields with their values, as stored with the price
+        "specs": row.specs,
         "sub_vertical": sub_vertical_label(row.sub_vertical),
         "original_value": str(row.original_value),
         "currency": row.currency,
@@ -91,16 +93,18 @@ def price_check(row: AveragePrice, unit_value, ctx: Context) -> dict:
 
 
 def scenario_payload(term_months: int, items: list[tuple], prices: dict, ctx: Context) -> dict:
-    """`items`: (item id or None, lineage, quantity, typed unit value or None). Items without a
-    value, whose price was deleted or whose curve no longer reaches the term are flagged and
-    left out of the totals."""
+    """`items`: (item id or None, lineage, quantity, typed unit value or None). Without a typed
+    value the average price's value counts (`value_from_price`). Items whose price was deleted
+    or whose curve no longer reaches the term are flagged and left out of the totals."""
     lines, rows = [], []
-    for item_id, lineage, quantity, unit_value in items:
+    for item_id, lineage, quantity, typed in items:
         row = prices.get(lineage)
+        unit_value = typed if typed is not None or row is None else row.original_value
         entry = {
             "id": item_id,
             "quantity": quantity,
             "unit_value": None if unit_value is None else str(unit_value),
+            "value_from_price": typed is None and row is not None,
             "line_total": None if unit_value is None else str(line_total(quantity, unit_value)),
             "available": row is not None,
         }
@@ -128,9 +132,9 @@ class ItemInputSerializer(serializers.Serializer):
     # Any version of the average price; its current version is the one used
     average_price = serializers.PrimaryKeyRelatedField(queryset=AveragePrice.objects.all())
     quantity = serializers.IntegerField(min_value=1, max_value=1_000_000)
-    # Typed by the analyst (Average Prices only position it)
+    # Typed by the analyst; when not sent, the current average price's value is stored
     unit_value = serializers.DecimalField(
-        max_digits=14, decimal_places=2, min_value=Decimal("0.01")
+        max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False, allow_null=True
     )
 
     def validate_average_price(self, value):
@@ -185,6 +189,9 @@ class ScenarioInputSerializer(serializers.Serializer):
                         % {"months": ctx.settings.validity_months}
                     ]
                 }
+            elif item.get("unit_value") is None:
+                # Not typed: the value of the average price counts
+                item["unit_value"] = row.original_value
             seen.add(lineage)
         if errors:
             raise serializers.ValidationError({"items": errors})
@@ -376,18 +383,11 @@ class EfmvAnalysisListSerializer(serializers.ModelSerializer):
         return [s.name for s in obj.scenarios.all()]
 
 
-class PreviewItemSerializer(ItemInputSerializer):
-    # Not typed yet: no total nor position for it
-    unit_value = serializers.DecimalField(
-        max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False, allow_null=True
-    )
-
-
 class ScenarioPreviewSerializer(serializers.Serializer):
     """The figures of a scenario being edited (nothing saved): the form never computes them."""
 
     term_months = serializers.IntegerField(min_value=1, max_value=MAX_TERM_MONTHS)
-    items = PreviewItemSerializer(many=True)
+    items = ItemInputSerializer(many=True)
 
     def to_representation(self, instance):
         items = [

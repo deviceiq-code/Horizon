@@ -9,6 +9,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useValidationRules } from '@/composables/useValidationRules'
+import { specSummary } from '@/modules/average-prices/specText'
 import { formatMoney, toInputMoney } from '@/utils/money'
 import AveragePricePicker from './AveragePricePicker.vue'
 import ScenarioTotalsBar from './ScenarioTotalsBar.vue'
@@ -97,6 +98,7 @@ function deletedItem(quantity: number): ScenarioItem {
     id: null,
     quantity,
     unit_value: null,
+    value_from_price: false,
     available: false,
     average_price: null,
     line_total: null,
@@ -204,9 +206,10 @@ const itemError = (index: number) => {
   ]
 }
 
+// Empty: the average price's value counts (shown as the placeholder)
 const unitValueRules = [
-  (v: string) => !!v?.trim() || t('validation.required'),
-  (v: string) => parseUnitValue(v ?? '', locale.value) !== null || t('efmv.item.unitValueRule'),
+  (v: string) =>
+    !v?.trim() || parseUnitValue(v, locale.value) !== null || t('efmv.item.unitValueRule'),
 ]
 
 const POSITION_COLORS: Record<PricePosition, string> = {
@@ -229,6 +232,9 @@ function signedPercent(value: string): string {
   const number = Number(value)
   return `${number > 0 ? '+' : ''}${n(number, 'percentValue')}%`
 }
+
+/** "Ultra 7 265U vPro, 32 GB, 14 Inches" */
+const specsOf = (index: number) => specSummary(detail(index)?.specs ?? [], t, n)
 
 const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 </script>
@@ -349,7 +355,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           <th class="text-end" style="width: 84px">{{ $t('efmv.item.quantity') }}</th>
           <th style="min-width: 260px">{{ $t('efmv.item.asset') }}</th>
           <th class="text-end" style="width: 170px">{{ $t('efmv.item.unitValue') }}</th>
-          <th class="text-end" style="width: 170px">{{ $t('efmv.item.historical') }}</th>
           <th style="width: 210px">{{ $t('efmv.item.position') }}</th>
           <th class="text-end" style="width: 160px">{{ $t('efmv.item.total') }}</th>
           <th style="width: 40px"></th>
@@ -357,7 +362,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
       </thead>
       <tbody>
         <tr v-if="!scenario.items.length">
-          <td colspan="8" class="text-medium-emphasis text-center py-6">
+          <td colspan="7" class="text-medium-emphasis text-center py-6">
             {{ $t('efmv.scenario.noAssets') }}
           </td>
         </tr>
@@ -401,7 +406,15 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             <div
               v-else-if="detail(i)?.asset_class"
               class="d-flex align-center ga-2"
-              :title="`${detail(i)!.manufacturer} ${detail(i)!.model} · ${detail(i)!.asset_class!.name}`"
+              :title="
+                [
+                  `${detail(i)!.manufacturer} ${detail(i)!.model}`,
+                  detail(i)!.asset_class!.name,
+                  specsOf(i),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              "
             >
               <v-icon :icon="detail(i)!.asset_class!.icon" size="18" color="primary" />
               <div class="asset-text">
@@ -410,10 +423,28 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                   <span class="text-medium-emphasis"> · {{ detail(i)!.manufacturer }}</span>
                 </div>
                 <div class="text-caption text-medium-emphasis text-truncate">
-                  {{ detail(i)!.asset_class!.name }} ·
-                  {{
-                    $t('efmv.item.curveUpTo', { months: Math.max(...(detail(i)!.terms ?? [0])) })
-                  }}
+                  {{ detail(i)!.asset_class!.name }}
+                  <template v-if="specsOf(i)"> · {{ specsOf(i) }}</template>
+                  <template v-if="detail(i)!.priced_on">
+                    ·
+                    <span
+                      v-if="detail(i)!.expired"
+                      class="text-warning"
+                      :title="
+                        $t('efmv.item.expiredHint', {
+                          date: shortDate(detail(i)!.priced_on!),
+                          until: shortDate(detail(i)!.valid_until!),
+                        })
+                      "
+                      data-testid="expired"
+                    >
+                      <v-icon icon="mdi-calendar-alert" size="x-small" />
+                      {{ $t('efmv.item.expired') }}
+                    </span>
+                    <span v-else>
+                      {{ $t('efmv.item.pricedOn', { date: shortDate(detail(i)!.priced_on!) }) }}
+                    </span>
+                  </template>
                 </div>
               </div>
             </div>
@@ -438,6 +469,9 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             <v-text-field
               v-model="item.unit_value"
               inputmode="decimal"
+              :placeholder="
+                detail(i)?.original_value ? toInputMoney(detail(i)!.original_value!, locale) : ''
+              "
               variant="plain"
               density="compact"
               hide-details
@@ -445,38 +479,10 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               :rules="item.average_price === null ? [] : unitValueRules"
               :disabled="item.average_price === null"
               :aria-label="$t('efmv.item.unitValue')"
-              :title="$t('efmv.item.unitValueRule')"
+              :title="$t('efmv.item.unitValueHint')"
               data-testid="unit-value"
               @blur="tidyUnitValue(item)"
             />
-          </td>
-          <td class="cell-text text-end numeric">
-            <template v-if="detail(i)?.original_value">
-              <div class="text-no-wrap">
-                {{ formatMoney(detail(i)!.original_value!, detail(i)!.currency ?? 'BRL', locale) }}
-              </div>
-              <div
-                v-if="detail(i)!.expired"
-                class="text-caption text-warning text-no-wrap"
-                :title="
-                  $t('efmv.item.expiredHint', {
-                    date: shortDate(detail(i)!.priced_on!),
-                    until: shortDate(detail(i)!.valid_until!),
-                  })
-                "
-                data-testid="expired"
-              >
-                <v-icon icon="mdi-calendar-alert" size="x-small" />
-                {{ $t('efmv.item.expired') }}
-              </div>
-              <div
-                v-else-if="detail(i)!.priced_on"
-                class="text-caption text-medium-emphasis text-no-wrap"
-              >
-                {{ shortDate(detail(i)!.priced_on!) }}
-              </div>
-            </template>
-            <span v-else class="text-disabled">—</span>
           </td>
           <td class="cell-text">
             <v-chip

@@ -54,6 +54,26 @@ const EXCAVATOR: efmvApi.ScenarioItem = {
   asset_class: { name: 'Excavators', icon: 'mdi-excavator' },
   manufacturer: 'Caterpillar',
   model: '320 GC',
+  specs: [
+    {
+      key: 'hours',
+      label: 'Hours',
+      kind: 'number',
+      unit: 'h',
+      required: true,
+      options: [],
+      value: '2500',
+    },
+    {
+      key: 'cab',
+      label: 'Cab',
+      kind: 'boolean',
+      unit: '',
+      required: false,
+      options: [],
+      value: 'true',
+    },
+  ],
   sub_vertical: 'Industry / Yellow line',
   original_value: '100000.00',
   currency: 'BRL',
@@ -219,6 +239,10 @@ describe('EfmvAnalysisView', () => {
     })
     expect(inBody('[data-testid="position"]')!.textContent).toContain('Compatible')
     expect(inBody('[data-testid="asset-row"]')!.textContent).toContain('320 GC · Caterpillar')
+    // Under it: asset class, specifications and the date of the price
+    expect(inBody('[data-testid="asset-row"]')!.textContent!.replace(/\s+/g, ' ')).toMatch(
+      /Excavators · 2500 h, Cab: Yes · priced on 10\/0?1\/2026/,
+    )
     expect(inBody('[data-testid="total-lo"]')!.textContent).toMatch(/200,000\.00/)
     expect(inBody('[data-testid="total-efmv"]')!.textContent).toContain('—')
     expect(inBody('[data-testid="total-hw"]')!.textContent).toContain('100.00%')
@@ -356,6 +380,35 @@ describe('EfmvAnalysisView', () => {
     await settle()
     expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(3)
     expect(inBody('[data-testid="add-asset"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
+  it("without a typed value the average price's value counts (placeholder)", async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.previewScenario.mockResolvedValue({
+      items: [{ ...EXCAVATOR, value_from_price: true }],
+      totals: TOTALS,
+      has_expired: false,
+    })
+    const { wrapper } = await mountView({ id: 3 })
+    await typeInto('unit-value', '')
+    await debounce()
+    const input = inBody('[data-testid="unit-value"] input') as HTMLInputElement
+    expect(input.placeholder).toBe('100,000.00')
+    expect(efmv.previewScenario).toHaveBeenLastCalledWith({
+      term_months: 36,
+      items: [{ average_price: 7, quantity: 2, unit_value: null }],
+    })
+    await click('save')
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        scenarios: [
+          expect.objectContaining({ items: [{ average_price: 7, quantity: 2, unit_value: null }] }),
+        ],
+      }),
+    )
     wrapper.unmount()
   })
 

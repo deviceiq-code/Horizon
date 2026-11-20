@@ -191,7 +191,7 @@ const en = {
     },
     item: {
       position: 'Position',
-      historical: 'Average Prices',
+      unitValueHint: 'Leave empty to use the value of Average Prices (shown in gray).',
       unitValueRule: 'Enter a value greater than zero.',
       pricedOn: 'priced on {date}',
       expired: 'Expired Price',
@@ -203,7 +203,6 @@ const en = {
       quantity: 'Quantity',
       total: 'Total',
       remove: 'Remove asset',
-      curveUpTo: 'curve up to {months} months',
       deleted: 'This average price was deleted; it will be removed when saving.',
       outOfCurve: 'The value curve does not reach {term} months; change the term or remove it.',
     },

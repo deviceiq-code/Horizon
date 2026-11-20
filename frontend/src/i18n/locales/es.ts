@@ -190,7 +190,7 @@ const es: Messages = {
     },
     item: {
       position: 'Posicionamiento',
-      historical: 'Precios Promedio',
+      unitValueHint: 'Deje vacío para usar el valor de los precios promedio (mostrado en gris).',
       unitValueRule: 'Ingrese un valor mayor que cero.',
       pricedOn: 'cotizado el {date}',
       expired: 'Precio Vencido',
@@ -202,7 +202,6 @@ const es: Messages = {
       quantity: 'Cantidad',
       total: 'Total',
       remove: 'Quitar bien',
-      curveUpTo: 'curva hasta {months} meses',
       deleted: 'Este precio promedio fue eliminado; se quitará al guardar.',
       outOfCurve: 'La curva de valor no llega a {term} meses; cambie el plazo o quite el bien.',
     },

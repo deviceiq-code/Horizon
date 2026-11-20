@@ -6,6 +6,7 @@
  */
 import { api, listQuery, type ListParams, type Paginated } from '@/api'
 import type { AccountManagerRef } from '@/modules/account-managers/api'
+import type { SpecValue } from '@/modules/average-prices/api'
 
 export interface CustomerRef {
   id: number
@@ -35,8 +36,10 @@ export type PricePosition = 'below' | 'slightly_below' | 'compatible' | 'slightl
 export interface ScenarioItem {
   id: number | null
   quantity: number
-  /** Typed by the analyst; null while not typed (preview) */
+  /** The value that counts: typed by the analyst or, when not typed, the average price's */
   unit_value: string | null
+  /** Not typed: the average price's value counts (stored with the analysis when saved) */
+  value_from_price?: boolean
   /** quantity × unit value; null without a value */
   line_total: string | null
   /** false: the average price was deleted (left out of the totals; removed when saving) */
@@ -46,6 +49,8 @@ export interface ScenarioItem {
   asset_class?: { name: string; icon: string }
   manufacturer?: string
   model?: string
+  /** Template fields with their values (as stored with the average price) */
+  specs?: SpecValue[]
   sub_vertical?: string
   original_value?: string
   currency?: string
@@ -104,7 +109,7 @@ export interface ScenarioItemInput {
   /** Any version of the average price (its current version is used) */
   average_price: number
   quantity: number
-  /** Canonical decimal string (null only in previews, while not typed) */
+  /** Canonical decimal string; null = not typed (the average price's value counts) */
   unit_value: string | null
 }
 
