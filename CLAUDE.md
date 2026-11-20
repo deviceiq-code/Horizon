@@ -136,7 +136,10 @@ Multi-user web system for **operating lease residual value pricing**
     menu (Sign out). Language and theme are changed in Settings (the language selector stays on
     the login page only).
     Module pages use `<v-container fluid class="module-page">` (full width, small side margin;
-    `src/styles/main.css`).
+    `src/styles/main.css`). The path bar is sticky under the top bar (height
+    `--horizon-path-bar-height`); on screens ≥ 960 px the column titles of every grid in a page
+    (`.v-data-table` in `.v-main`) stick right under it while the rows scroll — so grids must not
+    get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365): `src/apps.ts` (`SUITE_APPS`): "Horizon Pricing"
     (`/pricing/…`), "Horizon Remarketing" (coming soon) and "Administração" (`/admin/…`:
     Customers, Account Managers, Catalogs — shared by every app — plus Users and System Settings,

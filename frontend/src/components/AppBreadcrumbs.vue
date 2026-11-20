@@ -60,7 +60,15 @@ const crumbs = computed<Crumb[]>(() => {
 </template>
 
 <style scoped>
+/* Always visible under the top bar; its height is --horizon-path-bar-height (main.css), which
+   grids use to stop their header right under it */
 .breadcrumb-bar {
+  position: sticky;
+  top: var(--v-layout-top, 0px);
+  z-index: 5;
+  height: var(--horizon-path-bar-height);
+  display: flex;
+  align-items: center;
   background: rgb(var(--v-theme-surface));
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }

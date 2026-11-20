@@ -19,3 +19,25 @@ button {
     padding-inline: 16px;
   }
 }
+
+/* Height of the path bar under the top bar (AppBreadcrumbs.vue) */
+:root {
+  --horizon-path-bar-height: 38px;
+}
+
+/* Grids of the pages: the column titles scroll with the page until they reach the path bar,
+   then stay there while the rows scroll under them. The table must not scroll by itself for
+   that, so on narrow screens (where wide tables need their own horizontal scroll) the titles
+   simply scroll with the page. */
+@media (min-width: 960px) {
+  .v-main .v-data-table > .v-table__wrapper,
+  .v-main .v-card:has(.v-data-table) {
+    overflow: visible;
+  }
+  .v-main .v-data-table > .v-table__wrapper > table > thead:first-of-type > tr > th {
+    position: sticky;
+    top: calc(var(--v-layout-top, 0px) + var(--horizon-path-bar-height));
+    z-index: 3;
+    background: rgb(var(--v-theme-surface));
+  }
+}
