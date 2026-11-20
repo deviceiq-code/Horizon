@@ -77,4 +77,11 @@ export const ASSET_ICONS: readonly string[] = [
   'mdi-radioactive',
   'mdi-waveform',
   'mdi-video',
+  'mdi-lungs',
+  'mdi-flash',
+  'mdi-gas-cylinder',
+  'mdi-ceiling-light',
+  'mdi-robot',
+  'mdi-bed',
+  'mdi-laser-pointer',
 ]
