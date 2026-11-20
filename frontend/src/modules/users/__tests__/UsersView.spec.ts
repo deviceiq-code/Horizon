@@ -92,7 +92,12 @@ async function mountView(path = '/users') {
     is_admin: true,
     roles: ['Administrator'],
     photo_version: null,
-    preferences: { language: 'en', theme: 'system', updated_at: '' },
+    preferences: {
+      language: 'en',
+      theme: 'system',
+      color_theme: 'metallic_foundations',
+      updated_at: '',
+    },
   }
   const router = createRouter({
     history: createMemoryHistory(),

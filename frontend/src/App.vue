@@ -1,18 +1,41 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { RouterView } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore } from '@/stores/preferences'
+import { colorThemeById, vuetifyThemeName } from '@/themes'
 
 const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
 const vuetifyTheme = useTheme()
 
-// Preference values match Vuetify's theme names ('system' follows the operating system)
+// "System" follows the operating system's light/dark setting, also when it changes
+const systemDark = ref(false)
+const media = window.matchMedia?.('(prefers-color-scheme: dark)')
+const onSystemChange = () => (systemDark.value = !!media?.matches)
+onSystemChange()
+media?.addEventListener?.('change', onSystemChange)
+onBeforeUnmount(() => media?.removeEventListener?.('change', onSystemChange))
+
+// The color theme in its light or dark version
 watch(
-  () => preferences.theme,
-  (theme) => vuetifyTheme.change(theme),
+  () => [preferences.colorTheme, preferences.theme, systemDark.value] as const,
+  ([colorTheme, mode, osDark]) =>
+    vuetifyTheme.change(
+      vuetifyThemeName(colorTheme, mode === 'dark' || (mode === 'system' && osDark)),
+    ),
+  { immediate: true },
+)
+
+// The theme's font
+watch(
+  () => preferences.colorTheme,
+  (id) =>
+    document.documentElement.style.setProperty(
+      '--horizon-font-family',
+      colorThemeById(id).fontFamily,
+    ),
   { immediate: true },
 )
 </script>

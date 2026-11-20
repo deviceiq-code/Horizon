@@ -52,7 +52,7 @@ async function logout() {
 </script>
 
 <template>
-  <v-app-bar color="primary" density="comfortable">
+  <v-app-bar color="app-bar" density="comfortable" class="app-bar">
     <template #prepend>
       <v-app-bar-nav-icon :aria-label="$t('menu.open')" @click="toggleMenu" />
     </template>
@@ -167,3 +167,15 @@ async function logout() {
     <RouterView />
   </v-main>
 </template>
+
+<style scoped>
+/* A metallic sheen with the theme's top bar colors (app-bar → app-bar-end) */
+.app-bar {
+  background: linear-gradient(
+    100deg,
+    rgb(var(--v-theme-app-bar)) 0%,
+    rgb(var(--v-theme-app-bar)) 45%,
+    rgb(var(--v-theme-app-bar-end)) 100%
+  ) !important;
+}
+</style>

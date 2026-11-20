@@ -433,7 +433,7 @@ describe('AveragePricesView', () => {
     await settle()
     expect(prices.getAveragePrice).toHaveBeenCalledWith(100)
     expect(inBody('[data-testid="detail-specs"]')!.textContent).toContain('2500')
-    expect(inBody('[data-testid="detail-terms"]')!.textContent).toContain('% of original')
+    expect(inBody('[data-testid="detail-terms"]')!.textContent).toContain('% of Original')
 
     await click('tab-curve')
     expect(document.body.querySelectorAll('[data-testid="curve-row"]')).toHaveLength(25)
@@ -450,7 +450,7 @@ describe('AveragePricesView', () => {
     await settle()
     expect(prices.getAveragePrice).toHaveBeenLastCalledWith(90)
     expect(inBody('[data-testid="detail-original"]')!.textContent).toMatch(/95,000\.00/)
-    expect(document.body.textContent).toContain('Previous version')
+    expect(document.body.textContent).toContain('Previous Version')
     expect(inBody('[data-testid="detail-new-version"]')).toBeNull()
     wrapper.unmount()
   })

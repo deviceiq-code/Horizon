@@ -104,3 +104,15 @@ def test_logged_user_gets_messages_in_preferred_language(logged_client):
     r = _patch(logged_client, {"theme": "neon"}, headers={"accept-language": "pt-br"})
     assert r.status_code == 400
     assert "no es una elección válida" in r.json()["theme"][0]
+
+
+def test_color_theme_defaults_and_changes(logged_client):
+    assert (
+        logged_client.get("/api/auth/preferences/").json()["color_theme"] == "metallic_foundations"
+    )
+    for theme in ("earthy_serene", "sleek_futuristic", "metallic_foundations"):
+        r = _patch(logged_client, {"color_theme": theme})
+        assert (r.status_code, r.json()["color_theme"]) == (200, theme)
+    r = _patch(logged_client, {"color_theme": "neon"})
+    assert r.status_code == 400
+    assert "color_theme" in r.json()

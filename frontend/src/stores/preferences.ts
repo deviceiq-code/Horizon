@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/api'
 import { currentLanguage, isSupportedLanguage, setLanguage, type Language } from '@/i18n'
+import { DEFAULT_COLOR_THEME, isColorTheme } from '@/themes'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -9,10 +10,12 @@ export type Theme = 'light' | 'dark' | 'system'
 export interface Preferences {
   language: string
   theme: Theme
+  /** Color theme id (src/themes.ts) */
+  color_theme: string
   updated_at: string
 }
 
-export type PreferencesUpdate = Partial<{ language: Language; theme: Theme }>
+export type PreferencesUpdate = Partial<{ language: Language; theme: Theme; color_theme: string }>
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']
 
@@ -23,6 +26,17 @@ export const THEME_OPTIONS: readonly { value: Theme; icon: string }[] = [
   { value: 'system', icon: 'mdi-theme-light-dark' },
 ]
 const THEME_STORAGE_KEY = 'horizon.theme'
+const COLOR_THEME_STORAGE_KEY = 'horizon.colorTheme'
+
+function readStoredColorTheme(): string {
+  try {
+    const stored = localStorage.getItem(COLOR_THEME_STORAGE_KEY)
+    if (isColorTheme(stored)) return stored as string
+  } catch {
+    /* storage unavailable */
+  }
+  return DEFAULT_COLOR_THEME
+}
 
 function readStoredTheme(): Theme {
   try {
@@ -34,37 +48,46 @@ function readStoredTheme(): Theme {
   return 'system'
 }
 
-function storeTheme(theme: Theme) {
+function store(key: string, value: string) {
   try {
-    localStorage.setItem(THEME_STORAGE_KEY, theme)
+    localStorage.setItem(key, value)
   } catch {
     /* storage unavailable */
   }
 }
 
 /**
- * Language and theme in use. Values saved to the account (database) win;
+ * Language, mode (light/dark/system) and color theme in use. Values saved to the account (database) win;
  * a copy is kept in the browser so the login page already opens the right way.
  */
 export const usePreferencesStore = defineStore('preferences', () => {
   const language = ref<Language>(currentLanguage())
   const theme = ref<Theme>(readStoredTheme())
+  const colorTheme = ref<string>(readStoredColorTheme())
 
   /** Apply preferences to the UI without saving them to the account. */
-  function apply(p: { language?: string; theme?: Theme }) {
+  function apply(p: { language?: string; theme?: Theme; color_theme?: string }) {
     if (p.language && isSupportedLanguage(p.language)) {
       language.value = p.language
       setLanguage(p.language)
     }
     if (p.theme && THEMES.includes(p.theme)) {
       theme.value = p.theme
-      storeTheme(p.theme)
+      store(THEME_STORAGE_KEY, p.theme)
+    }
+    if (p.color_theme && isColorTheme(p.color_theme)) {
+      colorTheme.value = p.color_theme
+      store(COLOR_THEME_STORAGE_KEY, p.color_theme)
     }
   }
 
   /** Apply immediately and save to the account; if the API fails, roll back and rethrow. */
   async function save(changes: PreferencesUpdate) {
-    const previous = { language: language.value, theme: theme.value }
+    const previous = {
+      language: language.value,
+      theme: theme.value,
+      color_theme: colorTheme.value,
+    }
     apply(changes)
     try {
       const saved = await api<Preferences>('/auth/preferences/', {
@@ -78,5 +101,5 @@ export const usePreferencesStore = defineStore('preferences', () => {
     }
   }
 
-  return { language, theme, apply, save }
+  return { language, theme, colorTheme, apply, save }
 })

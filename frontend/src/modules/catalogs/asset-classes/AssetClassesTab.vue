@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import EnabledChip from '../EnabledChip.vue'
 import AssetClassFormDialog from './AssetClassFormDialog.vue'
+import { useAssetClassFilters } from './useAssetClassFilters'
 import SpecTemplateDialog from './SpecTemplateDialog.vue'
 import RemarketingAverage from '../remarketing/RemarketingAverage.vue'
 import { deleteAssetClass, listAssetClasses, REMARKETING_RATINGS, type AssetClass } from './api'
@@ -14,13 +15,33 @@ const notifications = useNotificationsStore()
 
 const table = ref<{ reload: () => Promise<void> } | null>(null)
 
+// --- Column filters --------------------------------------------------------------------------
+
+const {
+  filters,
+  typedName,
+  scope,
+  scopeItems,
+  loadVerticals,
+  clear: clearFilters,
+} = useAssetClassFilters()
+onMounted(() => loadVerticals().catch(() => undefined))
+const starOptions = [1, 2, 3, 4, 5].map((stars) => ({
+  value: stars,
+  title: `★ ${stars}+`,
+}))
+const statusOptions = computed(() => [
+  { value: 'true', title: t('catalogs.status.enabled') },
+  { value: 'false', title: t('catalogs.status.disabled') },
+])
+
 const headers = computed(() => [
   { title: t('catalogs.fields.id'), key: 'id', width: 80 },
-  { title: t('assetClasses.fields.name'), key: 'name' },
-  { title: t('assetClasses.fields.subVertical'), key: 'sub_vertical_detail' },
+  { title: t('assetClasses.fields.name'), key: 'name', minWidth: '220px' },
+  { title: t('assetClasses.fields.subVertical'), key: 'sub_vertical_detail', minWidth: '240px' },
   // Average of the four ratings; hover for each one
   { title: t('assetClasses.remarketing.title'), key: 'remarketing_average', width: 230 },
-  { title: t('catalogs.fields.status'), key: 'is_enabled', width: 130 },
+  { title: t('catalogs.fields.status'), key: 'is_enabled', width: 150 },
 ])
 
 const formOpen = ref(false)
@@ -59,6 +80,9 @@ function openTemplate(assetClass: AssetClass) {
       remarketing_average: 'remarketing_score',
     }"
     :search-placeholder="$t('assetClasses.searchPlaceholder')"
+    :filters="filters"
+    filters-storage-key="asset-classes"
+    @clear-filters="clearFilters"
     :empty-text="$t('assetClasses.empty')"
     :no-results-text="$t('assetClasses.noResults')"
     :delete-title="$t('assetClasses.deleteTitle')"
@@ -86,6 +110,50 @@ function openTemplate(assetClass: AssetClass) {
           <v-icon icon="mdi-format-list-checks" />
         </v-badge>
       </v-btn>
+    </template>
+    <template #[`filter.name`]>
+      <v-text-field
+        v-model="typedName"
+        :placeholder="$t('assetClasses.filters.name')"
+        prepend-inner-icon="mdi-filter-outline"
+        density="compact"
+        hide-details
+        clearable
+        data-testid="filter-name"
+      />
+    </template>
+    <template #[`filter.sub_vertical_detail`]>
+      <v-autocomplete
+        v-model="scope"
+        :items="scopeItems"
+        :placeholder="$t('assetClasses.filters.scope')"
+        density="compact"
+        hide-details
+        clearable
+        data-testid="filter-scope"
+      />
+    </template>
+    <template #[`filter.remarketing_average`]>
+      <v-select
+        v-model="filters.remarketing_min"
+        :items="starOptions"
+        :placeholder="$t('assetClasses.filters.minStars')"
+        density="compact"
+        hide-details
+        clearable
+        data-testid="filter-stars"
+      />
+    </template>
+    <template #[`filter.is_enabled`]>
+      <v-select
+        v-model="filters.is_enabled"
+        :items="statusOptions"
+        :placeholder="$t('assetClasses.filters.all')"
+        density="compact"
+        hide-details
+        clearable
+        data-testid="filter-status"
+      />
     </template>
     <template #[`item.name`]="{ item }">
       <div class="d-flex align-center ga-3 py-2">

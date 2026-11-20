@@ -10,6 +10,7 @@ import { LANGUAGES } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
 import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/stores/preferences'
 import { useAuthStore } from '@/stores/auth'
+import { COLOR_THEMES } from '@/themes'
 import SystemSettingsCard from '@/components/SystemSettingsCard.vue'
 import UserNameDisplayCard from '@/components/UserNameDisplayCard.vue'
 
@@ -113,6 +114,50 @@ async function save(changes: PreferencesUpdate) {
                 {{ $t(`settings.themes.${item.value}`) }}
               </v-btn>
             </v-btn-toggle>
+
+            <!-- Color theme: each one in a light and a dark version (the mode above) -->
+            <div class="text-body-2 mt-6 mb-2">{{ $t('settings.colorTheme') }}</div>
+            <div class="d-flex flex-wrap ga-3" data-testid="color-themes">
+              <v-card
+                v-for="colorTheme in COLOR_THEMES"
+                :key="colorTheme.id"
+                :variant="preferences.colorTheme === colorTheme.id ? 'outlined' : 'flat'"
+                :color="preferences.colorTheme === colorTheme.id ? 'primary' : undefined"
+                :class="{ 'color-theme--selected': preferences.colorTheme === colorTheme.id }"
+                class="color-theme pa-3"
+                width="260"
+                :disabled="saving"
+                :aria-pressed="preferences.colorTheme === colorTheme.id"
+                :data-testid="`color-theme-${colorTheme.id}`"
+                @click="save({ color_theme: colorTheme.id })"
+              >
+                <div class="swatches d-flex rounded overflow-hidden mb-2" style="height: 36px">
+                  <div
+                    v-for="swatch in colorTheme.swatches"
+                    :key="swatch"
+                    class="flex-grow-1"
+                    :style="{ background: swatch }"
+                  />
+                </div>
+                <div class="d-flex align-center justify-space-between">
+                  <div>
+                    <div class="text-body-2 font-weight-medium">{{ colorTheme.name }}</div>
+                    <div
+                      class="text-caption text-medium-emphasis"
+                      :style="{ fontFamily: `${colorTheme.fontFamily} !important` }"
+                    >
+                      Aa · {{ colorTheme.fontName }}
+                    </div>
+                  </div>
+                  <v-icon
+                    v-if="preferences.colorTheme === colorTheme.id"
+                    icon="mdi-check-circle"
+                    color="primary"
+                    size="small"
+                  />
+                </div>
+              </v-card>
+            </div>
           </v-card-text>
         </v-card>
       </v-window-item>
@@ -126,3 +171,17 @@ async function save(changes: PreferencesUpdate) {
     </v-window>
   </v-container>
 </template>
+
+<style scoped>
+.color-theme {
+  cursor: pointer;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+/* Outlined so a swatch the color of the card still shows */
+.swatches {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.color-theme--selected {
+  border-width: 2px;
+}
+</style>

@@ -9,6 +9,15 @@ class Theme(models.TextChoices):
     SYSTEM = "system", _("Follow system")
 
 
+class ColorTheme(models.TextChoices):
+    """Color schemes of the interface (each one has a light and a dark version, picked by
+    `theme`). Names are proper names: not translated."""
+
+    METALLIC_FOUNDATIONS = "metallic_foundations", "Metallic Foundations"
+    EARTHY_SERENE = "earthy_serene", "Earthy and Serene"
+    SLEEK_FUTURISTIC = "sleek_futuristic", "Sleek and Futuristic"
+
+
 class UserPreferences(models.Model):
     """Settings each user picks on the settings page."""
 
@@ -25,6 +34,12 @@ class UserPreferences(models.Model):
         default=settings.LANGUAGE_CODE,
     )
     theme = models.CharField(_("theme"), max_length=10, choices=Theme, default=Theme.SYSTEM)
+    color_theme = models.CharField(
+        _("color theme"),
+        max_length=40,
+        choices=ColorTheme,
+        default=ColorTheme.METALLIC_FOUNDATIONS,
+    )
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:

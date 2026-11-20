@@ -1,5 +1,5 @@
 import operator
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from functools import reduce
 
 from django.db.models import (
@@ -179,7 +179,8 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for asset classes.
 
     List supports ?search= (name, keyword, sub-vertical or vertical name), ?vertical=<id>,
-    ?sub_vertical=<id>, ?is_enabled=true|false, ?ordering= (id, name,
+    ?sub_vertical=<id>, ?is_enabled=true|false, ?name= (name or keyword contains),
+    ?remarketing_min= (remarketing average at least, 0–5), ?ordering= (id, name,
     sub_vertical__vertical__name, the four remarketing ratings, remarketing_score = their
     average, is_enabled), ?page= and ?page_size=.
     """
@@ -221,4 +222,24 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
             queryset = queryset.filter(sub_vertical__vertical_id=int(params["vertical"]))
         if params.get("sub_vertical", "").isdigit():
             queryset = queryset.filter(sub_vertical_id=int(params["sub_vertical"]))
+        # Column filters of the grid
+        name = " ".join(params.get("name", "").split()).lower()
+        if name:
+            with_keywords = queryset.annotate(
+                keywords_text=Func(
+                    F("keywords"),
+                    Value(" | "),
+                    function="array_to_string",
+                    output_field=CharField(),
+                )
+            )
+            queryset = with_keywords.filter(
+                Q(name__icontains=name) | Q(keywords_text__contains=name)
+            )
+        try:
+            minimum = Decimal(params.get("remarketing_min", ""))
+        except (InvalidOperation, ValueError):
+            minimum = None
+        if minimum is not None and minimum.is_finite():
+            queryset = queryset.filter(remarketing_score__gte=minimum)
         return queryset

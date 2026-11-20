@@ -1,3 +1,12 @@
+/* The theme's font (set in App.vue from src/themes.ts) everywhere, Vuetify's typography too */
+.v-application,
+.v-application [class*='text-'],
+.v-application input,
+.v-application textarea,
+.v-application button {
+  font-family: var(--horizon-font-family, 'Ubuntu', 'Segoe UI', Roboto, sans-serif) !important;
+}
+
 /* Pages of business modules (grids): the whole width, with a small side margin. */
 .module-page {
   padding: 16px 12px;

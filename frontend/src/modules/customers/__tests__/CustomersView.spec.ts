@@ -153,7 +153,7 @@ describe('CustomersView', () => {
     await settle()
     api.listCustomers.mockClear()
 
-    const header = wrapper.findAll('th').find((th) => th.text().includes('Account managers'))!
+    const header = wrapper.findAll('th').find((th) => th.text().includes('Account Managers'))!
     await header.trigger('click')
     await settle()
 

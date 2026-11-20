@@ -803,3 +803,7 @@ msgstr "Elija un elemento de la lista."
 #: catalogs
 msgid "Choose from 0 to 5 stars, in half steps."
 msgstr "Elija de 0 a 5 estrellas, de media en media."
+
+#: accounts
+msgid "color theme"
+msgstr "tema de colores"

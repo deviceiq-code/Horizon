@@ -224,6 +224,12 @@ Multi-user web system for **operating lease residual value pricing**
 - Never commit `.env` or passwords. New settings go into `.env.example`.
 - Before finishing a task: run tests, ruff, lint and type-check.
 - **Internationalization** (en default, pt-br, es — Django-style lowercase codes):
+  - **Names in Title Case** (titles, menu, tabs, column headers, field labels, buttons and
+    dialog titles — not sentences, hints or messages): every word capitalized except connector
+    words (en: and, or, of, the, a, by, for, from, in, on, per, to, with…; pt-br: e, ou, de,
+    da, do, com, por, para, em, como…; es: y, o, de, del, la, con, por, para, en, desde…).
+    Hyphenated words capitalize both parts ("Sub-Vertical"); text in parentheses stays as is
+    ("Allowed Terms (months)"). E.g. "Asset Classes", "Classes de Ativo", "Valores por Prazo".
   - Frontend: **no hard-coded visible text in templates/code** — always `$t('key')` / `t('key')`,
     with the key added to `en.ts`, `pt-br.ts` and `es.ts`. The test `src/i18n/__tests__/i18n.spec.ts`
     fails if a key is missing. Dates/numbers: `$d(value, 'short')`, `$n(value, 'decimal')`.
@@ -235,6 +241,15 @@ Multi-user web system for **operating lease residual value pricing**
     visitors, from the `Accept-Language` header (`src/api.ts` sends the current UI language).
   - New language: `LANGUAGES` in `config/settings.py` + `backend/locale/<locale>/` +
     `frontend/src/i18n/locales/<code>.ts` + entry in `LANGUAGES`/`messages` in `src/i18n/index.ts`.
-- UI: only open-source libraries without license keys (MIT/Apache/BSD). **Vuetify** components
-  (auto-imported via `vite-plugin-vuetify`), `mdi-*` icons, theme in `src/plugins/vuetify.ts`.
+  - **Themes** (`src/themes.ts`): each theme has colors and a font, in a light and a dark
+    version (Vuetify themes "<id>-light"/"<id>-dark"); the user's mode (light/dark/system)
+    picks the version (App.vue). User preference `color_theme` (backend
+    `accounts.models.ColorTheme`). Themes: "Metallic Foundations" (default; #3D52A0, #7091E6,
+    #8697C4, #ADBBDA, #EDE8F5), "Earthy and Serene" (#3E362E, #865D36, #93785B, #AC8968,
+    #A69080) and "Sleek and Futuristic" (#2C3531, #116466, #D9B08C, #FFCB9A, #D1E8E2); all use
+    the Ubuntu font (`@fontsource/ubuntu`, imported in main.ts). New theme = entry in
+    `COLOR_THEMES` + choice in `ColorTheme`. Use theme colors (`primary`, `app-bar`…), never
+    hard-coded ones.
+  - UI: only open-source libraries without license keys (MIT/Apache/BSD). **Vuetify** components
+  (auto-imported via `vite-plugin-vuetify`), `mdi-*` icons, themes in `src/themes.ts`.
   **Do not use PrimeVue/PrimeUI** — commercial license since v5.

@@ -17,7 +17,12 @@ const user = (is_admin: boolean): User => ({
   is_admin,
   roles: is_admin ? ['Administrator'] : [],
   photo_version: null,
-  preferences: { language: 'en', theme: 'system', updated_at: '' },
+  preferences: {
+    language: 'en',
+    theme: 'system',
+    color_theme: 'metallic_foundations',
+    updated_at: '',
+  },
 })
 
 async function mountAt(path: string, isStaff: boolean) {
@@ -51,8 +56,8 @@ describe('SettingsView', () => {
 
   it('administrators get the user and the system tabs', async () => {
     const { wrapper, router } = await mountAt('/settings', true)
-    expect(inBody('[data-testid="tab-user"]')!.textContent).toContain('User settings')
-    expect(inBody('[data-testid="tab-system"]')!.textContent).toContain('System settings')
+    expect(inBody('[data-testid="tab-user"]')!.textContent).toContain('User Settings')
+    expect(inBody('[data-testid="tab-system"]')!.textContent).toContain('System Settings')
     // User settings first
     expect(inBody('[data-testid="language-select"]')).not.toBeNull()
     expect(inBody('[data-testid="system-settings"]')).toBeNull()
@@ -78,6 +83,17 @@ describe('SettingsView', () => {
     expect(inBody('[data-testid="tab-system"]')).toBeNull()
     expect(inBody('[data-testid="system-settings"]')).toBeNull()
     expect(inBody('[data-testid="language-select"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
+  it('offers the color themes, Metallic Foundations chosen by default', async () => {
+    const { wrapper } = await mountAt('/settings', false)
+    const card = inBody('[data-testid="color-theme-metallic_foundations"]')!
+    expect(card.textContent).toContain('Metallic Foundations')
+    expect(card.getAttribute('aria-pressed')).toBe('true')
+    expect(inBody('[data-testid="color-themes"]')!.previousElementSibling!.textContent).toContain(
+      'Color Theme',
+    )
     wrapper.unmount()
   })
 })

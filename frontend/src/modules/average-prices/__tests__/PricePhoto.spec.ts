@@ -53,7 +53,7 @@ describe('PricePhoto', () => {
     const { wrapper, current } = mountPhoto(null)
     await settle()
     expect(inBody('.mdi-excavator')).not.toBeNull()
-    expect(inBody('[data-testid="photo-upload"]')!.getAttribute('title')).toBe('Add photo')
+    expect(inBody('[data-testid="photo-upload"]')!.getAttribute('title')).toBe('Add Photo')
 
     const file = new File(['jpeg'], 'front.jpg', { type: 'image/jpeg' })
     const input = inBody('[data-testid="photo-input"]') as HTMLInputElement

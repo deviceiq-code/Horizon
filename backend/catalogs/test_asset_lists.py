@@ -621,3 +621,32 @@ def test_sub_verticals_have_no_spec_template(logged_client, subs):
     assert "spec_template" not in option
     r = logged_client.get(f"/api/catalogs/sub-verticals/{subs['yellow'].pk}/spec-template/")
     assert r.status_code == 404
+
+
+# --- Grid column filters ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("params", "expected"),
+    [
+        ({"name": "excav"}, ["Excavators"]),
+        ({"name": "  EXCAV "}, ["Excavators"]),
+        ({"name": "escavadeira"}, ["Excavators"]),  # a keyword
+        ({"remarketing_min": "4"}, ["Excavators"]),
+        ({"remarketing_min": "1"}, ["Excavators", "Forklifts"]),
+        ({"remarketing_min": "abc"}, ["Drills", "Excavators", "Forklifts", "Tractors"]),
+        ({"is_enabled": "false"}, ["Drills"]),
+    ],
+)
+def test_asset_class_column_filters(logged_client, asset_classes, params, expected):
+    excavators, forklifts, tractors, drills = asset_classes
+    excavators.keywords = ["escavadeira"]
+    for field in ("liquidity", "value_retention", "technology_renewal", "usage_breadth"):
+        setattr(excavators, field, Decimal("4.5"))
+        setattr(forklifts, field, Decimal("1.5"))
+        setattr(tractors, field, Decimal("0"))
+        setattr(drills, field, Decimal("0"))
+    for asset_class in asset_classes:
+        asset_class.save()
+    results = logged_client.get(ASSET_CLASSES, {**params, "ordering": "name"}).json()["results"]
+    assert [a["name"] for a in results] == expected

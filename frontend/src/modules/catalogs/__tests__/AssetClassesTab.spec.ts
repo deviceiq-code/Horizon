@@ -20,6 +20,7 @@ vi.mock('../asset-classes/api', async (importOriginal) => ({
 }))
 vi.mock('../verticals/api', () => ({
   listSubVerticals: vi.fn<typeof verticalsApi.listSubVerticals>(),
+  listVerticals: vi.fn<typeof verticalsApi.listVerticals>(),
 }))
 
 const api = vi.mocked(assetClassesApi)
@@ -178,6 +179,71 @@ describe('AssetClassesTab', () => {
     wrapper.unmount()
   })
 
+  it('filters by name, vertical or sub-vertical, minimum stars and status', async () => {
+    verticals.listVerticals.mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [
+        {
+          id: 1,
+          name: 'Industry',
+          account_managers_detail: [],
+          is_enabled: true,
+          notes: '',
+          created_at: '',
+          updated_at: '',
+          sub_verticals: [
+            {
+              id: 10,
+              name: '',
+              is_general: true,
+              risk: 'medium',
+              allowed_terms: [12],
+              recommended_term: 12,
+            },
+            {
+              id: 11,
+              name: 'Yellow line',
+              is_general: false,
+              risk: 'high',
+              allowed_terms: [12],
+              recommended_term: 12,
+            },
+          ],
+        },
+      ],
+    })
+    const wrapper = mountTab()
+    await settle()
+    const lastFilters = () => api.listAssetClasses.mock.lastCall![0].filters
+
+    await click('toggle-filters')
+    await typeInto('filter-name', 'excav')
+    await new Promise((r) => setTimeout(r, 400))
+    await settle()
+    expect(lastFilters()).toEqual({ name: 'excav' })
+
+    // One picker for a vertical or one of its sub-verticals
+    await pickOption('filter-scope', 'Industry / Yellow line')
+    expect(lastFilters()).toEqual({ name: 'excav', sub_vertical: 11 })
+    await pickOption('filter-scope', 'Industry')
+    expect(lastFilters()).toEqual({ name: 'excav', vertical: 1 })
+
+    await pickOption('filter-stars', '★ 3+')
+    await pickOption('filter-status', 'Disabled')
+    expect(lastFilters()).toEqual({
+      name: 'excav',
+      vertical: 1,
+      remarketing_min: 3,
+      is_enabled: 'false',
+    })
+
+    await click('clear-filters')
+    expect(lastFilters()).toEqual({})
+    wrapper.unmount()
+  })
+
   it('sorts by the remarketing average on the server', async () => {
     const wrapper = mountTab()
     await settle()
@@ -198,7 +264,7 @@ describe('AssetClassesTab', () => {
     await settle()
     api.listAssetClasses.mockClear()
 
-    const header = wrapper.findAll('th').find((th) => th.text().includes('sub-vertical'))!
+    const header = wrapper.findAll('th').find((th) => th.text().includes('Sub-Vertical'))!
     await header.trigger('click')
     await settle()
 
