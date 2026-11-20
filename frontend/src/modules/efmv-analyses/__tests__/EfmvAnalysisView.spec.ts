@@ -185,12 +185,39 @@ describe('EfmvAnalysisView', () => {
     efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView({ id: 3 })
     expect(inBody('[data-testid="analysis-title"]')!.textContent).toContain('EFMV-2026-0003')
+    expect((inBody('[data-testid="created-at"] input') as HTMLInputElement).value).toBe(
+      '11/20/2026',
+    )
+    expect(inBody('[data-testid="tab-0"]')!.textContent).toContain('Base')
     expect(inBody('[data-testid="total-lo"]')!.textContent).toMatch(/200,000\.00/)
     expect(inBody('[data-testid="remove-scenario"]')!.hasAttribute('disabled')).toBe(true)
 
     await click('duplicate-scenario')
-    expect(inBody('[data-testid="scenario-1"]')!.textContent).toContain('Base (copy)')
+    // The copy gets its own tab, next to the original, and opens
+    expect(inBody('[data-testid="tab-1"]')!.textContent).toContain('Base (copy)')
+    expect(inBody('[data-testid="tab-1"]')!.className).toContain('v-tab--selected')
     expect(inBody('[data-testid="remove-scenario"]')!.hasAttribute('disabled')).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('adds a scenario in a new tab; an invalid one is opened when saving', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView({ id: 3 })
+    await click('add-scenario')
+    expect(inBody('[data-testid="tab-1"]')!.textContent).toContain('Scenario 2')
+    expect(inBody('[data-testid="tab-1"]')!.className).toContain('v-tab--selected')
+    // Back to the first tab; the second gets an invalid term
+    await click('tab-0')
+    const term = document.querySelectorAll<HTMLInputElement>(
+      '[data-testid="scenario-term"] input',
+    )[1]!
+    term.value = '0'
+    term.dispatchEvent(new Event('input'))
+    await settle()
+    expect(inBody('[data-testid="tab-1"] [data-testid="tab-issue"]')).not.toBeNull()
+    await click('save')
+    expect(efmv.updateEfmvAnalysis).not.toHaveBeenCalled()
+    expect(inBody('[data-testid="tab-1"]')!.className).toContain('v-tab--selected')
     wrapper.unmount()
   })
 
@@ -208,6 +235,7 @@ describe('EfmvAnalysisView', () => {
     expect(efmv.updateEfmvAnalysis).toHaveBeenCalled()
     expect(inBody('[data-testid="form-error"]')!.textContent).toContain('fix the fields')
     expect(inBody('[data-testid="asset-row"]')!.textContent).toContain('goes up to 24 months')
+    expect(inBody('[data-testid="tab-0"] [data-testid="tab-issue"]')).not.toBeNull()
     wrapper.unmount()
   })
 

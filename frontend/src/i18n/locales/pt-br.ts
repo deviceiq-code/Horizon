@@ -123,6 +123,7 @@ const ptBR: Messages = {
     deletedText: 'Análise excluída.',
     deleteTitle: 'Excluir Análise',
     deleteConfirm: 'Excluir a análise {code} e todos os seus cenários?',
+    notSavedYet: 'Ainda não salva',
     fixErrors: 'Corrija os campos marcados em vermelho.',
     fields: {
       code: 'Código',
@@ -144,7 +145,7 @@ const ptBR: Messages = {
       scope: 'Escopo',
       scopeHint: 'Uma breve explicação sobre os bens deste cenário.',
       assets: 'Bens',
-      noAssets: 'Nenhum bem ainda. Pesquise em Average Prices abaixo para adicionar.',
+      noAssets: 'Nenhum bem ainda. Use “Adicionar Bem” para pesquisar em Average Prices.',
       addAsset: 'Adicionar Bem (pesquisar Average Prices)',
       quantityRule: 'No mínimo 1.',
       duplicate: 'Duplicar Cenário',

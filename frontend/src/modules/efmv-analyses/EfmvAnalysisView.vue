@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
- * A new eFMV analysis (no `id`) or an existing one: account manager, customer (one the account
- * manager serves) and its scenarios (at least one). Figures come from the API.
+ * A new eFMV analysis (no `id`) or an existing one, in one form. On top, what is fixed for the
+ * whole analysis: account manager, customer (one the account manager serves) and creation
+ * date. Below, one tab per scenario (at least one); on wide screens the page fills the window
+ * and only the assets of the open scenario scroll. Figures come from the API.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -13,7 +15,7 @@ import type { AccountManagerRef } from '@/modules/account-managers/api'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import CustomerPicker from './CustomerPicker.vue'
-import ScenarioCard from './ScenarioCard.vue'
+import ScenarioPanel from './ScenarioPanel.vue'
 import {
   createEfmvAnalysis,
   deleteEfmvAnalysis,
@@ -27,6 +29,7 @@ import {
   copyName,
   copyScenario,
   nextScenarioName,
+  parseTerm,
   scenarioDraft,
   scenarioInput,
   type ScenarioDraft,
@@ -53,6 +56,8 @@ const customerOptions = ref<CustomerRef[]>([])
 // The customer list depends on the account manager: remounted when it changes
 const customerKey = ref(0)
 const scenarios = ref<ScenarioDraft[]>([])
+/** Key of the scenario whose tab is open */
+const tab = ref<number | null>(null)
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const errors = ref<Record<string, unknown>>({})
@@ -67,12 +72,16 @@ function fill(data: EfmvAnalysis) {
   customer.value = data.customer
   customerOptions.value = [data.customer_detail]
   customerKey.value++
+  const open = scenarios.value.findIndex((s) => s.key === tab.value)
   scenarios.value = data.scenarios.map(scenarioDraft)
+  // Stay on the same scenario after saving
+  tab.value = scenarios.value[Math.max(open, 0)]?.key ?? null
 }
 
 async function load() {
   if (isNew.value) {
     scenarios.value = [blankScenario(t('efmv.scenario.defaultName', { n: 1 }))]
+    tab.value = scenarios.value[0]!.key
     // An account manager starts their own analysis
     const me = auth.user
     if (me && me.roles.includes('Account Manager')) {
@@ -110,18 +119,25 @@ const otherNames = (index: number) => names.value.filter((_, i) => i !== index)
 
 function addScenario() {
   const name = nextScenarioName(t('efmv.scenario.defaultBase'), names.value)
-  scenarios.value.push(blankScenario(name))
+  const scenario = blankScenario(name)
+  scenarios.value.push(scenario)
+  tab.value = scenario.key
 }
 
 function duplicateScenario(index: number) {
   const source = scenarios.value[index]!
   const name = copyName(source.name, t('efmv.scenario.copy'), names.value)
-  scenarios.value.splice(index + 1, 0, copyScenario(source, name))
+  const copy = copyScenario(source, name)
+  scenarios.value.splice(index + 1, 0, copy)
+  tab.value = copy.key
 }
 
 const removing = ref<number | null>(null)
 function removeScenario() {
-  if (removing.value !== null) scenarios.value.splice(removing.value, 1)
+  if (removing.value !== null) {
+    scenarios.value.splice(removing.value, 1)
+    tab.value = scenarios.value[Math.min(removing.value, scenarios.value.length - 1)]!.key
+  }
   removing.value = null
 }
 
@@ -144,6 +160,26 @@ function scenarioErrors(index: number): ScenarioErrors | undefined {
   return undefined
 }
 
+/** Whether a scenario needs attention before saving (its tab is marked; saving opens it). */
+function hasIssues(index: number): boolean {
+  const scenario = scenarios.value[index]!
+  const name = scenario.name.trim().toLowerCase()
+  return (
+    !!scenarioErrors(index) ||
+    !name ||
+    scenario.name.length > 100 ||
+    otherNames(index).some((n) => n.trim().toLowerCase() === name) ||
+    parseTerm(scenario.term) === null ||
+    scenario.items.some((i) => !Number.isInteger(i.quantity) || i.quantity < 1) ||
+    !!scenario.preview?.items.some((i) => i.out_of_curve)
+  )
+}
+
+function openFirstWithIssues() {
+  const index = scenarios.value.findIndex((_, i) => hasIssues(i))
+  if (index >= 0) tab.value = scenarios.value[index]!.key
+}
+
 const fieldErrors = (key: string) => {
   const value = errors.value[key]
   return Array.isArray(value) ? (value as string[]) : undefined
@@ -155,7 +191,10 @@ async function save() {
   errors.value = {}
   formError.value = ''
   const { valid } = (await form.value?.validate()) ?? { valid: false }
-  if (!valid) return
+  if (!valid) {
+    if (accountManager.value !== null && customer.value !== null) openFirstWithIssues()
+    return
+  }
   // Assets whose average price was deleted are dropped when saving
   for (const scenario of scenarios.value) {
     const kept = scenario.items
@@ -187,6 +226,7 @@ async function save() {
       const general = errors.value.non_field_errors ?? errors.value.detail
       formError.value = Array.isArray(general) ? general.join(' ') : t('efmv.fixErrors')
       if (typeof general === 'string') formError.value = general
+      if (!fieldErrors('customer') && !fieldErrors('account_manager')) openFirstWithIssues()
     } else {
       formError.value = t('common.saveError')
     }
@@ -213,51 +253,7 @@ async function remove() {
 </script>
 
 <template>
-  <v-container fluid class="module-page">
-    <div class="d-flex flex-wrap align-center ga-3 mb-4">
-      <v-btn
-        icon="mdi-arrow-left"
-        variant="text"
-        :to="{ name: 'efmv-analyses-list' }"
-        :title="$t('efmv.backToList')"
-        :aria-label="$t('efmv.backToList')"
-        data-testid="back"
-      />
-      <div class="mr-auto">
-        <h1 class="text-h5" data-testid="analysis-title">
-          {{ analysis ? analysis.code : $t('efmv.newTitle') }}
-        </h1>
-        <div v-if="analysis" class="text-caption text-medium-emphasis">
-          {{
-            $t('efmv.createdBy', {
-              date: d(new Date(analysis.created_at), 'short'),
-              name: analysis.created_by_name ?? '—',
-            })
-          }}
-        </div>
-      </div>
-      <v-btn
-        v-if="analysis"
-        variant="text"
-        color="error"
-        prepend-icon="mdi-delete-outline"
-        data-testid="delete"
-        @click="confirmDelete = true"
-      >
-        {{ $t('common.delete') }}
-      </v-btn>
-      <v-btn
-        color="primary"
-        prepend-icon="mdi-content-save-outline"
-        :loading="saving"
-        :disabled="loading || loadFailed"
-        data-testid="save"
-        @click="save"
-      >
-        {{ $t('common.save') }}
-      </v-btn>
-    </div>
-
+  <v-container fluid class="module-page efmv-page">
     <v-progress-linear v-if="loading" indeterminate class="mb-4" />
     <v-alert v-else-if="loadFailed" type="error" variant="tonal" class="mb-4">
       {{ $t('common.loadError') }}
@@ -266,77 +262,164 @@ async function remove() {
       </template>
     </v-alert>
 
-    <v-form v-if="!loading && !loadFailed" ref="form" @submit.prevent="save">
-      <v-alert v-if="formError" type="error" variant="tonal" class="mb-4" data-testid="form-error">
+    <v-form v-if="!loading && !loadFailed" ref="form" class="efmv-form" @submit.prevent="save">
+      <!-- What is fixed for the whole analysis -->
+      <v-card class="mb-3 flex-shrink-0 pa-3" data-testid="analysis-header">
+        <div class="header-row">
+          <div class="d-flex align-center ga-1 header-title">
+            <v-btn
+              icon="mdi-arrow-left"
+              variant="text"
+              size="small"
+              :to="{ name: 'efmv-analyses-list' }"
+              :title="$t('efmv.backToList')"
+              :aria-label="$t('efmv.backToList')"
+              data-testid="back"
+            />
+            <h1 class="analysis-title text-no-wrap" data-testid="analysis-title">
+              {{ analysis ? analysis.code : $t('efmv.newTitle') }}
+            </h1>
+          </div>
+          <AccountManagerPicker
+            :model-value="accountManager"
+            :label="`${$t('efmv.fields.accountManager')} *`"
+            :initial-options="managerOptions"
+            :rules="[required]"
+            :error-messages="fieldErrors('account_manager')"
+            density="compact"
+            hide-details="auto"
+            class="header-field"
+            data-testid="account-manager"
+            @update:model-value="onManagerChange"
+          />
+          <CustomerPicker
+            v-if="accountManager !== null"
+            :key="customerKey"
+            v-model="customer"
+            :account-manager="accountManager"
+            :label="`${$t('efmv.fields.customer')} *`"
+            :initial-options="customerOptions"
+            :rules="[required]"
+            :error-messages="fieldErrors('customer')"
+            :no-data-text="$t('efmv.noCustomers')"
+            density="compact"
+            hide-details="auto"
+            class="header-field wide"
+            data-testid="customer"
+          />
+          <v-text-field
+            v-else
+            :label="`${$t('efmv.fields.customer')} *`"
+            :hint="$t('efmv.pickManagerFirst')"
+            persistent-hint
+            disabled
+            density="compact"
+            class="header-field wide"
+            data-testid="customer-disabled"
+          />
+          <v-text-field
+            :model-value="
+              analysis ? d(new Date(analysis.created_at), 'short') : $t('efmv.notSavedYet')
+            "
+            :label="$t('efmv.fields.createdAt')"
+            :title="analysis?.created_by_name ?? undefined"
+            prepend-inner-icon="mdi-calendar-outline"
+            readonly
+            density="compact"
+            hide-details
+            tabindex="-1"
+            class="header-field date"
+            data-testid="created-at"
+          />
+          <div class="d-flex align-center ga-2 header-actions">
+            <v-btn
+              v-if="analysis"
+              variant="text"
+              color="error"
+              prepend-icon="mdi-delete-outline"
+              data-testid="delete"
+              @click="confirmDelete = true"
+            >
+              {{ $t('common.delete') }}
+            </v-btn>
+            <v-btn
+              color="primary"
+              prepend-icon="mdi-content-save-outline"
+              :loading="saving"
+              data-testid="save"
+              @click="save"
+            >
+              {{ $t('common.save') }}
+            </v-btn>
+          </div>
+        </div>
+      </v-card>
+
+      <v-alert
+        v-if="formError"
+        type="error"
+        variant="tonal"
+        density="compact"
+        class="mb-3 flex-shrink-0"
+        data-testid="form-error"
+      >
         {{ formError }}
       </v-alert>
 
-      <v-card class="mb-4">
-        <v-card-title class="text-subtitle-1">{{ $t('efmv.general') }}</v-card-title>
-        <v-card-text>
-          <v-row dense>
-            <v-col cols="12" md="6">
-              <AccountManagerPicker
-                :model-value="accountManager"
-                :label="`${$t('efmv.fields.accountManager')} *`"
-                :initial-options="managerOptions"
-                :rules="[required]"
-                :error-messages="fieldErrors('account_manager')"
-                data-testid="account-manager"
-                @update:model-value="onManagerChange"
+      <!-- Scenarios: one tab each -->
+      <v-card class="scenarios">
+        <div class="d-flex align-center tabs-bar">
+          <v-tabs v-model="tab" color="primary" show-arrows class="flex-grow-1" data-testid="tabs">
+            <v-tab
+              v-for="(scenario, index) in scenarios"
+              :key="scenario.key"
+              :value="scenario.key"
+              class="text-none"
+              :data-testid="`tab-${index}`"
+            >
+              <v-icon
+                v-if="hasIssues(index)"
+                icon="mdi-alert-circle"
+                color="error"
+                size="small"
+                class="mr-1"
+                data-testid="tab-issue"
               />
-            </v-col>
-            <v-col cols="12" md="6">
-              <CustomerPicker
-                v-if="accountManager !== null"
-                :key="customerKey"
-                v-model="customer"
-                :account-manager="accountManager"
-                :label="`${$t('efmv.fields.customer')} *`"
-                :initial-options="customerOptions"
-                :rules="[required]"
-                :error-messages="fieldErrors('customer')"
-                :no-data-text="$t('efmv.noCustomers')"
-                data-testid="customer"
-              />
-              <v-text-field
-                v-else
-                :label="`${$t('efmv.fields.customer')} *`"
-                :hint="$t('efmv.pickManagerFirst')"
-                persistent-hint
-                disabled
-                data-testid="customer-disabled"
-              />
-            </v-col>
-          </v-row>
-        </v-card-text>
+              {{ scenario.name || $t('efmv.scenario.untitled') }}
+            </v-tab>
+          </v-tabs>
+          <v-btn
+            variant="text"
+            color="primary"
+            prepend-icon="mdi-plus"
+            class="mx-2 text-none"
+            data-testid="add-scenario"
+            @click="addScenario"
+          >
+            {{ $t('efmv.scenario.add') }}
+          </v-btn>
+        </div>
+        <v-window v-model="tab" class="scenario-window">
+          <!-- Eager: every scenario is validated and keeps its figures, open or not -->
+          <v-window-item
+            v-for="(scenario, index) in scenarios"
+            :key="scenario.key"
+            :value="scenario.key"
+            eager
+            class="h-100"
+          >
+            <ScenarioPanel
+              v-model="scenarios[index]!"
+              :index="index"
+              :can-remove="scenarios.length > 1"
+              :errors="scenarioErrors(index)"
+              :other-names="otherNames(index)"
+              @duplicate="duplicateScenario(index)"
+              @remove="removing = index"
+            />
+          </v-window-item>
+        </v-window>
       </v-card>
-
-      <div class="d-flex align-center mb-3">
-        <h2 class="text-h6 mr-auto">{{ $t('efmv.scenarios') }}</h2>
-        <v-btn
-          variant="tonal"
-          color="primary"
-          prepend-icon="mdi-plus"
-          data-testid="add-scenario"
-          @click="addScenario"
-        >
-          {{ $t('efmv.scenario.add') }}
-        </v-btn>
-      </div>
-      <div class="d-flex flex-column ga-4">
-        <ScenarioCard
-          v-for="(scenario, index) in scenarios"
-          :key="scenario.key"
-          v-model="scenarios[index]!"
-          :index="index"
-          :can-remove="scenarios.length > 1"
-          :errors="scenarioErrors(index)"
-          :other-names="otherNames(index)"
-          @duplicate="duplicateScenario(index)"
-          @remove="removing = index"
-        />
-      </div>
     </v-form>
 
     <ConfirmDialog
@@ -357,3 +440,66 @@ async function remove() {
     />
   </v-container>
 </template>
+
+<style scoped>
+.header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+.header-title {
+  min-height: 40px;
+}
+.analysis-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.header-field {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+.header-field.wide {
+  flex: 2 1 280px;
+}
+.header-field.date {
+  flex: 0 1 190px;
+  min-width: 160px;
+}
+.header-actions {
+  min-height: 40px;
+  margin-left: auto;
+}
+.tabs-bar {
+  border-bottom: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+/* Wide screens: the page fills the window under the path bar; the open scenario takes the
+   rest of it and only its assets scroll */
+@media (min-width: 960px) {
+  .efmv-page {
+    height: calc(100dvh - var(--v-layout-top, 0px) - var(--horizon-path-bar-height));
+    display: flex;
+    flex-direction: column;
+  }
+  .efmv-form {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .scenarios {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .scenario-window {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .scenario-window :deep(.v-window__container) {
+    height: 100%;
+  }
+}
+</style>

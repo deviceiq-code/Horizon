@@ -124,6 +124,7 @@ const es: Messages = {
     deletedText: 'Análisis eliminado.',
     deleteTitle: 'Eliminar Análisis',
     deleteConfirm: '¿Eliminar el análisis {code} y todos sus escenarios?',
+    notSavedYet: 'Aún no guardado',
     fixErrors: 'Corrija los campos marcados en rojo.',
     fields: {
       code: 'Código',
@@ -145,7 +146,7 @@ const es: Messages = {
       scope: 'Alcance',
       scopeHint: 'Una breve explicación sobre los bienes de este escenario.',
       assets: 'Bienes',
-      noAssets: 'Aún no hay bienes. Busque los precios promedio abajo para agregar uno.',
+      noAssets: 'Aún no hay bienes. Use “Agregar Bien” para buscar en los precios promedio.',
       addAsset: 'Agregar Bien (buscar Precios Promedio)',
       quantityRule: 'Al menos 1.',
       duplicate: 'Duplicar Escenario',

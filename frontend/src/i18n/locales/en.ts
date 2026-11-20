@@ -126,6 +126,7 @@ const en = {
     deletedText: 'Analysis deleted.',
     deleteTitle: 'Delete Analysis',
     deleteConfirm: 'Delete the analysis {code} and all its scenarios?',
+    notSavedYet: 'Not saved yet',
     fixErrors: 'Please fix the fields marked in red.',
     fields: {
       code: 'Code',
@@ -147,7 +148,7 @@ const en = {
       scope: 'Scope',
       scopeHint: 'A brief explanation of the assets of this scenario.',
       assets: 'Assets',
-      noAssets: 'No assets yet. Search the average prices below to add one.',
+      noAssets: 'No assets yet. Use “Add Asset” to search the average prices.',
       addAsset: 'Add Asset (search Average Prices)',
       quantityRule: 'At least 1.',
       duplicate: 'Duplicate Scenario',

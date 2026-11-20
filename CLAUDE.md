@@ -197,11 +197,14 @@ Multi-user web system for **operating lease residual value pricing**
     go through `api()` with a `FormData` body. Sizes: `src/utils/bytes.ts`. Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
     UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
   - `src/modules/efmv-analyses/` — list (ServerCrudTable) and a page per analysis
-    (`/pricing/efmv-analyses/new`, `/:id`; child routes of a RouterView parent): account
-    manager (the user by default when they have the role), `CustomerPicker.vue` (customers of
-    that account manager), `ScenarioCard.vue` (assets via `AveragePricePicker.vue`, figures
-    from `/scenario-preview/` after each change, `ScenarioTotalsBar.vue`); form state in
-    `draft.ts`.
+    (`/pricing/efmv-analyses/new`, `/:id`; child routes of a RouterView parent), one form:
+    a compact header with what is fixed (account manager — the user by default when they
+    have the role —, `CustomerPicker.vue` with that account manager's customers, creation
+    date) and one tab per scenario (`ScenarioPanel.vue`: name, term, scope and
+    `ScenarioTotalsBar.vue` on top; assets grid below via `AveragePricePicker.vue`; figures
+    from `/scenario-preview/` after each change). Tabs needing attention are marked and
+    saving opens the first. Exception to the page-grid rule: on screens ≥ 960 px the page
+    fills the window and only the assets grid scrolls (fixed header). Form state in `draft.ts`.
   - Decimal inputs (e.g. ratings): text field with `inputmode="decimal"` (not `type="number"`,
     which drops "7,5" in some browsers), `rules.decimalRange(min, max, places)`, and
     `normalizeDecimal()` (src/utils/decimal.ts) before sending. Display with `$n(value, 'rating')`.
