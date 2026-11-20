@@ -190,6 +190,7 @@ const en = {
       removeConfirm: 'Remove the scenario "{name}"? It is only gone after saving.',
     },
     item: {
+      position: 'Position',
       historical: 'Average Prices',
       unitValueRule: 'Enter a value greater than zero.',
       pricedOn: 'priced on {date}',

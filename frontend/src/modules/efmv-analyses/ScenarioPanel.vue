@@ -6,10 +6,10 @@
  * (`preview`); nothing is computed here. Assets whose curve stops before the term are flagged
  * (saving refuses them).
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useValidationRules } from '@/composables/useValidationRules'
-import { formatMoney } from '@/utils/money'
+import { formatMoney, toInputMoney } from '@/utils/money'
 import AveragePricePicker from './AveragePricePicker.vue'
 import ScenarioTotalsBar from './ScenarioTotalsBar.vue'
 import { previewScenario, type PricePosition, type ScenarioItem } from './api'
@@ -19,6 +19,7 @@ import {
   parseTerm,
   parseUnitValue,
   scenarioInput,
+  type ItemDraft,
   type ScenarioDraft,
   type ScenarioErrors,
 } from './draft'
@@ -138,8 +139,51 @@ function chooseAsset(index: number, id: number) {
   const item = scenario.value.items[index]!
   item.average_price = id
   item.pending = false
+  // Next: the value of this row (its field is enabled once the row has an asset)
+  nextTick(() => focusCell(index, 'unit'))
   // The value is typed by the analyst (Average Prices only positions it); the details come
   // with the next preview
+}
+
+// --- Keyboard (spreadsheet-like) ---------------------------------------------------------------
+
+const grid = ref<{ $el: HTMLElement } | null>(null)
+
+/** Focus (and select) the field of a cell, when it can be edited. */
+function focusCell(row: number, column: string) {
+  const input = grid.value?.$el.querySelector<HTMLInputElement>(
+    `tr[data-row="${row}"] td[data-col="${column}"] input:not([type="hidden"]):not(:disabled)`,
+  )
+  input?.focus()
+  input?.select()
+}
+
+/**
+ * Enter / ↓: same column, next row (Enter on the last row adds one); Shift+Enter / ↑: previous
+ * row. The asset picker keeps Enter and the arrows for its own list.
+ */
+function onGridKeydown(event: KeyboardEvent) {
+  const cell = (event.target as HTMLElement).closest<HTMLElement>('td[data-col]')
+  const column = cell?.dataset.col
+  if (!cell || !column || column === 'asset') return
+  const row = Number(cell.closest<HTMLElement>('tr')?.dataset.row)
+  let step = 0
+  if (event.key === 'Enter') step = event.shiftKey ? -1 : 1
+  else if (event.key === 'ArrowDown') step = 1
+  else if (event.key === 'ArrowUp') step = -1
+  if (!step) return
+  event.preventDefault()
+  if (event.key === 'Enter' && step === 1 && row === scenario.value.items.length - 1) {
+    addRow() // its asset picker takes the focus
+    return
+  }
+  focusCell(row + step, column)
+}
+
+/** The value as the UI shows money ("100.000,00" in pt-br) once the field is left. */
+function tidyUnitValue(item: ItemDraft) {
+  const value = parseUnitValue(item.unit_value, locale.value)
+  if (value !== null) item.unit_value = toInputMoney(value, locale.value)
 }
 
 function removeAsset(index: number) {
@@ -289,58 +333,83 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
     >
       {{ $t('efmv.item.expiredWarning') }}
     </v-alert>
-    <v-table density="comfortable" fixed-header class="assets" data-testid="assets">
+    <!-- A spreadsheet-like grid: Tab goes through the cells (quantity → asset → unit value),
+         Enter and ↑/↓ move to the same column of the next/previous row -->
+    <v-table
+      ref="grid"
+      density="compact"
+      fixed-header
+      class="assets sheet"
+      data-testid="assets"
+      @keydown="onGridKeydown"
+    >
       <thead>
         <tr>
-          <th style="width: 110px">{{ $t('efmv.item.quantity') }}</th>
-          <th>{{ $t('efmv.item.asset') }}</th>
-          <th style="width: 190px">{{ $t('efmv.item.unitValue') }}</th>
-          <th>{{ $t('efmv.item.historical') }}</th>
-          <th class="text-end">{{ $t('efmv.item.total') }}</th>
-          <th style="width: 48px"></th>
+          <th class="row-number">#</th>
+          <th class="text-end" style="width: 84px">{{ $t('efmv.item.quantity') }}</th>
+          <th style="min-width: 260px">{{ $t('efmv.item.asset') }}</th>
+          <th class="text-end" style="width: 170px">{{ $t('efmv.item.unitValue') }}</th>
+          <th class="text-end" style="width: 170px">{{ $t('efmv.item.historical') }}</th>
+          <th style="width: 210px">{{ $t('efmv.item.position') }}</th>
+          <th class="text-end" style="width: 160px">{{ $t('efmv.item.total') }}</th>
+          <th style="width: 40px"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!scenario.items.length">
-          <td colspan="6" class="text-medium-emphasis text-center py-6">
+          <td colspan="8" class="text-medium-emphasis text-center py-6">
             {{ $t('efmv.scenario.noAssets') }}
           </td>
         </tr>
-        <tr v-for="(item, i) in scenario.items" :key="item.key" data-testid="asset-row">
-          <td>
+        <tr
+          v-for="(item, i) in scenario.items"
+          :key="item.key"
+          :data-row="i"
+          :class="{ 'row-off': detail(i)?.out_of_curve || item.average_price === null }"
+          data-testid="asset-row"
+        >
+          <td class="row-number">{{ i + 1 }}</td>
+          <td class="cell-input" data-col="quantity">
             <v-text-field
               v-model.number="item.quantity"
-              type="number"
-              min="1"
+              inputmode="numeric"
+              variant="plain"
               density="compact"
-              hide-details="auto"
+              hide-details
+              class="text-end-input"
               :rules="item.average_price === null ? [] : quantityRules"
               :disabled="item.average_price === null"
               :aria-label="$t('efmv.item.quantity')"
+              :title="$t('efmv.scenario.quantityRule')"
               data-testid="quantity"
             />
           </td>
-          <td class="py-2">
+          <td :class="item.pending ? 'cell-input' : 'cell-text'" data-col="asset">
             <AveragePricePicker
               v-if="item.pending"
-              :label="$t('efmv.scenario.chooseAsset')"
+              label=""
+              :placeholder="$t('efmv.scenario.chooseAsset')"
               :exclude="chosen"
               prepend-inner-icon="mdi-magnify"
+              variant="plain"
               density="compact"
               hide-details
               autofocus
               data-testid="add-asset"
               @pick="chooseAsset(i, $event)"
             />
-            <div v-else-if="detail(i)?.asset_class" class="d-flex align-center ga-3">
-              <v-avatar color="primary" variant="tonal" size="32" rounded>
-                <v-icon :icon="detail(i)!.asset_class!.icon" size="18" />
-              </v-avatar>
-              <div>
-                <div class="font-weight-medium">
-                  {{ detail(i)!.manufacturer }} {{ detail(i)!.model }}
+            <div
+              v-else-if="detail(i)?.asset_class"
+              class="d-flex align-center ga-2"
+              :title="`${detail(i)!.manufacturer} ${detail(i)!.model} · ${detail(i)!.asset_class!.name}`"
+            >
+              <v-icon :icon="detail(i)!.asset_class!.icon" size="18" color="primary" />
+              <div class="asset-text">
+                <div class="text-truncate">
+                  <span class="font-weight-medium">{{ detail(i)!.model }}</span>
+                  <span class="text-medium-emphasis"> · {{ detail(i)!.manufacturer }}</span>
                 </div>
-                <div class="text-caption text-medium-emphasis">
+                <div class="text-caption text-medium-emphasis text-truncate">
                   {{ detail(i)!.asset_class!.name }} ·
                   {{
                     $t('efmv.item.curveUpTo', { months: Math.max(...(detail(i)!.terms ?? [0])) })
@@ -348,93 +417,98 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 </div>
               </div>
             </div>
-            <div v-else-if="item.average_price === null" class="text-medium-emphasis">
+            <div v-else-if="item.average_price === null" class="text-medium-emphasis text-caption">
               <v-icon icon="mdi-alert-outline" color="warning" size="small" class="mr-1" />
               {{ $t('efmv.item.deleted') }}
             </div>
-            <v-progress-circular v-else indeterminate size="18" width="2" />
+            <v-progress-circular v-else indeterminate size="16" width="2" />
             <div
               v-if="detail(i)?.out_of_curve && !itemError(i).length"
-              class="text-caption text-error mt-1"
+              class="text-caption text-error"
               data-testid="out-of-curve"
             >
               <v-icon icon="mdi-alert-circle-outline" size="x-small" />
               {{ $t('efmv.item.outOfCurve', { term: scenario.term }) }}
             </div>
-            <div
-              v-for="message in itemError(i)"
-              :key="message"
-              class="text-caption text-error mt-1"
-            >
+            <div v-for="message in itemError(i)" :key="message" class="text-caption text-error">
               {{ message }}
             </div>
           </td>
-          <td>
+          <td class="cell-input" data-col="unit">
             <v-text-field
               v-model="item.unit_value"
               inputmode="decimal"
-              :prefix="currency === 'BRL' ? 'R$' : currency"
+              variant="plain"
               density="compact"
-              hide-details="auto"
+              hide-details
+              class="text-end-input"
               :rules="item.average_price === null ? [] : unitValueRules"
               :disabled="item.average_price === null"
               :aria-label="$t('efmv.item.unitValue')"
+              :title="$t('efmv.item.unitValueRule')"
               data-testid="unit-value"
+              @blur="tidyUnitValue(item)"
             />
           </td>
-          <td class="py-2">
+          <td class="cell-text text-end numeric">
             <template v-if="detail(i)?.original_value">
               <div class="text-no-wrap">
                 {{ formatMoney(detail(i)!.original_value!, detail(i)!.currency ?? 'BRL', locale) }}
               </div>
-              <div class="d-flex flex-wrap align-center ga-1 mt-1">
-                <v-chip
-                  v-if="detail(i)!.position"
-                  :color="POSITION_COLORS[detail(i)!.position!]"
-                  :prepend-icon="POSITION_ICONS[detail(i)!.position!]"
-                  size="small"
-                  variant="tonal"
-                  label
-                  :title="$t(`efmv.position.${detail(i)!.position}Hint`)"
-                  data-testid="position"
-                >
-                  {{ $t(`efmv.position.${detail(i)!.position}`) }}
-                  ({{ signedPercent(detail(i)!.variation_percent!) }})
-                </v-chip>
-                <v-chip
-                  v-if="detail(i)!.expired"
-                  color="warning"
-                  prepend-icon="mdi-calendar-alert"
-                  size="small"
-                  variant="tonal"
-                  label
-                  :title="
-                    $t('efmv.item.expiredHint', {
-                      date: shortDate(detail(i)!.priced_on!),
-                      until: shortDate(detail(i)!.valid_until!),
-                    })
-                  "
-                  data-testid="expired"
-                >
-                  {{ $t('efmv.item.expired') }}
-                </v-chip>
-                <span v-else-if="detail(i)!.priced_on" class="text-caption text-medium-emphasis">
-                  {{ $t('efmv.item.pricedOn', { date: shortDate(detail(i)!.priced_on!) }) }}
-                </span>
+              <div
+                v-if="detail(i)!.expired"
+                class="text-caption text-warning text-no-wrap"
+                :title="
+                  $t('efmv.item.expiredHint', {
+                    date: shortDate(detail(i)!.priced_on!),
+                    until: shortDate(detail(i)!.valid_until!),
+                  })
+                "
+                data-testid="expired"
+              >
+                <v-icon icon="mdi-calendar-alert" size="x-small" />
+                {{ $t('efmv.item.expired') }}
+              </div>
+              <div
+                v-else-if="detail(i)!.priced_on"
+                class="text-caption text-medium-emphasis text-no-wrap"
+              >
+                {{ shortDate(detail(i)!.priced_on!) }}
               </div>
             </template>
-            <span v-else>—</span>
+            <span v-else class="text-disabled">—</span>
           </td>
-          <td class="text-end text-no-wrap" :class="{ 'text-disabled': detail(i)?.out_of_curve }">
+          <td class="cell-text">
+            <v-chip
+              v-if="detail(i)?.position"
+              :color="POSITION_COLORS[detail(i)!.position!]"
+              :prepend-icon="POSITION_ICONS[detail(i)!.position!]"
+              size="small"
+              variant="tonal"
+              label
+              :title="$t(`efmv.position.${detail(i)!.position}Hint`)"
+              data-testid="position"
+            >
+              {{ $t(`efmv.position.${detail(i)!.position}`) }}
+              ({{ signedPercent(detail(i)!.variation_percent!) }})
+            </v-chip>
+            <span v-else class="text-disabled">—</span>
+          </td>
+          <td
+            class="cell-text text-end text-no-wrap numeric font-weight-medium"
+            :class="{ 'text-disabled': detail(i)?.out_of_curve }"
+          >
             {{
               detail(i)?.line_total ? formatMoney(detail(i)!.line_total!, currency, locale) : '—'
             }}
           </td>
-          <td>
+          <td class="cell-action">
             <v-btn
               icon="mdi-close"
               variant="text"
-              size="small"
+              size="x-small"
+              tabindex="-1"
+              class="remove"
               :title="$t('efmv.item.remove')"
               :aria-label="$t('efmv.item.remove')"
               data-testid="remove-asset"
@@ -455,12 +529,90 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 .term {
   flex: 0 0 150px;
 }
-.assets :deep(td),
-.assets :deep(th) {
-  vertical-align: middle;
-}
 .assets {
   border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+/* --- Spreadsheet look ------------------------------------------------------------------------- */
+.sheet {
+  --cell-border: rgba(var(--v-border-color), var(--v-border-opacity));
+  --cell-height: 46px;
+}
+.sheet :deep(th),
+.sheet :deep(td) {
+  border-right: thin solid var(--cell-border);
+  border-bottom: thin solid var(--cell-border) !important;
+  vertical-align: middle;
+  padding: 0 10px !important;
+  height: var(--cell-height) !important;
+}
+.sheet :deep(th:last-child),
+.sheet :deep(td:last-child) {
+  border-right: 0;
+}
+.sheet :deep(thead th) {
+  /* A tint over the surface, so the rows scroll under an opaque header */
+  background:
+    linear-gradient(rgba(var(--v-theme-on-surface), 0.06), rgba(var(--v-theme-on-surface), 0.06)),
+    rgb(var(--v-theme-surface)) !important;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.row-number {
+  width: 44px;
+  text-align: center;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  font-variant-numeric: tabular-nums;
+}
+.sheet tbody tr:hover > td:not(.row-number) {
+  background: rgba(var(--v-theme-primary), 0.04);
+}
+.sheet tbody tr.row-off > td:not(.row-number) {
+  background: rgba(var(--v-theme-on-surface), 0.03);
+}
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+.asset-text {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+/* Editable cells: the field fills the cell; the cell shows focus and errors */
+.sheet td.cell-input {
+  padding: 0 !important;
+}
+.sheet td.cell-input:focus-within {
+  box-shadow: inset 0 0 0 2px rgb(var(--v-theme-primary));
+}
+.sheet td.cell-input:has(.v-input--error) {
+  box-shadow: inset 0 0 0 2px rgb(var(--v-theme-error));
+  background: rgba(var(--v-theme-error), 0.06);
+}
+.cell-input :deep(.v-field) {
+  padding-inline: 10px;
+}
+.cell-input :deep(.v-field__input) {
+  min-height: var(--cell-height);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.text-end-input :deep(input) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Remove: only on the row under the mouse (or with keyboard focus) */
+.sheet td.cell-action {
+  padding: 0 4px !important;
+}
+.remove {
+  opacity: 0;
+}
+.sheet tbody tr:hover .remove,
+.remove:focus-visible {
+  opacity: 1;
 }
 /* Only the assets scroll, under the fixed column titles: on wide screens the grid takes the
    rest of the window; on narrow ones it has a height of its own */

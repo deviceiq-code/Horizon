@@ -215,8 +215,11 @@ Multi-user web system for **operating lease residual value pricing**
     date) and one tab per scenario (`ScenarioPanel.vue`: name, term, scope and
     `ScenarioTotalsBar.vue` on top; assets grid below — "+ Row" adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
-    class as subtitle; empty rows are dropped when saving); columns: Quantity first, then
-    asset, typed Unit Value, Average Prices value with position/expired chips, total; figures
+    class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
+    number, Quantity, asset, typed Unit Value, Average Prices value (expired flag), Position,
+    total; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
+    editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
+    row adds one), remove buttons appear on hover and are out of the Tab order; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and
     saving opens the first. Exception to the page-grid rule: on screens ≥ 960 px the page
     fills the window and only the assets grid scrolls (fixed header). Form state in `draft.ts`.

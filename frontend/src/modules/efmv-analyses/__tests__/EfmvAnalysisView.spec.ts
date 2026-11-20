@@ -218,7 +218,7 @@ describe('EfmvAnalysisView', () => {
       items: [{ average_price: 7, quantity: 1, unit_value: '100000' }],
     })
     expect(inBody('[data-testid="position"]')!.textContent).toContain('Compatible')
-    expect(inBody('[data-testid="asset-row"]')!.textContent).toContain('Caterpillar 320 GC')
+    expect(inBody('[data-testid="asset-row"]')!.textContent).toContain('320 GC · Caterpillar')
     expect(inBody('[data-testid="total-lo"]')!.textContent).toMatch(/200,000\.00/)
     expect(inBody('[data-testid="total-efmv"]')!.textContent).toContain('—')
     expect(inBody('[data-testid="total-hw"]')!.textContent).toContain('100.00%')
@@ -295,7 +295,8 @@ describe('EfmvAnalysisView', () => {
     const titles = [...document.querySelectorAll('[data-testid="assets"] th')].map((th) =>
       th.textContent?.trim(),
     )
-    expect(titles[0]).toBe('Quantity')
+    // After the row number
+    expect(titles.slice(0, 2)).toEqual(['#', 'Quantity'])
     expect((inBody('[data-testid="unit-value"] input') as HTMLInputElement).value).toBe(
       '100,000.00',
     )
@@ -329,6 +330,32 @@ describe('EfmvAnalysisView', () => {
     expect(inBody('[data-testid="expired"]')!.textContent).toContain('Expired Price')
     expect(inBody('[data-testid="expired-warning"]')).not.toBeNull()
     expect(inBody('[data-testid="tab-0"] [data-testid="tab-expired"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
+  it('Enter moves down the same column; on the last row it adds a row', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      scenarios: [
+        {
+          ...ANALYSIS.scenarios[0]!,
+          items: [EXCAVATOR, { ...EXCAVATOR, id: 2, average_price: 8, unit_value: '5.00' }],
+        },
+      ],
+    })
+    const { wrapper } = await mountView({ id: 3 })
+    const units = document.querySelectorAll<HTMLInputElement>('[data-testid="unit-value"] input')
+    units[0]!.focus()
+    units[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await settle()
+    expect(document.activeElement).toBe(units[1])
+    units[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+    await settle()
+    expect(document.activeElement).toBe(units[0])
+    units[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await settle()
+    expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(3)
+    expect(inBody('[data-testid="add-asset"]')).not.toBeNull()
     wrapper.unmount()
   })
 

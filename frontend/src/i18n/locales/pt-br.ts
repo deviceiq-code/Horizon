@@ -188,6 +188,7 @@ const ptBR: Messages = {
       removeConfirm: 'Remover o cenário "{name}"? Ele só deixa de existir ao salvar.',
     },
     item: {
+      position: 'Posicionamento',
       historical: 'Average Prices',
       unitValueRule: 'Informe um valor maior que zero.',
       pricedOn: 'cotado em {date}',

@@ -189,6 +189,7 @@ const es: Messages = {
       removeConfirm: '¿Quitar el escenario "{name}"? Solo deja de existir al guardar.',
     },
     item: {
+      position: 'Posicionamiento',
       historical: 'Precios Promedio',
       unitValueRule: 'Ingrese un valor mayor que cero.',
       pricedOn: 'cotizado el {date}',
