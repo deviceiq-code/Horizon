@@ -10,6 +10,8 @@ export interface ItemDraft {
   quantity: number
   /** Unit value as typed, in the UI language ("100.000,50" in pt-br) */
   unit_value: string
+  /** A new row whose asset is not chosen yet (left out when saving) */
+  pending?: boolean
 }
 
 export interface ScenarioDraft {

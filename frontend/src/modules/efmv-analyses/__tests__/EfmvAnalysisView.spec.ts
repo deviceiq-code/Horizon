@@ -10,7 +10,7 @@ import * as pricesApi from '@/modules/average-prices/api'
 import * as customersApi from '@/modules/customers/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
-import { click, inBody, pickOption, settle, typeInto } from '@/test-utils'
+import { click, inBody, openDropdown, pickOption, settle, typeInto } from '@/test-utils'
 import * as efmvApi from '../api'
 import EfmvAnalysisView from '../EfmvAnalysisView.vue'
 
@@ -35,6 +35,11 @@ const efmv = vi.mocked(efmvApi)
 const customers = vi.mocked(customersApi)
 const managers = vi.mocked(managersApi)
 const prices = vi.mocked(pricesApi)
+
+const dropdownSubtitles = () =>
+  [...document.querySelectorAll('.v-overlay--active .v-list-item-subtitle')].map((el) =>
+    el.textContent?.trim(),
+  )
 
 const page = <T>(results: T[]) => ({ count: results.length, next: null, previous: null, results })
 // The scenario asks the API for its figures after a short pause
@@ -144,7 +149,36 @@ describe('EfmvAnalysisView', () => {
           model: '320 GC',
           manufacturer: { id: 1, name: 'Caterpillar' },
           asset_class: { id: 5, name: 'Excavators', icon: 'mdi-excavator' },
-        } as pricesApi.AveragePrice,
+          specs: [
+            {
+              key: 'hours',
+              label: 'Hours',
+              kind: 'number',
+              unit: 'h',
+              required: true,
+              options: [],
+              value: '2500',
+            },
+            {
+              key: 'cab',
+              label: 'Cab',
+              kind: 'boolean',
+              unit: '',
+              required: false,
+              options: [],
+              value: 'true',
+            },
+            {
+              key: 'tracks',
+              label: 'Tracks',
+              kind: 'text',
+              unit: '',
+              required: false,
+              options: [],
+              value: '',
+            },
+          ],
+        } as unknown as pricesApi.AveragePrice,
       ]),
     )
     efmv.previewScenario.mockResolvedValue({
@@ -168,7 +202,13 @@ describe('EfmvAnalysisView', () => {
     )
     await typeInto('scenario-name', 'Base')
     await typeInto('scenario-term', '36')
-    await pickOption('add-asset', 'Caterpillar 320 GC · Excavators')
+    // "+ Row" adds an empty row; the asset is chosen in it
+    await click('add-row')
+    expect(inBody('[data-testid="quantity"] input')!.hasAttribute('disabled')).toBe(true)
+    await openDropdown('add-asset')
+    expect(dropdownSubtitles()).toEqual(['Caterpillar · Excavators'])
+    await pickOption('add-asset', '320 GC (2500 h, Cab: Yes)')
+    expect(inBody('[data-testid="add-asset"]')).toBeNull()
     // The value is not taken from Average Prices: the analyst types it
     expect((inBody('[data-testid="unit-value"] input') as HTMLInputElement).value).toBe('')
     await typeInto('unit-value', '100,000')
@@ -289,6 +329,28 @@ describe('EfmvAnalysisView', () => {
     expect(inBody('[data-testid="expired"]')!.textContent).toContain('Expired Price')
     expect(inBody('[data-testid="expired-warning"]')).not.toBeNull()
     expect(inBody('[data-testid="tab-0"] [data-testid="tab-expired"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
+  it('an empty row is left out when saving', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView({ id: 3 })
+    await click('add-row')
+    expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(2)
+    await click('save')
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
+      account_manager: 10,
+      customer: 20,
+      scenarios: [
+        {
+          name: 'Base',
+          term_months: 36,
+          scope: 'Fleet',
+          items: [{ average_price: 7, quantity: 2, unit_value: '100000.00' }],
+        },
+      ],
+    })
     wrapper.unmount()
   })
 

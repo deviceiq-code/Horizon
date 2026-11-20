@@ -122,11 +122,24 @@ const chosen = computed(() =>
   scenario.value.items.map((i) => i.average_price).filter((id): id is number => id !== null),
 )
 
-function addAsset(id: number) {
-  // The value is typed by the analyst (Average Prices only positions it)
-  scenario.value.items.push({ key: newKey(), average_price: id, quantity: 1, unit_value: '' })
-  // Placeholder (loading) until the API answers
+/** A new empty row: the asset is chosen in it (Asset column). */
+function addRow() {
+  scenario.value.items.push({
+    key: newKey(),
+    average_price: null,
+    quantity: 1,
+    unit_value: '',
+    pending: true,
+  })
   scenario.value.preview?.items.push({ ...deletedItem(1), available: true })
+}
+
+function chooseAsset(index: number, id: number) {
+  const item = scenario.value.items[index]!
+  item.average_price = id
+  item.pending = false
+  // The value is typed by the analyst (Average Prices only positions it); the details come
+  // with the next preview
 }
 
 function removeAsset(index: number) {
@@ -253,16 +266,16 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             {{ scenario.items.length }}
           </v-chip>
         </div>
-        <AveragePricePicker
-          :label="$t('efmv.scenario.addAsset')"
-          :exclude="chosen"
-          prepend-inner-icon="mdi-plus"
-          density="compact"
-          hide-details
-          class="add-asset"
-          data-testid="add-asset"
-          @pick="addAsset"
-        />
+        <v-btn
+          variant="tonal"
+          color="primary"
+          prepend-icon="mdi-plus"
+          class="text-none"
+          data-testid="add-row"
+          @click="addRow"
+        >
+          {{ $t('efmv.scenario.addRow') }}
+        </v-btn>
       </div>
     </div>
 
@@ -301,14 +314,25 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               min="1"
               density="compact"
               hide-details="auto"
-              :rules="quantityRules"
+              :rules="item.average_price === null ? [] : quantityRules"
               :disabled="item.average_price === null"
               :aria-label="$t('efmv.item.quantity')"
               data-testid="quantity"
             />
           </td>
           <td class="py-2">
-            <div v-if="detail(i)?.asset_class" class="d-flex align-center ga-3">
+            <AveragePricePicker
+              v-if="item.pending"
+              :label="$t('efmv.scenario.chooseAsset')"
+              :exclude="chosen"
+              prepend-inner-icon="mdi-magnify"
+              density="compact"
+              hide-details
+              autofocus
+              data-testid="add-asset"
+              @pick="chooseAsset(i, $event)"
+            />
+            <div v-else-if="detail(i)?.asset_class" class="d-flex align-center ga-3">
               <v-avatar color="primary" variant="tonal" size="32" rounded>
                 <v-icon :icon="detail(i)!.asset_class!.icon" size="18" />
               </v-avatar>
@@ -352,7 +376,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               :prefix="currency === 'BRL' ? 'R$' : currency"
               density="compact"
               hide-details="auto"
-              :rules="unitValueRules"
+              :rules="item.average_price === null ? [] : unitValueRules"
               :disabled="item.average_price === null"
               :aria-label="$t('efmv.item.unitValue')"
               data-testid="unit-value"
@@ -430,10 +454,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 }
 .term {
   flex: 0 0 150px;
-}
-.add-asset {
-  flex: 0 1 460px;
-  min-width: 260px;
 }
 .assets :deep(td),
 .assets :deep(th) {

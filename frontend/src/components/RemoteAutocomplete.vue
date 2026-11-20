@@ -14,6 +14,8 @@ import { showInDropdown } from './remoteFilter'
 export interface RemoteOption {
   value: number
   title: string
+  /** Second line in the dropdown (optional) */
+  subtitle?: string
 }
 
 const model = defineModel<number | number[] | null>({ required: true })
@@ -58,6 +60,8 @@ function filter(_value: string, query: string, item?: { raw: unknown }): boolean
   return option ? showInDropdown(option, query, latestResults) : true
 }
 
+const itemProps = (option: RemoteOption) => (option.subtitle ? { subtitle: option.subtitle } : {})
+
 function selectedValues(): number[] {
   const value = model.value
   if (value === null || value === undefined) return []
@@ -101,6 +105,7 @@ onMounted(() => fetchOptions(''))
     v-model="model"
     :items="offered"
     item-title="title"
+    :item-props="itemProps"
     item-value="value"
     :label="label"
     :rules="rules"

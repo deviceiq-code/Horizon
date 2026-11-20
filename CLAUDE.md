@@ -213,9 +213,10 @@ Multi-user web system for **operating lease residual value pricing**
     a compact header with what is fixed (account manager — the user by default when they
     have the role —, `CustomerPicker.vue` with that account manager's customers, creation
     date) and one tab per scenario (`ScenarioPanel.vue`: name, term, scope and
-    `ScenarioTotalsBar.vue` on top; assets grid below via `AveragePricePicker.vue` — Quantity
-    first, then asset, typed Unit Value, Average Prices value with position/expired chips,
-    total; figures
+    `ScenarioTotalsBar.vue` on top; assets grid below — "+ Row" adds an empty row whose
+    Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
+    class as subtitle; empty rows are dropped when saving); columns: Quantity first, then
+    asset, typed Unit Value, Average Prices value with position/expired chips, total; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and
     saving opens the first. Exception to the page-grid rule: on screens ≥ 960 px the page
     fills the window and only the assets grid scrolls (fixed header). Form state in `draft.ts`.
@@ -223,7 +224,7 @@ Multi-user web system for **operating lease residual value pricing**
     which drops "7,5" in some browsers), `rules.decimalRange(min, max, places)`, and
     `normalizeDecimal()` (src/utils/decimal.ts) before sending. Display with `$n(value, 'rating')`.
   - `src/components/RemoteAutocomplete.vue` — generic single/multiple picker with server-side
-    search; module pickers wrap it: `AccountManagerPicker.vue`, `VerticalPicker.vue` (enabled only),
+    search (options may carry a `subtitle`, shown as a second line); module pickers wrap it: `AccountManagerPicker.vue`, `VerticalPicker.vue` (enabled only),
     `SubVerticalPicker.vue` ("Vertical / Sub-vertical", enabled verticals only).
     Multiple mode has per-chip X only (no "clear all") and clears the typed text after each pick.
     `exclude` hides records chosen elsewhere (e.g. the primary account manager in the secondaries);
