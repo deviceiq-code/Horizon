@@ -5,7 +5,7 @@
  */
 const en = {
   app: {
-    name: 'Horizon System',
+    name: 'Horizon',
     description: 'Operating lease residual value pricing',
   },
   photo: {
@@ -52,7 +52,24 @@ const en = {
     submit: 'Sign in',
     invalidCredentials: 'Invalid username or password.',
   },
+  apps: {
+    launcher: 'Horizon Apps',
+    home: 'Home',
+    comingSoon: 'Coming Soon',
+    pricing: {
+      description: 'Residual value pricing: average prices of assets and their value curves.',
+    },
+    remarketing: {
+      description: 'Stock and sale of used assets.',
+    },
+    admin: {
+      title: 'Administration',
+      description:
+        'What every app shares: catalogs, customers and account managers; users and system settings.',
+    },
+  },
   menu: {
+    path: 'Path',
     account: 'Your Account',
     open: 'Open Menu',
     home: 'Home',
@@ -60,7 +77,7 @@ const en = {
   },
   home: {
     welcome: 'Welcome, {name}',
-    text: 'The environment is up and running. Asset, residual curve and pricing simulation screens will live here.',
+    text: 'Choose an app to start.',
   },
   accountManagers: {
     title: 'Account Managers',

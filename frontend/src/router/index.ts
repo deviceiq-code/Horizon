@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { MODULES } from '@/modules'
+import { moduleRoutes } from '@/modules'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -21,19 +21,16 @@ const router = createRouter({
           name: 'home',
           component: () => import('@/views/HomeView.vue'),
         },
-        // Routes of admin-only modules are marked so the guard below can check them
-        ...MODULES.flatMap((module) =>
-          module.adminOnly
-            ? module.routes.map((route) => ({
-                ...route,
-                meta: { ...route.meta, adminOnly: true },
-              }))
-            : module.routes,
-        ),
+        // Every module under its app's prefix ("/pricing/...", "/admin/...")
+        ...moduleRoutes(),
         {
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
+          meta: { titleKey: 'menu.settings' },
+          // The system tab became Administration → System Settings
+          beforeEnter: (to) =>
+            to.query.tab === 'system' ? { name: 'system-settings' } : undefined,
         },
       ],
     },

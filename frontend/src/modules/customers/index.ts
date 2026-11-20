@@ -4,6 +4,7 @@ const customers: AppModule = {
   name: 'customers',
   icon: 'mdi-domain',
   titleKey: 'customers.title',
+  app: 'admin',
   routes: [
     {
       path: 'customers',

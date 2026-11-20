@@ -137,10 +137,20 @@ Multi-user web system for **operating lease residual value pricing**
     the login page only).
     Module pages use `<v-container fluid class="module-page">` (full width, small side margin;
     `src/styles/main.css`).
+  - **Suite of apps** (like Microsoft 365): `src/apps.ts` (`SUITE_APPS`): "Horizon Pricing"
+    (`/pricing/…`), "Horizon Remarketing" (coming soon) and "Administração" (`/admin/…`:
+    Customers, Account Managers, Catalogs — shared by every app — plus Users and System Settings,
+    administrators only). App names are brands (English in every language); areas are
+    translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
+    prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
+    the prefix. Navigation: the top bar shows the app name and the app launcher
+    (`AppLauncher.vue`); under it the path bar (`AppBreadcrumbs.vue`: Horizon › app › module ›
+    tab, from `meta.titleKey` — child routes such as Catalogs tabs set their own); the side
+    menu lists the current app's modules (outside an app: the apps); `/` is the suite's home
+    (app cards). The user's own settings (`/settings`) open from the user menu.
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
-    router and the side menu (`placement: 'system'` puts a module in the bottom group, next to
-    Settings; `adminOnly: true` hides it from non-administrators and the router guard refuses
-    its routes). `account-managers/` is the reference module. `users/` (Users and Roles tabs,
+    router and the side menu (`adminOnly: true` hides it from non-administrators and the router guard refuses its
+    routes). `account-managers/` is the reference module. `users/` (Users and Roles tabs,
     `?tab=roles`; system roles show translated via `roleText.ts`).
   - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
     listed in `tabs.ts`. A new small table is a new tab here, not a new module.
@@ -183,9 +193,9 @@ Multi-user web system for **operating lease residual value pricing**
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;
     when changing them, check in a real browser too. A combobox renders an
     `<input type="hidden">` before the visible one (`typeInto` skips it).
-  - Settings page (`src/views/SettingsView.vue`): two tabs — "User settings" (language, theme;
-    per account) and "System settings" (global, administrators only — `auth.user.is_admin`; `?tab=system`). New
-    global settings go into the System tab as cards like `src/components/SystemSettingsCard.vue`.
+  - Settings: `src/views/SettingsView.vue` is the user's own (language, mode, color theme);
+    global settings are the `system-settings` module (Administration, administrators only),
+    one card each (e.g. `src/components/SystemSettingsCard.vue`).
   - `src/stores/systemSettings.ts` — system settings (loaded once).
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
   - `src/components/ConfirmDialog.vue` — generic confirmation dialog.

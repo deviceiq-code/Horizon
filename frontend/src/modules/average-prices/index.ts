@@ -4,6 +4,7 @@ const averagePrices: AppModule = {
   name: 'average-prices',
   icon: 'mdi-chart-timeline-variant',
   titleKey: 'averagePrices.title',
+  app: 'pricing',
   routes: [
     {
       path: 'average-prices',

@@ -2,7 +2,7 @@ import type { Messages } from './en'
 
 const ptBR: Messages = {
   app: {
-    name: 'Sistema Horizon',
+    name: 'Horizon',
     description: 'Precificação de residuais de leasing operacional',
   },
   photo: {
@@ -49,15 +49,32 @@ const ptBR: Messages = {
     submit: 'Entrar',
     invalidCredentials: 'Usuário ou senha inválidos.',
   },
+  apps: {
+    launcher: 'Apps Horizon',
+    home: 'Início',
+    comingSoon: 'Em Breve',
+    pricing: {
+      description: 'Precificação de valor residual: preços médios dos bens e suas curvas de valor.',
+    },
+    remarketing: {
+      description: 'Estoque e venda de bens usados.',
+    },
+    admin: {
+      title: 'Administração',
+      description:
+        'O que todos os apps compartilham: catálogos, clientes e account managers; usuários e configurações do sistema.',
+    },
+  },
   menu: {
+    path: 'Caminho',
     account: 'Sua Conta',
     open: 'Abrir Menu',
     home: 'Início',
     settings: 'Configurações',
   },
   home: {
-    welcome: 'Bem-vindo, {name}',
-    text: 'O ambiente está funcionando. Aqui entrarão as telas de ativos, curvas de residual e simulações de precificação.',
+    welcome: 'Olá, {name}',
+    text: 'Escolha um app para começar.',
   },
   accountManagers: {
     title: 'Account Managers',

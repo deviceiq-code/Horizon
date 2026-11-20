@@ -54,35 +54,12 @@ describe('SettingsView', () => {
     document.body.innerHTML = ''
   })
 
-  it('administrators get the user and the system tabs', async () => {
-    const { wrapper, router } = await mountAt('/settings', true)
-    expect(inBody('[data-testid="tab-user"]')!.textContent).toContain('User Settings')
-    expect(inBody('[data-testid="tab-system"]')!.textContent).toContain('System Settings')
-    // User settings first
+  it("has only the user's own settings (global ones are in Administration)", async () => {
+    const { wrapper } = await mountAt('/settings', true)
     expect(inBody('[data-testid="language-select"]')).not.toBeNull()
+    expect(inBody('[data-testid="theme-toggle"]')).not.toBeNull()
     expect(inBody('[data-testid="system-settings"]')).toBeNull()
-
-    inBody('[data-testid="tab-system"]')!.click()
-    await settle()
-    expect(router.currentRoute.value.query.tab).toBe('system')
-    expect(inBody('[data-testid="system-settings"]')).not.toBeNull()
-    expect((inBody('[data-testid="searxng-url"] input') as HTMLInputElement).value).toBe(
-      'http://192.168.0.22:30053',
-    )
-    wrapper.unmount()
-  })
-
-  it('opens on the tab in the address', async () => {
-    const { wrapper } = await mountAt('/settings?tab=system', true)
-    expect(inBody('[data-testid="system-settings"]')).not.toBeNull()
-    wrapper.unmount()
-  })
-
-  it('other users only have their own settings', async () => {
-    const { wrapper } = await mountAt('/settings?tab=system', false)
-    expect(inBody('[data-testid="tab-system"]')).toBeNull()
-    expect(inBody('[data-testid="system-settings"]')).toBeNull()
-    expect(inBody('[data-testid="language-select"]')).not.toBeNull()
+    expect(inBody('[data-testid="settings-tabs"]')).toBeNull()
     wrapper.unmount()
   })
 

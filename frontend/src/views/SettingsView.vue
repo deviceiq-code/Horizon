@@ -1,38 +1,20 @@
 <script setup lang="ts">
 /**
- * Settings, in two tabs: the user's own (language, theme; saved to their account) and the
- * system's (global, administrators only). The tab is in the address (?tab=system).
+ * The user's own settings (language, mode, color theme), saved to their account. Global
+ * settings are in Administration → System Settings.
  */
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
 import { LANGUAGES } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
 import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/stores/preferences'
-import { useAuthStore } from '@/stores/auth'
 import { COLOR_THEMES } from '@/themes'
-import SystemSettingsCard from '@/components/SystemSettingsCard.vue'
-import UserNameDisplayCard from '@/components/UserNameDisplayCard.vue'
 
 const { t } = useI18n()
 const preferences = usePreferencesStore()
-const auth = useAuthStore()
 const notifications = useNotificationsStore()
 
 const saving = ref(false)
-
-// --- Tabs ------------------------------------------------------------------------------------
-
-type Tab = 'user' | 'system'
-const route = useRoute()
-const router = useRouter()
-const isAdmin = computed(() => !!auth.user?.is_admin)
-const tab = computed<Tab>({
-  get: () => (route.query.tab === 'system' && isAdmin.value ? 'system' : 'user'),
-  set: (value) => {
-    router.replace({ query: { ...route.query, tab: value === 'user' ? undefined : value } })
-  },
-})
 
 const THEMES = THEME_OPTIONS
 
@@ -52,123 +34,103 @@ async function save(changes: PreferencesUpdate) {
 
 <template>
   <v-container style="max-width: 900px">
-    <h1 class="text-h5 mb-3">{{ $t('settings.title') }}</h1>
+    <h1 class="text-h5 mb-1">{{ $t('settings.title') }}</h1>
 
-    <v-tabs v-model="tab" color="primary" class="mb-4" data-testid="settings-tabs">
-      <v-tab value="user" prepend-icon="mdi-account-cog-outline" data-testid="tab-user">
-        {{ $t('settings.tabs.user') }}
-      </v-tab>
-      <v-tab v-if="isAdmin" value="system" prepend-icon="mdi-cog-outline" data-testid="tab-system">
-        {{ $t('settings.tabs.system') }}
-      </v-tab>
-    </v-tabs>
+    <p class="text-medium-emphasis mb-4">{{ $t('settings.subtitle') }}</p>
 
-    <v-window v-model="tab">
-      <v-window-item value="user">
-        <p class="text-medium-emphasis mb-4">{{ $t('settings.subtitle') }}</p>
+    <v-card class="mb-4">
+      <v-card-item prepend-icon="mdi-translate">
+        <v-card-title>{{ $t('settings.language') }}</v-card-title>
+        <v-card-subtitle>{{ $t('settings.languageDescription') }}</v-card-subtitle>
+      </v-card-item>
+      <v-card-text>
+        <v-select
+          :model-value="preferences.language"
+          :items="LANGUAGES"
+          item-title="name"
+          item-value="code"
+          :label="$t('settings.language')"
+          :disabled="saving"
+          hide-details
+          style="max-width: 360px"
+          data-testid="language-select"
+          @update:model-value="save({ language: $event })"
+        />
+      </v-card-text>
+    </v-card>
 
-        <v-card class="mb-4">
-          <v-card-item prepend-icon="mdi-translate">
-            <v-card-title>{{ $t('settings.language') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.languageDescription') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
-            <v-select
-              :model-value="preferences.language"
-              :items="LANGUAGES"
-              item-title="name"
-              item-value="code"
-              :label="$t('settings.language')"
-              :disabled="saving"
-              hide-details
-              style="max-width: 360px"
-              data-testid="language-select"
-              @update:model-value="save({ language: $event })"
-            />
-          </v-card-text>
-        </v-card>
+    <v-card>
+      <v-card-item prepend-icon="mdi-palette-outline">
+        <v-card-title>{{ $t('settings.appearance') }}</v-card-title>
+        <v-card-subtitle>{{ $t('settings.themeDescription') }}</v-card-subtitle>
+      </v-card-item>
+      <v-card-text>
+        <div class="text-body-2 mb-2">{{ $t('settings.theme') }}</div>
+        <v-btn-toggle
+          :model-value="preferences.theme"
+          mandatory
+          divided
+          variant="outlined"
+          color="primary"
+          :disabled="saving"
+          data-testid="theme-toggle"
+          @update:model-value="save({ theme: $event })"
+        >
+          <v-btn
+            v-for="item in THEMES"
+            :key="item.value"
+            :value="item.value"
+            :prepend-icon="item.icon"
+          >
+            {{ $t(`settings.themes.${item.value}`) }}
+          </v-btn>
+        </v-btn-toggle>
 
-        <v-card>
-          <v-card-item prepend-icon="mdi-palette-outline">
-            <v-card-title>{{ $t('settings.appearance') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.themeDescription') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
-            <div class="text-body-2 mb-2">{{ $t('settings.theme') }}</div>
-            <v-btn-toggle
-              :model-value="preferences.theme"
-              mandatory
-              divided
-              variant="outlined"
-              color="primary"
-              :disabled="saving"
-              data-testid="theme-toggle"
-              @update:model-value="save({ theme: $event })"
-            >
-              <v-btn
-                v-for="item in THEMES"
-                :key="item.value"
-                :value="item.value"
-                :prepend-icon="item.icon"
-              >
-                {{ $t(`settings.themes.${item.value}`) }}
-              </v-btn>
-            </v-btn-toggle>
-
-            <!-- Color theme: each one in a light and a dark version (the mode above) -->
-            <div class="text-body-2 mt-6 mb-2">{{ $t('settings.colorTheme') }}</div>
-            <div class="d-flex flex-wrap ga-3" data-testid="color-themes">
-              <v-card
-                v-for="colorTheme in COLOR_THEMES"
-                :key="colorTheme.id"
-                :variant="preferences.colorTheme === colorTheme.id ? 'outlined' : 'flat'"
-                :color="preferences.colorTheme === colorTheme.id ? 'primary' : undefined"
-                :class="{ 'color-theme--selected': preferences.colorTheme === colorTheme.id }"
-                class="color-theme pa-3"
-                width="260"
-                :disabled="saving"
-                :aria-pressed="preferences.colorTheme === colorTheme.id"
-                :data-testid="`color-theme-${colorTheme.id}`"
-                @click="save({ color_theme: colorTheme.id })"
-              >
-                <div class="swatches d-flex rounded overflow-hidden mb-2" style="height: 36px">
-                  <div
-                    v-for="swatch in colorTheme.swatches"
-                    :key="swatch"
-                    class="flex-grow-1"
-                    :style="{ background: swatch }"
-                  />
-                </div>
-                <div class="d-flex align-center justify-space-between">
-                  <div>
-                    <div class="text-body-2 font-weight-medium">{{ colorTheme.name }}</div>
-                    <div
-                      class="text-caption text-medium-emphasis"
-                      :style="{ fontFamily: `${colorTheme.fontFamily} !important` }"
-                    >
-                      Aa · {{ colorTheme.fontName }}
-                    </div>
-                  </div>
-                  <v-icon
-                    v-if="preferences.colorTheme === colorTheme.id"
-                    icon="mdi-check-circle"
-                    color="primary"
-                    size="small"
-                  />
-                </div>
-              </v-card>
+        <!-- Color theme: each one in a light and a dark version (the mode above) -->
+        <div class="text-body-2 mt-6 mb-2">{{ $t('settings.colorTheme') }}</div>
+        <div class="d-flex flex-wrap ga-3" data-testid="color-themes">
+          <v-card
+            v-for="colorTheme in COLOR_THEMES"
+            :key="colorTheme.id"
+            :variant="preferences.colorTheme === colorTheme.id ? 'outlined' : 'flat'"
+            :color="preferences.colorTheme === colorTheme.id ? 'primary' : undefined"
+            :class="{ 'color-theme--selected': preferences.colorTheme === colorTheme.id }"
+            class="color-theme pa-3"
+            width="260"
+            :disabled="saving"
+            :aria-pressed="preferences.colorTheme === colorTheme.id"
+            :data-testid="`color-theme-${colorTheme.id}`"
+            @click="save({ color_theme: colorTheme.id })"
+          >
+            <div class="swatches d-flex rounded overflow-hidden mb-2" style="height: 36px">
+              <div
+                v-for="swatch in colorTheme.swatches"
+                :key="swatch"
+                class="flex-grow-1"
+                :style="{ background: swatch }"
+              />
             </div>
-          </v-card-text>
-        </v-card>
-      </v-window-item>
-
-      <!-- Global settings: administrators only -->
-      <v-window-item v-if="isAdmin" value="system">
-        <p class="text-medium-emphasis mb-4">{{ $t('system.subtitle') }}</p>
-        <UserNameDisplayCard class="mb-4" />
-        <SystemSettingsCard />
-      </v-window-item>
-    </v-window>
+            <div class="d-flex align-center justify-space-between">
+              <div>
+                <div class="text-body-2 font-weight-medium">{{ colorTheme.name }}</div>
+                <div
+                  class="text-caption text-medium-emphasis"
+                  :style="{ fontFamily: `${colorTheme.fontFamily} !important` }"
+                >
+                  Aa · {{ colorTheme.fontName }}
+                </div>
+              </div>
+              <v-icon
+                v-if="preferences.colorTheme === colorTheme.id"
+                icon="mdi-check-circle"
+                color="primary"
+                size="small"
+              />
+            </div>
+          </v-card>
+        </div>
+      </v-card-text>
+    </v-card>
   </v-container>
 </template>
 

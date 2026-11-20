@@ -1,14 +1,17 @@
 /**
- * Registry of the system's modules. Each module gets an icon in the side menu and its
- * routes are mounted under MainLayout. To add a module, create src/modules/<name>/index.ts
- * exporting an AppModule and list it in MODULES (menu order).
+ * Registry of the suite's modules. Each module belongs to an app (src/apps.ts): its routes are
+ * mounted under MainLayout with the app's prefix ("/pricing/average-prices") and it gets an
+ * icon in that app's side menu. To add a module, create src/modules/<name>/index.ts exporting
+ * an AppModule and list it in MODULES (menu order).
  */
 import type { RouteRecordRaw } from 'vue-router'
+import { suiteApp, type AppId } from '@/apps'
 
 import accountManagers from './account-managers'
 import averagePrices from './average-prices'
 import catalogs from './catalogs'
 import customers from './customers'
+import systemSettings from './system-settings'
 import users from './users'
 
 export interface AppModule {
@@ -18,10 +21,10 @@ export interface AppModule {
   icon: string
   /** Translation key of the module title (menu label and page title) */
   titleKey: string
-  /** Routes relative to "/" (children of MainLayout) */
+  /** The app it belongs to (its routes get the app's address prefix) */
+  app: AppId
+  /** Routes relative to the app ("average-prices" → "/pricing/average-prices") */
   routes: RouteRecordRaw[]
-  /** 'main' (default): business modules at the top of the menu; 'system': bottom group */
-  placement?: 'main' | 'system'
   /** Only administrators see it in the menu and can open its routes */
   adminOnly?: boolean
 }
@@ -31,4 +34,44 @@ export function visibleModules(isAdmin: boolean): AppModule[] {
   return MODULES.filter((module) => isAdmin || !module.adminOnly)
 }
 
-export const MODULES: AppModule[] = [averagePrices, customers, accountManagers, catalogs, users]
+export const MODULES: AppModule[] = [
+  averagePrices,
+  customers,
+  accountManagers,
+  catalogs,
+  users,
+  systemSettings,
+]
+
+/** Modules of an app the user can open, in menu order. */
+export function appModules(app: AppId | undefined, isAdmin: boolean): AppModule[] {
+  return visibleModules(isAdmin).filter((module) => module.app === app)
+}
+
+/**
+ * Routes of every module under its app's prefix, with what the layout needs in `meta`: the
+ * app, the module and its title (breadcrumb) and whether administrators only can open it.
+ * The former addresses without the prefix redirect to the new ones.
+ */
+export function moduleRoutes(): RouteRecordRaw[] {
+  return MODULES.flatMap((module) => {
+    const prefix = suiteApp(module.app)!.path
+    return module.routes.flatMap((route) => [
+      {
+        ...route,
+        path: `${prefix}/${route.path}`,
+        meta: {
+          ...route.meta,
+          app: module.app,
+          module: module.name,
+          titleKey: module.titleKey,
+          adminOnly: !!module.adminOnly,
+        },
+      } as RouteRecordRaw,
+      {
+        path: `/${route.path}/:rest(.*)*`,
+        redirect: (to) => `/${prefix}${to.fullPath}`,
+      } as RouteRecordRaw,
+    ])
+  })
+}

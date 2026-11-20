@@ -2,7 +2,7 @@ import type { Messages } from './en'
 
 const es: Messages = {
   app: {
-    name: 'Sistema Horizon',
+    name: 'Horizon',
     description: 'Valoración de residuales de leasing operativo',
   },
   photo: {
@@ -49,15 +49,33 @@ const es: Messages = {
     submit: 'Entrar',
     invalidCredentials: 'Usuario o contraseña inválidos.',
   },
+  apps: {
+    launcher: 'Apps Horizon',
+    home: 'Inicio',
+    comingSoon: 'Próximamente',
+    pricing: {
+      description:
+        'Precios de valor residual: precios promedio de los bienes y sus curvas de valor.',
+    },
+    remarketing: {
+      description: 'Inventario y venta de bienes usados.',
+    },
+    admin: {
+      title: 'Administración',
+      description:
+        'Lo que comparten todas las apps: catálogos, clientes y gestores de cuenta; usuarios y configuración del sistema.',
+    },
+  },
   menu: {
+    path: 'Ruta',
     account: 'Su Cuenta',
     open: 'Abrir Menú',
     home: 'Inicio',
     settings: 'Configuración',
   },
   home: {
-    welcome: 'Bienvenido, {name}',
-    text: 'El entorno está funcionando. Aquí estarán las pantallas de activos, curvas de residual y simulaciones de valoración.',
+    welcome: 'Hola, {name}',
+    text: 'Elija una app para empezar.',
   },
   accountManagers: {
     title: 'Gestores de Cuenta',

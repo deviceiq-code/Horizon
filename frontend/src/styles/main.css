@@ -1,9 +1,12 @@
-/* The theme's font (set in App.vue from src/themes.ts) everywhere, Vuetify's typography too */
+/* The theme's font (set in App.vue from src/themes.ts) everywhere: the app, menus and dialogs
+   (Vuetify puts them in .v-overlay-container, outside .v-application) and its typography */
+body,
 .v-application,
-.v-application [class*='text-'],
-.v-application input,
-.v-application textarea,
-.v-application button {
+.v-overlay-container,
+[class*='text-'],
+input,
+textarea,
+button {
   font-family: var(--horizon-font-family, 'Ubuntu', 'Segoe UI', Roboto, sans-serif) !important;
 }
 

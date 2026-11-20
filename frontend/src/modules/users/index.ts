@@ -5,7 +5,7 @@ const users: AppModule = {
   name: 'users',
   icon: 'mdi-account-group-outline',
   titleKey: 'users.title',
-  placement: 'system',
+  app: 'admin',
   adminOnly: true,
   routes: [
     {

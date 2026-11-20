@@ -6,7 +6,7 @@ const catalogs: AppModule = {
   name: 'catalogs',
   icon: 'mdi-database-cog-outline',
   titleKey: 'catalogs.title',
-  placement: 'system',
+  app: 'admin',
   routes: [
     {
       // The menu links here; it opens the first tab and stays highlighted on every tab
@@ -18,16 +18,19 @@ const catalogs: AppModule = {
         {
           path: 'verticals',
           name: 'catalogs-verticals',
+          meta: { titleKey: 'verticals.title' },
           component: () => import('./verticals/VerticalsTab.vue'),
         },
         {
           path: 'asset-classes',
           name: 'catalogs-asset-classes',
+          meta: { titleKey: 'assetClasses.title' },
           component: () => import('./asset-classes/AssetClassesTab.vue'),
         },
         {
           path: 'manufacturers',
           name: 'catalogs-manufacturers',
+          meta: { titleKey: 'manufacturers.title' },
           component: () => import('./manufacturers/ManufacturersTab.vue'),
         },
       ],

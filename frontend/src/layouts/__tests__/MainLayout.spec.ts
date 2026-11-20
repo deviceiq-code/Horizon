@@ -7,6 +7,7 @@ import { VApp } from 'vuetify/components'
 
 import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
+import { moduleRoutes } from '@/modules'
 import { useAuthStore, type User } from '@/stores/auth'
 import { usePreferencesStore } from '@/stores/preferences'
 import { click, inBody, settle } from '@/test-utils'
@@ -29,7 +30,7 @@ const ME: User = {
   },
 }
 
-async function mountLayout() {
+async function mountLayout(path = '/') {
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
@@ -40,14 +41,10 @@ async function mountLayout() {
       { path: '/', name: 'home', component: Blank },
       { path: '/login', name: 'login', component: Blank },
       { path: '/settings', name: 'settings', component: Blank },
-      ...['average-prices', 'customers', 'account-managers', 'catalogs', 'users'].map((name) => ({
-        path: `/${name}`,
-        name,
-        component: Blank,
-      })),
+      { path: '/', component: Blank, children: moduleRoutes() },
     ],
   })
-  await router.push('/')
+  await router.push(path)
   // v-layout gives the app bar and drawer their place
   const wrapper = mount(
     { render: () => h(VApp, () => h(MainLayout)) },
@@ -95,6 +92,50 @@ describe('MainLayout', () => {
 
     await click('theme-dark')
     expect(save).toHaveBeenCalledWith({ theme: 'dark' })
+    wrapper.unmount()
+  })
+
+  it('outside an app: "Horizon", the apps in the side menu', async () => {
+    const { wrapper } = await mountLayout('/')
+    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Horizon')
+    expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-app-admin"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-app-remarketing"]')).toBeNull() // coming soon
+    wrapper.unmount()
+  })
+
+  it('inside an app: its name, its pages in the side menu and the path', async () => {
+    const { wrapper } = await mountLayout('/admin/catalogs/asset-classes')
+    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Administration')
+    expect(inBody('[data-testid="menu-customers"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-users"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-average-prices"]')).toBeNull()
+    expect(inBody('[data-testid="breadcrumbs"]')!.textContent).toMatch(
+      /Horizon.*Administration.*Catalogs.*Asset Classes/,
+    )
+    wrapper.unmount()
+  })
+
+  it('the app launcher lists the apps; Remarketing is coming soon', async () => {
+    const { wrapper } = await mountLayout('/pricing/average-prices')
+    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Horizon Pricing')
+    await click('app-launcher')
+    const menu = inBody('[data-testid="app-launcher-menu"]')!
+    expect(menu.textContent).toContain('Horizon Pricing')
+    expect(menu.textContent).toContain('Coming Soon')
+    expect(inBody('[data-testid="launcher-remarketing"]')!.className).toContain(
+      'v-list-item--disabled',
+    )
+    expect(inBody('[data-testid="launcher-pricing"]')!.className).toContain('v-list-item--active')
+    wrapper.unmount()
+  })
+
+  it("the user menu opens the user's settings", async () => {
+    const { wrapper, router } = await mountLayout('/pricing/average-prices')
+    await click('me')
+    await click('user-settings')
+    await settle()
+    expect(router.currentRoute.value.name).toBe('settings')
     wrapper.unmount()
   })
 })
