@@ -987,3 +987,47 @@ msgstr "año"
 #: efmv
 msgid "The value curve of this asset goes up to %(last)s months; the scenario is %(term)s months."
 msgstr "La curva de valor de este bien llega hasta %(last)s meses; el escenario es de %(term)s meses."
+
+#: pricing/efmv
+msgid "unit value"
+msgstr "valor unitario"
+
+#: pricing/efmv
+msgid "compatible up to (%)"
+msgstr "compatible hasta (%)"
+
+#: pricing/efmv
+msgid "below from (%)"
+msgstr "por debajo desde (%)"
+
+#: pricing/efmv
+msgid "above from (%)"
+msgstr "por encima desde (%)"
+
+#: pricing/efmv
+msgid "validity (months)"
+msgstr "validez (meses)"
+
+#: pricing/efmv
+msgid "accept expired prices"
+msgstr "aceptar precios vencidos"
+
+#: pricing/efmv
+msgid "pricing settings"
+msgstr "configuración de pricing"
+
+#: pricing/efmv
+msgid "Pricing settings"
+msgstr "Configuración de Pricing"
+
+#: pricing/efmv
+msgid "Only administrators can change the pricing settings."
+msgstr "Solo los administradores pueden cambiar la configuración de Pricing."
+
+#: pricing/efmv
+msgid "Must be greater than the compatible range (%(value)s%%)."
+msgstr "Debe ser mayor que el rango compatible (%(value)s%%)."
+
+#: pricing/efmv
+msgid "This average price is more than %(months)s months old and expired prices are not accepted. Update it in Average Prices."
+msgstr "Este precio promedio tiene más de %(months)s meses y no se aceptan precios vencidos. Actualícelo en Precios Promedio."

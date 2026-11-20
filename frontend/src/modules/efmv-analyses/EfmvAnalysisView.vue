@@ -30,6 +30,7 @@ import {
   copyScenario,
   nextScenarioName,
   parseTerm,
+  parseUnitValue,
   scenarioDraft,
   scenarioInput,
   type ScenarioDraft,
@@ -38,7 +39,7 @@ import {
 
 const props = defineProps<{ id?: number }>()
 
-const { t, d } = useI18n()
+const { t, d, locale } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
 const notifications = useNotificationsStore()
@@ -73,7 +74,7 @@ function fill(data: EfmvAnalysis) {
   customerOptions.value = [data.customer_detail]
   customerKey.value++
   const open = scenarios.value.findIndex((s) => s.key === tab.value)
-  scenarios.value = data.scenarios.map(scenarioDraft)
+  scenarios.value = data.scenarios.map((s) => scenarioDraft(s, locale.value))
   // Stay on the same scenario after saving
   tab.value = scenarios.value[Math.max(open, 0)]?.key ?? null
 }
@@ -114,6 +115,9 @@ function onManagerChange(value: number | number[] | null) {
 
 // --- Scenarios -----------------------------------------------------------------------------------
 
+/** Some average price used is past its validity (as the API reports, live while editing) */
+const outdated = computed(() => scenarios.value.some((s) => s.preview?.has_expired))
+
 const names = computed(() => scenarios.value.map((s) => s.name))
 const otherNames = (index: number) => names.value.filter((_, i) => i !== index)
 
@@ -143,7 +147,7 @@ function removeScenario() {
 
 // What the server refused no longer applies once the scenarios change
 watch(
-  () => JSON.stringify(scenarios.value.map(scenarioInput)),
+  () => JSON.stringify(scenarios.value.map((s) => scenarioInput(s, locale.value))),
   () => {
     if (errors.value.scenarios) {
       errors.value = { ...errors.value, scenarios: undefined }
@@ -170,7 +174,13 @@ function hasIssues(index: number): boolean {
     scenario.name.length > 100 ||
     otherNames(index).some((n) => n.trim().toLowerCase() === name) ||
     parseTerm(scenario.term) === null ||
-    scenario.items.some((i) => !Number.isInteger(i.quantity) || i.quantity < 1) ||
+    scenario.items.some(
+      (i) =>
+        i.average_price !== null &&
+        (!Number.isInteger(i.quantity) ||
+          i.quantity < 1 ||
+          parseUnitValue(i.unit_value, locale.value) === null),
+    ) ||
     !!scenario.preview?.items.some((i) => i.out_of_curve)
   )
 }
@@ -208,7 +218,7 @@ async function save() {
   const data = {
     account_manager: accountManager.value!,
     customer: customer.value!,
-    scenarios: scenarios.value.map(scenarioInput),
+    scenarios: scenarios.value.map((s) => scenarioInput(s, locale.value)),
   }
   saving.value = true
   try {
@@ -279,6 +289,19 @@ async function remove() {
             <h1 class="analysis-title text-no-wrap" data-testid="analysis-title">
               {{ analysis ? analysis.code : $t('efmv.newTitle') }}
             </h1>
+            <v-chip
+              v-if="outdated"
+              color="warning"
+              prepend-icon="mdi-calendar-alert"
+              size="small"
+              variant="tonal"
+              label
+              class="ml-2"
+              :title="$t('efmv.outdatedHint')"
+              data-testid="outdated"
+            >
+              {{ $t('efmv.outdated') }}
+            </v-chip>
           </div>
           <AccountManagerPicker
             :model-value="accountManager"
@@ -384,6 +407,15 @@ async function remove() {
                 size="small"
                 class="mr-1"
                 data-testid="tab-issue"
+              />
+              <v-icon
+                v-else-if="scenario.preview?.has_expired"
+                icon="mdi-calendar-alert"
+                color="warning"
+                size="small"
+                class="mr-1"
+                :title="$t('efmv.outdatedHint')"
+                data-testid="tab-expired"
               />
               {{ scenario.name || $t('efmv.scenario.untitled') }}
             </v-tab>

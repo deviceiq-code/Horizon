@@ -1,4 +1,5 @@
 /** What the analysis page edits before saving (figures always come from the API). */
+import { parseMoney, toInputMoney } from '@/utils/money'
 import type { Scenario, ScenarioInput, ScenarioItem, ScenarioPreview } from './api'
 
 export interface ItemDraft {
@@ -7,6 +8,8 @@ export interface ItemDraft {
   /** null: the average price was deleted (removed when saving) */
   average_price: number | null
   quantity: number
+  /** Unit value as typed, in the UI language ("100.000,50" in pt-br) */
+  unit_value: string
 }
 
 export interface ScenarioDraft {
@@ -25,7 +28,7 @@ export interface ScenarioErrors {
   name?: string[]
   term_months?: string[]
   scope?: string[]
-  items?: Record<string, { average_price?: string[]; quantity?: string[] }>
+  items?: Record<string, { average_price?: string[]; quantity?: string[]; unit_value?: string[] }>
 }
 
 export const DEFAULT_TERM = 36
@@ -38,7 +41,7 @@ export function blankScenario(name: string): ScenarioDraft {
   return { key: newKey(), name, term: String(DEFAULT_TERM), scope: '', items: [], preview: null }
 }
 
-export function scenarioDraft(s: Scenario): ScenarioDraft {
+export function scenarioDraft(s: Scenario, language: string): ScenarioDraft {
   return {
     key: newKey(),
     name: s.name,
@@ -48,8 +51,9 @@ export function scenarioDraft(s: Scenario): ScenarioDraft {
       key: newKey(),
       average_price: i.average_price,
       quantity: i.quantity,
+      unit_value: i.unit_value === null ? '' : toInputMoney(i.unit_value, language),
     })),
-    preview: { items: s.items, totals: s.totals },
+    preview: { items: s.items, totals: s.totals, has_expired: s.has_expired },
   }
 }
 
@@ -72,15 +76,25 @@ export function parseTerm(text: string): number | null {
   return term >= 1 && term <= MAX_TERM ? term : null
 }
 
+/** The unit value typed, as a canonical decimal string, or null when empty or invalid. */
+export function parseUnitValue(text: string, language: string): string | null {
+  const value = parseMoney(text, language)
+  return value !== null && Number(value) > 0 ? value : null
+}
+
 /** Input for the API; assets whose price was deleted are left out. */
-export function scenarioInput(s: ScenarioDraft): ScenarioInput {
+export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput {
   return {
     name: s.name.trim(),
     term_months: parseTerm(s.term) ?? 0,
     scope: s.scope.trim(),
     items: s.items
       .filter((i) => i.average_price !== null)
-      .map((i) => ({ average_price: i.average_price!, quantity: i.quantity })),
+      .map((i) => ({
+        average_price: i.average_price!,
+        quantity: i.quantity,
+        unit_value: parseUnitValue(i.unit_value, language),
+      })),
   }
 }
 

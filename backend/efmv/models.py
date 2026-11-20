@@ -6,6 +6,8 @@ An item follows the asset's *current* average price: it stores the price's linea
 all its versions), so a new version applies at once.
 """
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -95,6 +97,13 @@ class EfmvScenarioItem(models.Model):
     # AveragePrice.lineage: the current version is always used
     price_lineage = models.UUIDField(_("average price"), db_index=True)
     quantity = models.PositiveIntegerField(_("quantity"), validators=[MinValueValidator(1)])
+    # Typed by the analyst (never taken from Average Prices, only compared with it)
+    unit_value = models.DecimalField(
+        _("unit value"),
+        max_digits=14,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
     position = models.PositiveSmallIntegerField(_("position"), default=0)
 
     class Meta:

@@ -104,6 +104,34 @@ const en = {
     deleteTitle: 'Delete Account Manager',
     deleteConfirm: 'Delete "{name}"? This cannot be undone.',
   },
+  pricingSettings: {
+    title: 'Control Panel',
+    subtitle: 'Limits the eFMV analyses use to check the values typed against Average Prices.',
+    saved: 'Pricing settings saved.',
+    lastChange: 'Last changed on {date} by {name}',
+    beyondCompatible: 'Must be greater than the compatible range.',
+    monthsRange: 'Enter a whole number of months from 1 to 120.',
+    positioning: {
+      title: 'Positioning Against Average Prices',
+      subtitle:
+        'How the unit value typed for an asset compares with the value of its average price (% of that value).',
+      below: 'Below Historical From',
+      belowHint: 'This much lower or more',
+      compatible: 'Compatible Up To',
+      compatibleHint: 'This much lower or higher at most',
+      above: 'Above Historical From',
+      aboveHint: 'This much higher or more',
+    },
+    validity: {
+      title: 'Validity of Average Prices',
+      subtitle:
+        'Counted from the date of the current version of the average price. Analyses using an older one are flagged as possibly outdated.',
+      months: 'Valid For',
+      acceptExpired: 'Accept Expired Average Prices',
+      acceptExpiredOn: 'They can still be added to analyses (flagged).',
+      acceptExpiredOff: 'Analyses refuse them until they are updated in Average Prices.',
+    },
+  },
   efmv: {
     title: 'eFMV Analyses',
     subtitle:
@@ -127,6 +155,9 @@ const en = {
     deleteTitle: 'Delete Analysis',
     deleteConfirm: 'Delete the analysis {code} and all its scenarios?',
     notSavedYet: 'Not saved yet',
+    outdated: 'Possibly Outdated',
+    outdatedHint:
+      'Some average prices used are past their validity; the analysis may be out of date.',
     fixErrors: 'Please fix the fields marked in red.',
     fields: {
       code: 'Code',
@@ -158,6 +189,13 @@ const en = {
       removeConfirm: 'Remove the scenario "{name}"? It is only gone after saving.',
     },
     item: {
+      historical: 'Average Prices',
+      unitValueRule: 'Enter a value greater than zero.',
+      pricedOn: 'priced on {date}',
+      expired: 'Expired Price',
+      expiredHint: 'Average price from {date}, valid until {until}.',
+      expiredWarning:
+        'Some average prices of this scenario are past their validity (set in the Pricing control panel): this analysis may be out of date.',
       asset: 'Asset',
       unitValue: 'Unit Value',
       quantity: 'Quantity',
@@ -166,6 +204,20 @@ const en = {
       curveUpTo: 'curve up to {months} months',
       deleted: 'This average price was deleted; it will be removed when saving.',
       outOfCurve: 'The value curve does not reach {term} months; change the term or remove it.',
+    },
+    position: {
+      below: 'Below Historical',
+      belowHint: 'The value typed is below the historical value of Average Prices.',
+      slightly_below: 'Slightly Below',
+      slightly_belowHint:
+        'The value typed is somewhat below the historical value (between the compatible range and the "below" limit).',
+      compatible: 'Compatible',
+      compatibleHint: 'The value typed is compatible with the historical value of Average Prices.',
+      slightly_above: 'Slightly Above',
+      slightly_aboveHint:
+        'The value typed is somewhat above the historical value (between the compatible range and the "above" limit).',
+      above: 'Above Historical',
+      aboveHint: 'The value typed is above the historical value of Average Prices.',
     },
     totals: {
       lo: 'LO',

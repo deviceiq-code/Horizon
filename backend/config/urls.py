@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/catalogs/", include("catalogs.urls")),
     path("api/average-prices/", include("pricing.urls")),
     path("api/efmv-analyses/", include("efmv.urls")),
+    path("api/pricing/", include("pricing.control_panel")),
     path("api/system/", include("system.urls")),
     path("api/", include("users.urls")),
 ]

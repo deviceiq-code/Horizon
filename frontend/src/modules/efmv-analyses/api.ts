@@ -25,10 +25,20 @@ export interface ScenarioTotals {
   sv_percent: string | null
 }
 
-/** An asset of a scenario: the current version of an average price, and how many. */
+/** How a typed value compares with Average Prices (limits set in the Pricing control panel). */
+export type PricePosition = 'below' | 'slightly_below' | 'compatible' | 'slightly_above' | 'above'
+
+/**
+ * An asset of a scenario: the current version of an average price, how many and the value
+ * typed by the analyst (Average Prices only position it).
+ */
 export interface ScenarioItem {
   id: number | null
   quantity: number
+  /** Typed by the analyst; null while not typed (preview) */
+  unit_value: string | null
+  /** quantity × unit value; null without a value */
+  line_total: string | null
   /** false: the average price was deleted (left out of the totals; removed when saving) */
   available: boolean
   /** Current version (null when deleted) */
@@ -41,7 +51,14 @@ export interface ScenarioItem {
   currency?: string
   /** Terms of its value curve (it stops at the last one) */
   terms?: number[]
-  line_total: string | null
+  /** Date of the current version of the average price, and until when it is current */
+  priced_on?: string
+  valid_until?: string
+  /** Older than the validity set in the control panel: the analysis may be out of date */
+  expired: boolean
+  /** Typed value against the average price's value, % (negative = below); null without a value */
+  variation_percent?: string | null
+  position?: PricePosition | null
   /** The curve does not reach the scenario's term (left out of the totals; refused on save) */
   out_of_curve: boolean
 }
@@ -53,6 +70,8 @@ export interface Scenario {
   scope: string
   items: ScenarioItem[]
   totals: ScenarioTotals
+  /** Some average price used is past its validity */
+  has_expired: boolean
 }
 
 export interface EfmvAnalysis {
@@ -64,6 +83,8 @@ export interface EfmvAnalysis {
   customer: number
   customer_detail: CustomerRef
   scenarios: Scenario[]
+  /** Some average price used is past its validity: the analysis may be out of date */
+  is_outdated: boolean
   created_at: string
   created_by_name: string | null
   updated_at: string
@@ -83,6 +104,8 @@ export interface ScenarioItemInput {
   /** Any version of the average price (its current version is used) */
   average_price: number
   quantity: number
+  /** Canonical decimal string (null only in previews, while not typed) */
+  unit_value: string | null
 }
 
 export interface ScenarioInput {
@@ -102,6 +125,7 @@ export interface EfmvAnalysisInput {
 export interface ScenarioPreview {
   items: ScenarioItem[]
   totals: ScenarioTotals
+  has_expired: boolean
 }
 
 const BASE = '/efmv-analyses/'

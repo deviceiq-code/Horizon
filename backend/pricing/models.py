@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from catalogs.models import AssetClass, Manufacturer, SubVertical
 
 from .curves import increasing_terms, monthly_curve, percent_of
+from .positioning import PositionLimits
 
 
 class Currency(models.TextChoices):
@@ -266,3 +267,69 @@ class PriceDocument(models.Model):
         # Remove the file only once the deletion is committed
         transaction.on_commit(lambda: storage.delete(path))
         return result
+
+
+class PricingSettings(models.Model):
+    """Pricing control panel (a single row, pk=1; read it with PricingSettings.current()).
+
+    How a price typed in an analysis is placed against Average Prices (percentages of the
+    reference value): at most `compatible_percent` away = compatible; `below_percent` or more
+    below = below the historical value; `above_percent` or more above = above it; in between =
+    slightly below/above. And how long an average price stays current (`validity_months`,
+    from the date of its current version) and whether older ones can still be used.
+    """
+
+    compatible_percent = models.DecimalField(
+        _("compatible up to (%)"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("5.00"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    below_percent = models.DecimalField(
+        _("below from (%)"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("10.00"),
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    above_percent = models.DecimalField(
+        _("above from (%)"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("10.00"),
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    validity_months = models.PositiveSmallIntegerField(
+        _("validity (months)"), default=12, validators=[MinValueValidator(1)]
+    )
+    accept_expired = models.BooleanField(_("accept expired prices"), default=True)
+
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("updated by"),
+    )
+
+    class Meta:
+        verbose_name = _("pricing settings")
+        verbose_name_plural = _("pricing settings")
+
+    def __str__(self):
+        return str(_("Pricing settings"))
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def current(cls) -> "PricingSettings":
+        obj, _created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def limits(self) -> PositionLimits:
+        return PositionLimits(self.compatible_percent, self.below_percent, self.above_percent)

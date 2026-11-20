@@ -98,15 +98,27 @@ Multi-user web system for **operating lease residual value pricing**
     `EFMV-<year>-<NNNN>` (year + sequence, next number per year), account manager (user with the
     role; must be the customer's primary or secondary), customer, created by/at; ≥ 1
     `EfmvScenario` (name unique per analysis case-insensitively, term 1–360 months, scope) with
-    `EfmvScenarioItem`s (an average price's `lineage` — the **current** version always counts —
-    and a quantity; no repeated price). Writes are nested (`scenarios` replaces them all); a
+    `EfmvScenarioItem`s (an average price's `lineage` — the **current** version always counts —,
+    a quantity and a `unit_value` **typed by the analyst**, never taken from Average Prices;
+    no repeated price). Each item is placed against the current average price's value
+    (`pricing/positioning.py`, pure: `variation_percent` and `price_position` → below /
+    slightly_below / compatible / slightly_above / above, compared at 2 places, inclusive
+    limits) and flagged `expired` when that version is older than the validity; the analysis
+    returns `is_outdated` (scenarios `has_expired`). Writes are nested (`scenarios` replaces them all); a
     term beyond an asset's curve (its last term) is refused per item. Figures come only from
-    `efmv/calculations.py` (pure, tested): LO = Σ quantity × original value; HW/SW/SV shares of
+    `efmv/calculations.py` (pure, tested): LO = Σ quantity × typed unit value; HW/SW/SV shares of
     the LO with 2 places (Average Prices are hardware; SW and SV to come); eFMV at EOL (%, 2
     places) not computed yet (null). `POST /scenario-preview/` gives the figures of a scenario
     being edited; deleted prices and items out of the curve are flagged and left out of them.
     `?search=` also finds a code. Customers: `?account_manager=<user id>` (primary or
     secondary) and `?is_active=`.
+  - **Pricing control panel** (`PricingSettings` singleton in `pricing/models.py`,
+    `PricingSettings.current()`), `/api/pricing/settings/` (`pricing/control_panel.py`; GET
+    everyone signed in, PATCH administrators): `compatible_percent` (5), `below_percent` /
+    `above_percent` (10, each greater than the compatible range), `validity_months` (12, from
+    the date of the price's current version) and `accept_expired` (true; false = analyses
+    refuse expired prices). Frontend: `src/modules/pricing-settings/` ("Control Panel" in the
+    Pricing app, administrators only).
   - `users/` — user and role management (administrators only): `Role` (name unique
     case-insensitive, description, `is_system`, `users` M2M → `user.roles`); users can have many
     roles. System role "Administrator" (`key="administrator"`, created by a migration) cannot be
@@ -201,7 +213,9 @@ Multi-user web system for **operating lease residual value pricing**
     a compact header with what is fixed (account manager — the user by default when they
     have the role —, `CustomerPicker.vue` with that account manager's customers, creation
     date) and one tab per scenario (`ScenarioPanel.vue`: name, term, scope and
-    `ScenarioTotalsBar.vue` on top; assets grid below via `AveragePricePicker.vue`; figures
+    `ScenarioTotalsBar.vue` on top; assets grid below via `AveragePricePicker.vue` — Quantity
+    first, then asset, typed Unit Value, Average Prices value with position/expired chips,
+    total; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and
     saving opens the first. Exception to the page-grid rule: on screens ≥ 960 px the page
     fills the window and only the assets grid scrolls (fixed header). Form state in `draft.ts`.

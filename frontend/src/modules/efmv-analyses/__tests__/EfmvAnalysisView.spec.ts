@@ -43,6 +43,7 @@ const debounce = () => new Promise((r) => setTimeout(r, 400)).then(settle)
 const EXCAVATOR: efmvApi.ScenarioItem = {
   id: 1,
   quantity: 2,
+  unit_value: '100000.00',
   available: true,
   average_price: 7,
   asset_class: { name: 'Excavators', icon: 'mdi-excavator' },
@@ -54,6 +55,11 @@ const EXCAVATOR: efmvApi.ScenarioItem = {
   terms: [12, 24, 36],
   line_total: '200000.00',
   out_of_curve: false,
+  priced_on: '2026-10-01',
+  valid_until: '2027-10-01',
+  expired: false,
+  variation_percent: '0.00',
+  position: 'compatible',
 }
 
 const TOTALS: efmvApi.ScenarioTotals = {
@@ -71,8 +77,17 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
   account_manager_detail: { id: 10, full_name: 'Ana Lima' },
   customer: 20,
   customer_detail: { id: 20, name: 'Acme Ltda', trade_name: '', tax_id: '11222333000181' },
+  is_outdated: false,
   scenarios: [
-    { id: 1, name: 'Base', term_months: 36, scope: 'Fleet', items: [EXCAVATOR], totals: TOTALS },
+    {
+      id: 1,
+      name: 'Base',
+      term_months: 36,
+      scope: 'Fleet',
+      items: [EXCAVATOR],
+      totals: TOTALS,
+      has_expired: false,
+    },
   ],
   created_at: '2026-11-20T10:00:00Z',
   created_by_name: 'Fernando Almeida',
@@ -132,7 +147,11 @@ describe('EfmvAnalysisView', () => {
         } as pricesApi.AveragePrice,
       ]),
     )
-    efmv.previewScenario.mockResolvedValue({ items: [{ ...EXCAVATOR, id: null }], totals: TOTALS })
+    efmv.previewScenario.mockResolvedValue({
+      items: [{ ...EXCAVATOR, id: null }],
+      totals: TOTALS,
+      has_expired: false,
+    })
   })
   afterEach(() => {
     vi.clearAllMocks()
@@ -150,11 +169,15 @@ describe('EfmvAnalysisView', () => {
     await typeInto('scenario-name', 'Base')
     await typeInto('scenario-term', '36')
     await pickOption('add-asset', 'Caterpillar 320 GC · Excavators')
+    // The value is not taken from Average Prices: the analyst types it
+    expect((inBody('[data-testid="unit-value"] input') as HTMLInputElement).value).toBe('')
+    await typeInto('unit-value', '100,000')
     await debounce()
     expect(efmv.previewScenario).toHaveBeenLastCalledWith({
       term_months: 36,
-      items: [{ average_price: 7, quantity: 1 }],
+      items: [{ average_price: 7, quantity: 1, unit_value: '100000' }],
     })
+    expect(inBody('[data-testid="position"]')!.textContent).toContain('Compatible')
     expect(inBody('[data-testid="asset-row"]')!.textContent).toContain('Caterpillar 320 GC')
     expect(inBody('[data-testid="total-lo"]')!.textContent).toMatch(/200,000\.00/)
     expect(inBody('[data-testid="total-efmv"]')!.textContent).toContain('—')
@@ -166,7 +189,12 @@ describe('EfmvAnalysisView', () => {
       account_manager: 10,
       customer: 20,
       scenarios: [
-        { name: 'Base', term_months: 36, scope: '', items: [{ average_price: 7, quantity: 1 }] },
+        {
+          name: 'Base',
+          term_months: 36,
+          scope: '',
+          items: [{ average_price: 7, quantity: 1, unit_value: '100000' }],
+        },
       ],
     })
     expect(replace).toHaveBeenCalledWith({ name: 'efmv-analysis', params: { id: 4 } })
@@ -221,6 +249,49 @@ describe('EfmvAnalysisView', () => {
     wrapper.unmount()
   })
 
+  it('the quantity comes first; the value typed is placed against Average Prices', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView({ id: 3 })
+    const titles = [...document.querySelectorAll('[data-testid="assets"] th')].map((th) =>
+      th.textContent?.trim(),
+    )
+    expect(titles[0]).toBe('Quantity')
+    expect((inBody('[data-testid="unit-value"] input') as HTMLInputElement).value).toBe(
+      '100,000.00',
+    )
+    efmv.previewScenario.mockResolvedValue({
+      items: [
+        { ...EXCAVATOR, unit_value: '88000.00', variation_percent: '-12.00', position: 'below' },
+      ],
+      totals: TOTALS,
+      has_expired: false,
+    })
+    await typeInto('unit-value', '88000')
+    await debounce()
+    expect(inBody('[data-testid="position"]')!.textContent).toMatch(/Below Historical.*-12\.00%/)
+    wrapper.unmount()
+  })
+
+  it('an expired average price marks the analysis as possibly outdated', async () => {
+    const expired = {
+      ...EXCAVATOR,
+      expired: true,
+      priced_on: '2025-01-10',
+      valid_until: '2026-01-10',
+    }
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      is_outdated: true,
+      scenarios: [{ ...ANALYSIS.scenarios[0]!, items: [expired], has_expired: true }],
+    })
+    const { wrapper } = await mountView({ id: 3 })
+    expect(inBody('[data-testid="outdated"]')!.textContent).toContain('Possibly Outdated')
+    expect(inBody('[data-testid="expired"]')!.textContent).toContain('Expired Price')
+    expect(inBody('[data-testid="expired-warning"]')).not.toBeNull()
+    expect(inBody('[data-testid="tab-0"] [data-testid="tab-expired"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
   it('shows what the server refuses next to the asset', async () => {
     efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView({ id: 3 })
@@ -245,6 +316,7 @@ describe('EfmvAnalysisView', () => {
     efmv.previewScenario.mockResolvedValue({
       items: [{ ...EXCAVATOR, out_of_curve: true, line_total: '200000.00' }],
       totals: { ...TOTALS, lo: '0.00', hw_percent: null, sw_percent: null, sv_percent: null },
+      has_expired: false,
     })
     await typeInto('scenario-term', '48')
     await debounce()

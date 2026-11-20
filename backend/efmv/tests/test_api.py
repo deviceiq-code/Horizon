@@ -1,9 +1,13 @@
+from datetime import timedelta
+from decimal import Decimal
+
 import pytest
+from django.utils import timezone
 
 from catalogs.models import AssetClass, SubVertical
 from customers.models import Customer
 from efmv.models import EfmvAnalysis, format_code
-from pricing.models import AveragePrice
+from pricing.models import AveragePrice, PricingSettings
 from pricing.testing import _new_version, _payload, _post
 from users.testing import make_account_manager
 
@@ -74,8 +78,8 @@ def body(managers, customers, prices, **overrides):
                 "term_months": 24,
                 "scope": "Yellow line fleet",
                 "items": [
-                    {"average_price": prices["excavator"], "quantity": 2},
-                    {"average_price": prices["tractor"], "quantity": 1},
+                    {"average_price": prices["excavator"], "quantity": 2, "unit_value": "100000"},
+                    {"average_price": prices["tractor"], "quantity": 1, "unit_value": "50000.00"},
                 ],
             }
         ],
@@ -149,7 +153,9 @@ def test_term_beyond_the_curve_is_refused(logged_client, managers, customers, pr
 
 def test_same_asset_twice_is_refused(logged_client, managers, customers, prices):
     data = body(managers, customers, prices)
-    data["scenarios"][0]["items"].append({"average_price": prices["excavator"], "quantity": 1})
+    data["scenarios"][0]["items"].append(
+        {"average_price": prices["excavator"], "quantity": 1, "unit_value": "1"}
+    )
     r = post(logged_client, data)
     assert r.status_code == 400
     assert "2" in r.json()["scenarios"]["0"]["items"]
@@ -177,7 +183,10 @@ def test_uses_the_current_version(logged_client, managers, customers, prices, ca
     item = data["scenarios"][0]["items"][0]
     assert item["average_price"] == newer
     assert item["original_value"] == "120000.00"
-    assert data["scenarios"][0]["totals"]["lo"] == "290000.00"
+    # The typed value is kept; the newer average price only changes how it is placed
+    assert item["unit_value"] == "100000.00"
+    assert (item["variation_percent"], item["position"]) == ("-16.67", "below")
+    assert data["scenarios"][0]["totals"]["lo"] == "250000.00"
 
 
 def test_deleted_price_is_flagged_and_left_out(logged_client, managers, customers, prices):
@@ -204,7 +213,9 @@ def test_edit_replaces_scenarios(logged_client, managers, customers, prices):
             {
                 "name": "Short",
                 "term_months": 12,
-                "items": [{"average_price": prices["tractor"], "quantity": 3}],
+                "items": [
+                    {"average_price": prices["tractor"], "quantity": 3, "unit_value": "50000"}
+                ],
             },
             {"name": "Long", "term_months": 36, "scope": "", "items": []},
         ],
@@ -243,15 +254,18 @@ def test_scenario_preview(logged_client, prices):
     r = post_preview = logged_client.post(
         f"{URL}scenario-preview/",
         {"term_months": 36, "items": [
-            {"average_price": prices["excavator"], "quantity": 1},
-            {"average_price": prices["tractor"], "quantity": 1},
+            {"average_price": prices["excavator"], "quantity": 1, "unit_value": "107000"},
+            {"average_price": prices["tractor"], "quantity": 1, "unit_value": "50000"},
+            {"average_price": prices["excavator"], "quantity": 1},  # not typed yet
         ]},
         content_type="application/json",
     )  # fmt: skip
     assert post_preview.status_code == 200, r.json()
     data = r.json()
-    assert [i["out_of_curve"] for i in data["items"]] == [False, True]
-    assert data["totals"]["lo"] == "100000.00"
+    assert [i["out_of_curve"] for i in data["items"]] == [False, True, False]
+    assert data["totals"]["lo"] == "107000.00"
+    assert [i["position"] for i in data["items"]] == ["slightly_above", "compatible", None]
+    assert data["items"][2]["line_total"] is None
 
 
 def test_price_in_an_analysis_is_kept(logged_client, managers, customers, prices):
@@ -268,3 +282,55 @@ def test_customers_filtered_by_account_manager(logged_client, managers, customer
     customers["acme"].is_active = False
     customers["acme"].save()
     assert names({"account_manager": managers["ana"].pk, "is_active": "true"}) == ["Beta S.A."]
+
+
+def test_unit_value_is_required(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    del data["scenarios"][0]["items"][0]["unit_value"]
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert "unit_value" in r.json()["scenarios"]["0"]["items"]["0"]
+
+
+def test_position_follows_the_control_panel(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["items"][0]["unit_value"] = "92000"  # 8% below
+    analysis = post(logged_client, data).json()
+    item = analysis["scenarios"][0]["items"][0]
+    assert (item["variation_percent"], item["position"]) == ("-8.00", "slightly_below")
+    settings = PricingSettings.current()
+    settings.below_percent = Decimal("7.5")
+    settings.save()
+    item = logged_client.get(f"{URL}{analysis['id']}/").json()["scenarios"][0]["items"][0]
+    assert item["position"] == "below"
+
+
+def _age_prices(months):
+    """Every average price dated a little over `months` months ago."""
+    AveragePrice.objects.update(created_at=timezone.now() - timedelta(days=31 * months + 1))
+
+
+def test_expired_prices_mark_the_analysis_outdated(logged_client, managers, customers, prices):
+    analysis = post(logged_client, body(managers, customers, prices)).json()
+    assert analysis["is_outdated"] is False
+    assert analysis["scenarios"][0]["items"][0]["expired"] is False
+    _age_prices(12)
+    data = logged_client.get(f"{URL}{analysis['id']}/").json()
+    assert data["is_outdated"] is True
+    assert data["scenarios"][0]["has_expired"] is True
+    assert data["scenarios"][0]["items"][0]["expired"] is True
+    # Still accepted (the default)
+    assert post(logged_client, body(managers, customers, prices)).status_code == 201
+
+
+def test_expired_prices_can_be_refused(logged_client, managers, customers, prices):
+    settings = PricingSettings.current()
+    settings.accept_expired = False
+    settings.validity_months = 6
+    settings.save()
+    _age_prices(5)
+    assert post(logged_client, body(managers, customers, prices)).status_code == 201
+    _age_prices(6)
+    r = post(logged_client, body(managers, customers, prices))
+    assert r.status_code == 400
+    assert "6 months" in r.json()["scenarios"]["0"]["items"]["0"]["average_price"][0]

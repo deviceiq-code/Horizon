@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -6,7 +8,8 @@ from rest_framework import serializers
 
 from catalogs.models import MAX_TERM_MONTHS
 from catalogs.serializers import sub_vertical_label
-from pricing.models import AveragePrice
+from pricing.models import AveragePrice, PricingSettings
+from pricing.positioning import is_expired, price_position, valid_until, variation_percent
 from users.display import full_name_in, person_ref
 from users.models import is_account_manager
 
@@ -56,24 +59,66 @@ def totals_payload(totals) -> dict:
     }
 
 
-def scenario_payload(term_months: int, items: list[tuple], prices: dict) -> dict:
-    """`items`: (item id or None, lineage, quantity). Items whose price was deleted or whose
-    curve no longer reaches the term are flagged and left out of the totals."""
+class Context:
+    """What positioning needs, read once per request: the control panel and today."""
+
+    def __init__(self):
+        self.settings = PricingSettings.current()
+        self.limits = self.settings.limits()
+        self.today = timezone.localdate()
+
+    def expired(self, row: AveragePrice) -> bool:
+        return is_expired(
+            timezone.localtime(row.created_at), self.today, self.settings.validity_months
+        )
+
+
+def price_check(row: AveragePrice, unit_value, ctx: Context) -> dict:
+    """How the typed value compares with the average price, and whether that price is still
+    current (the date of its current version + the validity of the control panel)."""
+    priced_on = timezone.localtime(row.created_at).date()
+    data = {
+        "priced_on": priced_on.isoformat(),
+        "valid_until": valid_until(priced_on, ctx.settings.validity_months).isoformat(),
+        "expired": ctx.expired(row),
+        "variation_percent": None,
+        "position": None,
+    }
+    if unit_value is not None:
+        data["variation_percent"] = str(variation_percent(unit_value, row.original_value))
+        data["position"] = str(price_position(unit_value, row.original_value, ctx.limits))
+    return data
+
+
+def scenario_payload(term_months: int, items: list[tuple], prices: dict, ctx: Context) -> dict:
+    """`items`: (item id or None, lineage, quantity, typed unit value or None). Items without a
+    value, whose price was deleted or whose curve no longer reaches the term are flagged and
+    left out of the totals."""
     lines, rows = [], []
-    for item_id, lineage, quantity in items:
+    for item_id, lineage, quantity, unit_value in items:
         row = prices.get(lineage)
-        entry = {"id": item_id, "quantity": quantity, "available": row is not None}
+        entry = {
+            "id": item_id,
+            "quantity": quantity,
+            "unit_value": None if unit_value is None else str(unit_value),
+            "line_total": None if unit_value is None else str(line_total(quantity, unit_value)),
+            "available": row is not None,
+        }
         if row is None:
-            entry.update({"average_price": None, "line_total": None, "out_of_curve": False})
+            entry.update({"average_price": None, "out_of_curve": False, "expired": False})
         else:
             out = not covers_term(price_terms(row), term_months)
             entry.update(asset_detail(row))
-            entry["line_total"] = str(line_total(quantity, row.original_value))
+            entry.update(price_check(row, unit_value, ctx))
             entry["out_of_curve"] = out
-            if not out:
-                lines.append(Line("hw", quantity, row.original_value))
+            if not out and unit_value is not None:
+                lines.append(Line("hw", quantity, unit_value))
         rows.append(entry)
-    return {"items": rows, "totals": totals_payload(scenario_totals(lines))}
+    return {
+        "items": rows,
+        "totals": totals_payload(scenario_totals(lines)),
+        "has_expired": any(entry["expired"] for entry in rows),
+    }
 
 
 # --- Input ------------------------------------------------------------------------------------
@@ -83,6 +128,10 @@ class ItemInputSerializer(serializers.Serializer):
     # Any version of the average price; its current version is the one used
     average_price = serializers.PrimaryKeyRelatedField(queryset=AveragePrice.objects.all())
     quantity = serializers.IntegerField(min_value=1, max_value=1_000_000)
+    # Typed by the analyst (Average Prices only position it)
+    unit_value = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal("0.01")
+    )
 
     def validate_average_price(self, value):
         if value.deleted_at is not None:
@@ -105,6 +154,7 @@ class ScenarioInputSerializer(serializers.Serializer):
     def validate(self, attrs):
         lineages = [item["average_price"].lineage for item in attrs["items"]]
         prices = current_prices(lineages)
+        ctx = Context()
         errors, seen = {}, set()
         for index, item in enumerate(attrs["items"]):
             lineage = item["average_price"].lineage
@@ -123,6 +173,16 @@ class ScenarioInputSerializer(serializers.Serializer):
                             "the scenario is %(term)s months."
                         )
                         % {"last": max(price_terms(row)), "term": attrs["term_months"]}
+                    ]
+                }
+            elif not ctx.settings.accept_expired and ctx.expired(row):
+                errors[str(index)] = {
+                    "average_price": [
+                        _(
+                            "This average price is more than %(months)s months old and expired "
+                            "prices are not accepted. Update it in Average Prices."
+                        )
+                        % {"months": ctx.settings.validity_months}
                     ]
                 }
             seen.add(lineage)
@@ -209,6 +269,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
         scenarios = list(instance.scenarios.all())
         items = {s.pk: list(s.items.all()) for s in scenarios}
         prices = current_prices(i.price_lineage for its in items.values() for i in its)
+        ctx = Context()
         data["scenarios"] = [
             {
                 "id": s.id,
@@ -217,12 +278,15 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                 "scope": s.scope,
                 **scenario_payload(
                     s.term_months,
-                    [(i.id, i.price_lineage, i.quantity) for i in items[s.pk]],
+                    [(i.id, i.price_lineage, i.quantity, i.unit_value) for i in items[s.pk]],
                     prices,
+                    ctx,
                 ),
             }
             for s in scenarios
         ]
+        # Some average price used is past its validity: the analysis may be out of date
+        data["is_outdated"] = any(s["has_expired"] for s in data["scenarios"])
         return data
 
     def _save_scenarios(self, analysis, scenarios):
@@ -240,6 +304,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                     scenario=row,
                     price_lineage=item["average_price"].lineage,
                     quantity=item["quantity"],
+                    unit_value=item["unit_value"],
                     position=index,
                 )
                 for index, item in enumerate(scenario["items"])
@@ -311,16 +376,26 @@ class EfmvAnalysisListSerializer(serializers.ModelSerializer):
         return [s.name for s in obj.scenarios.all()]
 
 
+class PreviewItemSerializer(ItemInputSerializer):
+    # Not typed yet: no total nor position for it
+    unit_value = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False, allow_null=True
+    )
+
+
 class ScenarioPreviewSerializer(serializers.Serializer):
-    """The totals of a scenario being edited (nothing saved): the form never computes them."""
+    """The figures of a scenario being edited (nothing saved): the form never computes them."""
 
     term_months = serializers.IntegerField(min_value=1, max_value=MAX_TERM_MONTHS)
-    items = ItemInputSerializer(many=True)
+    items = PreviewItemSerializer(many=True)
 
     def to_representation(self, instance):
-        items = [(None, i["average_price"].lineage, i["quantity"]) for i in instance["items"]]
-        prices = current_prices(lineage for _, lineage, _q in items)
-        return scenario_payload(instance["term_months"], items, prices)
+        items = [
+            (None, i["average_price"].lineage, i["quantity"], i.get("unit_value"))
+            for i in instance["items"]
+        ]
+        prices = current_prices(item[1] for item in items)
+        return scenario_payload(instance["term_months"], items, prices, Context())
 
 
 # Silence "imported but unused" for names used only in type contexts

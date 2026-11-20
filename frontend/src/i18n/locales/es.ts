@@ -102,6 +102,35 @@ const es: Messages = {
     deleteTitle: 'Eliminar Gestor de Cuenta',
     deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
   },
+  pricingSettings: {
+    title: 'Panel de Control',
+    subtitle:
+      'Límites que usan los análisis de eFMV para comparar los valores ingresados con los precios promedio.',
+    saved: 'Configuración de Pricing guardada.',
+    lastChange: 'Último cambio el {date} por {name}',
+    beyondCompatible: 'Debe ser mayor que el rango compatible.',
+    monthsRange: 'Ingrese un número entero de meses de 1 a 120.',
+    positioning: {
+      title: 'Posicionamiento Frente a los Precios Promedio',
+      subtitle:
+        'Cómo se compara el valor unitario ingresado para un bien con el valor de su precio promedio (% de ese valor).',
+      below: 'Por Debajo del Histórico Desde',
+      belowHint: 'Esta diferencia hacia abajo o más',
+      compatible: 'Compatible Hasta',
+      compatibleHint: 'Como máximo esta diferencia, hacia arriba o abajo',
+      above: 'Por Encima del Histórico Desde',
+      aboveHint: 'Esta diferencia hacia arriba o más',
+    },
+    validity: {
+      title: 'Validez de los Precios Promedio',
+      subtitle:
+        'Se cuenta desde la fecha de la versión actual del precio promedio. Los análisis que usan uno más antiguo se marcan como posiblemente desactualizados.',
+      months: 'Válido Por',
+      acceptExpired: 'Aceptar Precios Promedio Vencidos',
+      acceptExpiredOn: 'Aún se pueden agregar a los análisis (con aviso).',
+      acceptExpiredOff: 'Los análisis los rechazan hasta que se actualicen en Precios Promedio.',
+    },
+  },
   efmv: {
     title: 'Análisis de eFMV',
     subtitle:
@@ -125,6 +154,9 @@ const es: Messages = {
     deleteTitle: 'Eliminar Análisis',
     deleteConfirm: '¿Eliminar el análisis {code} y todos sus escenarios?',
     notSavedYet: 'Aún no guardado',
+    outdated: 'Posiblemente Desactualizado',
+    outdatedHint:
+      'Algunos precios promedio usados superaron su validez; el análisis puede estar desactualizado.',
     fixErrors: 'Corrija los campos marcados en rojo.',
     fields: {
       code: 'Código',
@@ -156,6 +188,13 @@ const es: Messages = {
       removeConfirm: '¿Quitar el escenario "{name}"? Solo deja de existir al guardar.',
     },
     item: {
+      historical: 'Precios Promedio',
+      unitValueRule: 'Ingrese un valor mayor que cero.',
+      pricedOn: 'cotizado el {date}',
+      expired: 'Precio Vencido',
+      expiredHint: 'Precio promedio del {date}, válido hasta el {until}.',
+      expiredWarning:
+        'Algunos precios promedio de este escenario superaron su validez (definida en el Panel de Control de Pricing): este análisis puede estar desactualizado.',
       asset: 'Bien',
       unitValue: 'Valor Unitario',
       quantity: 'Cantidad',
@@ -164,6 +203,21 @@ const es: Messages = {
       curveUpTo: 'curva hasta {months} meses',
       deleted: 'Este precio promedio fue eliminado; se quitará al guardar.',
       outOfCurve: 'La curva de valor no llega a {term} meses; cambie el plazo o quite el bien.',
+    },
+    position: {
+      below: 'Por Debajo del Histórico',
+      belowHint: 'El valor ingresado está por debajo del valor histórico de los precios promedio.',
+      slightly_below: 'Levemente por Debajo',
+      slightly_belowHint:
+        'El valor ingresado está algo por debajo del valor histórico (entre el rango compatible y el límite "por debajo").',
+      compatible: 'Compatible',
+      compatibleHint:
+        'El valor ingresado es compatible con el valor histórico de los precios promedio.',
+      slightly_above: 'Levemente por Encima',
+      slightly_aboveHint:
+        'El valor ingresado está algo por encima del valor histórico (entre el rango compatible y el límite "por encima").',
+      above: 'Por Encima del Histórico',
+      aboveHint: 'El valor ingresado está por encima del valor histórico de los precios promedio.',
     },
     totals: {
       lo: 'LO',

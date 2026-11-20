@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AveragePrice, PriceDocument, PricePoint
+from .models import AveragePrice, PriceDocument, PricePoint, PricingSettings
 
 
 class PricePointInline(admin.TabularInline):
@@ -53,3 +53,9 @@ class PriceDocumentAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(PricingSettings)
+class PricingSettingsAdmin(admin.ModelAdmin):
+    list_display = ["__str__", "compatible_percent", "below_percent", "above_percent",
+                    "validity_months", "accept_expired"]  # fmt: skip

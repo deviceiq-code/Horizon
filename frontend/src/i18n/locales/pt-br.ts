@@ -101,6 +101,35 @@ const ptBR: Messages = {
     deleteTitle: 'Excluir Account Manager',
     deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
   },
+  pricingSettings: {
+    title: 'Painel de Controle',
+    subtitle:
+      'Limites usados pelas análises de eFMV para checar os valores digitados contra o Average Prices.',
+    saved: 'Configurações do Pricing salvas.',
+    lastChange: 'Última alteração em {date} por {name}',
+    beyondCompatible: 'Deve ser maior que a faixa compatível.',
+    monthsRange: 'Informe um número inteiro de meses de 1 a 120.',
+    positioning: {
+      title: 'Posicionamento Frente ao Average Prices',
+      subtitle:
+        'Como o valor unitário digitado para um bem se compara com o valor do seu preço médio (% desse valor).',
+      below: 'Abaixo do Histórico a Partir de',
+      belowHint: 'Esta diferença para menos, ou maior',
+      compatible: 'Compatível Até',
+      compatibleHint: 'No máximo esta diferença, para mais ou para menos',
+      above: 'Acima do Histórico a Partir de',
+      aboveHint: 'Esta diferença para mais, ou maior',
+    },
+    validity: {
+      title: 'Validade dos Preços Médios',
+      subtitle:
+        'Contada a partir da data da versão atual do preço médio. Análises que usam um preço mais antigo são marcadas como possivelmente desatualizadas.',
+      months: 'Válido Por',
+      acceptExpired: 'Aceitar Preços Médios Vencidos',
+      acceptExpiredOn: 'Ainda podem ser adicionados às análises (com aviso).',
+      acceptExpiredOff: 'As análises os recusam até serem atualizados no Average Prices.',
+    },
+  },
   efmv: {
     title: 'Análises de eFMV',
     subtitle:
@@ -124,6 +153,9 @@ const ptBR: Messages = {
     deleteTitle: 'Excluir Análise',
     deleteConfirm: 'Excluir a análise {code} e todos os seus cenários?',
     notSavedYet: 'Ainda não salva',
+    outdated: 'Possivelmente Desatualizada',
+    outdatedHint:
+      'Alguns preços médios usados passaram da validade; a análise pode estar desatualizada.',
     fixErrors: 'Corrija os campos marcados em vermelho.',
     fields: {
       code: 'Código',
@@ -155,6 +187,13 @@ const ptBR: Messages = {
       removeConfirm: 'Remover o cenário "{name}"? Ele só deixa de existir ao salvar.',
     },
     item: {
+      historical: 'Average Prices',
+      unitValueRule: 'Informe um valor maior que zero.',
+      pricedOn: 'cotado em {date}',
+      expired: 'Preço Vencido',
+      expiredHint: 'Preço médio de {date}, válido até {until}.',
+      expiredWarning:
+        'Alguns preços médios deste cenário passaram da validade (definida no Painel de Controle do Pricing): esta análise pode estar desatualizada.',
       asset: 'Bem',
       unitValue: 'Valor Unitário',
       quantity: 'Quantidade',
@@ -163,6 +202,20 @@ const ptBR: Messages = {
       curveUpTo: 'curva até {months} meses',
       deleted: 'Este preço médio foi excluído; será removido ao salvar.',
       outOfCurve: 'A curva de valor não chega a {term} meses; altere o prazo ou remova o bem.',
+    },
+    position: {
+      below: 'Abaixo do Histórico',
+      belowHint: 'O valor digitado está abaixo do valor histórico de Average Prices.',
+      slightly_below: 'Levemente Abaixo',
+      slightly_belowHint:
+        'O valor digitado está um pouco abaixo do valor histórico (entre a faixa compatível e o limite "abaixo").',
+      compatible: 'Compatível',
+      compatibleHint: 'O valor digitado é compatível com o valor histórico de Average Prices.',
+      slightly_above: 'Levemente Acima',
+      slightly_aboveHint:
+        'O valor digitado está um pouco acima do valor histórico (entre a faixa compatível e o limite "acima").',
+      above: 'Acima do Histórico',
+      aboveHint: 'O valor digitado está acima do valor histórico de Average Prices.',
     },
     totals: {
       lo: 'LO',

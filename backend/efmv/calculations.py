@@ -1,7 +1,8 @@
 """Calculations of eFMV analyses. Pure functions (no database), fully tested.
 
 Per scenario:
-- LO (Leasing Origination): the total value of its items, quantity × unit value.
+- LO (Leasing Origination): the total value of its items, quantity × unit value (typed by the
+  analyst; Average Prices only position it, see pricing/positioning.py).
 - HW / SW / SV: the share of hardware, software and services in the LO (2 decimal places).
   Assets from Average Prices are hardware; software and services come later.
 - eFMV at the end of the lease: to come (shown as a percentage, 2 decimal places).
