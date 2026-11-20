@@ -84,4 +84,10 @@ export const ASSET_ICONS: readonly string[] = [
   'mdi-robot',
   'mdi-bed',
   'mdi-laser-pointer',
+  'mdi-baby-face-outline',
+  'mdi-cradle',
+  'mdi-bed-single',
+  'mdi-lightbulb-on',
+  'mdi-pot-steam',
+  'mdi-washing-machine',
 ]
