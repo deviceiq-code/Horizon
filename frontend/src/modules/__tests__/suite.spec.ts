@@ -53,7 +53,7 @@ describe('suite apps and routes', () => {
     expect(SUITE_APPS.map((app) => appName(app, t))).toEqual([
       'Pricing',
       'Remarketing',
-      'Partners and Programs',
+      'Partners and Alliances',
       'Administração',
     ])
     expect(appModules('pricing', false).map((m) => m.name)).toEqual(['average-prices'])

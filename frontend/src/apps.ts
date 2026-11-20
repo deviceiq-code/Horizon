@@ -38,7 +38,7 @@ export const SUITE_APPS: readonly SuiteApp[] = [
   {
     id: 'partners',
     path: 'partners',
-    name: 'Partners and Programs',
+    name: 'Partners and Alliances',
     descriptionKey: 'apps.partners.description',
     icon: 'mdi-handshake-outline',
     comingSoon: true,

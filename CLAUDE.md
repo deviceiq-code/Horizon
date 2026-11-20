@@ -148,7 +148,7 @@ Multi-user web system for **operating lease residual value pricing**
     (`.v-data-table` in `.v-main`) stick right under it while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
-    (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Programs"
+    (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Alliances"
     (partnerships, incentive programs, discounts, fees) — both coming soon — and
     "Administração" (`/admin/…`: Customers, Catalogs — shared by every app — plus Users and
     System Settings, administrators only). App names have no "Horizon" and stay in English in
