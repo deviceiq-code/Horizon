@@ -166,6 +166,9 @@ const en = {
       createdAt: 'Created',
     },
     scenario: {
+      vertical: 'Vertical',
+      verticalHint: 'The assets it admits: a whole vertical or one of its sub-verticals.',
+      pickVerticalFirst: 'Choose the vertical first.',
       add: 'Add Scenario',
       defaultName: 'Scenario {n}',
       defaultBase: 'Scenario',
@@ -190,6 +193,7 @@ const en = {
       removeConfirm: 'Remove the scenario "{name}"? It is only gone after saving.',
     },
     item: {
+      outOfScope: "Not in the scenario's vertical; change the vertical or remove it.",
       position: 'Position',
       unitValueHint: 'Leave empty to use the value of Average Prices (shown in gray).',
       unitValueRule: 'Enter a value greater than zero.',

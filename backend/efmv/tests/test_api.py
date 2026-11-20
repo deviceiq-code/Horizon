@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from catalogs.models import AssetClass, SubVertical
+from catalogs.models import AssetClass, SubVertical, Vertical
 from customers.models import Customer
 from efmv.models import EfmvAnalysis, format_code
 from pricing.models import AveragePrice, PricingSettings
@@ -77,6 +77,7 @@ def body(managers, customers, prices, **overrides):
                 "name": "Base",
                 "term_months": 24,
                 "scope": "Yellow line fleet",
+                "vertical": industry(),
                 "items": [
                     {"average_price": prices["excavator"], "quantity": 2, "unit_value": "100000"},
                     {"average_price": prices["tractor"], "quantity": 1, "unit_value": "50000.00"},
@@ -85,6 +86,10 @@ def body(managers, customers, prices, **overrides):
         ],
         **overrides,
     }
+
+
+def industry():
+    return Vertical.objects.get(name="Industry").pk
 
 
 def post(client, data):
@@ -136,7 +141,7 @@ def test_at_least_one_scenario(logged_client, managers, customers, prices):
 
 
 def test_scenario_names_are_distinct(logged_client, managers, customers, prices):
-    scenario = {"name": "Base", "term_months": 12, "items": []}
+    scenario = {"name": "Base", "term_months": 12, "vertical": industry(), "items": []}
     r = post(
         logged_client,
         body(managers, customers, prices, scenarios=[scenario, {**scenario, "name": " base "}]),
@@ -217,11 +222,12 @@ def test_edit_replaces_scenarios(logged_client, managers, customers, prices):
             {
                 "name": "Short",
                 "term_months": 12,
+                "vertical": industry(),
                 "items": [
                     {"average_price": prices["tractor"], "quantity": 3, "unit_value": "50000"}
                 ],
             },
-            {"name": "Long", "term_months": 36, "scope": "", "items": []},
+            {"name": "Long", "term_months": 36, "scope": "", "vertical": industry(), "items": []},
         ],
     )
     r = logged_client.put(f"{URL}{analysis['id']}/", data, content_type="application/json")
@@ -351,3 +357,74 @@ def test_expired_prices_can_be_refused(logged_client, managers, customers, price
     r = post(logged_client, body(managers, customers, prices))
     assert r.status_code == 400
     assert "6 months" in r.json()["scenarios"]["0"]["items"]["0"]["average_price"][0]
+
+
+def test_the_vertical_is_required(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    del data["scenarios"][0]["vertical"]
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert "vertical" in r.json()["scenarios"]["0"]
+
+
+def test_a_sub_vertical_narrows_the_assets(logged_client, managers, customers, prices, catalog):
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["sub_vertical"] = catalog["yellow"].pk  # the tractor is in "Farm"
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert r.json()["scenarios"]["0"]["items"] == {
+        "1": {"average_price": ["This asset is not in the scenario's vertical."]}
+    }
+    data["scenarios"][0]["items"].pop()
+    r = post(logged_client, data)
+    assert r.status_code == 201, r.json()
+    scenario = r.json()["scenarios"][0]
+    assert (scenario["vertical"], scenario["sub_vertical"]) == (industry(), catalog["yellow"].pk)
+    assert scenario["scope_label"] == "Industry / Yellow line"
+
+
+def test_assets_of_another_vertical_are_refused(logged_client, managers, customers, prices):
+    other = Vertical.objects.create(name="Healthcare")
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["vertical"] = other.pk
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert set(r.json()["scenarios"]["0"]["items"]) == {"0", "1"}
+
+
+def test_the_sub_vertical_must_be_of_the_vertical(
+    logged_client, managers, customers, prices, catalog
+):
+    other = Vertical.objects.create(name="Healthcare")
+    data = body(managers, customers, prices)
+    data["scenarios"][0].update(vertical=other.pk, sub_vertical=catalog["yellow"].pk, items=[])
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert "sub_vertical" in r.json()["scenarios"]["0"]
+
+
+def test_preview_flags_assets_outside_the_vertical(logged_client, prices, catalog):
+    r = logged_client.post(
+        f"{URL}scenario-preview/",
+        {"term_months": 24, "vertical": industry(), "sub_vertical": catalog["yellow"].pk,
+         "items": [{"average_price": prices["excavator"], "quantity": 1},
+                   {"average_price": prices["tractor"], "quantity": 1}]},
+        content_type="application/json",
+    )  # fmt: skip
+    data = r.json()
+    assert [i["out_of_scope"] for i in data["items"]] == [False, True]
+    assert data["totals"]["lo"] == "100000.00"
+
+
+def test_verticals_used_by_scenarios_cannot_be_removed(
+    logged_client, managers, customers, prices, catalog
+):
+    data = body(managers, customers, prices)
+    data["scenarios"][0].update(sub_vertical=catalog["yellow"].pk, items=[])
+    assert post(logged_client, data).status_code == 201
+    Vertical.objects.create(name="Spare")
+    spare = Vertical.objects.get(name="Spare")
+    assert logged_client.delete(f"/api/catalogs/verticals/{spare.pk}/").status_code == 204
+    # Industry: used by the scenario (and by asset classes)
+    r = logged_client.delete(f"/api/catalogs/verticals/{industry()}/")
+    assert r.status_code == 409

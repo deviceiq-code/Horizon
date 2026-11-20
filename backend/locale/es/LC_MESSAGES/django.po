@@ -1031,3 +1031,19 @@ msgstr "Debe ser mayor que el rango compatible (%(value)s%%)."
 #: pricing/efmv
 msgid "This average price is more than %(months)s months old and expired prices are not accepted. Update it in Average Prices."
 msgstr "Este precio promedio tiene más de %(months)s meses y no se aceptan precios vencidos. Actualícelo en Precios Promedio."
+
+#: efmv/catalogs
+msgid "This asset is not in the scenario's vertical."
+msgstr "Este bien no está en la vertical del escenario."
+
+#: efmv/catalogs
+msgid "This sub-vertical is not of the chosen vertical."
+msgstr "Esta sub-vertical no es de la vertical elegida."
+
+#: efmv/catalogs
+msgid "This vertical is in use (asset classes or eFMV analyses) and cannot be deleted."
+msgstr "Esta vertical está en uso (clases de activo o análisis de eFMV) y no se puede eliminar."
+
+#: efmv/catalogs
+msgid "The sub-vertical \"%(name)s\" is in use (asset classes or eFMV analyses) and cannot be removed."
+msgstr "La sub-vertical \"%(name)s\" está en uso (clases de activo o análisis de eFMV) y no se puede quitar."

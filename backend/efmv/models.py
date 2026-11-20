@@ -73,6 +73,24 @@ class EfmvScenario(models.Model):
     )
     # Short explanation of the assets of the scenario
     scope = models.TextField(_("scope"), blank=True)
+    # Which assets can be in it: those of the vertical (any sub-vertical) or, when a
+    # sub-vertical is chosen, only those of that sub-vertical. Required by the API (null only
+    # for scenarios saved before it existed).
+    vertical = models.ForeignKey(
+        "catalogs.Vertical",
+        on_delete=models.PROTECT,
+        null=True,
+        related_name="efmv_scenarios",
+        verbose_name=_("vertical"),
+    )
+    sub_vertical = models.ForeignKey(
+        "catalogs.SubVertical",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="efmv_scenarios",
+        verbose_name=_("sub-vertical"),
+    )
     position = models.PositiveSmallIntegerField(_("position"), default=0)
 
     class Meta:
@@ -85,6 +103,19 @@ class EfmvScenario(models.Model):
 
     def __str__(self):
         return self.name
+
+    def admits(self, sub_vertical) -> bool:
+        """Whether an asset of this sub-vertical can be in the scenario."""
+        return in_scope(self.vertical_id, self.sub_vertical_id, sub_vertical)
+
+
+def in_scope(vertical_id, sub_vertical_id, sub_vertical) -> bool:
+    """An asset (by its sub-vertical) fits a scenario's vertical / sub-vertical."""
+    if vertical_id is None:
+        return True
+    if sub_vertical_id is not None:
+        return sub_vertical.pk == sub_vertical_id
+    return sub_vertical.vertical_id == vertical_id
 
 
 class EfmvScenarioItem(models.Model):

@@ -185,8 +185,8 @@ class VerticalSerializer(serializers.ModelSerializer):
                         {
                             "sub_verticals": [
                                 _(
-                                    'The sub-vertical "%(name)s" has asset classes and '
-                                    "cannot be removed."
+                                    'The sub-vertical "%(name)s" is in use (asset classes '
+                                    "or eFMV analyses) and cannot be removed."
                                 )
                                 % {"name": sub.name}
                             ]

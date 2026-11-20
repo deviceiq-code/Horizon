@@ -33,6 +33,8 @@ describe('eFMV analysis draft', () => {
     const scenario = blankScenario(' Base ')
     scenario.term = '24'
     scenario.scope = ' Fleet '
+    scenario.vertical = 1
+    scenario.sub_vertical = 11
     scenario.items = [
       { key: 1, average_price: 7, quantity: 2, unit_value: '100.000,50' },
       { key: 2, average_price: null, quantity: 1, unit_value: '' },
@@ -42,6 +44,8 @@ describe('eFMV analysis draft', () => {
       name: 'Base',
       term_months: 24,
       scope: 'Fleet',
+      vertical: 1,
+      sub_vertical: 11,
       items: [
         { average_price: 7, quantity: 2, unit_value: '100000.50' },
         { average_price: 8, quantity: 1, unit_value: null },

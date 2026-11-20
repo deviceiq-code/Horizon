@@ -467,7 +467,10 @@ def test_vertical_with_asset_classes_cannot_be_deleted(logged_client, asset_clas
     industry = verticals["industry"]
     r = logged_client.delete(f"/api/catalogs/verticals/{industry.pk}/")
     assert r.status_code == 409
-    assert r.json()["detail"] == "This vertical has asset classes and cannot be deleted."
+    assert (
+        r.json()["detail"]
+        == "This vertical is in use (asset classes or eFMV analyses) and cannot be deleted."
+    )
     assert Vertical.objects.filter(pk=industry.pk).exists()
 
 
@@ -489,7 +492,8 @@ def test_sub_vertical_with_asset_classes_cannot_be_removed(logged_client, asset_
     r = _patch(logged_client, "/api/catalogs/verticals/", industry.pk, payload)
     assert r.status_code == 400
     assert r.json()["sub_verticals"] == [
-        'The sub-vertical "Yellow line" has asset classes and cannot be removed.'
+        'The sub-vertical "Yellow line" is in use (asset classes or eFMV analyses) and cannot '
+        "be removed."
     ]
     assert industry.sub_verticals.count() == 2
 

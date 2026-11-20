@@ -165,6 +165,9 @@ const es: Messages = {
       createdAt: 'Creado',
     },
     scenario: {
+      vertical: 'Vertical',
+      verticalHint: 'Los bienes que admite: una vertical entera o una de sus sub-verticales.',
+      pickVerticalFirst: 'Elija primero la vertical.',
       add: 'Agregar Escenario',
       defaultName: 'Escenario {n}',
       defaultBase: 'Escenario',
@@ -189,6 +192,7 @@ const es: Messages = {
       removeConfirm: '¿Quitar el escenario "{name}"? Solo deja de existir al guardar.',
     },
     item: {
+      outOfScope: 'No es de la vertical del escenario; cambie la vertical o quite el bien.',
       position: 'Posicionamiento',
       unitValueHint: 'Deje vacío para usar el valor de los precios promedio (mostrado en gris).',
       unitValueRule: 'Ingrese un valor mayor que cero.',

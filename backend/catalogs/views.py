@@ -74,7 +74,12 @@ class VerticalViewSet(viewsets.ModelViewSet):
             return super().destroy(request, *args, **kwargs)
         except ProtectedError:
             return Response(
-                {"detail": _("This vertical has asset classes and cannot be deleted.")},
+                {
+                    "detail": _(
+                        "This vertical is in use (asset classes or eFMV analyses) and cannot "
+                        "be deleted."
+                    )
+                },
                 status=status.HTTP_409_CONFLICT,
             )
 

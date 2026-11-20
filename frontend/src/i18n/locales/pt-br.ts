@@ -164,6 +164,9 @@ const ptBR: Messages = {
       createdAt: 'Criada em',
     },
     scenario: {
+      vertical: 'Vertical',
+      verticalHint: 'Os bens que ele admite: uma vertical inteira ou uma de suas sub-verticais.',
+      pickVerticalFirst: 'Escolha primeiro a vertical.',
       add: 'Adicionar Cenário',
       defaultName: 'Cenário {n}',
       defaultBase: 'Cenário',
@@ -188,6 +191,7 @@ const ptBR: Messages = {
       removeConfirm: 'Remover o cenário "{name}"? Ele só deixa de existir ao salvar.',
     },
     item: {
+      outOfScope: 'Não é da vertical do cenário; altere a vertical ou remova o bem.',
       position: 'Posicionamento',
       unitValueHint: 'Deixe vazio para usar o valor do Average Prices (mostrado em cinza).',
       unitValueRule: 'Informe um valor maior que zero.',

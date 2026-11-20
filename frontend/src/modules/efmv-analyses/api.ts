@@ -66,6 +66,8 @@ export interface ScenarioItem {
   position?: PricePosition | null
   /** The curve does not reach the scenario's term (left out of the totals; refused on save) */
   out_of_curve: boolean
+  /** Not of the scenario's vertical / sub-vertical (left out of the totals; refused on save) */
+  out_of_scope?: boolean
 }
 
 export interface Scenario {
@@ -73,6 +75,11 @@ export interface Scenario {
   name: string
   term_months: number
   scope: string
+  /** The assets it admits: the vertical's, or only the sub-vertical's when set */
+  vertical: number | null
+  sub_vertical: number | null
+  /** "Industry" or "Industry / Yellow line" */
+  scope_label: string | null
   items: ScenarioItem[]
   totals: ScenarioTotals
   /** Some average price used is past its validity */
@@ -117,6 +124,8 @@ export interface ScenarioInput {
   name: string
   term_months: number
   scope: string
+  vertical: number | null
+  sub_vertical: number | null
   items: ScenarioItemInput[]
 }
 
@@ -161,7 +170,12 @@ export function deleteEfmvAnalysis(id: number) {
 }
 
 /** Figures of a scenario being edited (nothing is saved). */
-export function previewScenario(data: { term_months: number; items: ScenarioItemInput[] }) {
+export function previewScenario(data: {
+  term_months: number
+  vertical: number | null
+  sub_vertical: number | null
+  items: ScenarioItemInput[]
+}) {
   return api<ScenarioPreview>(`${BASE}scenario-preview/`, {
     method: 'POST',
     body: JSON.stringify(data),

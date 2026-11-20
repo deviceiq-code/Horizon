@@ -10,7 +10,13 @@ import RemoteAutocomplete, { type RemoteOption } from '@/components/RemoteAutoco
 import { listAveragePrices, type AveragePrice } from '@/modules/average-prices/api'
 import { specSummary } from '@/modules/average-prices/specText'
 
-defineProps<{ label: string; exclude: number[] }>()
+const props = defineProps<{
+  label: string
+  exclude: number[]
+  /** Only assets of this vertical / sub-vertical (the scenario's) */
+  vertical?: number | null
+  subVertical?: number | null
+}>()
 const emit = defineEmits<{ pick: [id: number] }>()
 
 const { t, n } = useI18n()
@@ -31,6 +37,10 @@ async function search(term: string): Promise<RemoteOption[]> {
     pageSize: 20,
     search: term,
     ordering: 'asset_class__name',
+    filters: {
+      ...(props.vertical ? { vertical: props.vertical } : {}),
+      ...(props.subVertical ? { sub_vertical: props.subVertical } : {}),
+    },
   })
   return data.results.map((row) => ({
     value: row.id,

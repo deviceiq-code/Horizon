@@ -50,7 +50,12 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
     queryset = EfmvAnalysis.objects.select_related(
         "account_manager", "customer", "created_by"
     ).prefetch_related(
-        Prefetch("scenarios", queryset=EfmvScenario.objects.prefetch_related("items"))
+        Prefetch(
+            "scenarios",
+            queryset=EfmvScenario.objects.select_related(
+                "vertical", "sub_vertical__vertical"
+            ).prefetch_related("items"),
+        )
     )
     filter_backends = [AnalysisSearchFilter, AnalysisOrderingFilter]
     search_fields = [

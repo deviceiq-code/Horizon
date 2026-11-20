@@ -7,6 +7,7 @@ import { ApiError } from '@/api'
 import { i18n, setLanguage } from '@/i18n'
 import * as managersApi from '@/modules/account-managers/api'
 import * as pricesApi from '@/modules/average-prices/api'
+import * as verticalsApi from '@/modules/catalogs/verticals/api'
 import * as customersApi from '@/modules/customers/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
@@ -27,6 +28,9 @@ vi.mock('@/modules/customers/api', () => ({
 vi.mock('@/modules/account-managers/api', () => ({
   listAccountManagers: vi.fn<typeof managersApi.listAccountManagers>(),
 }))
+vi.mock('@/modules/catalogs/verticals/api', () => ({
+  listSubVerticals: vi.fn<typeof verticalsApi.listSubVerticals>(),
+}))
 vi.mock('@/modules/average-prices/api', () => ({
   listAveragePrices: vi.fn<typeof pricesApi.listAveragePrices>(),
 }))
@@ -35,6 +39,7 @@ const efmv = vi.mocked(efmvApi)
 const customers = vi.mocked(customersApi)
 const managers = vi.mocked(managersApi)
 const prices = vi.mocked(pricesApi)
+const verticals = vi.mocked(verticalsApi)
 
 const dropdownSubtitles = () =>
   [...document.querySelectorAll('.v-overlay--active .v-list-item-subtitle')].map((el) =>
@@ -109,6 +114,9 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
       name: 'Base',
       term_months: 36,
       scope: 'Fleet',
+      vertical: 1,
+      sub_vertical: null,
+      scope_label: 'Industry',
       items: [EXCAVATOR],
       totals: TOTALS,
       has_expired: false,
@@ -162,6 +170,28 @@ describe('EfmvAnalysisView', () => {
       page([{ id: 20, name: 'Acme Ltda', trade_name: '' } as customersApi.Customer]),
     )
     managers.listAccountManagers.mockResolvedValue(page([]))
+    verticals.listSubVerticals.mockResolvedValue(
+      page([
+        {
+          id: 10,
+          name: 'General',
+          is_general: true,
+          label: 'Industry / General',
+          vertical: { id: 1, name: 'Industry', is_enabled: true },
+          allowed_terms: [36],
+          recommended_term: 36,
+        },
+        {
+          id: 11,
+          name: 'Yellow line',
+          is_general: false,
+          label: 'Industry / Yellow line',
+          vertical: { id: 1, name: 'Industry', is_enabled: true },
+          allowed_terms: [36],
+          recommended_term: 36,
+        },
+      ]),
+    )
     prices.listAveragePrices.mockResolvedValue(
       page([
         {
@@ -222,12 +252,18 @@ describe('EfmvAnalysisView', () => {
     )
     await typeInto('scenario-name', 'Base')
     await typeInto('scenario-term', '36')
+    // The vertical comes first: it limits the assets offered
+    expect(inBody('[data-testid="add-row"]')!.hasAttribute('disabled')).toBe(true)
+    await pickOption('scenario-vertical', 'Yellow line')
     // "+ Row" adds an empty row; the asset is chosen in it
     await click('add-row')
     expect(inBody('[data-testid="quantity"] input')!.hasAttribute('disabled')).toBe(true)
     await openDropdown('add-asset')
     expect(dropdownSubtitles()).toEqual(['Caterpillar · Excavators'])
     await pickOption('add-asset', '320 GC (2500 h, Cab: Yes)')
+    expect(prices.listAveragePrices).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filters: { vertical: 1, sub_vertical: 11 } }),
+    )
     expect(inBody('[data-testid="add-asset"]')).toBeNull()
     // The value is not taken from Average Prices: the analyst types it
     expect((inBody('[data-testid="unit-value"] input') as HTMLInputElement).value).toBe('')
@@ -235,6 +271,8 @@ describe('EfmvAnalysisView', () => {
     await debounce()
     expect(efmv.previewScenario).toHaveBeenLastCalledWith({
       term_months: 36,
+      vertical: 1,
+      sub_vertical: 11,
       items: [{ average_price: 7, quantity: 1, unit_value: '100000' }],
     })
     expect(inBody('[data-testid="position"]')!.textContent).toContain('Compatible')
@@ -257,6 +295,8 @@ describe('EfmvAnalysisView', () => {
           name: 'Base',
           term_months: 36,
           scope: '',
+          vertical: 1,
+          sub_vertical: 11,
           items: [{ average_price: 7, quantity: 1, unit_value: '100000' }],
         },
       ],
@@ -398,6 +438,8 @@ describe('EfmvAnalysisView', () => {
     expect(input.placeholder).toBe('100,000.00')
     expect(efmv.previewScenario).toHaveBeenLastCalledWith({
       term_months: 36,
+      vertical: 1,
+      sub_vertical: null,
       items: [{ average_price: 7, quantity: 2, unit_value: null }],
     })
     await click('save')
@@ -427,10 +469,30 @@ describe('EfmvAnalysisView', () => {
           name: 'Base',
           term_months: 36,
           scope: 'Fleet',
+          vertical: 1,
+          sub_vertical: null,
           items: [{ average_price: 7, quantity: 2, unit_value: '100000.00' }],
         },
       ],
     })
+    wrapper.unmount()
+  })
+
+  it('assets outside the vertical are flagged and mark the tab', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView({ id: 3 })
+    efmv.previewScenario.mockResolvedValue({
+      items: [{ ...EXCAVATOR, out_of_scope: true }],
+      totals: { ...TOTALS, lo: '0.00', hw_percent: null, sw_percent: null, sv_percent: null },
+      has_expired: false,
+    })
+    await pickOption('scenario-vertical', 'Yellow line')
+    await debounce()
+    expect(efmv.previewScenario).toHaveBeenLastCalledWith(
+      expect.objectContaining({ vertical: 1, sub_vertical: 11 }),
+    )
+    expect(inBody('[data-testid="out-of-scope"]')!.textContent).toContain("scenario's vertical")
+    expect(inBody('[data-testid="tab-0"] [data-testid="tab-issue"]')).not.toBeNull()
     wrapper.unmount()
   })
 

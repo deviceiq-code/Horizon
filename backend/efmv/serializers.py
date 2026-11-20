@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from catalogs.models import MAX_TERM_MONTHS
+from catalogs.models import MAX_TERM_MONTHS, SubVertical, Vertical
 from catalogs.serializers import sub_vertical_label
 from pricing.models import AveragePrice, PricingSettings
 from pricing.positioning import is_expired, price_position, valid_until, variation_percent
@@ -14,7 +14,7 @@ from users.display import full_name_in, person_ref
 from users.models import is_account_manager
 
 from .calculations import Line, covers_term, line_total, scenario_totals
-from .models import EfmvAnalysis, EfmvScenario, EfmvScenarioItem
+from .models import EfmvAnalysis, EfmvScenario, EfmvScenarioItem, in_scope
 
 User = get_user_model()
 
@@ -47,6 +47,13 @@ def asset_detail(row: AveragePrice) -> dict:
         "currency": row.currency,
         "terms": price_terms(row),
     }
+
+
+def scope_label(vertical, sub_vertical) -> str | None:
+    """ "Healthcare" or "Healthcare / Diagnostics" (the general sub-vertical shows translated)."""
+    if vertical is None:
+        return None
+    return sub_vertical_label(sub_vertical) if sub_vertical else vertical.name
 
 
 def totals_payload(totals) -> dict:
@@ -92,10 +99,18 @@ def price_check(row: AveragePrice, unit_value, ctx: Context) -> dict:
     return data
 
 
-def scenario_payload(term_months: int, items: list[tuple], prices: dict, ctx: Context) -> dict:
-    """`items`: (item id or None, lineage, quantity, typed unit value or None). Without a typed
-    value the average price's value counts (`value_from_price`). Items whose price was deleted
-    or whose curve no longer reaches the term are flagged and left out of the totals."""
+def scenario_payload(
+    term_months: int,
+    items: list[tuple],
+    prices: dict,
+    ctx: Context,
+    scope: tuple = (None, None),
+) -> dict:
+    """`items`: (item id or None, lineage, quantity, typed unit value or None); `scope`: the
+    scenario's (vertical id, sub-vertical id). Without a typed value the average price's value
+    counts (`value_from_price`). Items whose price was deleted, whose curve no longer reaches
+    the term or that are outside the scenario's vertical are flagged and left out of the
+    totals."""
     lines, rows = [], []
     for item_id, lineage, quantity, typed in items:
         row = prices.get(lineage)
@@ -109,13 +124,22 @@ def scenario_payload(term_months: int, items: list[tuple], prices: dict, ctx: Co
             "available": row is not None,
         }
         if row is None:
-            entry.update({"average_price": None, "out_of_curve": False, "expired": False})
+            entry.update(
+                {
+                    "average_price": None,
+                    "out_of_curve": False,
+                    "out_of_scope": False,
+                    "expired": False,
+                }
+            )
         else:
             out = not covers_term(price_terms(row), term_months)
+            outside = not in_scope(*scope, row.sub_vertical)
             entry.update(asset_detail(row))
             entry.update(price_check(row, unit_value, ctx))
             entry["out_of_curve"] = out
-            if not out and unit_value is not None:
+            entry["out_of_scope"] = outside
+            if not out and not outside and unit_value is not None:
                 lines.append(Line("hw", quantity, unit_value))
         rows.append(entry)
     return {
@@ -147,6 +171,11 @@ class ScenarioInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     term_months = serializers.IntegerField(min_value=1, max_value=MAX_TERM_MONTHS)
     scope = serializers.CharField(required=False, allow_blank=True, default="")
+    # The assets it admits: the vertical's, or only the sub-vertical's when one is chosen
+    vertical = serializers.PrimaryKeyRelatedField(queryset=Vertical.objects.all())
+    sub_vertical = serializers.PrimaryKeyRelatedField(
+        queryset=SubVertical.objects.all(), required=False, allow_null=True, default=None
+    )
     items = ItemInputSerializer(many=True, required=False, default=list)
 
     def validate_name(self, value):
@@ -156,6 +185,11 @@ class ScenarioInputSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        vertical, sub_vertical = attrs["vertical"], attrs.get("sub_vertical")
+        if sub_vertical is not None and sub_vertical.vertical_id != vertical.pk:
+            raise serializers.ValidationError(
+                {"sub_vertical": [_("This sub-vertical is not of the chosen vertical.")]}
+            )
         lineages = [item["average_price"].lineage for item in attrs["items"]]
         prices = current_prices(lineages)
         ctx = Context()
@@ -169,6 +203,10 @@ class ScenarioInputSerializer(serializers.Serializer):
                 }
             elif row is None:
                 errors[str(index)] = {"average_price": [_("This average price was deleted.")]}
+            elif not in_scope(vertical.pk, sub_vertical and sub_vertical.pk, row.sub_vertical):
+                errors[str(index)] = {
+                    "average_price": [_("This asset is not in the scenario's vertical.")]
+                }
             elif not covers_term(price_terms(row), attrs["term_months"]):
                 errors[str(index)] = {
                     "average_price": [
@@ -283,11 +321,15 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                 "name": s.name,
                 "term_months": s.term_months,
                 "scope": s.scope,
+                "vertical": s.vertical_id,
+                "sub_vertical": s.sub_vertical_id,
+                "scope_label": scope_label(s.vertical, s.sub_vertical),
                 **scenario_payload(
                     s.term_months,
                     [(i.id, i.price_lineage, i.quantity, i.unit_value) for i in items[s.pk]],
                     prices,
                     ctx,
+                    (s.vertical_id, s.sub_vertical_id),
                 ),
             }
             for s in scenarios
@@ -304,6 +346,8 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                 name=scenario["name"],
                 term_months=scenario["term_months"],
                 scope=scenario.get("scope", ""),
+                vertical=scenario["vertical"],
+                sub_vertical=scenario.get("sub_vertical"),
                 position=position,
             )
             EfmvScenarioItem.objects.bulk_create(
@@ -387,6 +431,8 @@ class ScenarioPreviewSerializer(serializers.Serializer):
     """The figures of a scenario being edited (nothing saved): the form never computes them."""
 
     term_months = serializers.IntegerField(min_value=1, max_value=MAX_TERM_MONTHS)
+    vertical = serializers.IntegerField(required=False, allow_null=True, default=None)
+    sub_vertical = serializers.IntegerField(required=False, allow_null=True, default=None)
     items = ItemInputSerializer(many=True)
 
     def to_representation(self, instance):
@@ -395,7 +441,8 @@ class ScenarioPreviewSerializer(serializers.Serializer):
             for i in instance["items"]
         ]
         prices = current_prices(item[1] for item in items)
-        return scenario_payload(instance["term_months"], items, prices, Context())
+        scope = (instance.get("vertical"), instance.get("sub_vertical"))
+        return scenario_payload(instance["term_months"], items, prices, Context(), scope)
 
 
 # Silence "imported but unused" for names used only in type contexts

@@ -12,6 +12,7 @@ import { useValidationRules } from '@/composables/useValidationRules'
 import { specSummary } from '@/modules/average-prices/specText'
 import { formatMoney, toInputMoney } from '@/utils/money'
 import AveragePricePicker from './AveragePricePicker.vue'
+import VerticalScopePicker, { type VerticalScope } from './VerticalScopePicker.vue'
 import ScenarioTotalsBar from './ScenarioTotalsBar.vue'
 import { previewScenario, type PricePosition, type ScenarioItem } from './api'
 import {
@@ -72,7 +73,12 @@ async function refresh() {
   const current = ++request
   pending.value = true
   try {
-    const preview = await previewScenario({ term_months: term, items: input.items })
+    const preview = await previewScenario({
+      term_months: term,
+      vertical: input.vertical,
+      sub_vertical: input.sub_vertical,
+      items: input.items,
+    })
     if (current !== request) return
     // Put the details back in the positions of `items` (deleted prices were not sent)
     const sent = [...preview.items]
@@ -110,6 +116,8 @@ function deletedItem(quantity: number): ScenarioItem {
 const watched = computed(() =>
   JSON.stringify([
     scenario.value.term,
+    scenario.value.vertical,
+    scenario.value.sub_vertical,
     scenario.value.items.map((i) => [i.average_price, i.quantity, i.unit_value]),
   ]),
 )
@@ -233,6 +241,15 @@ function signedPercent(value: string): string {
   return `${number > 0 ? '+' : ''}${n(number, 'percentValue')}%`
 }
 
+/** The scenario's vertical / sub-vertical, as the picker edits it */
+const verticalScope = computed<VerticalScope>({
+  get: () => ({ vertical: scenario.value.vertical, sub_vertical: scenario.value.sub_vertical }),
+  set: (value) => {
+    scenario.value.vertical = value.vertical
+    scenario.value.sub_vertical = value.sub_vertical
+  },
+})
+
 /** "Ultra 7 265U vPro, 32 GB, 14 Inches" */
 const specsOf = (index: number) => specSummary(detail(index)?.specs ?? [], t, n)
 
@@ -289,6 +306,17 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               />
             </div>
           </div>
+          <VerticalScopePicker
+            v-model="verticalScope"
+            :label="`${$t('efmv.scenario.vertical')} *`"
+            :current-label="scenario.scope_label"
+            :rules="[() => scenario.vertical !== null || t('validation.required')]"
+            :error-messages="[...(errors?.vertical ?? []), ...(errors?.sub_vertical ?? [])]"
+            :hint="$t('efmv.scenario.verticalHint')"
+            density="compact"
+            class="mb-1"
+            data-testid="scenario-vertical"
+          />
           <v-textarea
             v-model="scenario.scope"
             :label="$t('efmv.scenario.scope')"
@@ -321,6 +349,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           color="primary"
           prepend-icon="mdi-plus"
           class="text-none"
+          :disabled="scenario.vertical === null"
+          :title="scenario.vertical === null ? $t('efmv.scenario.pickVerticalFirst') : undefined"
           data-testid="add-row"
           @click="addRow"
         >
@@ -370,7 +400,10 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           v-for="(item, i) in scenario.items"
           :key="item.key"
           :data-row="i"
-          :class="{ 'row-off': detail(i)?.out_of_curve || item.average_price === null }"
+          :class="{
+            'row-off':
+              detail(i)?.out_of_curve || detail(i)?.out_of_scope || item.average_price === null,
+          }"
           data-testid="asset-row"
         >
           <td class="row-number">{{ i + 1 }}</td>
@@ -395,6 +428,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               label=""
               :placeholder="$t('efmv.scenario.chooseAsset')"
               :exclude="chosen"
+              :vertical="scenario.vertical"
+              :sub-vertical="scenario.sub_vertical"
               prepend-inner-icon="mdi-magnify"
               variant="plain"
               density="compact"
@@ -454,6 +489,14 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             </div>
             <v-progress-circular v-else indeterminate size="16" width="2" />
             <div
+              v-if="detail(i)?.out_of_scope && !itemError(i).length"
+              class="text-caption text-error"
+              data-testid="out-of-scope"
+            >
+              <v-icon icon="mdi-alert-circle-outline" size="x-small" />
+              {{ $t('efmv.item.outOfScope') }}
+            </div>
+            <div
               v-if="detail(i)?.out_of_curve && !itemError(i).length"
               class="text-caption text-error"
               data-testid="out-of-curve"
@@ -502,7 +545,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           </td>
           <td
             class="cell-text text-end text-no-wrap numeric font-weight-medium"
-            :class="{ 'text-disabled': detail(i)?.out_of_curve }"
+            :class="{ 'text-disabled': detail(i)?.out_of_curve || detail(i)?.out_of_scope }"
           >
             {{
               detail(i)?.line_total ? formatMoney(detail(i)!.line_total!, currency, locale) : '—'

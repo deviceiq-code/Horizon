@@ -174,6 +174,8 @@ function hasIssues(index: number): boolean {
     scenario.name.length > 100 ||
     otherNames(index).some((n) => n.trim().toLowerCase() === name) ||
     parseTerm(scenario.term) === null ||
+    scenario.vertical === null ||
+    !!scenario.preview?.items.some((i) => i.out_of_scope) ||
     scenario.items.some(
       (i) =>
         i.average_price !== null &&
