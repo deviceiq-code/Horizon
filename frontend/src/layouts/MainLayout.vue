@@ -71,7 +71,7 @@ async function logout() {
       <v-app-bar-nav-icon :aria-label="$t('menu.open')" @click="toggleMenu" />
       <AppLauncher />
     </template>
-    <!-- "Horizon Pricing", "Administração"… or just "Horizon" outside an app -->
+    <!-- "Pricing", "Administração"… or just "Horizon" outside an app -->
     <v-app-bar-title data-testid="app-title">{{ title }}</v-app-bar-title>
     <!-- Only the signed-in user; their menu holds the account actions (language and theme
          are in Settings) -->

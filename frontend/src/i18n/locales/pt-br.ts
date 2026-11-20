@@ -59,6 +59,9 @@ const ptBR: Messages = {
     remarketing: {
       description: 'Estoque e venda de bens usados.',
     },
+    partners: {
+      description: 'Parcerias, programas de incentivo, descontos e fees.',
+    },
     admin: {
       title: 'Administração',
       description:

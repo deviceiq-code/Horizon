@@ -3,16 +3,14 @@
  * under its own address prefix and side menu. "Administration" holds what every app shares:
  * catalogs, customers, account managers, users and system settings.
  */
-export type AppId = 'pricing' | 'remarketing' | 'admin'
+export type AppId = 'pricing' | 'remarketing' | 'partners' | 'admin'
 
 export interface SuiteApp {
   id: AppId
   /** Address prefix of the app's pages ("/pricing/...") */
   path: string
-  /** Brand name (not translated); absent when the name is translated with titleKey */
+  /** App name (not translated, e.g. "Pricing"); absent when translated with titleKey */
   name?: string
-  /** Short brand name for the breadcrumb ("Pricing") */
-  shortName?: string
   /** Translated name (areas like Administration) */
   titleKey?: string
   descriptionKey: string
@@ -25,18 +23,24 @@ export const SUITE_APPS: readonly SuiteApp[] = [
   {
     id: 'pricing',
     path: 'pricing',
-    name: 'Horizon Pricing',
-    shortName: 'Pricing',
+    name: 'Pricing',
     descriptionKey: 'apps.pricing.description',
     icon: 'mdi-chart-timeline-variant',
   },
   {
     id: 'remarketing',
     path: 'remarketing',
-    name: 'Horizon Remarketing',
-    shortName: 'Remarketing',
+    name: 'Remarketing',
     descriptionKey: 'apps.remarketing.description',
     icon: 'mdi-storefront-outline',
+    comingSoon: true,
+  },
+  {
+    id: 'partners',
+    path: 'partners',
+    name: 'Partners and Programs',
+    descriptionKey: 'apps.partners.description',
+    icon: 'mdi-handshake-outline',
     comingSoon: true,
   },
   {
@@ -54,12 +58,7 @@ export function suiteApp(id: string | undefined | null): SuiteApp | undefined {
 
 type Translate = (key: string) => string
 
-/** Full name: "Horizon Pricing" / "Administração". */
+/** "Pricing" / "Administração". */
 export function appName(app: SuiteApp, t: Translate): string {
   return app.name ?? t(app.titleKey!)
-}
-
-/** Name in the breadcrumb: "Pricing" / "Administração". */
-export function appShortName(app: SuiteApp, t: Translate): string {
-  return app.shortName ?? appName(app, t)
 }

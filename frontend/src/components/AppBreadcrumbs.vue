@@ -7,7 +7,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, type RouteLocationRaw } from 'vue-router'
-import { appShortName, suiteApp } from '@/apps'
+import { appName, suiteApp } from '@/apps'
 import { appModules } from '@/modules'
 import { useAuthStore } from '@/stores/auth'
 
@@ -26,7 +26,7 @@ const crumbs = computed<Crumb[]>(() => {
   if (app) {
     // The app links to its first page
     const first = appModules(app.id, !!auth.user?.is_admin)[0]
-    items.push({ title: appShortName(app, t), to: first ? { name: first.name } : undefined })
+    items.push({ title: appName(app, t), to: first ? { name: first.name } : undefined })
   }
   for (const record of route.matched) {
     const key = record.meta.titleKey as string | undefined

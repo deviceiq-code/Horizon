@@ -60,6 +60,9 @@ const es: Messages = {
     remarketing: {
       description: 'Inventario y venta de bienes usados.',
     },
+    partners: {
+      description: 'Alianzas, programas de incentivos, descuentos y fees.',
+    },
     admin: {
       title: 'Administración',
       description:

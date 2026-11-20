@@ -101,6 +101,7 @@ describe('MainLayout', () => {
     expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-app-admin"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-app-remarketing"]')).toBeNull() // coming soon
+    expect(inBody('[data-testid="menu-app-partners"]')).toBeNull()
     wrapper.unmount()
   })
 
@@ -118,10 +119,10 @@ describe('MainLayout', () => {
 
   it('the app launcher lists the apps; Remarketing is coming soon', async () => {
     const { wrapper } = await mountLayout('/pricing/average-prices')
-    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Horizon Pricing')
+    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Pricing')
     await click('app-launcher')
     const menu = inBody('[data-testid="app-launcher-menu"]')!
-    expect(menu.textContent).toContain('Horizon Pricing')
+    expect(menu.textContent).toContain('Pricing')
     expect(menu.textContent).toContain('Coming Soon')
     expect(inBody('[data-testid="launcher-remarketing"]')!.className).toContain(
       'v-list-item--disabled',

@@ -51,8 +51,9 @@ describe('suite apps and routes', () => {
     const t = (key: string) => i18n.global.t(key)
     setLanguage('pt-br')
     expect(SUITE_APPS.map((app) => appName(app, t))).toEqual([
-      'Horizon Pricing',
-      'Horizon Remarketing',
+      'Pricing',
+      'Remarketing',
+      'Partners and Programs',
       'Administração',
     ])
     expect(appModules('pricing', false).map((m) => m.name)).toEqual(['average-prices'])

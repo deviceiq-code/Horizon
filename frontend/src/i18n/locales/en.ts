@@ -62,6 +62,9 @@ const en = {
     remarketing: {
       description: 'Stock and sale of used assets.',
     },
+    partners: {
+      description: 'Partnerships, incentive programs, discounts and fees.',
+    },
     admin: {
       title: 'Administration',
       description:

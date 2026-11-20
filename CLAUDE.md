@@ -147,11 +147,12 @@ Multi-user web system for **operating lease residual value pricing**
     `--horizon-path-bar-height`); on screens ≥ 960 px the column titles of every grid in a page
     (`.v-data-table` in `.v-main`) stick right under it while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
-  - **Suite of apps** (like Microsoft 365): `src/apps.ts` (`SUITE_APPS`): "Horizon Pricing"
-    (`/pricing/…`), "Horizon Remarketing" (coming soon) and "Administração" (`/admin/…`:
-    Customers, Account Managers, Catalogs — shared by every app — plus Users and System Settings,
-    administrators only). App names are brands (English in every language); areas are
-    translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
+  - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
+    (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Programs"
+    (partnerships, incentive programs, discounts, fees) — both coming soon — and
+    "Administração" (`/admin/…`: Customers, Catalogs — shared by every app — plus Users and
+    System Settings, administrators only). App names have no "Horizon" and stay in English in
+    every language; areas are translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
     prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
     the prefix. Navigation: the top bar shows the app name and the app launcher
     (`AppLauncher.vue`); under it the path bar (`AppBreadcrumbs.vue`: Horizon › app › module ›
