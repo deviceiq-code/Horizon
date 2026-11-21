@@ -10,6 +10,8 @@ export interface ItemDraft {
   quantity: number
   /** Unit value as typed, in the UI language ("100.000,50" in pt-br) */
   unit_value: string
+  /** eFMV value of one unit as typed; empty = the curve's value at the term */
+  efmv_value: string
   /** A new row whose asset is not chosen yet (left out when saving) */
   pending?: boolean
 }
@@ -37,7 +39,10 @@ export interface ScenarioErrors {
   vertical?: string[]
   sub_vertical?: string[]
   scope?: string[]
-  items?: Record<string, { average_price?: string[]; quantity?: string[]; unit_value?: string[] }>
+  items?: Record<
+    string,
+    { average_price?: string[]; quantity?: string[]; unit_value?: string[]; efmv_value?: string[] }
+  >
 }
 
 export const DEFAULT_TERM = 36
@@ -74,6 +79,9 @@ export function scenarioDraft(s: Scenario, language: string): ScenarioDraft {
       average_price: i.average_price,
       quantity: i.quantity,
       unit_value: i.unit_value === null ? '' : toInputMoney(i.unit_value, language),
+      // Typed only when it is not the curve's (that one stays the placeholder)
+      efmv_value:
+        i.efmv_value == null || i.efmv_from_curve ? '' : toInputMoney(i.efmv_value, language),
     })),
     preview: { items: s.items, totals: s.totals, has_expired: s.has_expired },
   }
@@ -104,6 +112,13 @@ export function parseUnitValue(text: string, language: string): string | null {
   return value !== null && Number(value) > 0 ? value : null
 }
 
+/** The eFMV value typed (zero allowed), as a canonical decimal string, or null when empty or
+ * invalid. */
+export function parseEfmvValue(text: string, language: string): string | null {
+  const value = parseMoney(text, language)
+  return value !== null && Number(value) >= 0 ? value : null
+}
+
 /** Input for the API; assets whose price was deleted are left out. */
 export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput {
   return {
@@ -118,6 +133,7 @@ export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput
         average_price: i.average_price!,
         quantity: i.quantity,
         unit_value: parseUnitValue(i.unit_value, language),
+        efmv_value: parseEfmvValue(i.efmv_value ?? '', language),
       })),
   }
 }

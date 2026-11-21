@@ -1047,3 +1047,6 @@ msgstr "Esta vertical está en uso (clases de activo o análisis de eFMV) y no s
 #: efmv/catalogs
 msgid "The sub-vertical \"%(name)s\" is in use (asset classes or eFMV analyses) and cannot be removed."
 msgstr "La sub-vertical \"%(name)s\" está en uso (clases de activo o análisis de eFMV) y no se puede quitar."
+
+msgid "eFMV value"
+msgstr "valor eFMV"

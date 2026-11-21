@@ -202,6 +202,10 @@ const ptBR: Messages = {
         'Alguns preços médios deste cenário passaram da validade (definida no Painel de Controle do Pricing): esta análise pode estar desatualizada.',
       asset: 'Bem',
       unitValue: 'Valor Unitário',
+      efmvValue: 'eFMV',
+      efmvValueHint:
+        'Valor de uma unidade ao fim do prazo ({term} meses). Deixe vazio para usar a curva do Average Prices (mostrado em cinza).',
+      efmvValueRule: 'Informe um valor igual ou maior que zero.',
       quantity: 'Quantidade',
       total: 'Total',
       remove: 'Remover bem',

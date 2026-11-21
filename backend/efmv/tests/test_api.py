@@ -428,3 +428,46 @@ def test_verticals_used_by_scenarios_cannot_be_removed(
     # Industry: used by the scenario (and by asset classes)
     r = logged_client.delete(f"/api/catalogs/verticals/{industry()}/")
     assert r.status_code == 409
+
+
+def test_efmv_value_comes_from_the_curve_at_the_term(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["items"][1]["efmv_value"] = "31500"  # typed for the tractor
+    r = post(logged_client, data)
+    assert r.status_code == 201, r.json()
+    items = r.json()["scenarios"][0]["items"]
+    # 24 months: excavator 55,000 (curve), tractor typed (its curve gives 30,000)
+    assert [(i["efmv_value"], i["curve_value"], i["efmv_from_curve"]) for i in items] == [
+        ("55000.00", "55000.00", True),
+        ("31500.00", "30000.00", False),
+    ]
+    # Not typed: it follows the scenario's term
+    data["scenarios"][0]["term_months"] = 18
+    r = logged_client.put(f"{URL}{r.json()['id']}/", data, content_type="application/json")
+    items = r.json()["scenarios"][0]["items"]
+    assert [i["efmv_value"] for i in items] == ["62500.00", "31500.00"]
+
+
+def test_scenario_preview_with_efmv_values(logged_client, prices):
+    r = logged_client.post(
+        f"{URL}scenario-preview/",
+        {"term_months": 36, "items": [
+            {"average_price": prices["excavator"], "quantity": 1, "efmv_value": "0"},
+            {"average_price": prices["tractor"], "quantity": 1},  # its curve stops at 24
+        ]},
+        content_type="application/json",
+    )  # fmt: skip
+    assert r.status_code == 200, r.json()
+    items = r.json()["items"]
+    assert [(i["efmv_value"], i["curve_value"]) for i in items] == [
+        ("0.00", "42500.00"),
+        (None, None),
+    ]
+    r = logged_client.post(
+        f"{URL}scenario-preview/",
+        {"term_months": 12, "items": [
+            {"average_price": prices["excavator"], "quantity": 1, "efmv_value": "-1"},
+        ]},
+        content_type="application/json",
+    )  # fmt: skip
+    assert r.status_code == 400

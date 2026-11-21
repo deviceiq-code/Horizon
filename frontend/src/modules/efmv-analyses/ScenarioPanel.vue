@@ -18,6 +18,7 @@ import { previewScenario, type PricePosition, type ScenarioItem } from './api'
 import {
   MAX_TERM,
   newKey,
+  parseEfmvValue,
   parseTerm,
   parseUnitValue,
   scenarioInput,
@@ -118,7 +119,7 @@ const watched = computed(() =>
     scenario.value.term,
     scenario.value.vertical,
     scenario.value.sub_vertical,
-    scenario.value.items.map((i) => [i.average_price, i.quantity, i.unit_value]),
+    scenario.value.items.map((i) => [i.average_price, i.quantity, i.unit_value, i.efmv_value]),
   ]),
 )
 watch(watched, () => {
@@ -140,6 +141,7 @@ function addRow() {
     average_price: null,
     quantity: 1,
     unit_value: '',
+    efmv_value: '',
     pending: true,
   })
   scenario.value.preview?.items.push({ ...deletedItem(1), available: true })
@@ -195,6 +197,10 @@ function tidyUnitValue(item: ItemDraft) {
   const value = parseUnitValue(item.unit_value, locale.value)
   if (value !== null) item.unit_value = toInputMoney(value, locale.value)
 }
+function tidyEfmvValue(item: ItemDraft) {
+  const value = parseEfmvValue(item.efmv_value, locale.value)
+  if (value !== null) item.efmv_value = toInputMoney(value, locale.value)
+}
 
 function removeAsset(index: number) {
   scenario.value.items.splice(index, 1)
@@ -211,6 +217,7 @@ const itemError = (index: number) => {
     ...(errors?.average_price ?? []),
     ...(errors?.quantity ?? []),
     ...(errors?.unit_value ?? []),
+    ...(errors?.efmv_value ?? []),
   ]
 }
 
@@ -218,6 +225,11 @@ const itemError = (index: number) => {
 const unitValueRules = [
   (v: string) =>
     !v?.trim() || parseUnitValue(v, locale.value) !== null || t('efmv.item.unitValueRule'),
+]
+// Empty: the average price's curve at the term counts (shown as the placeholder)
+const efmvValueRules = [
+  (v: string) =>
+    !v?.trim() || parseEfmvValue(v, locale.value) !== null || t('efmv.item.efmvValueRule'),
 ]
 
 const POSITION_COLORS: Record<PricePosition, string> = {
@@ -369,7 +381,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
     >
       {{ $t('efmv.item.expiredWarning') }}
     </v-alert>
-    <!-- A spreadsheet-like grid: Tab goes through the cells (quantity → asset → unit value),
+    <!-- A spreadsheet-like grid: Tab goes through the cells (quantity → asset → unit value →
+         eFMV),
          Enter and ↑/↓ move to the same column of the next/previous row -->
     <v-table
       ref="grid"
@@ -386,13 +399,20 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           <th style="min-width: 260px">{{ $t('efmv.item.asset') }}</th>
           <th class="text-end" style="width: 170px">{{ $t('efmv.item.unitValue') }}</th>
           <th style="width: 210px">{{ $t('efmv.item.position') }}</th>
+          <th
+            class="text-end"
+            style="width: 170px"
+            :title="$t('efmv.item.efmvValueHint', { term: scenario.term })"
+          >
+            {{ $t('efmv.item.efmvValue') }}
+          </th>
           <th class="text-end" style="width: 160px">{{ $t('efmv.item.total') }}</th>
           <th style="width: 40px"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!scenario.items.length">
-          <td colspan="7" class="text-medium-emphasis text-center py-6">
+          <td colspan="8" class="text-medium-emphasis text-center py-6">
             {{ $t('efmv.scenario.noAssets') }}
           </td>
         </tr>
@@ -542,6 +562,25 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               ({{ signedPercent(detail(i)!.variation_percent!) }})
             </v-chip>
             <span v-else class="text-disabled">—</span>
+          </td>
+          <td class="cell-input" data-col="efmv">
+            <v-text-field
+              v-model="item.efmv_value"
+              inputmode="decimal"
+              :placeholder="
+                detail(i)?.curve_value ? toInputMoney(detail(i)!.curve_value!, locale) : ''
+              "
+              variant="plain"
+              density="compact"
+              hide-details
+              class="text-end-input"
+              :rules="item.average_price === null ? [] : efmvValueRules"
+              :disabled="item.average_price === null"
+              :aria-label="$t('efmv.item.efmvValue')"
+              :title="$t('efmv.item.efmvValueHint', { term: scenario.term })"
+              data-testid="efmv-value"
+              @blur="tidyEfmvValue(item)"
+            />
           </td>
           <td
             class="cell-text text-end text-no-wrap numeric font-weight-medium"

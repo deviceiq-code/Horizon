@@ -54,6 +54,9 @@ const EXCAVATOR: efmvApi.ScenarioItem = {
   id: 1,
   quantity: 2,
   unit_value: '100000.00',
+  efmv_value: '42500.00',
+  curve_value: '42500.00',
+  efmv_from_curve: true,
   available: true,
   average_price: 7,
   asset_class: { name: 'Excavators', icon: 'mdi-excavator' },
@@ -273,7 +276,7 @@ describe('EfmvAnalysisView', () => {
       term_months: 36,
       vertical: 1,
       sub_vertical: 11,
-      items: [{ average_price: 7, quantity: 1, unit_value: '100000' }],
+      items: [{ average_price: 7, quantity: 1, unit_value: '100000', efmv_value: null }],
     })
     expect(inBody('[data-testid="position"]')!.textContent).toContain('Compatible')
     expect(inBody('[data-testid="asset-row"]')!.textContent).toContain('320 GC · Caterpillar')
@@ -297,7 +300,7 @@ describe('EfmvAnalysisView', () => {
           scope: '',
           vertical: 1,
           sub_vertical: 11,
-          items: [{ average_price: 7, quantity: 1, unit_value: '100000' }],
+          items: [{ average_price: 7, quantity: 1, unit_value: '100000', efmv_value: null }],
         },
       ],
     })
@@ -440,17 +443,61 @@ describe('EfmvAnalysisView', () => {
       term_months: 36,
       vertical: 1,
       sub_vertical: null,
-      items: [{ average_price: 7, quantity: 2, unit_value: null }],
+      items: [{ average_price: 7, quantity: 2, unit_value: null, efmv_value: null }],
     })
     await click('save')
     expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(
       3,
       expect.objectContaining({
         scenarios: [
-          expect.objectContaining({ items: [{ average_price: 7, quantity: 2, unit_value: null }] }),
+          expect.objectContaining({
+            items: [{ average_price: 7, quantity: 2, unit_value: null, efmv_value: null }],
+          }),
         ],
       }),
     )
+    wrapper.unmount()
+  })
+
+  it('the eFMV value comes from the curve at the term (placeholder) or is typed', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      scenarios: [
+        {
+          ...ANALYSIS.scenarios[0]!,
+          items: [{ ...EXCAVATOR, efmv_value: '40000.00', efmv_from_curve: false }],
+        },
+      ],
+    })
+    efmv.previewScenario.mockResolvedValue({
+      items: [{ ...EXCAVATOR, efmv_value: '41000.00', efmv_from_curve: false }],
+      totals: TOTALS,
+      has_expired: false,
+    })
+    const { wrapper } = await mountView({ id: 3 })
+    const input = () => inBody('[data-testid="efmv-value"] input') as HTMLInputElement
+    // Typed before: shown as typed; the curve's value stays as the placeholder
+    expect(input().value).toBe('40,000.00')
+    expect(input().placeholder).toBe('42,500.00')
+    await typeInto('efmv-value', '41000')
+    await debounce()
+    expect(efmv.previewScenario).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        items: [{ average_price: 7, quantity: 2, unit_value: '100000.00', efmv_value: '41000' }],
+      }),
+    )
+    // Emptied: the curve counts
+    await typeInto('efmv-value', '')
+    await debounce()
+    expect(efmv.previewScenario).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        items: [{ average_price: 7, quantity: 2, unit_value: '100000.00', efmv_value: null }],
+      }),
+    )
+    // A negative value is refused before saving
+    await typeInto('efmv-value', '-5')
+    await click('save')
+    expect(efmv.updateEfmvAnalysis).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
@@ -471,7 +518,7 @@ describe('EfmvAnalysisView', () => {
           scope: 'Fleet',
           vertical: 1,
           sub_vertical: null,
-          items: [{ average_price: 7, quantity: 2, unit_value: '100000.00' }],
+          items: [{ average_price: 7, quantity: 2, unit_value: '100000.00', efmv_value: null }],
         },
       ],
     })

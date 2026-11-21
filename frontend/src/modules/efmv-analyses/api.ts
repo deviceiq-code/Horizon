@@ -2,7 +2,8 @@
  * eFMV analyses (Estimated Fair Market Value): for a customer and its account manager, one or
  * more scenarios (name, term, scope and assets from Average Prices with quantities). The API
  * computes every figure: per scenario the LO (Leasing Origination, total value of the assets),
- * the eFMV at the end of the lease (to come) and the HW/SW/SV shares.
+ * the eFMV at the end of the lease (to come; per asset, the value of one unit at the end of
+ * the term — the average price's curve at the term or typed by the analyst) and the HW/SW/SV shares.
  */
 import { api, listQuery, type ListParams, type Paginated } from '@/api'
 import type { AccountManagerRef } from '@/modules/account-managers/api'
@@ -42,6 +43,12 @@ export interface ScenarioItem {
   value_from_price?: boolean
   /** quantity × unit value; null without a value */
   line_total: string | null
+  /** One unit at the end of the term: typed, or the curve's value at the term (null beyond it) */
+  efmv_value?: string | null
+  /** The average price's curve at the scenario's term (the placeholder); null beyond the curve */
+  curve_value?: string | null
+  /** Not typed: the curve's value counts (it follows the term and the price's current version) */
+  efmv_from_curve?: boolean
   /** false: the average price was deleted (left out of the totals; removed when saving) */
   available: boolean
   /** Current version (null when deleted) */
@@ -118,6 +125,8 @@ export interface ScenarioItemInput {
   quantity: number
   /** Canonical decimal string; null = not typed (the average price's value counts) */
   unit_value: string | null
+  /** Canonical decimal string; null = not typed (the curve's value at the term counts) */
+  efmv_value: string | null
 }
 
 export interface ScenarioInput {

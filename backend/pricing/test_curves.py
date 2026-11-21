@@ -2,7 +2,7 @@ from decimal import Decimal as D
 
 import pytest
 
-from .curves import anchor_value, increasing_terms, monthly_curve, percent_of
+from .curves import anchor_value, increasing_terms, monthly_curve, percent_of, value_at
 
 
 def test_example_from_the_specification():
@@ -95,3 +95,13 @@ def test_increasing_terms():
     assert increasing_terms(original, {12: D("1100")}) == [12]
     # Same value is not an increase
     assert increasing_terms(original, {12: D("800"), 24: D("800")}) == []
+
+
+def test_value_at_a_month():
+    anchors = {12: D("70000"), 24: D("55000")}
+    assert value_at(D("100000"), anchors, 0) == D("100000.00")
+    assert value_at(D("100000"), anchors, 13) == D("68750.00")
+    assert value_at(D("100000"), anchors, 24) == D("55000.00")
+    # Beyond the last term the curve does not exist
+    assert value_at(D("100000"), anchors, 25) is None
+    assert value_at(D("100000"), {}, 1) is None

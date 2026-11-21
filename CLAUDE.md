@@ -104,7 +104,9 @@ Multi-user web system for **operating lease residual value pricing**
     `EfmvScenarioItem`s (an average price's `lineage` — the **current** version always counts —,
     a quantity and a `unit_value` typed by the analyst — when not typed, the current average
     price's value counts (`value_from_price` in previews) and is stored on save; no repeated
-    price). Items carry the price's `specs` for display. Each item is placed against the current average price's value
+    price; and an optional `efmv_value` — one unit at the end of the term, typed; null = the
+    price's curve at the scenario's term, `pricing/curves.py::value_at`, returned as
+    `curve_value` and followed when the term or the price changes, `efmv_from_curve`). Items carry the price's `specs` for display. Each item is placed against the current average price's value
     (`pricing/positioning.py`, pure: `variation_percent` and `price_position` → below /
     slightly_below / compatible / slightly_above / above, compared at 2 places, inclusive
     limits) and flagged `expired` when that version is older than the validity; the analysis
@@ -223,7 +225,8 @@ Multi-user web system for **operating lease residual value pricing**
     number (the scenario's Vertical picker — `VerticalScopePicker.vue`, each vertical
     followed by its sub-verticals — comes first and filters the asset picker; "+ Row" waits
     for it), Quantity, asset (class · specifications · price date or expired flag), Unit Value
-    (the average price's value as placeholder; empty = that value), Position, total; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
+    (the average price's value as placeholder; empty = that value), Position, eFMV (the
+    curve's value at the term as placeholder; empty = that value), total; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
     row adds one), remove buttons appear on hover and are out of the Tab order; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and

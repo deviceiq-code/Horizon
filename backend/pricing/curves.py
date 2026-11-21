@@ -70,6 +70,13 @@ def monthly_curve(original: Decimal, anchors: Mapping[int, Decimal]) -> list[Cur
     return curve
 
 
+def value_at(original: Decimal, anchors: Mapping[int, Decimal], month: int) -> Decimal | None:
+    """The curve's value at `month` (0 = the original value), or None beyond its last term."""
+    if month < 0 or not anchors or month > max(anchors):
+        return None
+    return monthly_curve(original, anchors)[month].value
+
+
 def increasing_terms(original: Decimal, anchors: Mapping[int, Decimal]) -> list[int]:
     """Anchor terms worth more than the point before them (unusual: the user is warned).
 

@@ -204,6 +204,10 @@ const en = {
         'Some average prices of this scenario are past their validity (set in the Pricing control panel): this analysis may be out of date.',
       asset: 'Asset',
       unitValue: 'Unit Value',
+      efmvValue: 'eFMV',
+      efmvValueHint:
+        'Value of one unit at the end of the term ({term} months). Leave empty to use the curve of Average Prices (shown in gray).',
+      efmvValueRule: 'Enter a value of zero or more.',
       quantity: 'Quantity',
       total: 'Total',
       remove: 'Remove asset',

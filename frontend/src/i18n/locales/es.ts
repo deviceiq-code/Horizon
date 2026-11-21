@@ -203,6 +203,10 @@ const es: Messages = {
         'Algunos precios promedio de este escenario superaron su validez (definida en el Panel de Control de Pricing): este análisis puede estar desactualizado.',
       asset: 'Bien',
       unitValue: 'Valor Unitario',
+      efmvValue: 'eFMV',
+      efmvValueHint:
+        'Valor de una unidad al final del plazo ({term} meses). Deje vacío para usar la curva de los precios promedio (mostrado en gris).',
+      efmvValueRule: 'Ingrese un valor igual o mayor que cero.',
       quantity: 'Cantidad',
       total: 'Total',
       remove: 'Quitar bien',

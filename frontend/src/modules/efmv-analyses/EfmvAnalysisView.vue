@@ -29,6 +29,7 @@ import {
   copyName,
   copyScenario,
   nextScenarioName,
+  parseEfmvValue,
   parseTerm,
   parseUnitValue,
   scenarioDraft,
@@ -181,7 +182,8 @@ function hasIssues(index: number): boolean {
         i.average_price !== null &&
         (!Number.isInteger(i.quantity) ||
           i.quantity < 1 ||
-          (!!i.unit_value.trim() && parseUnitValue(i.unit_value, locale.value) === null)),
+          (!!i.unit_value.trim() && parseUnitValue(i.unit_value, locale.value) === null) ||
+          (!!i.efmv_value.trim() && parseEfmvValue(i.efmv_value, locale.value) === null)),
     ) ||
     !!scenario.preview?.items.some((i) => i.out_of_curve)
   )

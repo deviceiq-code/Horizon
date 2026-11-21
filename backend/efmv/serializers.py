@@ -8,6 +8,7 @@ from rest_framework import serializers
 
 from catalogs.models import MAX_TERM_MONTHS, SubVertical, Vertical
 from catalogs.serializers import sub_vertical_label
+from pricing.curves import value_at
 from pricing.models import AveragePrice, PricingSettings
 from pricing.positioning import is_expired, price_position, valid_until, variation_percent
 from users.display import full_name_in, person_ref
@@ -32,6 +33,12 @@ def current_prices(lineages) -> dict:
 
 def price_terms(row: AveragePrice) -> list[int]:
     return sorted(point.term_months for point in row.points.all())
+
+
+def curve_value(row: AveragePrice, term_months: int):
+    """The average price's value at the scenario's term (None beyond its curve)."""
+    anchors = {point.term_months: point.value for point in row.points.all()}
+    return value_at(row.original_value, anchors, term_months)
 
 
 def asset_detail(row: AveragePrice) -> dict:
@@ -106,21 +113,28 @@ def scenario_payload(
     ctx: Context,
     scope: tuple = (None, None),
 ) -> dict:
-    """`items`: (item id or None, lineage, quantity, typed unit value or None); `scope`: the
-    scenario's (vertical id, sub-vertical id). Without a typed value the average price's value
-    counts (`value_from_price`). Items whose price was deleted, whose curve no longer reaches
-    the term or that are outside the scenario's vertical are flagged and left out of the
-    totals."""
+    """`items`: (item id or None, lineage, quantity, typed unit value or None, typed eFMV value
+    or None); `scope`: the scenario's (vertical id, sub-vertical id). Without a typed value the
+    average price's value counts (`value_from_price`); without a typed eFMV value, the average
+    price's curve at the term (`efmv_from_curve`). Items whose price was deleted, whose curve
+    no longer reaches the term or that are outside the scenario's vertical are flagged and left
+    out of the totals."""
     lines, rows = [], []
-    for item_id, lineage, quantity, typed in items:
+    for item_id, lineage, quantity, typed, typed_efmv in items:
         row = prices.get(lineage)
         unit_value = typed if typed is not None or row is None else row.original_value
+        from_curve = None if row is None else curve_value(row, term_months)
+        efmv_value = typed_efmv if typed_efmv is not None else from_curve
         entry = {
             "id": item_id,
             "quantity": quantity,
             "unit_value": None if unit_value is None else str(unit_value),
             "value_from_price": typed is None and row is not None,
             "line_total": None if unit_value is None else str(line_total(quantity, unit_value)),
+            # One unit at the end of the term: typed, or the curve's value at the term
+            "efmv_value": None if efmv_value is None else str(efmv_value),
+            "curve_value": None if from_curve is None else str(from_curve),
+            "efmv_from_curve": typed_efmv is None and from_curve is not None,
             "available": row is not None,
         }
         if row is None:
@@ -159,6 +173,10 @@ class ItemInputSerializer(serializers.Serializer):
     # Typed by the analyst; when not sent, the current average price's value is stored
     unit_value = serializers.DecimalField(
         max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False, allow_null=True
+    )
+    # Typed by the analyst; when not sent, the curve's value at the scenario's term counts
+    efmv_value = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
     )
 
     def validate_average_price(self, value):
@@ -326,7 +344,10 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                 "scope_label": scope_label(s.vertical, s.sub_vertical),
                 **scenario_payload(
                     s.term_months,
-                    [(i.id, i.price_lineage, i.quantity, i.unit_value) for i in items[s.pk]],
+                    [
+                        (i.id, i.price_lineage, i.quantity, i.unit_value, i.efmv_value)
+                        for i in items[s.pk]
+                    ],
                     prices,
                     ctx,
                     (s.vertical_id, s.sub_vertical_id),
@@ -356,6 +377,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                     price_lineage=item["average_price"].lineage,
                     quantity=item["quantity"],
                     unit_value=item["unit_value"],
+                    efmv_value=item.get("efmv_value"),
                     position=index,
                 )
                 for index, item in enumerate(scenario["items"])
@@ -437,7 +459,13 @@ class ScenarioPreviewSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         items = [
-            (None, i["average_price"].lineage, i["quantity"], i.get("unit_value"))
+            (
+                None,
+                i["average_price"].lineage,
+                i["quantity"],
+                i.get("unit_value"),
+                i.get("efmv_value"),
+            )
             for i in instance["items"]
         ]
         prices = current_prices(item[1] for item in items)

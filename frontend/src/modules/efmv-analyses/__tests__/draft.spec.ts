@@ -4,6 +4,7 @@ import {
   copyName,
   copyScenario,
   nextScenarioName,
+  parseEfmvValue,
   parseTerm,
   parseUnitValue,
   scenarioInput,
@@ -36,9 +37,9 @@ describe('eFMV analysis draft', () => {
     scenario.vertical = 1
     scenario.sub_vertical = 11
     scenario.items = [
-      { key: 1, average_price: 7, quantity: 2, unit_value: '100.000,50' },
-      { key: 2, average_price: null, quantity: 1, unit_value: '' },
-      { key: 3, average_price: 8, quantity: 1, unit_value: '' },
+      { key: 1, average_price: 7, quantity: 2, unit_value: '100.000,50', efmv_value: '0' },
+      { key: 2, average_price: null, quantity: 1, unit_value: '', efmv_value: '' },
+      { key: 3, average_price: 8, quantity: 1, unit_value: '', efmv_value: '42.500' },
     ]
     expect(scenarioInput(scenario, 'pt-br')).toEqual({
       name: 'Base',
@@ -47,8 +48,8 @@ describe('eFMV analysis draft', () => {
       vertical: 1,
       sub_vertical: 11,
       items: [
-        { average_price: 7, quantity: 2, unit_value: '100000.50' },
-        { average_price: 8, quantity: 1, unit_value: null },
+        { average_price: 7, quantity: 2, unit_value: '100000.50', efmv_value: '0' },
+        { average_price: 8, quantity: 1, unit_value: null, efmv_value: '42500' },
       ],
     })
   })
@@ -58,11 +59,14 @@ describe('eFMV analysis draft', () => {
     expect(parseUnitValue('1,500.25', 'en')).toBe('1500.25')
     expect(parseUnitValue('0', 'en')).toBeNull()
     expect(parseUnitValue('abc', 'en')).toBeNull()
+    // eFMV values may be zero
+    expect(parseEfmvValue('0', 'en')).toBe('0')
+    expect(parseEfmvValue('-1', 'en')).toBeNull()
   })
 
   it('copies a scenario with its own items', () => {
     const scenario = blankScenario('Base')
-    scenario.items = [{ key: 1, average_price: 7, quantity: 2, unit_value: '10' }]
+    scenario.items = [{ key: 1, average_price: 7, quantity: 2, unit_value: '10', efmv_value: '' }]
     const copy = copyScenario(scenario, 'Base (copy)')
     copy.items[0]!.quantity = 5
     expect(scenario.items[0]!.quantity).toBe(2)
