@@ -436,15 +436,12 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             {{ $t('efmv.item.efmvValue') }}
           </th>
           <th class="text-end" style="width: 160px">{{ $t('efmv.item.total') }}</th>
-          <th class="text-end" style="width: 90px" :title="$t('efmv.item.weightHint')">
-            {{ $t('efmv.item.weight') }}
-          </th>
           <th style="width: 40px"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!scenario.items.length">
-          <td colspan="8" class="text-medium-emphasis text-center py-6">
+          <td colspan="7" class="text-medium-emphasis text-center py-6">
             {{ $t('efmv.scenario.noAssets') }}
           </td>
         </tr>
@@ -651,13 +648,23 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               }}</span>
             </div>
             <div v-else class="text-end">—</div>
-          </td>
-          <td class="cell-text text-end text-no-wrap numeric" data-testid="weight">
-            {{
-              detail(i)?.weight_percent
-                ? `${$n(Number(detail(i)!.weight_percent), 'percentValue')}%`
-                : '—'
-            }}
+            <!-- Its share of the scenario's LO, as the chips of the other columns -->
+            <div v-if="detail(i)?.weight_percent" class="chip-below">
+              <v-chip
+                size="x-small"
+                variant="tonal"
+                label
+                class="numeric font-weight-regular"
+                :title="$t('efmv.item.weightHint')"
+                data-testid="weight"
+              >
+                {{
+                  $t('efmv.item.weightPercent', {
+                    percent: $n(Number(detail(i)!.weight_percent), 'percentValue'),
+                  })
+                }}
+              </v-chip>
+            </div>
           </td>
           <td class="cell-action">
             <v-btn
@@ -775,6 +782,11 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
   padding-top: 0;
 }
 /* Unit value with its position below (the row grows) */
+.chip-below {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
 .cell-stack .position,
 .cell-stack .below {
   display: flex;

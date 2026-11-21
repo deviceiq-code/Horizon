@@ -236,7 +236,7 @@ Multi-user web system for **operating lease residual value pricing**
     (the average price's value as placeholder; empty = that value; its Position chip below it
     in the same cell), eFMV (the
     curve's value at the term as placeholder; empty = that value; "25%" becomes its value when
-    the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total, Weight (read only); money cells show the currency symbol on the left
+    the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total (its Weight — share of the LO — below it, as a chip "Weight (50.69%)"); money cells show the currency symbol on the left
     (`utils/money.ts::currencySymbol`) and the number on the right; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
     row adds one), remove buttons appear on hover and are out of the Tab order; figures

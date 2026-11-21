@@ -204,7 +204,7 @@ const ptBR: Messages = {
       asset: 'Bem',
       unitValue: 'Valor Unitário',
       efmvValue: 'eFMV',
-      weight: 'Peso',
+      weightPercent: 'Peso ({percent}%)',
       weightHint: 'Quanto o total da linha representa do LO do cenário.',
       efmvValueHint:
         'Valor de uma unidade ao fim do prazo ({term} meses), ou um percentual do valor unitário (ex.: 25%). Deixe vazio para usar a curva do Average Prices (mostrado em cinza).',

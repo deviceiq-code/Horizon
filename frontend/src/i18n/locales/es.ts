@@ -205,7 +205,7 @@ const es: Messages = {
       asset: 'Bien',
       unitValue: 'Valor Unitario',
       efmvValue: 'eFMV',
-      weight: 'Peso',
+      weightPercent: 'Peso ({percent}%)',
       weightHint: 'Cuánto representa el total de la fila en el LO del escenario.',
       efmvValueHint:
         'Valor de una unidad al final del plazo ({term} meses), o un porcentaje del valor unitario (ej.: 25%). Deje vacío para usar la curva de los precios promedio (mostrado en gris).',

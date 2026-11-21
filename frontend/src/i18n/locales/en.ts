@@ -206,7 +206,7 @@ const en = {
       asset: 'Asset',
       unitValue: 'Unit Value',
       efmvValue: 'eFMV',
-      weight: 'Weight',
+      weightPercent: 'Weight ({percent}%)',
       weightHint: "Share of the row's total in the scenario's LO.",
       efmvValueHint:
         'Value of one unit at the end of the term ({term} months), or a percentage of the unit value (e.g. 25%). Leave empty to use the curve of Average Prices (shown in gray).',

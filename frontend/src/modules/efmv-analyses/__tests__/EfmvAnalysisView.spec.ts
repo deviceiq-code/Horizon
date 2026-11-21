@@ -294,13 +294,12 @@ describe('EfmvAnalysisView', () => {
       /42\.50%\s*· R\$\s?85,000\.00/,
     )
     expect(inBody('[data-testid="total-hw"]')!.textContent).toContain('100.00%')
-    // Last column: the row's share of the scenario's LO (read only)
+    // Below the row's total: its share of the scenario's LO (no column of its own)
     const headers = [...document.querySelectorAll('[data-testid="assets"] th')].map((th) =>
       th.textContent?.trim(),
     )
-    expect(headers.filter(Boolean).pop()).toBe('Weight')
-    expect(inBody('[data-testid="weight"]')!.textContent?.trim()).toBe('100.00%')
-    expect(inBody('[data-testid="weight"] input')).toBeNull()
+    expect(headers.filter(Boolean).pop()).toBe('Total')
+    expect(inBody('[data-testid="weight"]')!.textContent?.trim()).toBe('Weight (100.00%)')
 
     efmv.createEfmvAnalysis.mockResolvedValue({ ...ANALYSIS, id: 4, code: 'EFMV-2026-0004' })
     await click('save')
