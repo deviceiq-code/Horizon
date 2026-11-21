@@ -164,6 +164,8 @@ const ptBR: Messages = {
       createdAt: 'Criada em',
     },
     scenario: {
+      duplicateShort: 'Duplicar',
+      removeShort: 'Remover',
       vertical: 'Vertical',
       verticalHint: 'Os bens que ele admite: uma vertical inteira ou uma de suas sub-verticais.',
       pickVerticalFirst: 'Escolha primeiro a vertical.',

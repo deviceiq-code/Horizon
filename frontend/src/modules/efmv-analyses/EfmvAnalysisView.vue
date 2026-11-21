@@ -496,7 +496,7 @@ async function remove() {
               data-testid="duplicate-scenario"
               @click="duplicateScenario(openIndex)"
             >
-              <span class="d-none d-md-inline">{{ $t('efmv.scenario.duplicate') }}</span>
+              <span class="d-none d-md-inline">{{ $t('efmv.scenario.duplicateShort') }}</span>
             </v-btn>
             <!-- The wrapper keeps the tooltip while the button is disabled (one scenario left) -->
             <span
@@ -511,7 +511,7 @@ async function remove() {
                 data-testid="remove-scenario"
                 @click="removing = openIndex"
               >
-                <span class="d-none d-md-inline">{{ $t('efmv.scenario.remove') }}</span>
+                <span class="d-none d-md-inline">{{ $t('efmv.scenario.removeShort') }}</span>
               </v-btn>
             </span>
           </div>

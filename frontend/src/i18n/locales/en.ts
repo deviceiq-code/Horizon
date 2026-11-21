@@ -166,6 +166,8 @@ const en = {
       createdAt: 'Created',
     },
     scenario: {
+      duplicateShort: 'Duplicate',
+      removeShort: 'Remove',
       vertical: 'Vertical',
       verticalHint: 'The assets it admits: a whole vertical or one of its sub-verticals.',
       pickVerticalFirst: 'Choose the vertical first.',

@@ -351,6 +351,15 @@ describe('EfmvAnalysisView', () => {
     for (const id of ['add-scenario', 'duplicate-scenario', 'remove-scenario']) {
       expect(toolbar.querySelector(`[data-testid="${id}"]`)).not.toBeNull()
     }
+    // Only "Add" says "Scenario"; the full names are in the tooltips
+    expect(
+      ['add-scenario', 'duplicate-scenario', 'remove-scenario'].map((id) =>
+        toolbar.querySelector(`[data-testid="${id}"]`)!.textContent!.trim(),
+      ),
+    ).toEqual(['Add Scenario', 'Duplicate', 'Remove'])
+    expect(inBody('[data-testid="duplicate-scenario"]')!.getAttribute('title')).toBe(
+      'Duplicate Scenario',
+    )
     // Remove acts on the open scenario (the copy)
     await click('remove-scenario')
     expect(inBody('.v-overlay--active')!.textContent).toContain('Base (copy)')

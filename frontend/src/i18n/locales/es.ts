@@ -165,6 +165,8 @@ const es: Messages = {
       createdAt: 'Creado',
     },
     scenario: {
+      duplicateShort: 'Duplicar',
+      removeShort: 'Quitar',
       vertical: 'Vertical',
       verticalHint: 'Los bienes que admite: una vertical entera o una de sus sub-verticales.',
       pickVerticalFirst: 'Elija primero la vertical.',
