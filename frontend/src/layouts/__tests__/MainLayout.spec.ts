@@ -96,9 +96,10 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('outside an app: "Horizon", the apps in the side menu', async () => {
+  it('outside an app: the Horizon brand and the apps in the side menu', async () => {
     const { wrapper } = await mountLayout('/')
-    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Horizon')
+    expect(inBody('[data-testid="brand"]')!.textContent).toContain('Horizon')
+    expect(inBody('[data-testid="app-title"]')).toBeNull()
     expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-app-admin"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-app-remarketing"]')).toBeNull() // coming soon
@@ -112,10 +113,31 @@ describe('MainLayout', () => {
     expect(inBody('[data-testid="menu-customers"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-users"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-average-prices"]')).toBeNull()
-    expect(inBody('[data-testid="breadcrumbs"]')!.textContent).toMatch(
+    // The other apps, to switch to; not the current one
+    expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-app-admin"]')).toBeNull()
+    // The path is in the top bar
+    expect(inBody('header [data-testid="breadcrumbs"]')!.textContent).toMatch(
       /Horizon.*Administration.*Catalogs.*Asset Classes/,
     )
     wrapper.unmount()
+  })
+
+  it('the side menu collapses or opens and remembers the choice', async () => {
+    localStorage.clear()
+    // jsdom's window is 1024 px wide: narrower than 1440, so the menu starts collapsed
+    const { wrapper } = await mountLayout('/pricing/average-prices')
+    const menu = () => inBody('[data-testid="side-menu"]')!
+    expect(menu().className).toContain('v-navigation-drawer--rail')
+    await click('toggle-menu')
+    expect(menu().className).not.toContain('v-navigation-drawer--rail')
+    expect(localStorage.getItem('horizon.sideMenu.narrow')).toBe('open')
+    wrapper.unmount()
+    // Opened again: as the user left it
+    const again = await mountLayout('/pricing/average-prices')
+    expect(menu().className).not.toContain('v-navigation-drawer--rail')
+    again.wrapper.unmount()
+    localStorage.clear()
   })
 
   it('the app launcher lists the apps; Remarketing is coming soon', async () => {

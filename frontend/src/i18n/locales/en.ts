@@ -72,6 +72,8 @@ const en = {
     },
   },
   menu: {
+    collapse: 'Collapse Menu',
+    apps: 'Apps',
     path: 'Path',
     account: 'Your Account',
     open: 'Open Menu',

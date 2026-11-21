@@ -1,4 +1,4 @@
-# Horizon System
+# Horizon
 
 Web system for operating lease residual value pricing.
 

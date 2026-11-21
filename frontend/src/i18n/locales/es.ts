@@ -70,6 +70,8 @@ const es: Messages = {
     },
   },
   menu: {
+    collapse: 'Contraer Menú',
+    apps: 'Apps',
     path: 'Ruta',
     account: 'Su Cuenta',
     open: 'Abrir Menú',

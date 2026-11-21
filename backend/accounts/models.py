@@ -16,6 +16,7 @@ class ColorTheme(models.TextChoices):
     METALLIC_FOUNDATIONS = "metallic_foundations", "Metallic Foundations"
     EARTHY_SERENE = "earthy_serene", "Earthy and Serene"
     SLEEK_FUTURISTIC = "sleek_futuristic", "Sleek and Futuristic"
+    EMERALD_SLATE = "emerald_slate", "Emerald Slate"
 
 
 class UiScale(models.TextChoices):

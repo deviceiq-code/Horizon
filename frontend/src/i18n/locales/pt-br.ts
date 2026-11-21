@@ -69,6 +69,8 @@ const ptBR: Messages = {
     },
   },
   menu: {
+    collapse: 'Recolher Menu',
+    apps: 'Apps',
     path: 'Caminho',
     account: 'Sua Conta',
     open: 'Abrir Menu',

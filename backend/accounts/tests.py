@@ -110,7 +110,7 @@ def test_color_theme_defaults_and_changes(logged_client):
     assert (
         logged_client.get("/api/auth/preferences/").json()["color_theme"] == "metallic_foundations"
     )
-    for theme in ("earthy_serene", "sleek_futuristic", "metallic_foundations"):
+    for theme in ("earthy_serene", "sleek_futuristic", "emerald_slate", "metallic_foundations"):
         r = _patch(logged_client, {"color_theme": theme})
         assert (r.status_code, r.json()["color_theme"]) == (200, theme)
     r = _patch(logged_client, {"color_theme": "neon"})

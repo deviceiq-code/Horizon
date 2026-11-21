@@ -39,7 +39,11 @@ async function login() {
 
     <v-card width="400" max-width="100%" elevation="4" class="pa-2">
       <v-card-item>
-        <v-card-title class="text-h5">{{ $t('app.name') }}</v-card-title>
+        <template #prepend>
+          <!-- The brand's mark, as in the side menu -->
+          <v-avatar color="primary" rounded="lg" size="40" class="font-weight-bold">H</v-avatar>
+        </template>
+        <v-card-title class="text-h5 font-weight-bold">{{ $t('app.name') }}</v-card-title>
         <v-card-subtitle>{{ $t('app.description') }}</v-card-subtitle>
       </v-card-item>
 

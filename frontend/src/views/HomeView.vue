@@ -17,8 +17,11 @@ function firstPage(app: SuiteApp) {
 
 <template>
   <v-container fluid class="module-page" style="max-width: 1200px">
-    <h1 class="text-h4 mb-1">{{ $t('home.welcome', { name: auth.user?.name }) }}</h1>
-    <p class="text-medium-emphasis mb-6">{{ $t('home.text') }}</p>
+    <!-- Welcome banner: the theme's primary color fading into the side menu's -->
+    <div class="welcome mb-6" data-testid="welcome">
+      <h1 class="welcome-title">{{ $t('home.welcome', { name: auth.user?.name }) }}</h1>
+      <p class="welcome-text">{{ $t('home.text') }}</p>
+    </div>
 
     <v-row>
       <v-col v-for="app in SUITE_APPS" :key="app.id" cols="12" sm="6" lg="4">
@@ -49,6 +52,30 @@ function firstPage(app: SuiteApp) {
 </template>
 
 <style scoped>
+.welcome {
+  padding: 32px;
+  border-radius: 16px;
+  color: #fff;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 55%),
+    linear-gradient(
+      120deg,
+      rgb(var(--v-theme-primary)) 0%,
+      color-mix(in srgb, rgb(var(--v-theme-primary)) 45%, rgb(var(--v-theme-sidebar))) 55%,
+      rgb(var(--v-theme-sidebar)) 100%
+    );
+}
+/* Over the generic page title rule (main.css): larger, white */
+.welcome .welcome-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px;
+}
+.welcome-text {
+  margin: 0;
+  opacity: 0.85;
+}
 .app-card {
   transition: transform 0.15s;
 }

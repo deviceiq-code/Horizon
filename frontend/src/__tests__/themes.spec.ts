@@ -22,6 +22,8 @@ describe('color themes', () => {
       'earthy_serene-dark',
       'sleek_futuristic-light',
       'sleek_futuristic-dark',
+      'emerald_slate-light',
+      'emerald_slate-dark',
     ])
   })
 
@@ -39,6 +41,26 @@ describe('color themes', () => {
     expect(theme.swatches).toEqual(['#2C3531', '#116466', '#D9B08C', '#FFCB9A', '#D1E8E2'])
     expect(theme.light.colors!.primary).toBe('#116466')
     expect(vuetifyThemeName('sleek_futuristic', false)).toBe('sleek_futuristic-light')
+  })
+
+  it('Emerald Slate: emerald green over slate, Public Sans', () => {
+    const theme = COLOR_THEMES.find((t) => t.id === 'emerald_slate')!
+    expect(theme.name).toBe('Emerald Slate')
+    expect(theme.fontName).toBe('Public Sans')
+    expect(theme.light.colors!.primary).toBe('#00926F')
+    expect(theme.light.colors!.sidebar).toBe('#1C252E')
+    expect(theme.dark.colors!.background).toBe('#141A21')
+  })
+
+  it('every theme colors the side menu and gets the card shadow', () => {
+    for (const [name, definition] of Object.entries(vuetifyThemes())) {
+      expect({ name, sidebar: definition.colors!.sidebar }).toEqual({
+        name,
+        sidebar: expect.any(String),
+      })
+      expect(definition.colors!['sidebar-active']).toMatch(/^#/)
+      expect(definition.variables!['card-shadow']).toContain('rgba')
+    }
   })
 
   it('names the Vuetify theme from the color theme and the mode', () => {

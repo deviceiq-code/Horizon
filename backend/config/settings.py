@@ -1,4 +1,4 @@
-"""Horizon System settings. Sensitive values come from the .env file at the repository root."""
+"""Horizon settings. Sensitive values come from the .env file at the repository root."""
 
 from pathlib import Path
 

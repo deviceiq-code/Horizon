@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The path of the page in the suite, under the top bar: Horizon › Pricing › Average Prices.
+ * The path of the page in the suite, in the top bar: Horizon › Pricing › Average Prices.
  * Built from the route: the app (meta.app) and every matched route with a meta.titleKey
  * (module, then e.g. a Catalogs tab). Every step but the last is a link.
  */
@@ -41,7 +41,7 @@ const crumbs = computed<Crumb[]>(() => {
 
 <template>
   <nav class="breadcrumb-bar" :aria-label="$t('menu.path')" data-testid="breadcrumbs">
-    <v-breadcrumbs :items="crumbs" density="compact" class="py-1 px-3">
+    <v-breadcrumbs :items="crumbs" density="compact" class="py-0 px-1">
       <template #divider>
         <v-icon icon="mdi-chevron-right" size="small" />
       </template>
@@ -60,24 +60,24 @@ const crumbs = computed<Crumb[]>(() => {
 </template>
 
 <style scoped>
-/* Always visible under the top bar; its height is --horizon-path-bar-height (main.css), which
-   grids use to stop their header right under it */
+/* Inside the top bar (MainLayout): no bar of its own */
 .breadcrumb-bar {
-  position: sticky;
-  top: var(--v-layout-top, 0px);
-  z-index: 5;
-  height: var(--horizon-path-bar-height);
   display: flex;
   align-items: center;
-  background: rgb(var(--v-theme-surface));
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  min-width: 0;
+  overflow: hidden;
 }
-/* No outer margin (it would leave a gap under the top bar) */
 .breadcrumb-bar :deep(.v-breadcrumbs) {
   margin: 0;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.breadcrumb-bar :deep(.v-breadcrumbs-item) {
+  color: rgba(var(--v-theme-on-background), var(--v-medium-emphasis-opacity));
 }
 /* The current page reads as normal text, not as a faded disabled link */
 .breadcrumb-bar :deep(.v-breadcrumbs-item--disabled) {
   opacity: 1;
+  color: rgb(var(--v-theme-on-background));
 }
 </style>

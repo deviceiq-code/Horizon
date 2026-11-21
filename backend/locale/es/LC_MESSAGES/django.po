@@ -1,4 +1,4 @@
-# Horizon System backend translations — Spanish.
+# Horizon backend translations — Spanish.
 msgid ""
 msgstr ""
 "Project-Id-Version: horizon\n"
@@ -45,12 +45,12 @@ msgid "Invalid username or password."
 msgstr "Usuario o contraseña inválidos."
 
 #: config/urls.py
-msgid "Horizon System — Administration"
-msgstr "Sistema Horizon — Administración"
+msgid "Horizon — Administration"
+msgstr "Horizon — Administración"
 
 #: config/urls.py
-msgid "Horizon System"
-msgstr "Sistema Horizon"
+msgid "Horizon"
+msgstr "Horizon"
 
 #: account_managers/apps.py
 msgid "Account managers"

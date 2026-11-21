@@ -10,19 +10,72 @@ button {
   font-family: var(--horizon-font-family, 'Ubuntu', 'Segoe UI', Roboto, sans-serif) !important;
 }
 
-/* Pages of business modules (grids): the whole width, with a small side margin. */
+/* Pages of business modules (grids): the whole width, with a margin around. */
 .module-page {
-  padding: 16px 12px;
+  padding: 16px;
 }
 @media (min-width: 1280px) {
   .module-page {
-    padding-inline: 16px;
+    padding: 24px;
   }
 }
 
-/* Height of the path bar under the top bar (AppBreadcrumbs.vue) */
+/* The path of the page lives in the top bar (AppBreadcrumbs.vue): no bar of its own under it.
+   Kept as a variable for the layouts that subtract it. */
 :root {
-  --horizon-path-bar-height: 38px;
+  --horizon-path-bar-height: 0px;
+}
+
+/* --- Look of the components (every theme) -------------------------------------------------- */
+/* Cards: rounded, a soft shadow (--v-card-shadow, per light/dark in src/themes.ts) */
+.v-card {
+  border-radius: 16px;
+}
+.v-card--variant-elevated {
+  box-shadow: var(--v-card-shadow) !important;
+}
+/* Buttons: rounded corners (round icon buttons stay round), no capitals */
+.v-btn:not(.v-btn--icon) {
+  border-radius: 10px;
+}
+.v-btn {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+}
+/* Fields: rounded corners like the buttons */
+.v-field--variant-outlined,
+.v-field--variant-filled,
+.v-field--variant-solo {
+  border-radius: 10px;
+}
+/* Page titles and the line under them */
+.v-main h1 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  letter-spacing: normal !important;
+}
+/* Vuetify's Material type is widely spaced; the interface reads tighter */
+.text-body-1,
+.text-body-2,
+.text-caption,
+.text-subtitle-1,
+.text-subtitle-2,
+.text-button,
+.v-card-title,
+.v-card-subtitle,
+.v-list-item-title,
+.v-list-item-subtitle,
+.v-chip,
+.v-field,
+.v-label {
+  letter-spacing: normal !important;
+}
+/* Grid column titles: medium weight, normal case */
+.v-table > .v-table__wrapper > table > thead > tr > th {
+  font-weight: 600 !important;
+  text-transform: none;
 }
 
 /* Grids of the pages: the column titles scroll with the page until they reach the path bar,

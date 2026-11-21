@@ -1,4 +1,4 @@
-# CLAUDE.md — Horizon System
+# CLAUDE.md — Horizon
 
 ## What it is
 Multi-user web system for **operating lease residual value pricing**
@@ -185,14 +185,20 @@ Multi-user web system for **operating lease residual value pricing**
     in `--ui-zoom`: heights tied to the window divide by it (`calc(100dvh / var(--ui-zoom, 1))`),
     or they shrink with the zoom.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
-  - `src/layouts/MainLayout.vue` — top bar + side icon rail (expands on hover) for authenticated pages.
-    The top bar shows only the signed-in user (photo or initials + name); clicking opens their
-    menu (Sign out). Language and theme are changed in Settings (the language selector stays on
-    the login page only).
-    Module pages use `<v-container fluid class="module-page">` (full width, small side margin;
-    `src/styles/main.css`). The path bar is sticky under the top bar (height
-    `--horizon-path-bar-height`); on screens ≥ 960 px the column titles of every grid in a page
-    (`.v-data-table` in `.v-main`) stick right under it while the rows scroll — so grids must not
+  - `src/layouts/MainLayout.vue` — the frame of authenticated pages (a clean dashboard look):
+    dark side menu (theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`)
+    with the Horizon brand, Home, a section named after the current app with its modules, a
+    section "Apps" with the other apps, Settings at the bottom; open from 1440 px, collapsed to
+    icons below (they expand on hover); the top bar's button opens/collapses it and the choice
+    is remembered in the browser (`horizon.sideMenu.wide|narrow`). Phones: a drawer.
+    Light top bar: that button, the path (`AppBreadcrumbs.vue`), the app launcher and the
+    signed-in user (photo or initials + name; their menu: appearance, Settings, Sign out).
+    Language and theme are changed in Settings (the language selector stays on the login page).
+    Module pages use `<v-container fluid class="module-page">` (full width, 24 px margin;
+    `src/styles/main.css`, which also sets the shared look: cards 16 px corners + soft shadow
+    `--v-card-shadow`, buttons/fields 10 px corners, page titles `h1` 24 px semibold, normal
+    letter spacing). On screens ≥ 960 px the column titles of every grid in a page
+    (`.v-data-table` in `.v-main`) stick under the top bar while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
     (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Alliances"
@@ -201,11 +207,10 @@ Multi-user web system for **operating lease residual value pricing**
     System Settings, administrators only). App names have no "Horizon" and stay in English in
     every language; areas are translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
     prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
-    the prefix. Navigation: the top bar shows the app name and the app launcher
-    (`AppLauncher.vue`); under it the path bar (`AppBreadcrumbs.vue`: Horizon › app › module ›
-    tab, from `meta.titleKey` — child routes such as Catalogs tabs set their own); the side
-    menu lists the current app's modules (outside an app: the apps); `/` is the suite's home
-    (app cards). The user's own settings (`/settings`) open from the user menu.
+    the prefix. Navigation: the top bar shows the path (`AppBreadcrumbs.vue`: Horizon › app › module ›
+    tab, from `meta.titleKey` — child routes such as Catalogs tabs set their own) and the app
+    launcher (`AppLauncher.vue`); the side menu lists the current app's modules and the other
+    apps; `/` is the suite's home (welcome banner + app cards). The user's own settings (`/settings`) open from the user menu.
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
     router and the side menu (`adminOnly: true` hides it from non-administrators and the router guard refuses its
     routes). `account-managers/` is the reference module. `users/` (Users and Roles tabs,
@@ -341,10 +346,11 @@ Multi-user web system for **operating lease residual value pricing**
     picks the version (App.vue). User preference `color_theme` (backend
     `accounts.models.ColorTheme`). Themes: "Metallic Foundations" (default; #3D52A0, #7091E6,
     #8697C4, #ADBBDA, #EDE8F5), "Earthy and Serene" (#3E362E, #865D36, #93785B, #AC8968,
-    #A69080) and "Sleek and Futuristic" (#2C3531, #116466, #D9B08C, #FFCB9A, #D1E8E2); all use
-    the Ubuntu font (`@fontsource/ubuntu`, imported in main.ts). New theme = entry in
-    `COLOR_THEMES` + choice in `ColorTheme`. Use theme colors (`primary`, `app-bar`…), never
-    hard-coded ones.
+    #A69080) and "Sleek and Futuristic" (#2C3531, #116466, #D9B08C, #FFCB9A, #D1E8E2) use the
+    Ubuntu font; "Emerald Slate" (#1C252E, #00926F, #00A883, #CBEEE0, #F9FAFB; emerald over
+    slate, the dashboard look's reference palette) uses Public Sans (`@fontsource/*`, imported
+    in main.ts). New theme = entry in `COLOR_THEMES` (with the side menu colors) + choice in
+    `ColorTheme`. Use theme colors (`primary`, `sidebar`…), never hard-coded ones.
   - UI: only open-source libraries without license keys (MIT/Apache/BSD). **Vuetify** components
   (auto-imported via `vite-plugin-vuetify`), `mdi-*` icons, themes in `src/themes.ts`.
   **Do not use PrimeVue/PrimeUI** — commercial license since v5.
