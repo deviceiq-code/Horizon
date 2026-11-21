@@ -4,6 +4,8 @@ import {
   copyName,
   copyScenario,
   nextScenarioName,
+  isEfmvInput,
+  parseEfmvPercent,
   parseEfmvValue,
   parseTerm,
   parseUnitValue,
@@ -53,6 +55,7 @@ describe('eFMV analysis draft', () => {
       { key: 1, average_price: 7, quantity: 2, unit_value: '100.000,50', efmv_value: '0' },
       { key: 2, average_price: null, quantity: 1, unit_value: '', efmv_value: '' },
       { key: 3, average_price: 8, quantity: 1, unit_value: '', efmv_value: '42.500' },
+      { key: 4, average_price: 9, quantity: 1, unit_value: '', efmv_value: '12,5%' },
     ]
     expect(scenarioInput(scenario, 'pt-br')).toEqual({
       name: 'Base',
@@ -63,6 +66,7 @@ describe('eFMV analysis draft', () => {
       items: [
         { average_price: 7, quantity: 2, unit_value: '100000.50', efmv_value: '0' },
         { average_price: 8, quantity: 1, unit_value: null, efmv_value: '42500' },
+        { average_price: 9, quantity: 1, unit_value: null, efmv_value: null, efmv_percent: '12.5' },
       ],
     })
   })
@@ -75,6 +79,13 @@ describe('eFMV analysis draft', () => {
     // eFMV values may be zero
     expect(parseEfmvValue('0', 'en')).toBe('0')
     expect(parseEfmvValue('-1', 'en')).toBeNull()
+    // …or a percentage of the unit value
+    expect(parseEfmvPercent('25%', 'en')).toBe('25')
+    expect(parseEfmvPercent(' 12,5 % ', 'pt-br')).toBe('12.5')
+    expect(parseEfmvPercent('25', 'en')).toBeNull()
+    expect(parseEfmvPercent('-5%', 'en')).toBeNull()
+    expect(isEfmvInput('25%', 'en') && isEfmvInput('', 'en') && isEfmvInput('10', 'en')).toBe(true)
+    expect(isEfmvInput('%', 'en')).toBe(false)
   })
 
   it('copies a scenario with its own items', () => {

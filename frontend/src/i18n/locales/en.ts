@@ -209,8 +209,10 @@ const en = {
       weight: 'Weight',
       weightHint: "Share of the row's total in the scenario's LO.",
       efmvValueHint:
-        'Value of one unit at the end of the term ({term} months). Leave empty to use the curve of Average Prices (shown in gray).',
-      efmvValueRule: 'Enter a value of zero or more.',
+        'Value of one unit at the end of the term ({term} months), or a percentage of the unit value (e.g. 25%). Leave empty to use the curve of Average Prices (shown in gray).',
+      efmvValueRule: 'Enter a value or a percentage (e.g. 25%) of zero or more.',
+      efmvPercent: '% Value ({percent}%)',
+      efmvPercentHint: 'The eFMV as a percentage of the unit value.',
       quantity: 'Quantity',
       total: 'Total',
       remove: 'Remove asset',

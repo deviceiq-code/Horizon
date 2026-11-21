@@ -1,6 +1,14 @@
 from decimal import Decimal as D
 
-from efmv.calculations import Line, covers_term, line_total, scenario_totals, weight_percent
+from efmv.calculations import (
+    Line,
+    covers_term,
+    efmv_percent_of_unit,
+    line_total,
+    percent_of_value,
+    scenario_totals,
+    weight_percent,
+)
 
 
 def test_line_total_rounds_half_up():
@@ -56,3 +64,16 @@ def test_weight_of_an_item():
     assert weight_percent(2, D("100000"), D("250000")) == D("80.00")
     assert weight_percent(1, D("1"), D("3")) == D("33.33")
     assert weight_percent(1, D("1"), D("0")) is None
+
+
+def test_percent_of_a_value():
+    assert percent_of_value(D("100.00"), D("25")) == D("25.00")
+    assert percent_of_value(D("12371.91"), D("12.5")) == D("1546.49")  # 1546.48875
+    assert percent_of_value(D("100"), D("0")) == D("0.00")
+
+
+def test_efmv_as_a_percentage_of_the_unit_value():
+    assert efmv_percent_of_unit(D("25.00"), D("100.00")) == D("25.00")
+    assert efmv_percent_of_unit(D("55000"), D("100000")) == D("55.00")
+    assert efmv_percent_of_unit(D("1"), D("3")) == D("33.33")
+    assert efmv_percent_of_unit(D("1"), D("0")) is None

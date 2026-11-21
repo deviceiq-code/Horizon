@@ -76,6 +76,19 @@ def weight_percent(quantity: int, unit_value: Decimal, lo: Decimal) -> Decimal |
     return (unit_value * quantity / lo * HUNDRED).quantize(CENTS, rounding=ROUND_HALF_UP)
 
 
+def efmv_percent_of_unit(efmv_value: Decimal, unit_value: Decimal) -> Decimal | None:
+    """An item's eFMV as a percentage of its unit value (2 places); None without a value."""
+    if unit_value == 0:
+        return None
+    return (efmv_value / unit_value * HUNDRED).quantize(CENTS, rounding=ROUND_HALF_UP)
+
+
+def percent_of_value(value: Decimal, percent: Decimal) -> Decimal:
+    """`percent` % of `value`, in money (2 places, half up): an eFMV typed as a percentage
+    of the unit value ("25%" of 100.00 → 25.00)."""
+    return (value * percent / HUNDRED).quantize(CENTS, rounding=ROUND_HALF_UP)
+
+
 def covers_term(anchor_terms: Sequence[int], term_months: int) -> bool:
     """Whether an asset's value curve reaches the scenario's term (the curve stops at its last
     term)."""

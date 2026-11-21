@@ -119,6 +119,24 @@ export function parseEfmvValue(text: string, language: string): string | null {
   return value !== null && Number(value) >= 0 ? value : null
 }
 
+/** The eFMV typed as a percentage of the unit value ("25%", "12,5 %" in pt-br), as a canonical
+ * decimal string ("25", "12.5"), or null when it is not one. The API turns it into a value. */
+export function parseEfmvPercent(text: string, language: string): string | null {
+  const match = /^(.*?)\s*%\s*$/.exec(text.trim())
+  if (!match) return null
+  const value = parseMoney(match[1]!, language)
+  return value !== null && Number(value) >= 0 ? value : null
+}
+
+/** Whether what was typed in an eFMV cell is acceptable: empty, a value or a percentage. */
+export function isEfmvInput(text: string, language: string): boolean {
+  return (
+    !text.trim() ||
+    parseEfmvValue(text, language) !== null ||
+    parseEfmvPercent(text, language) !== null
+  )
+}
+
 /** Input for the API; assets whose price was deleted are left out. */
 export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput {
   return {
@@ -134,6 +152,10 @@ export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput
         quantity: i.quantity,
         unit_value: parseUnitValue(i.unit_value, language),
         efmv_value: parseEfmvValue(i.efmv_value ?? '', language),
+        // "25%": a percentage of the unit value, turned into a value by the API
+        ...(parseEfmvPercent(i.efmv_value ?? '', language) !== null && {
+          efmv_percent: parseEfmvPercent(i.efmv_value, language)!,
+        }),
       })),
   }
 }

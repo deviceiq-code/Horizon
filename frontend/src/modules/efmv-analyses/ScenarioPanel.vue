@@ -18,6 +18,8 @@ import { previewScenario, type PricePosition, type ScenarioItem } from './api'
 import {
   MAX_TERM,
   newKey,
+  isEfmvInput,
+  parseEfmvPercent,
   parseEfmvValue,
   parseTerm,
   parseUnitValue,
@@ -204,9 +206,26 @@ function tidyUnitValue(item: ItemDraft) {
   const value = parseUnitValue(item.unit_value, locale.value)
   if (value !== null) item.unit_value = toInputMoney(value, locale.value)
 }
-function tidyEfmvValue(item: ItemDraft) {
+/**
+ * Leaving the eFMV cell (Tab, Enter, click elsewhere): a value is shown as money; a percentage
+ * ("25%") is turned into the value it gives — resolved by the API, as a % of the unit value.
+ */
+async function tidyEfmvValue(item: ItemDraft) {
   const value = parseEfmvValue(item.efmv_value, locale.value)
-  if (value !== null) item.efmv_value = toInputMoney(value, locale.value)
+  if (value !== null) {
+    item.efmv_value = toInputMoney(value, locale.value)
+    return
+  }
+  const typed = item.efmv_value
+  if (parseEfmvPercent(typed, locale.value) === null) return
+  clearTimeout(timer)
+  await refresh()
+  const index = scenario.value.items.indexOf(item)
+  const resolved = index >= 0 ? detail(index)?.efmv_value : null
+  // Only if nothing was typed meanwhile
+  if (resolved && item.efmv_value === typed) {
+    item.efmv_value = toInputMoney(resolved, locale.value)
+  }
 }
 
 function removeAsset(index: number) {
@@ -237,8 +256,7 @@ const unitValueRules = [
 ]
 // Empty: the average price's curve at the term counts (shown as the placeholder)
 const efmvValueRules = [
-  (v: string) =>
-    !v?.trim() || parseEfmvValue(v, locale.value) !== null || t('efmv.item.efmvValueRule'),
+  (v: string) => isEfmvInput(v ?? '', locale.value) || t('efmv.item.efmvValueRule'),
 ]
 
 const POSITION_COLORS: Record<PricePosition, string> = {
@@ -580,7 +598,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               </v-chip>
             </div>
           </td>
-          <td class="cell-input" data-col="efmv">
+          <!-- The eFMV and, below it, what it is of the unit value -->
+          <td class="cell-input cell-stack" data-col="efmv">
             <v-text-field
               v-model="item.efmv_value"
               inputmode="decimal"
@@ -603,6 +622,23 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 ><span class="symbol">{{ symbol }}</span></template
               >
             </v-text-field>
+            <!-- Same look as the position below the unit value -->
+            <div v-if="detail(i)?.efmv_percent" class="below">
+              <v-chip
+                size="x-small"
+                variant="tonal"
+                label
+                class="numeric"
+                :title="$t('efmv.item.efmvPercentHint')"
+                data-testid="efmv-percent"
+              >
+                {{
+                  $t('efmv.item.efmvPercent', {
+                    percent: $n(Number(detail(i)!.efmv_percent), 'percentValue'),
+                  })
+                }}
+              </v-chip>
+            </div>
           </td>
           <td
             class="cell-text text-no-wrap numeric font-weight-medium"
@@ -739,7 +775,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
   padding-top: 0;
 }
 /* Unit value with its position below (the row grows) */
-.cell-stack .position {
+.cell-stack .position,
+.cell-stack .below {
   display: flex;
   justify-content: flex-end;
   padding: 0 10px 6px;

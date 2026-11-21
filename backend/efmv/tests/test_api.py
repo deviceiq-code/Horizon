@@ -520,3 +520,42 @@ def test_scenario_title_in_the_user_language(logged_client, user, managers, cust
     scenario = {"name": "Desktops", "term_months": 36, "vertical": industry(), "items": []}
     r = post(logged_client, body(managers, customers, prices, scenarios=[scenario]))
     assert r.json()["scenarios"][0]["title"] == "36 Meses - Desktops"
+
+
+def test_efmv_typed_as_a_percentage_of_the_unit_value(logged_client, managers, customers, prices):
+    items = [
+        {
+            "average_price": prices["excavator"],
+            "quantity": 1,
+            "unit_value": "100",
+            "efmv_percent": "25",
+        },
+        # Unit value not typed: a percentage of the average price's value (50,000)
+        {"average_price": prices["tractor"], "quantity": 1, "efmv_percent": "12.5"},
+    ]
+    r = logged_client.post(
+        f"{URL}scenario-preview/",
+        {"term_months": 24, "items": items},
+        content_type="application/json",
+    )
+    assert r.status_code == 200, r.json()
+    assert [(i["efmv_value"], i["efmv_from_curve"]) for i in r.json()["items"]] == [
+        ("25.00", False),
+        ("6250.00", False),
+    ]
+    # Shown below the field: the eFMV as a % of the unit value
+    assert [i["efmv_percent"] for i in r.json()["items"]] == ["25.00", "12.50"]
+    # Saved as the value it gives
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["items"] = items
+    r = post(logged_client, data)
+    assert r.status_code == 201, r.json()
+    assert [i["efmv_value"] for i in r.json()["scenarios"][0]["items"]] == ["25.00", "6250.00"]
+    # Not both
+    items[0]["efmv_value"] = "30"
+    r = logged_client.post(
+        f"{URL}scenario-preview/",
+        {"term_months": 24, "items": items},
+        content_type="application/json",
+    )
+    assert r.status_code == 400

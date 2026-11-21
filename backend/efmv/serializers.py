@@ -14,7 +14,15 @@ from pricing.positioning import is_expired, price_position, valid_until, variati
 from users.display import full_name_in, person_ref
 from users.models import is_account_manager
 
-from .calculations import Line, covers_term, line_total, scenario_totals, weight_percent
+from .calculations import (
+    Line,
+    covers_term,
+    efmv_percent_of_unit,
+    line_total,
+    percent_of_value,
+    scenario_totals,
+    weight_percent,
+)
 from .models import EfmvAnalysis, EfmvScenario, EfmvScenarioItem, in_scope, title_key
 
 User = get_user_model()
@@ -115,15 +123,19 @@ def scenario_payload(
     scope: tuple = (None, None),
 ) -> dict:
     """`items`: (item id or None, lineage, quantity, typed unit value or None, typed eFMV value
-    or None); `scope`: the scenario's (vertical id, sub-vertical id). Without a typed value the
+    or None[, eFMV typed as a % of the unit value or None]); `scope`: the scenario's (vertical
+    id, sub-vertical id). Without a typed value the
     average price's value counts (`value_from_price`); without a typed eFMV value, the average
     price's curve at the term (`efmv_from_curve`). Items whose price was deleted, whose curve
     no longer reaches the term or that are outside the scenario's vertical are flagged and left
     out of the totals."""
     lines, rows, counted = [], [], []
-    for item_id, lineage, quantity, typed, typed_efmv in items:
+    for item_id, lineage, quantity, typed, typed_efmv, *percent in items:
         row = prices.get(lineage)
         unit_value = typed if typed is not None or row is None else row.original_value
+        if typed_efmv is None and percent and percent[0] is not None and unit_value is not None:
+            # Typed as a percentage of the unit value: resolved here (the form shows the value)
+            typed_efmv = percent_of_value(unit_value, percent[0])
         from_curve = None if row is None else curve_value(row, term_months)
         efmv_value = typed_efmv if typed_efmv is not None else from_curve
         entry = {
@@ -136,6 +148,12 @@ def scenario_payload(
             "efmv_value": None if efmv_value is None else str(efmv_value),
             "curve_value": None if from_curve is None else str(from_curve),
             "efmv_from_curve": typed_efmv is None and from_curve is not None,
+            # The eFMV as a percentage of the unit value (shown below it)
+            "efmv_percent": (
+                None
+                if efmv_value is None or not unit_value
+                else str(efmv_percent_of_unit(efmv_value, unit_value))
+            ),
             "available": row is not None,
             # Share of the scenario's LO; null when left out of the totals
             "weight_percent": None,
@@ -186,6 +204,17 @@ class ItemInputSerializer(serializers.Serializer):
     efmv_value = serializers.DecimalField(
         max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
     )
+    # Or typed as a percentage of the unit value ("25" = 25%): turned into `efmv_value`
+    efmv_percent = serializers.DecimalField(
+        max_digits=6, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
+    )
+
+    def validate(self, attrs):
+        if attrs.get("efmv_value") is not None and attrs.get("efmv_percent") is not None:
+            raise serializers.ValidationError(
+                {"efmv_percent": [_("Send the eFMV as a value or as a percentage, not both.")]}
+            )
+        return attrs
 
     def validate_average_price(self, value):
         if value.deleted_at is not None:
@@ -250,6 +279,9 @@ class ScenarioInputSerializer(serializers.Serializer):
             elif item.get("unit_value") is None:
                 # Not typed: the value of the average price counts
                 item["unit_value"] = row.original_value
+            if str(index) not in errors and item.get("efmv_percent") is not None:
+                # Stored as the value it gives (a percentage of the unit value)
+                item["efmv_value"] = percent_of_value(item["unit_value"], item["efmv_percent"])
         if errors:
             raise serializers.ValidationError({"items": errors})
         return attrs
@@ -470,6 +502,7 @@ class ScenarioPreviewSerializer(serializers.Serializer):
                 i["quantity"],
                 i.get("unit_value"),
                 i.get("efmv_value"),
+                i.get("efmv_percent"),
             )
             for i in instance["items"]
         ]

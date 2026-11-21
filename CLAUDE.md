@@ -110,7 +110,9 @@ Multi-user web system for **operating lease residual value pricing**
     price's value counts (`value_from_price` in previews) and is stored on save; the same
     price may repeat in several rows — e.g. another value per delivery state; and an optional `efmv_value` — one unit at the end of the term, typed; null = the
     price's curve at the scenario's term, `pricing/curves.py::value_at`, returned as
-    `curve_value` and followed when the term or the price changes, `efmv_from_curve`). Items carry the price's `specs` for display. Each item is placed against the current average price's value
+    `curve_value` and followed when the term or the price changes, `efmv_from_curve`; or
+    `efmv_percent` in the input — a % of the unit value, `calculations.percent_of_value`,
+    resolved by the API, stored as the value; items return `efmv_percent` = eFMV / unit value). Items carry the price's `specs` for display. Each item is placed against the current average price's value
     (`pricing/positioning.py`, pure: `variation_percent` and `price_position` → below /
     slightly_below / compatible / slightly_above / above, compared at 2 places, inclusive
     limits) and flagged `expired` when that version is older than the validity; the analysis
@@ -233,7 +235,8 @@ Multi-user web system for **operating lease residual value pricing**
     for it), Quantity, asset (class · specifications · price date or expired flag), Unit Value
     (the average price's value as placeholder; empty = that value; its Position chip below it
     in the same cell), eFMV (the
-    curve's value at the term as placeholder; empty = that value), total, Weight (read only); money cells show the currency symbol on the left
+    curve's value at the term as placeholder; empty = that value; "25%" becomes its value when
+    the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total, Weight (read only); money cells show the currency symbol on the left
     (`utils/money.ts::currencySymbol`) and the number on the right; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
     row adds one), remove buttons appear on hover and are out of the Tab order; figures

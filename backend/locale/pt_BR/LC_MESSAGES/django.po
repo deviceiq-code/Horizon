@@ -1058,3 +1058,6 @@ msgstr[1] "%(count)d Meses"
 
 msgid "Another scenario already has this term and name."
 msgstr "Outro cenário já tem este prazo e nome."
+
+msgid "Send the eFMV as a value or as a percentage, not both."
+msgstr "Envie o eFMV como valor ou como percentual, não ambos."

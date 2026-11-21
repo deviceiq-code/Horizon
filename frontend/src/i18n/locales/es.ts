@@ -208,8 +208,10 @@ const es: Messages = {
       weight: 'Peso',
       weightHint: 'Cuánto representa el total de la fila en el LO del escenario.',
       efmvValueHint:
-        'Valor de una unidad al final del plazo ({term} meses). Deje vacío para usar la curva de los precios promedio (mostrado en gris).',
-      efmvValueRule: 'Ingrese un valor igual o mayor que cero.',
+        'Valor de una unidad al final del plazo ({term} meses), o un porcentaje del valor unitario (ej.: 25%). Deje vacío para usar la curva de los precios promedio (mostrado en gris).',
+      efmvValueRule: 'Ingrese un valor o un porcentaje (ej.: 25%) igual o mayor que cero.',
+      efmvPercent: '% Valor ({percent}%)',
+      efmvPercentHint: 'El eFMV como porcentaje del valor unitario.',
       quantity: 'Cantidad',
       total: 'Total',
       remove: 'Quitar bien',

@@ -52,6 +52,8 @@ export interface ScenarioItem {
   curve_value?: string | null
   /** Not typed: the curve's value counts (it follows the term and the price's current version) */
   efmv_from_curve?: boolean
+  /** The eFMV as a percentage of the unit value (2 places) */
+  efmv_percent?: string | null
   /** Share of the scenario's LO (%, 2 places); null when left out of the totals */
   weight_percent?: string | null
   /** false: the average price was deleted (left out of the totals; removed when saving) */
@@ -136,6 +138,8 @@ export interface ScenarioItemInput {
   unit_value: string | null
   /** Canonical decimal string; null = not typed (the curve's value at the term counts) */
   efmv_value: string | null
+  /** Or typed as a percentage of the unit value ("25" = 25%); the API turns it into a value */
+  efmv_percent?: string
 }
 
 export interface ScenarioInput {

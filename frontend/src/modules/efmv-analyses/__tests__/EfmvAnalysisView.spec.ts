@@ -57,6 +57,7 @@ const EXCAVATOR: efmvApi.ScenarioItem = {
   efmv_value: '42500.00',
   curve_value: '42500.00',
   efmv_from_curve: true,
+  efmv_percent: '42.50',
   available: true,
   average_price: 7,
   asset_class: { name: 'Excavators', icon: 'mdi-excavator' },
@@ -545,6 +546,34 @@ describe('EfmvAnalysisView', () => {
         items: [{ average_price: 7, quantity: 2, unit_value: '100000.00', efmv_value: null }],
       }),
     )
+    // Below the field: the eFMV as a percentage of the unit value
+    expect(inBody('[data-testid="efmv-percent"]')!.textContent).toContain('% Value (42.50%)')
+    // A percentage of the unit value is turned into its value when the cell is left
+    efmv.previewScenario.mockResolvedValue({
+      items: [
+        { ...EXCAVATOR, efmv_value: '25000.00', efmv_percent: '25.00', efmv_from_curve: false },
+      ],
+      totals: TOTALS,
+      has_expired: false,
+    })
+    await typeInto('efmv-value', '25%')
+    input().dispatchEvent(new Event('blur'))
+    await settle()
+    expect(efmv.previewScenario).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        items: [
+          {
+            average_price: 7,
+            quantity: 2,
+            unit_value: '100000.00',
+            efmv_value: null,
+            efmv_percent: '25',
+          },
+        ],
+      }),
+    )
+    expect(input().value).toBe('25,000.00')
+    expect(inBody('[data-testid="efmv-percent"]')!.textContent!.trim()).toBe('% Value (25.00%)')
     // A negative value is refused before saving
     await typeInto('efmv-value', '-5')
     await click('save')

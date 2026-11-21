@@ -207,8 +207,10 @@ const ptBR: Messages = {
       weight: 'Peso',
       weightHint: 'Quanto o total da linha representa do LO do cenário.',
       efmvValueHint:
-        'Valor de uma unidade ao fim do prazo ({term} meses). Deixe vazio para usar a curva do Average Prices (mostrado em cinza).',
-      efmvValueRule: 'Informe um valor igual ou maior que zero.',
+        'Valor de uma unidade ao fim do prazo ({term} meses), ou um percentual do valor unitário (ex.: 25%). Deixe vazio para usar a curva do Average Prices (mostrado em cinza).',
+      efmvValueRule: 'Informe um valor ou um percentual (ex.: 25%) igual ou maior que zero.',
+      efmvPercent: '% Valor ({percent}%)',
+      efmvPercentHint: 'O eFMV como percentual do valor unitário.',
       quantity: 'Quantidade',
       total: 'Total',
       remove: 'Remover bem',
