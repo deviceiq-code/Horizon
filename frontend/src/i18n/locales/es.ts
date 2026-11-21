@@ -134,6 +134,34 @@ const es: Messages = {
     },
   },
   efmv: {
+    wizard: {
+      subtitle: 'Defina las premisas del análisis; sus escenarios vienen después.',
+      steps: {
+        premises: 'Premisas',
+        services: 'Servicios',
+        partnerships: 'Alianzas y Socios',
+      },
+      premisesTitle: 'Account Manager, Cliente y Vertical',
+      premisesHint: 'Quedan fijos una vez creado el análisis.',
+      verticalHint:
+        'Una vertical entera o una de sus sub-verticales: los bienes que admiten los escenarios.',
+      servicesText: 'Los servicios del análisis se elegirán aquí cuando se agreguen a Horizon.',
+      partnershipsText:
+        'Las alianzas y socios del análisis se elegirán aquí cuando se agreguen a Horizon.',
+      back: 'Volver',
+      next: 'Siguiente',
+      create: 'Crear Análisis',
+      manager: {
+        pick: 'Elija un account manager para ver sus cifras.',
+        loadError: 'No se pudieron cargar las cifras del account manager.',
+        analyses: 'Análisis de eFMV',
+        primaryCustomers: 'Clientes como AM Principal',
+        topVerticals: 'Verticales Más Exploradas',
+        analysesCount: '{n} análisis | {n} análisis',
+        noAnalyses: 'Aún no hay análisis.',
+        worksIn: 'Trabaja en',
+      },
+    },
     title: 'Análisis de eFMV',
     subtitle:
       'Estimated Fair Market Value: por escenario, el Leasing Origination (LO), el eFMV al final del contrato y la participación de hardware, software y servicios.',
@@ -161,6 +189,7 @@ const es: Messages = {
       'Algunos precios promedio usados superaron su validez; el análisis puede estar desactualizado.',
     fixErrors: 'Corrija los campos marcados en rojo.',
     fields: {
+      vertical: 'Vertical',
       code: 'Código',
       accountManager: 'Account Manager',
       customer: 'Cliente',
@@ -170,8 +199,7 @@ const es: Messages = {
       duplicateShort: 'Duplicar',
       removeShort: 'Quitar',
       vertical: 'Vertical',
-      verticalHint: 'Los bienes que admite: una vertical entera o una de sus sub-verticales.',
-      pickVerticalFirst: 'Elija primero la vertical.',
+      verticalHint: 'La vertical del análisis: los bienes ofrecidos en sus escenarios son de ella.',
       add: 'Agregar Escenario',
       defaultBase: 'Escenario',
       copy: 'copia',
@@ -198,7 +226,7 @@ const es: Messages = {
       removeConfirm: '¿Quitar el escenario "{name}"? Solo deja de existir al guardar.',
     },
     item: {
-      outOfScope: 'No es de la vertical del escenario; cambie la vertical o quite el bien.',
+      outOfScope: 'No es de la vertical del análisis; quítelo.',
       unitValueHint: 'Deje vacío para usar el valor de los precios promedio (mostrado en gris).',
       unitValueRule: 'Ingrese un valor mayor que cero.',
       pricedOn: 'cotizado el {date}',

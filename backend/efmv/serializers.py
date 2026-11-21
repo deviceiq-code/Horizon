@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from catalogs.models import MAX_TERM_MONTHS, SubVertical, Vertical
+from catalogs.models import MAX_TERM_MONTHS, SubVertical
 from catalogs.serializers import sub_vertical_label
 from pricing.curves import value_at
 from pricing.models import AveragePrice, PricingSettings
@@ -123,11 +123,11 @@ def scenario_payload(
     scope: tuple = (None, None),
 ) -> dict:
     """`items`: (item id or None, lineage, quantity, typed unit value or None, typed eFMV value
-    or None[, eFMV typed as a % of the unit value or None]); `scope`: the scenario's (vertical
+    or None[, eFMV typed as a % of the unit value or None]); `scope`: the analysis's (vertical
     id, sub-vertical id). Without a typed value the
     average price's value counts (`value_from_price`); without a typed eFMV value, the average
     price's curve at the term (`efmv_from_curve`). Items whose price was deleted, whose curve
-    no longer reaches the term or that are outside the scenario's vertical are flagged and left
+    no longer reaches the term or that are outside the analysis's vertical are flagged and left
     out of the totals."""
     lines, rows, counted = [], [], []
     for item_id, lineage, quantity, typed, typed_efmv, *percent in items:
@@ -229,22 +229,13 @@ class ScenarioInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     term_months = serializers.IntegerField(min_value=1, max_value=MAX_TERM_MONTHS)
     scope = serializers.CharField(required=False, allow_blank=True, default="")
-    # The assets it admits: the vertical's, or only the sub-vertical's when one is chosen
-    vertical = serializers.PrimaryKeyRelatedField(queryset=Vertical.objects.all())
-    sub_vertical = serializers.PrimaryKeyRelatedField(
-        queryset=SubVertical.objects.all(), required=False, allow_null=True, default=None
-    )
     items = ItemInputSerializer(many=True, required=False, default=list)
 
     def validate_name(self, value):
         return " ".join(value.split())
 
     def validate(self, attrs):
-        vertical, sub_vertical = attrs["vertical"], attrs.get("sub_vertical")
-        if sub_vertical is not None and sub_vertical.vertical_id != vertical.pk:
-            raise serializers.ValidationError(
-                {"sub_vertical": [_("This sub-vertical is not of the chosen vertical.")]}
-            )
+        # Whether each asset is of the analysis's vertical is checked with the analysis
         lineages = [item["average_price"].lineage for item in attrs["items"]]
         prices = current_prices(lineages)
         ctx = Context()
@@ -254,10 +245,6 @@ class ScenarioInputSerializer(serializers.Serializer):
             row = prices.get(item["average_price"].lineage)
             if row is None:
                 errors[str(index)] = {"average_price": [_("This average price was deleted.")]}
-            elif not in_scope(vertical.pk, sub_vertical and sub_vertical.pk, row.sub_vertical):
-                errors[str(index)] = {
-                    "average_price": [_("This asset is not in the scenario's vertical.")]
-                }
             elif not covers_term(price_terms(row), attrs["term_months"]):
                 errors[str(index)] = {
                     "average_price": [
@@ -289,15 +276,24 @@ class ScenarioInputSerializer(serializers.Serializer):
         return attrs
 
 
+# Set when the analysis is created (wizard), not changed afterwards
+PREMISES = ("account_manager", "customer", "vertical", "sub_vertical")
+
+
 class EfmvAnalysisSerializer(serializers.ModelSerializer):
-    """An analysis with its scenarios (at least one) and their assets. Sending `scenarios`
-    replaces them all. The account manager must be one of the customer's (primary or
-    secondary)."""
+    """An analysis with its scenarios (at least one) and their assets. The premises — account
+    manager (one of the customer's, primary or secondary), customer and vertical (or one of its
+    sub-verticals: the assets the scenarios admit) — are set on creation and cannot change.
+    Sending `scenarios` replaces them all."""
 
     code = serializers.CharField(read_only=True)
     account_manager_detail = serializers.SerializerMethodField()
     customer_detail = serializers.SerializerMethodField()
+    vertical_label = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    sub_vertical = serializers.PrimaryKeyRelatedField(
+        queryset=SubVertical.objects.all(), required=False, allow_null=True
+    )
     scenarios = ScenarioInputSerializer(many=True, write_only=True)
 
     class Meta:
@@ -309,6 +305,9 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             "account_manager_detail",
             "customer",
             "customer_detail",
+            "vertical",
+            "sub_vertical",
+            "vertical_label",
             "scenarios",
             "created_at",
             "created_by_name",
@@ -325,6 +324,10 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj) -> str | None:
         return full_name_in(self.context, obj.created_by) if obj.created_by else None
+
+    def get_vertical_label(self, obj) -> str | None:
+        """ "Industry" or "Industry / Yellow line" """
+        return scope_label(obj.vertical, obj.sub_vertical)
 
     def validate_account_manager(self, value):
         if not (value.is_active and is_account_manager(value)):
@@ -347,6 +350,27 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        if self.instance is not None:
+            # The premises stay as created
+            errors = {
+                field: [_("This cannot be changed after the analysis is created.")]
+                for field in PREMISES
+                if field in attrs and attrs[field] != getattr(self.instance, field)
+            }
+            if errors:
+                raise serializers.ValidationError(errors)
+        elif attrs.get("vertical") is None:
+            raise serializers.ValidationError({"vertical": [_("This field is required.")]})
+        vertical = attrs.get("vertical") or getattr(self.instance, "vertical", None)
+        sub_vertical = attrs.get("sub_vertical", getattr(self.instance, "sub_vertical", None))
+        if (
+            sub_vertical is not None
+            and vertical is not None
+            and sub_vertical.vertical_id != vertical.pk
+        ):
+            raise serializers.ValidationError(
+                {"sub_vertical": [_("This sub-vertical is not of the chosen vertical.")]}
+            )
         manager = attrs.get("account_manager") or getattr(self.instance, "account_manager", None)
         customer = attrs.get("customer") or getattr(self.instance, "customer", None)
         if (
@@ -362,7 +386,29 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             )
         if self.instance is None and "scenarios" not in attrs:
             raise serializers.ValidationError({"scenarios": [_("Add at least one scenario.")]})
+        if "scenarios" in attrs:
+            self._check_scope(attrs["scenarios"], vertical, sub_vertical)
         return attrs
+
+    @staticmethod
+    def _check_scope(scenarios, vertical, sub_vertical):
+        """Every asset must be of the analysis's vertical (or sub-vertical)."""
+        if vertical is None:
+            return
+        items = [item for scenario in scenarios for item in scenario["items"]]
+        prices = current_prices(item["average_price"].lineage for item in items)
+        errors = {}
+        for s_index, scenario in enumerate(scenarios):
+            for i_index, item in enumerate(scenario["items"]):
+                row = prices.get(item["average_price"].lineage)
+                if row is not None and not in_scope(
+                    vertical.pk, sub_vertical and sub_vertical.pk, row.sub_vertical
+                ):
+                    errors.setdefault(str(s_index), {"items": {}})["items"][str(i_index)] = {
+                        "average_price": [_("This asset is not in the analysis's vertical.")]
+                    }
+        if errors:
+            raise serializers.ValidationError({"scenarios": errors})
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -378,9 +424,6 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                 "title": s.title,
                 "term_months": s.term_months,
                 "scope": s.scope,
-                "vertical": s.vertical_id,
-                "sub_vertical": s.sub_vertical_id,
-                "scope_label": scope_label(s.vertical, s.sub_vertical),
                 **scenario_payload(
                     s.term_months,
                     [
@@ -389,7 +432,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                     ],
                     prices,
                     ctx,
-                    (s.vertical_id, s.sub_vertical_id),
+                    (instance.vertical_id, instance.sub_vertical_id),
                 ),
             }
             for s in scenarios
@@ -406,8 +449,6 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                 name=scenario["name"],
                 term_months=scenario["term_months"],
                 scope=scenario.get("scope", ""),
-                vertical=scenario["vertical"],
-                sub_vertical=scenario.get("sub_vertical"),
                 position=position,
             )
             EfmvScenarioItem.objects.bulk_create(

@@ -12,7 +12,6 @@ import { useValidationRules } from '@/composables/useValidationRules'
 import { specSummary } from '@/modules/average-prices/specText'
 import { currencySymbol, toInputMoney } from '@/utils/money'
 import AveragePricePicker from './AveragePricePicker.vue'
-import VerticalScopePicker, { type VerticalScope } from './VerticalScopePicker.vue'
 import ScenarioTotalsBar from './ScenarioTotalsBar.vue'
 import { previewScenario, type PricePosition, type ScenarioItem } from './api'
 import {
@@ -38,6 +37,10 @@ const props = defineProps<{
   otherKeys: string[]
   /** This scenario's official name ("36 Months - Desktops") */
   title: string
+  /** The assets it admits: the analysis's vertical (sub_vertical null = the whole vertical) */
+  scope: { vertical: number | null; sub_vertical: number | null }
+  /** "Industry / Yellow line": shown as a label (set by the wizard) */
+  scopeLabel: string | null
 }>()
 
 const { t, n, d, locale } = useI18n()
@@ -85,8 +88,8 @@ async function refresh() {
   try {
     const preview = await previewScenario({
       term_months: term,
-      vertical: input.vertical,
-      sub_vertical: input.sub_vertical,
+      vertical: props.scope.vertical,
+      sub_vertical: props.scope.sub_vertical,
       items: input.items,
     })
     if (current !== request) return
@@ -126,8 +129,7 @@ function deletedItem(quantity: number): ScenarioItem {
 const watched = computed(() =>
   JSON.stringify([
     scenario.value.term,
-    scenario.value.vertical,
-    scenario.value.sub_vertical,
+    props.scope,
     scenario.value.items.map((i) => [i.average_price, i.quantity, i.unit_value, i.efmv_value]),
   ]),
 )
@@ -278,15 +280,6 @@ function signedPercent(value: string): string {
   return `${number > 0 ? '+' : ''}${n(number, 'percentValue')}%`
 }
 
-/** The scenario's vertical / sub-vertical, as the picker edits it */
-const verticalScope = computed<VerticalScope>({
-  get: () => ({ vertical: scenario.value.vertical, sub_vertical: scenario.value.sub_vertical }),
-  set: (value) => {
-    scenario.value.vertical = value.vertical
-    scenario.value.sub_vertical = value.sub_vertical
-  },
-})
-
 /** "Ultra 7 265U vPro, 32 GB, 14 Inches" */
 const specsOf = (index: number) => specSummary(detail(index)?.specs ?? [], t, n)
 
@@ -324,17 +317,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               data-testid="scenario-term"
             />
           </div>
-          <VerticalScopePicker
-            v-model="verticalScope"
-            :label="`${$t('efmv.scenario.vertical')} *`"
-            :current-label="scenario.scope_label"
-            :rules="[() => scenario.vertical !== null || t('validation.required')]"
-            :error-messages="[...(errors?.vertical ?? []), ...(errors?.sub_vertical ?? [])]"
-            :hint="$t('efmv.scenario.verticalHint')"
-            density="compact"
-            class="mb-1"
-            data-testid="scenario-vertical"
-          />
           <v-textarea
             v-model="scenario.scope"
             :label="$t('efmv.scenario.scope')"
@@ -361,14 +343,26 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           <v-chip size="x-small" variant="tonal" class="ml-1" data-testid="asset-count">
             {{ scenario.items.length }}
           </v-chip>
+          <!-- The analysis's vertical (set by the wizard): the assets offered are of it -->
+          <v-chip
+            v-if="scopeLabel"
+            size="small"
+            variant="tonal"
+            color="primary"
+            label
+            prepend-icon="mdi-shape-outline"
+            class="ml-2"
+            :title="$t('efmv.scenario.verticalHint')"
+            data-testid="scenario-vertical"
+          >
+            {{ scopeLabel }}
+          </v-chip>
         </div>
         <v-btn
           variant="tonal"
           color="primary"
           prepend-icon="mdi-plus"
           class="text-none"
-          :disabled="scenario.vertical === null"
-          :title="scenario.vertical === null ? $t('efmv.scenario.pickVerticalFirst') : undefined"
           data-testid="add-row"
           @click="addRow"
         >
@@ -452,8 +446,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               v-if="item.pending"
               label=""
               :placeholder="$t('efmv.scenario.chooseAsset')"
-              :vertical="scenario.vertical"
-              :sub-vertical="scenario.sub_vertical"
+              :vertical="scope.vertical"
+              :sub-vertical="scope.sub_vertical"
               prepend-inner-icon="mdi-magnify"
               variant="plain"
               density="compact"

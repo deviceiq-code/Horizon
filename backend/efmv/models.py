@@ -1,6 +1,8 @@
-"""eFMV analyses (estimated Fair Market Value): for a customer and its account manager, one or
-more scenarios, each with a term, a scope and the assets (from Average Prices, with
-quantities) that are evaluated. Analyses are edited freely.
+"""eFMV analyses (estimated Fair Market Value): for a customer, its account manager and a
+business vertical (or one of its sub-verticals) — the premises, set when the analysis is
+created (wizard) and not changed afterwards — one or more scenarios, each with a term, a scope
+and the assets (from Average Prices, with quantities) that are evaluated. Scenarios are edited
+freely.
 
 An item follows the asset's *current* average price: it stores the price's lineage (shared by
 all its versions), so a new version applies at once.
@@ -34,6 +36,24 @@ class EfmvAnalysis(models.Model):
         related_name="efmv_analyses",
         verbose_name=_("customer"),
     )
+    # The assets it admits: the vertical's (any sub-vertical) or, when a sub-vertical is chosen,
+    # only that sub-vertical's. Required by the API (null only for analyses whose scenarios had
+    # none before the vertical moved to the analysis).
+    vertical = models.ForeignKey(
+        "catalogs.Vertical",
+        on_delete=models.PROTECT,
+        null=True,
+        related_name="efmv_analyses",
+        verbose_name=_("vertical"),
+    )
+    sub_vertical = models.ForeignKey(
+        "catalogs.SubVertical",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="efmv_analyses",
+        verbose_name=_("sub-vertical"),
+    )
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -59,6 +79,10 @@ class EfmvAnalysis(models.Model):
     def code(self) -> str:
         return format_code(self.year, self.sequence)
 
+    def admits(self, sub_vertical) -> bool:
+        """Whether an asset of this sub-vertical can be in the analysis's scenarios."""
+        return in_scope(self.vertical_id, self.sub_vertical_id, sub_vertical)
+
 
 def format_code(year: int, sequence: int) -> str:
     return f"EFMV-{year}-{sequence:04d}"
@@ -75,24 +99,6 @@ class EfmvScenario(models.Model):
     )
     # Short explanation of the assets of the scenario
     scope = models.TextField(_("scope"), blank=True)
-    # Which assets can be in it: those of the vertical (any sub-vertical) or, when a
-    # sub-vertical is chosen, only those of that sub-vertical. Required by the API (null only
-    # for scenarios saved before it existed).
-    vertical = models.ForeignKey(
-        "catalogs.Vertical",
-        on_delete=models.PROTECT,
-        null=True,
-        related_name="efmv_scenarios",
-        verbose_name=_("vertical"),
-    )
-    sub_vertical = models.ForeignKey(
-        "catalogs.SubVertical",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="efmv_scenarios",
-        verbose_name=_("sub-vertical"),
-    )
     position = models.PositiveSmallIntegerField(_("position"), default=0)
 
     class Meta:
@@ -115,10 +121,6 @@ class EfmvScenario(models.Model):
     def title(self) -> str:
         return scenario_title(self.term_months, self.name)
 
-    def admits(self, sub_vertical) -> bool:
-        """Whether an asset of this sub-vertical can be in the scenario."""
-        return in_scope(self.vertical_id, self.sub_vertical_id, sub_vertical)
-
 
 def scenario_title(term_months: int, name: str) -> str:
     """The official name of a scenario: its term and the name given, if any ("36 Months -
@@ -133,7 +135,7 @@ def title_key(term_months: int, name: str) -> tuple[int, str]:
 
 
 def in_scope(vertical_id, sub_vertical_id, sub_vertical) -> bool:
-    """An asset (by its sub-vertical) fits a scenario's vertical / sub-vertical."""
+    """An asset (by its sub-vertical) fits an analysis's vertical / sub-vertical."""
     if vertical_id is None:
         return True
     if sub_vertical_id is not None:

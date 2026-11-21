@@ -22,11 +22,6 @@ export interface ScenarioDraft {
   /** As typed */
   term: string
   scope: string
-  /** The assets it admits (sub_vertical null = the whole vertical) */
-  vertical: number | null
-  sub_vertical: number | null
-  /** As the API showed it ("Industry / Yellow line"), until the list of verticals loads */
-  scope_label: string | null
   items: ItemDraft[]
   /** Latest figures from the API, item by item in the same order as `items` */
   preview: ScenarioPreview | null
@@ -36,8 +31,6 @@ export interface ScenarioDraft {
 export interface ScenarioErrors {
   name?: string[]
   term_months?: string[]
-  vertical?: string[]
-  sub_vertical?: string[]
   scope?: string[]
   items?: Record<
     string,
@@ -57,9 +50,6 @@ export function blankScenario(name = ''): ScenarioDraft {
     name,
     term: String(DEFAULT_TERM),
     scope: '',
-    vertical: null,
-    sub_vertical: null,
-    scope_label: null,
     items: [],
     preview: null,
   }
@@ -71,9 +61,6 @@ export function scenarioDraft(s: Scenario, language: string): ScenarioDraft {
     name: s.name,
     term: String(s.term_months),
     scope: s.scope,
-    vertical: s.vertical,
-    sub_vertical: s.sub_vertical,
-    scope_label: s.scope_label,
     items: s.items.map((i: ScenarioItem) => ({
       key: newKey(),
       average_price: i.average_price,
@@ -142,8 +129,6 @@ export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput
     name: s.name.trim(),
     term_months: parseTerm(s.term) ?? 0,
     scope: s.scope.trim(),
-    vertical: s.vertical,
-    sub_vertical: s.sub_vertical,
     items: s.items
       .filter((i) => i.average_price !== null)
       .map((i) => ({

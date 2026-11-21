@@ -1076,3 +1076,9 @@ msgstr "Grande"
 
 msgid "interface size"
 msgstr "tamanho da interface"
+
+msgid "This cannot be changed after the analysis is created."
+msgstr "Não pode ser alterado depois de criada a análise."
+
+msgid "This asset is not in the analysis's vertical."
+msgstr "Este bem não é da vertical da análise."

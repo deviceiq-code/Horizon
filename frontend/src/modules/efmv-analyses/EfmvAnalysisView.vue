@@ -1,27 +1,22 @@
 <script setup lang="ts">
 /**
- * A new eFMV analysis (no `id`) or an existing one, in one form. On top, what is fixed for the
- * whole analysis: account manager, customer (one the account manager serves) and creation
- * date. Below, one tab per scenario (at least one); on wide screens the page fills the window
- * and only the assets of the open scenario scroll. Figures come from the API.
+ * An eFMV analysis (created by the wizard, EfmvWizardView.vue; deleted from the list's grid). On top, its premises — account
+ * manager, customer, vertical — and creation date, as labels (they do not change). Below, one
+ * tab per scenario (at least one); on wide screens the page fills the window and only the
+ * assets of the open scenario scroll. Figures come from the API.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { ApiError } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import AccountManagerPicker from '@/modules/account-managers/AccountManagerPicker.vue'
-import type { AccountManagerRef } from '@/modules/account-managers/api'
-import { useAuthStore } from '@/stores/auth'
+import PersonAvatar from '@/components/PersonAvatar.vue'
+import { userPhotoUrl } from '@/modules/users/api'
 import { useNotificationsStore } from '@/stores/notifications'
-import CustomerPicker from './CustomerPicker.vue'
 import ScenarioPanel from './ScenarioPanel.vue'
 import {
-  createEfmvAnalysis,
-  deleteEfmvAnalysis,
+  getAccountManagerSummary,
   getEfmvAnalysis,
   updateEfmvAnalysis,
-  type CustomerRef,
   type EfmvAnalysis,
 } from './api'
 import {
@@ -40,25 +35,18 @@ import {
   type ScenarioErrors,
 } from './draft'
 
-const props = defineProps<{ id?: number }>()
+const props = defineProps<{ id: number }>()
 
 const { t, d, locale } = useI18n()
-const router = useRouter()
-const auth = useAuthStore()
 const notifications = useNotificationsStore()
-const required = (v: unknown) => (v !== null && v !== undefined) || t('validation.required')
 
 const loading = ref(false)
 const loadFailed = ref(false)
 const saving = ref(false)
 const analysis = ref<EfmvAnalysis | null>(null)
 
-const accountManager = ref<number | null>(null)
-const managerOptions = ref<AccountManagerRef[]>([])
-const customer = ref<number | null>(null)
-const customerOptions = ref<CustomerRef[]>([])
-// The customer list depends on the account manager: remounted when it changes
-const customerKey = ref(0)
+/** The account manager's photo version (their photo on the header), loaded with the analysis */
+const managerPhoto = ref<string | null>(null)
 const scenarios = ref<ScenarioDraft[]>([])
 /** Key of the scenario whose tab is open */
 const tab = ref<number | null>(null)
@@ -67,15 +55,14 @@ const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const errors = ref<Record<string, unknown>>({})
 const formError = ref('')
 
-const isNew = computed(() => props.id === undefined)
+/** The assets the scenarios admit: the analysis's vertical (or sub-vertical) */
+const scope = computed(() => ({
+  vertical: analysis.value?.vertical ?? null,
+  sub_vertical: analysis.value?.sub_vertical ?? null,
+}))
 
 function fill(data: EfmvAnalysis) {
   analysis.value = data
-  accountManager.value = data.account_manager
-  managerOptions.value = [data.account_manager_detail]
-  customer.value = data.customer
-  customerOptions.value = [data.customer_detail]
-  customerKey.value++
   // After saving, the scenarios keep their keys (found by their official name, unique; the API
   // returns them in its order): new keys would replace every tab and window item while the
   // open tab changes, and the window lost its selection (no scenario shown)
@@ -90,39 +77,23 @@ function fill(data: EfmvAnalysis) {
 }
 
 async function load() {
-  if (isNew.value) {
-    // Without a name: called by its term ("36 Months")
-    scenarios.value = [blankScenario()]
-    tab.value = scenarios.value[0]!.key
-    // An account manager starts their own analysis
-    const me = auth.user
-    if (me && me.roles.includes('Account Manager')) {
-      accountManager.value = me.id
-      managerOptions.value = [{ id: me.id, full_name: me.name }]
-    }
-    return
-  }
   loading.value = true
   loadFailed.value = false
   try {
-    fill(await getEfmvAnalysis(props.id!))
+    fill(await getEfmvAnalysis(props.id))
   } catch {
     loadFailed.value = true
   } finally {
     loading.value = false
   }
+  // The account manager's photo (only shown: a failure leaves their initials)
+  if (analysis.value) {
+    getAccountManagerSummary(analysis.value.account_manager)
+      .then((summary) => (managerPhoto.value = summary.photo_version))
+      .catch(() => undefined)
+  }
 }
 onMounted(load)
-
-function onManagerChange(value: number | number[] | null) {
-  const id = typeof value === 'number' ? value : null
-  if (id === accountManager.value) return
-  accountManager.value = id
-  // Another account manager serves other customers
-  customer.value = null
-  customerOptions.value = []
-  customerKey.value++
-}
 
 // --- Scenarios -----------------------------------------------------------------------------------
 
@@ -199,7 +170,7 @@ watch(
   () => {
     if (errors.value.scenarios) {
       errors.value = { ...errors.value, scenarios: undefined }
-      if (!fieldErrors('customer') && !fieldErrors('account_manager')) formError.value = ''
+      formError.value = ''
     }
   },
 )
@@ -220,7 +191,6 @@ function hasIssues(index: number): boolean {
     scenario.name.length > 100 ||
     otherKeys(index).includes(keys.value[index]!) ||
     parseTerm(scenario.term) === null ||
-    scenario.vertical === null ||
     !!scenario.preview?.items.some((i) => i.out_of_scope) ||
     scenario.items.some(
       (i) =>
@@ -239,19 +209,14 @@ function openFirstWithIssues() {
   if (index >= 0) tab.value = scenarios.value[index]!.key
 }
 
-const fieldErrors = (key: string) => {
-  const value = errors.value[key]
-  return Array.isArray(value) ? (value as string[]) : undefined
-}
-
-// --- Save / delete -------------------------------------------------------------------------------
+// --- Save -------------------------------------------------------------------------------------
 
 async function save() {
   errors.value = {}
   formError.value = ''
   const { valid } = (await form.value?.validate()) ?? { valid: false }
   if (!valid) {
-    if (accountManager.value !== null && customer.value !== null) openFirstWithIssues()
+    openFirstWithIssues()
     return
   }
   // Assets whose average price was deleted are dropped when saving
@@ -264,20 +229,13 @@ async function save() {
       scenario.preview.items = kept.map(([, detail]) => detail!).filter(Boolean)
     }
   }
-  const data = {
-    account_manager: accountManager.value!,
-    customer: customer.value!,
-    scenarios: scenarios.value.map((s) => scenarioInput(s, locale.value)),
-  }
   saving.value = true
   try {
-    const saved = isNew.value
-      ? await createEfmvAnalysis(data)
-      : await updateEfmvAnalysis(props.id!, data)
-    notifications.notify(t(isNew.value ? 'efmv.created' : 'efmv.updated', { code: saved.code }))
-    if (isNew.value) {
-      await router.replace({ name: 'efmv-analysis', params: { id: saved.id } })
-    }
+    // Only the scenarios: the premises do not change
+    const saved = await updateEfmvAnalysis(props.id, {
+      scenarios: scenarios.value.map((s) => scenarioInput(s, locale.value)),
+    })
+    notifications.notify(t('efmv.updated', { code: saved.code }))
     fill(saved)
   } catch (error) {
     if (error instanceof ApiError && error.status === 400 && error.data) {
@@ -285,28 +243,12 @@ async function save() {
       const general = errors.value.non_field_errors ?? errors.value.detail
       formError.value = Array.isArray(general) ? general.join(' ') : t('efmv.fixErrors')
       if (typeof general === 'string') formError.value = general
-      if (!fieldErrors('customer') && !fieldErrors('account_manager')) openFirstWithIssues()
+      openFirstWithIssues()
     } else {
       formError.value = t('common.saveError')
     }
   } finally {
     saving.value = false
-  }
-}
-
-const confirmDelete = ref(false)
-const deleting = ref(false)
-async function remove() {
-  deleting.value = true
-  try {
-    await deleteEfmvAnalysis(props.id!)
-    notifications.notify(t('efmv.deleted', { code: analysis.value?.code ?? '' }))
-    await router.push({ name: 'efmv-analyses-list' })
-  } catch {
-    notifications.notify(t('common.deleteError'), 'error')
-  } finally {
-    deleting.value = false
-    confirmDelete.value = false
   }
 }
 </script>
@@ -336,7 +278,7 @@ async function remove() {
               data-testid="back"
             />
             <h1 class="analysis-title text-no-wrap" data-testid="analysis-title">
-              {{ analysis ? analysis.code : $t('efmv.newTitle') }}
+              {{ analysis?.code }}
             </h1>
             <v-chip
               v-if="outdated"
@@ -352,68 +294,55 @@ async function remove() {
               {{ $t('efmv.outdated') }}
             </v-chip>
           </div>
-          <AccountManagerPicker
-            :model-value="accountManager"
-            :label="`${$t('efmv.fields.accountManager')} *`"
-            :initial-options="managerOptions"
-            :rules="[required]"
-            :error-messages="fieldErrors('account_manager')"
-            density="compact"
-            hide-details="auto"
-            class="header-field"
-            data-testid="account-manager"
-            @update:model-value="onManagerChange"
-          />
-          <CustomerPicker
-            v-if="accountManager !== null"
-            :key="customerKey"
-            v-model="customer"
-            :account-manager="accountManager"
-            :label="`${$t('efmv.fields.customer')} *`"
-            :initial-options="customerOptions"
-            :rules="[required]"
-            :error-messages="fieldErrors('customer')"
-            :no-data-text="$t('efmv.noCustomers')"
-            density="compact"
-            hide-details="auto"
-            class="header-field wide"
-            data-testid="customer"
-          />
-          <v-text-field
-            v-else
-            :label="`${$t('efmv.fields.customer')} *`"
-            :hint="$t('efmv.pickManagerFirst')"
-            persistent-hint
-            disabled
-            density="compact"
-            class="header-field wide"
-            data-testid="customer-disabled"
-          />
-          <v-text-field
-            :model-value="
-              analysis ? d(new Date(analysis.created_at), 'short') : $t('efmv.notSavedYet')
-            "
-            :label="$t('efmv.fields.createdAt')"
-            :title="analysis?.created_by_name ?? undefined"
-            prepend-inner-icon="mdi-calendar-outline"
-            readonly
-            density="compact"
-            hide-details
-            tabindex="-1"
-            class="header-field date"
-            data-testid="created-at"
-          />
-          <div class="d-flex align-center ga-2 header-actions">
-            <v-btn
-              v-if="analysis"
-              variant="text"
-              color="error"
-              prepend-icon="mdi-delete-outline"
-              data-testid="delete"
-              @click="confirmDelete = true"
+          <!-- The premises, set by the wizard: labels only -->
+          <div v-if="analysis" class="premises" data-testid="premises">
+            <div class="premise" data-testid="premise-account-manager">
+              <div class="premise-label">{{ $t('efmv.fields.accountManager') }}</div>
+              <div class="premise-value">
+                <PersonAvatar
+                  :name="analysis.account_manager_detail.full_name"
+                  :src="managerPhoto ? userPhotoUrl(analysis.account_manager, managerPhoto) : null"
+                  :size="24"
+                  color="primary"
+                  class="mr-2"
+                />
+                {{ analysis.account_manager_detail.full_name }}
+              </div>
+            </div>
+            <div class="premise" data-testid="premise-customer">
+              <div class="premise-label">{{ $t('efmv.fields.customer') }}</div>
+              <div class="premise-value">
+                <v-icon icon="mdi-domain" size="small" class="mr-2 text-medium-emphasis" />
+                {{ analysis.customer_detail.name }}
+                <span v-if="analysis.customer_detail.trade_name" class="text-medium-emphasis ml-1">
+                  ({{ analysis.customer_detail.trade_name }})
+                </span>
+              </div>
+            </div>
+            <div class="premise" data-testid="premise-vertical">
+              <div class="premise-label">{{ $t('efmv.fields.vertical') }}</div>
+              <div class="premise-value">
+                <v-icon icon="mdi-shape-outline" size="small" class="mr-2 text-medium-emphasis" />
+                {{ analysis.vertical_label ?? '—' }}
+              </div>
+            </div>
+            <div
+              class="premise"
+              :title="analysis.created_by_name ?? undefined"
+              data-testid="created-at"
             >
-              {{ $t('common.delete') }}
-            </v-btn>
+              <div class="premise-label">{{ $t('efmv.fields.createdAt') }}</div>
+              <div class="premise-value">
+                <v-icon
+                  icon="mdi-calendar-outline"
+                  size="small"
+                  class="mr-2 text-medium-emphasis"
+                />
+                {{ d(new Date(analysis.created_at), 'short') }}
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-center ga-2 header-actions">
             <v-btn
               color="primary"
               prepend-icon="mdi-content-save-outline"
@@ -535,6 +464,8 @@ async function remove() {
               :errors="scenarioErrors(index)"
               :other-keys="otherKeys(index)"
               :title="titleOf(scenario)"
+              :scope="scope"
+              :scope-label="analysis?.vertical_label ?? null"
             />
           </v-window-item>
         </v-window>
@@ -553,14 +484,6 @@ async function remove() {
       @update:model-value="!$event && (removing = null)"
       @confirm="removeScenario"
     />
-    <ConfirmDialog
-      v-model="confirmDelete"
-      :title="$t('efmv.deleteTitle')"
-      :message="$t('efmv.deleteConfirm', { code: analysis?.code ?? '' })"
-      :confirm-text="$t('common.delete')"
-      :loading="deleting"
-      @confirm="remove"
-    />
   </v-container>
 </template>
 
@@ -568,7 +491,7 @@ async function remove() {
 .header-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 .header-title {
@@ -579,16 +502,26 @@ async function remove() {
   font-weight: 500;
   line-height: 1.2;
 }
-.header-field {
-  flex: 1 1 220px;
-  min-width: 200px;
+/* The premises: small captions over their values, side by side */
+.premises {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 28px;
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding-left: 12px;
+  border-left: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
-.header-field.wide {
-  flex: 2 1 280px;
+.premise-label {
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
 }
-.header-field.date {
-  flex: 0 1 190px;
-  min-width: 160px;
+.premise-value {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  white-space: nowrap;
 }
 .header-actions {
   min-height: 40px;

@@ -92,11 +92,6 @@ export interface Scenario {
   title: string
   term_months: number
   scope: string
-  /** The assets it admits: the vertical's, or only the sub-vertical's when set */
-  vertical: number | null
-  sub_vertical: number | null
-  /** "Industry" or "Industry / Yellow line" */
-  scope_label: string | null
   items: ScenarioItem[]
   totals: ScenarioTotals
   /** Some average price used is past its validity */
@@ -111,6 +106,11 @@ export interface EfmvAnalysis {
   account_manager_detail: AccountManagerRef
   customer: number
   customer_detail: CustomerRef
+  /** The assets the scenarios admit: the vertical's, or only the sub-vertical's when set */
+  vertical: number | null
+  sub_vertical: number | null
+  /** "Industry" or "Industry / Yellow line" */
+  vertical_label: string | null
   scenarios: Scenario[]
   /** Some average price used is past its validity: the analysis may be out of date */
   is_outdated: boolean
@@ -146,16 +146,33 @@ export interface ScenarioInput {
   name: string
   term_months: number
   scope: string
-  vertical: number | null
-  sub_vertical: number | null
   items: ScenarioItemInput[]
 }
 
+/** A new analysis (the wizard): its premises — fixed afterwards — and its first scenarios. */
 export interface EfmvAnalysisInput {
   account_manager: number
   customer: number
-  /** At least one; they replace the analysis's scenarios */
+  vertical: number
+  sub_vertical: number | null
+  /** At least one */
   scenarios: ScenarioInput[]
+}
+
+/** What the wizard shows about an account manager. */
+export interface AccountManagerSummary {
+  id: number
+  full_name: string
+  email: string
+  job_title: string
+  photo_version: string | null
+  /** Business verticals of their profile */
+  verticals: string[]
+  analyses_count: number
+  /** Their 5 verticals with most analyses */
+  top_verticals: { id: number; name: string; analyses: number }[]
+  /** Active customers they are the primary account manager of */
+  primary_customers_count: number
 }
 
 export interface ScenarioPreview {
@@ -183,8 +200,15 @@ export function createEfmvAnalysis(data: EfmvAnalysisInput) {
   return api<EfmvAnalysis>(BASE, { method: 'POST', body: JSON.stringify(data) })
 }
 
-export function updateEfmvAnalysis(id: number, data: EfmvAnalysisInput) {
-  return api<EfmvAnalysis>(`${BASE}${id}/`, { method: 'PUT', body: JSON.stringify(data) })
+/** The scenarios replace the analysis's (the premises do not change). */
+export function updateEfmvAnalysis(id: number, data: { scenarios: ScenarioInput[] }) {
+  return api<EfmvAnalysis>(`${BASE}${id}/`, { method: 'PATCH', body: JSON.stringify(data) })
+}
+
+export function getAccountManagerSummary(accountManager: number) {
+  return api<AccountManagerSummary>(
+    `${BASE}account-manager-summary/?account_manager=${accountManager}`,
+  )
 }
 
 export function deleteEfmvAnalysis(id: number) {

@@ -96,15 +96,16 @@ Multi-user web system for **operating lease residual value pricing**
     Pricing tests share fixtures in `pricing/conftest.py` and helpers in `pricing/testing.py`.
   - `efmv/` — **eFMV Analyses** (Pricing), `/api/efmv-analyses/`. `EfmvAnalysis`: code
     `EFMV-<year>-<NNNN>` (year + sequence, next number per year), account manager (user with the
-    role; must be the customer's primary or secondary), customer, created by/at; ≥ 1
+    role; must be the customer's primary or secondary), customer, `vertical` — required on
+    create — and optional `sub_vertical` of it (the assets its scenarios admit, by the average
+    price's sub-vertical; `efmv.models.in_scope`; items outside are flagged `out_of_scope` in
+    previews and refused on save; Vertical/SubVertical PROTECT; `vertical_label` in the API):
+    these premises are set on creation and cannot change (400); created by/at; ≥ 1
     `EfmvScenario` (official name = `title`: "<term> Months - <name>", or "<term> Months" — the
     name is optional — `efmv.models.scenario_title`, translated; unique per analysis by term +
     name case-insensitively; the tab shows it (`draft.ts::scenarioTitle`) and the list's
     `scenario_names` are titles; scenarios — and tabs — are ordered by term as a number, then
-    name; tabs switch without animation; term 1–360 months, scope,
-    `vertical` — required by the API — and optional `sub_vertical` of it: the assets it admits,
-    by the average price's sub-vertical; `efmv.models.in_scope`; items outside are flagged
-    `out_of_scope` in previews and refused on save; Vertical/SubVertical PROTECT) with
+    name; tabs switch without animation; term 1–360 months, scope) with
     `EfmvScenarioItem`s (an average price's `lineage` — the **current** version always counts —,
     a quantity and a `unit_value` typed by the analyst — when not typed, the current average
     price's value counts (`value_from_price` in previews) and is stored on save; the same
@@ -235,18 +236,22 @@ Multi-user web system for **operating lease residual value pricing**
     click to enlarge; menu: file, `PhotoSearchDialog.vue`, `PhotoUrlDialog.vue`) and `PriceDocuments.vue` ("Documents" tab; drag and drop). File uploads
     go through `api()` with a `FormData` body. Sizes: `src/utils/bytes.ts`. Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
     UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
-  - `src/modules/efmv-analyses/` — list (ServerCrudTable) and a page per analysis
-    (`/pricing/efmv-analyses/new`, `/:id`; child routes of a RouterView parent), one form:
-    a compact header with what is fixed (account manager — the user by default when they
-    have the role —, `CustomerPicker.vue` with that account manager's customers, creation
-    date) and one tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
+  - `src/modules/efmv-analyses/` — list (ServerCrudTable; deleting is only there) and, as
+    child routes of a RouterView parent, `/pricing/efmv-analyses/new` — `EfmvWizardView.vue`,
+    3 steps: Premises (account manager — the user by default when they have the role —,
+    `CustomerPicker.vue` with that account manager's customers, `VerticalScopePicker.vue`;
+    beside them the account manager's card from `GET /account-manager-summary/?account_manager=`:
+    photo, analyses, top 5 verticals by analyses, active customers as primary AM), Services and
+    Partnerships and Alliances (coming soon); "Create Analysis" posts the premises and a first
+    scenario ("36 Months") and opens it — and `/:id` (`EfmvAnalysisView.vue`): a compact header
+    with the premises as labels and the creation date (saving PATCHes only `scenarios`) and one
+    tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
     open one — (`ScenarioPanel.vue`: name, term, scope and
     `ScenarioTotalsBar.vue` on top; assets grid below — "+ Row" adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
-    number (the scenario's Vertical picker — `VerticalScopePicker.vue`, each vertical
-    followed by its sub-verticals — comes first and filters the asset picker; "+ Row" waits
-    for it), Quantity, asset (class · specifications · price date or expired flag), Unit Value
+    number (the analysis's vertical, shown as a chip beside "Assets", filters the asset
+    picker), Quantity, asset (class · specifications · price date or expired flag), Unit Value
     (the average price's value as placeholder; empty = that value; its Position chip below it
     in the same cell), eFMV (the
     curve's value at the term as placeholder; empty = that value; "25%" becomes its value when

@@ -135,6 +135,34 @@ const en = {
     },
   },
   efmv: {
+    wizard: {
+      subtitle: 'Set the premises of the analysis; its scenarios come next.',
+      steps: {
+        premises: 'Premises',
+        services: 'Services',
+        partnerships: 'Partnerships and Alliances',
+      },
+      premisesTitle: 'Account Manager, Customer and Vertical',
+      premisesHint: 'They are fixed once the analysis is created.',
+      verticalHint: 'A whole vertical or one of its sub-verticals: the assets the scenarios admit.',
+      servicesText:
+        'The services of the analysis will be chosen here once they are added to Horizon.',
+      partnershipsText:
+        'The partnerships and alliances of the analysis will be chosen here once they are added to Horizon.',
+      back: 'Back',
+      next: 'Next',
+      create: 'Create Analysis',
+      manager: {
+        pick: 'Choose an account manager to see their figures.',
+        loadError: "Could not load the account manager's figures.",
+        analyses: 'eFMV Analyses',
+        primaryCustomers: 'Customers as Primary AM',
+        topVerticals: 'Most Explored Verticals',
+        analysesCount: '{n} analysis | {n} analyses',
+        noAnalyses: 'No analyses yet.',
+        worksIn: 'Works in',
+      },
+    },
     title: 'eFMV Analyses',
     subtitle:
       'Estimated Fair Market Value: per scenario, the Leasing Origination (LO), the eFMV at the end of the lease and the shares of hardware, software and services.',
@@ -162,6 +190,7 @@ const en = {
       'Some average prices used are past their validity; the analysis may be out of date.',
     fixErrors: 'Please fix the fields marked in red.',
     fields: {
+      vertical: 'Vertical',
       code: 'Code',
       accountManager: 'Account Manager',
       customer: 'Customer',
@@ -171,8 +200,7 @@ const en = {
       duplicateShort: 'Duplicate',
       removeShort: 'Remove',
       vertical: 'Vertical',
-      verticalHint: 'The assets it admits: a whole vertical or one of its sub-verticals.',
-      pickVerticalFirst: 'Choose the vertical first.',
+      verticalHint: "The analysis's vertical: the assets offered in its scenarios are of it.",
       add: 'Add Scenario',
       defaultBase: 'Scenario',
       copy: 'copy',
@@ -199,7 +227,7 @@ const en = {
       removeConfirm: 'Remove the scenario "{name}"? It is only gone after saving.',
     },
     item: {
-      outOfScope: "Not in the scenario's vertical; change the vertical or remove it.",
+      outOfScope: "Not in the analysis's vertical; remove it.",
       unitValueHint: 'Leave empty to use the value of Average Prices (shown in gray).',
       unitValueRule: 'Enter a value greater than zero.',
       pricedOn: 'priced on {date}',

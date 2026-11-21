@@ -5,10 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 
 import { ApiError } from '@/api'
 import { i18n, setLanguage } from '@/i18n'
-import * as managersApi from '@/modules/account-managers/api'
 import * as pricesApi from '@/modules/average-prices/api'
-import * as verticalsApi from '@/modules/catalogs/verticals/api'
-import * as customersApi from '@/modules/customers/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { click, inBody, openDropdown, pickOption, settle, typeInto } from '@/test-utils'
@@ -17,29 +14,17 @@ import EfmvAnalysisView from '../EfmvAnalysisView.vue'
 
 vi.mock('../api', () => ({
   getEfmvAnalysis: vi.fn<typeof efmvApi.getEfmvAnalysis>(),
-  createEfmvAnalysis: vi.fn<typeof efmvApi.createEfmvAnalysis>(),
+  getAccountManagerSummary: vi.fn<typeof efmvApi.getAccountManagerSummary>(),
   updateEfmvAnalysis: vi.fn<typeof efmvApi.updateEfmvAnalysis>(),
   deleteEfmvAnalysis: vi.fn<typeof efmvApi.deleteEfmvAnalysis>(),
   previewScenario: vi.fn<typeof efmvApi.previewScenario>(),
-}))
-vi.mock('@/modules/customers/api', () => ({
-  listCustomers: vi.fn<typeof customersApi.listCustomers>(),
-}))
-vi.mock('@/modules/account-managers/api', () => ({
-  listAccountManagers: vi.fn<typeof managersApi.listAccountManagers>(),
-}))
-vi.mock('@/modules/catalogs/verticals/api', () => ({
-  listSubVerticals: vi.fn<typeof verticalsApi.listSubVerticals>(),
 }))
 vi.mock('@/modules/average-prices/api', () => ({
   listAveragePrices: vi.fn<typeof pricesApi.listAveragePrices>(),
 }))
 
 const efmv = vi.mocked(efmvApi)
-const customers = vi.mocked(customersApi)
-const managers = vi.mocked(managersApi)
 const prices = vi.mocked(pricesApi)
-const verticals = vi.mocked(verticalsApi)
 
 const dropdownSubtitles = () =>
   [...document.querySelectorAll('.v-overlay--active .v-list-item-subtitle')].map((el) =>
@@ -113,6 +98,9 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
   account_manager_detail: { id: 10, full_name: 'Ana Lima' },
   customer: 20,
   customer_detail: { id: 20, name: 'Acme Ltda', trade_name: '', tax_id: '11222333000181' },
+  vertical: 1,
+  sub_vertical: null,
+  vertical_label: 'Industry',
   is_outdated: false,
   scenarios: [
     {
@@ -121,9 +109,6 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
       title: '36 Months - Base',
       term_months: 36,
       scope: 'Fleet',
-      vertical: 1,
-      sub_vertical: null,
-      scope_label: 'Industry',
       items: [EXCAVATOR],
       totals: TOTALS,
       has_expired: false,
@@ -134,7 +119,7 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
   updated_at: '2026-11-20T10:00:00Z',
 }
 
-async function mountView(props: { id?: number } = {}, roles = ['Account Manager']) {
+async function mountView(props: { id: number } = { id: 3 }, roles = ['Account Manager']) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useAuthStore().user = {
@@ -160,7 +145,7 @@ async function mountView(props: { id?: number } = {}, roles = ['Account Manager'
       { path: '/:id', name: 'efmv-analysis', component: { render: () => null } },
     ],
   })
-  await router.push(props.id ? `/${props.id}` : '/new')
+  await router.push(`/${props.id}`)
   const replace = vi.spyOn(router, 'replace')
   const wrapper = mount(EfmvAnalysisView, {
     props,
@@ -174,32 +159,6 @@ async function mountView(props: { id?: number } = {}, roles = ['Account Manager'
 describe('EfmvAnalysisView', () => {
   beforeEach(() => {
     setLanguage('en')
-    customers.listCustomers.mockResolvedValue(
-      page([{ id: 20, name: 'Acme Ltda', trade_name: '' } as customersApi.Customer]),
-    )
-    managers.listAccountManagers.mockResolvedValue(page([]))
-    verticals.listSubVerticals.mockResolvedValue(
-      page([
-        {
-          id: 10,
-          name: 'General',
-          is_general: true,
-          label: 'Industry / General',
-          vertical: { id: 1, name: 'Industry', is_enabled: true },
-          allowed_terms: [36],
-          recommended_term: 36,
-        },
-        {
-          id: 11,
-          name: 'Yellow line',
-          is_general: false,
-          label: 'Industry / Yellow line',
-          vertical: { id: 1, name: 'Industry', is_enabled: true },
-          allowed_terms: [36],
-          recommended_term: 36,
-        },
-      ]),
-    )
     prices.listAveragePrices.mockResolvedValue(
       page([
         {
@@ -244,25 +203,45 @@ describe('EfmvAnalysisView', () => {
       totals: TOTALS,
       has_expired: false,
     })
+    efmv.getAccountManagerSummary.mockResolvedValue({
+      id: 10,
+      full_name: 'Ana Lima',
+      email: 'ana@example.com',
+      job_title: '',
+      photo_version: 'p1',
+      verticals: [],
+      analyses_count: 1,
+      top_verticals: [],
+      primary_customers_count: 1,
+    })
   })
   afterEach(() => {
     vi.clearAllMocks()
     document.body.innerHTML = ''
   })
 
-  it('creates an analysis: the account manager is the user, customers are theirs', async () => {
-    const { wrapper, replace } = await mountView()
-    expect(inBody('[data-testid="analysis-title"]')!.textContent).toContain('New eFMV Analysis')
-    // Only the customers this account manager serves are offered
-    await pickOption('customer', 'Acme Ltda')
-    expect(customers.listCustomers).toHaveBeenCalledWith(
-      expect.objectContaining({ filters: { account_manager: 10, is_active: true } }),
+  it("adds an asset in a row: only the analysis's vertical is offered", async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      sub_vertical: 11,
+      vertical_label: 'Industry / Yellow line',
+      scenarios: [{ ...ANALYSIS.scenarios[0]!, items: [] }],
+    })
+    efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView()
+    // The premises are labels (set by the wizard)
+    expect(inBody('[data-testid="premise-account-manager"]')!.textContent).toContain('Ana Lima')
+    expect(inBody('[data-testid="premise-customer"]')!.textContent).toContain('Acme Ltda')
+    expect(inBody('[data-testid="premise-vertical"]')!.textContent).toContain(
+      'Industry / Yellow line',
     )
-    await typeInto('scenario-name', 'Base')
-    await typeInto('scenario-term', '36')
-    // The vertical comes first: it limits the assets offered
-    expect(inBody('[data-testid="add-row"]')!.hasAttribute('disabled')).toBe(true)
-    await pickOption('scenario-vertical', 'Yellow line')
+    expect(inBody('[data-testid="account-manager"]')).toBeNull()
+    // Analyses are deleted from the list's grid, not here
+    expect(inBody('[data-testid="delete"]')).toBeNull()
+    // The scenario shows the vertical; its assets are of it
+    expect(inBody('[data-testid="scenario-vertical"]')!.textContent).toContain(
+      'Industry / Yellow line',
+    )
     // "+ Row" adds an empty row; the asset is chosen in it
     await click('add-row')
     expect(inBody('[data-testid="quantity"] input')!.hasAttribute('disabled')).toBe(true)
@@ -302,31 +281,18 @@ describe('EfmvAnalysisView', () => {
     expect(headers.filter(Boolean).pop()).toBe('Total')
     expect(inBody('[data-testid="weight"]')!.textContent?.trim()).toBe('Weight (100.00%)')
 
-    efmv.createEfmvAnalysis.mockResolvedValue({ ...ANALYSIS, id: 4, code: 'EFMV-2026-0004' })
+    // Saving sends only the scenarios (the premises do not change)
     await click('save')
-    expect(efmv.createEfmvAnalysis).toHaveBeenCalledWith({
-      account_manager: 10,
-      customer: 20,
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
       scenarios: [
         {
           name: 'Base',
           term_months: 36,
-          scope: '',
-          vertical: 1,
-          sub_vertical: 11,
+          scope: 'Fleet',
           items: [{ average_price: 7, quantity: 1, unit_value: '100000', efmv_value: null }],
         },
       ],
     })
-    expect(replace).toHaveBeenCalledWith({ name: 'efmv-analysis', params: { id: 4 } })
-    wrapper.unmount()
-  })
-
-  it('without the Account Manager role the customer waits for an account manager', async () => {
-    const { wrapper } = await mountView({}, ['Administrator'])
-    expect(inBody('[data-testid="customer-disabled"]')).not.toBeNull()
-    await click('save')
-    expect(efmv.createEfmvAnalysis).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
@@ -334,9 +300,7 @@ describe('EfmvAnalysisView', () => {
     efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView({ id: 3 })
     expect(inBody('[data-testid="analysis-title"]')!.textContent).toContain('EFMV-2026-0003')
-    expect((inBody('[data-testid="created-at"] input') as HTMLInputElement).value).toBe(
-      '11/20/2026',
-    )
+    expect(inBody('[data-testid="created-at"]')!.textContent).toMatch(/11\/20\/2026/)
     expect(inBody('[data-testid="tab-0"]')!.textContent).toContain('Base')
     expect(inBody('[data-testid="total-lo"]')!.textContent).toMatch(/200,000\.00/)
     expect(inBody('[data-testid="remove-scenario"]')!.hasAttribute('disabled')).toBe(true)
@@ -633,15 +597,11 @@ describe('EfmvAnalysisView', () => {
     expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(2)
     await click('save')
     expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
-      account_manager: 10,
-      customer: 20,
       scenarios: [
         {
           name: 'Base',
           term_months: 36,
           scope: 'Fleet',
-          vertical: 1,
-          sub_vertical: null,
           items: [{ average_price: 7, quantity: 2, unit_value: '100000.00', efmv_value: null }],
         },
       ],
@@ -650,8 +610,7 @@ describe('EfmvAnalysisView', () => {
   })
 
   it('assets outside the vertical are flagged and mark the tab', async () => {
-    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
-    const { wrapper } = await mountView({ id: 3 })
+    efmv.getEfmvAnalysis.mockResolvedValue({ ...ANALYSIS, sub_vertical: 11 })
     efmv.previewScenario.mockResolvedValue({
       items: [{ ...EXCAVATOR, out_of_scope: true }],
       totals: {
@@ -665,12 +624,14 @@ describe('EfmvAnalysisView', () => {
       },
       has_expired: false,
     })
-    await pickOption('scenario-vertical', 'Yellow line')
+    const { wrapper } = await mountView({ id: 3 })
+    // A change asks the API again, with the analysis's sub-vertical
+    await typeInto('quantity', '3')
     await debounce()
     expect(efmv.previewScenario).toHaveBeenLastCalledWith(
       expect.objectContaining({ vertical: 1, sub_vertical: 11 }),
     )
-    expect(inBody('[data-testid="out-of-scope"]')!.textContent).toContain("scenario's vertical")
+    expect(inBody('[data-testid="out-of-scope"]')!.textContent).toContain("analysis's vertical")
     expect(inBody('[data-testid="tab-0"] [data-testid="tab-issue"]')).not.toBeNull()
     wrapper.unmount()
   })

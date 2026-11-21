@@ -133,6 +133,35 @@ const ptBR: Messages = {
     },
   },
   efmv: {
+    wizard: {
+      subtitle: 'Defina as premissas da análise; os cenários vêm em seguida.',
+      steps: {
+        premises: 'Premissas',
+        services: 'Serviços',
+        partnerships: 'Parcerias e Alianças',
+      },
+      premisesTitle: 'Account Manager, Cliente e Vertical',
+      premisesHint: 'Ficam fixos depois de criada a análise.',
+      verticalHint:
+        'Uma vertical inteira ou uma de suas sub-verticais: os bens que os cenários admitem.',
+      servicesText:
+        'Os serviços da análise serão escolhidos aqui quando forem adicionados ao Horizon.',
+      partnershipsText:
+        'As parcerias e alianças da análise serão escolhidas aqui quando forem adicionadas ao Horizon.',
+      back: 'Voltar',
+      next: 'Avançar',
+      create: 'Criar Análise',
+      manager: {
+        pick: 'Escolha um account manager para ver seus números.',
+        loadError: 'Não foi possível carregar os números do account manager.',
+        analyses: 'Análises de eFMV',
+        primaryCustomers: 'Clientes como AM Principal',
+        topVerticals: 'Verticais Mais Exploradas',
+        analysesCount: '{n} análise | {n} análises',
+        noAnalyses: 'Nenhuma análise ainda.',
+        worksIn: 'Atua em',
+      },
+    },
     title: 'Análises de eFMV',
     subtitle:
       'Estimated Fair Market Value: por cenário, o Leasing Origination (LO), o eFMV no fim do contrato e a participação de hardware, software e serviços.',
@@ -160,6 +189,7 @@ const ptBR: Messages = {
       'Alguns preços médios usados passaram da validade; a análise pode estar desatualizada.',
     fixErrors: 'Corrija os campos marcados em vermelho.',
     fields: {
+      vertical: 'Vertical',
       code: 'Código',
       accountManager: 'Account Manager',
       customer: 'Cliente',
@@ -169,8 +199,7 @@ const ptBR: Messages = {
       duplicateShort: 'Duplicar',
       removeShort: 'Remover',
       vertical: 'Vertical',
-      verticalHint: 'Os bens que ele admite: uma vertical inteira ou uma de suas sub-verticais.',
-      pickVerticalFirst: 'Escolha primeiro a vertical.',
+      verticalHint: 'A vertical da análise: os bens oferecidos nos cenários são dela.',
       add: 'Adicionar Cenário',
       defaultBase: 'Cenário',
       copy: 'cópia',
@@ -197,7 +226,7 @@ const ptBR: Messages = {
       removeConfirm: 'Remover o cenário "{name}"? Ele só deixa de existir ao salvar.',
     },
     item: {
-      outOfScope: 'Não é da vertical do cenário; altere a vertical ou remova o bem.',
+      outOfScope: 'Não é da vertical da análise; remova-o.',
       unitValueHint: 'Deixe vazio para usar o valor do Average Prices (mostrado em cinza).',
       unitValueRule: 'Informe um valor maior que zero.',
       pricedOn: 'cotado em {date}',

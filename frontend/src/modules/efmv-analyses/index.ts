@@ -23,7 +23,8 @@ const efmvAnalyses: AppModule = {
           path: 'new',
           name: 'efmv-analysis-new',
           meta: { titleKey: 'efmv.newTitle' },
-          component: () => import('./EfmvAnalysisView.vue'),
+          // A wizard sets the premises; then the analysis opens with a first scenario
+          component: () => import('./EfmvWizardView.vue'),
         },
         {
           path: ':id(\\d+)',
