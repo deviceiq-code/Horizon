@@ -33,14 +33,12 @@ import {
 const scenario = defineModel<ScenarioDraft>({ required: true })
 const props = defineProps<{
   index: number
-  canRemove: boolean
   errors?: ScenarioErrors
   /** Other scenarios' official names (`titleKey`: term + name; they must be different) */
   otherKeys: string[]
   /** This scenario's official name ("36 Months - Desktops") */
   title: string
 }>()
-const emit = defineEmits<{ remove: []; duplicate: [] }>()
 
 const { t, n, d, locale } = useI18n()
 const rules = useValidationRules()
@@ -325,28 +323,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               class="term"
               data-testid="scenario-term"
             />
-            <div class="d-flex pt-1">
-              <v-btn
-                icon="mdi-content-copy"
-                variant="text"
-                size="small"
-                :title="$t('efmv.scenario.duplicate')"
-                :aria-label="$t('efmv.scenario.duplicate')"
-                data-testid="duplicate-scenario"
-                @click="emit('duplicate')"
-              />
-              <v-btn
-                icon="mdi-delete-outline"
-                variant="text"
-                size="small"
-                color="error"
-                :disabled="!canRemove"
-                :title="$t(canRemove ? 'efmv.scenario.remove' : 'efmv.scenario.keepOne')"
-                :aria-label="$t('efmv.scenario.remove')"
-                data-testid="remove-scenario"
-                @click="emit('remove')"
-              />
-            </div>
           </div>
           <VerticalScopePicker
             v-model="verticalScope"

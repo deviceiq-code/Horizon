@@ -234,7 +234,8 @@ Multi-user web system for **operating lease residual value pricing**
     (`/pricing/efmv-analyses/new`, `/:id`; child routes of a RouterView parent), one form:
     a compact header with what is fixed (account manager — the user by default when they
     have the role —, `CustomerPicker.vue` with that account manager's customers, creation
-    date) and one tab per scenario (`ScenarioPanel.vue`: name, term, scope and
+    date) and one tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
+    open one — (`ScenarioPanel.vue`: name, term, scope and
     `ScenarioTotalsBar.vue` on top; assets grid below — "+ Row" adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row

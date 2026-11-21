@@ -346,6 +346,18 @@ describe('EfmvAnalysisView', () => {
     expect(inBody('[data-testid="tab-1"]')!.textContent).toContain('Base (copy)')
     expect(inBody('[data-testid="tab-1"]')!.className).toContain('v-tab--selected')
     expect(inBody('[data-testid="remove-scenario"]')!.hasAttribute('disabled')).toBe(false)
+    // Add, duplicate and remove sit together in the toolbar of the tabs
+    const toolbar = inBody('[data-testid="scenario-toolbar"]')!
+    for (const id of ['add-scenario', 'duplicate-scenario', 'remove-scenario']) {
+      expect(toolbar.querySelector(`[data-testid="${id}"]`)).not.toBeNull()
+    }
+    // Remove acts on the open scenario (the copy)
+    await click('remove-scenario')
+    expect(inBody('.v-overlay--active')!.textContent).toContain('Base (copy)')
+    await click('confirm-button')
+    expect(document.querySelectorAll('[data-testid^="tab-"]').length).toBeGreaterThan(0)
+    expect(inBody('[data-testid="tab-1"]')).toBeNull()
+    expect(inBody('[data-testid="tab-0"]')!.textContent).toContain('Base')
     wrapper.unmount()
   })
 

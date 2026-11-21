@@ -171,6 +171,9 @@ function addScenario() {
   tab.value = scenario.key
 }
 
+/** Position in `scenarios` of the open tab's scenario (the toolbar acts on it) */
+const openIndex = computed(() => scenarios.value.findIndex((s) => s.key === tab.value))
+
 function duplicateScenario(index: number) {
   const source = scenarios.value[index]!
   const name = source.name.trim()
@@ -466,16 +469,52 @@ async function remove() {
               {{ titleOf(scenario) }}
             </v-tab>
           </v-tabs>
-          <v-btn
-            variant="text"
-            color="primary"
-            prepend-icon="mdi-plus"
-            class="mx-2 text-none"
-            data-testid="add-scenario"
-            @click="addScenario"
+          <!-- Toolbar of the scenarios: add one; duplicate or remove the open one. On narrow
+               screens only the icons show (the names are in their tooltips). -->
+          <div
+            class="scenario-toolbar d-flex align-center ga-1 px-2"
+            data-testid="scenario-toolbar"
           >
-            {{ $t('efmv.scenario.add') }}
-          </v-btn>
+            <v-btn
+              variant="text"
+              color="primary"
+              prepend-icon="mdi-plus"
+              class="text-none"
+              :title="$t('efmv.scenario.add')"
+              data-testid="add-scenario"
+              @click="addScenario"
+            >
+              <span class="d-none d-md-inline">{{ $t('efmv.scenario.add') }}</span>
+            </v-btn>
+            <v-divider vertical class="my-2" />
+            <v-btn
+              variant="text"
+              prepend-icon="mdi-content-copy"
+              class="text-none"
+              :disabled="openIndex < 0"
+              :title="$t('efmv.scenario.duplicate')"
+              data-testid="duplicate-scenario"
+              @click="duplicateScenario(openIndex)"
+            >
+              <span class="d-none d-md-inline">{{ $t('efmv.scenario.duplicate') }}</span>
+            </v-btn>
+            <!-- The wrapper keeps the tooltip while the button is disabled (one scenario left) -->
+            <span
+              :title="$t(scenarios.length > 1 ? 'efmv.scenario.remove' : 'efmv.scenario.keepOne')"
+            >
+              <v-btn
+                variant="text"
+                color="error"
+                prepend-icon="mdi-delete-outline"
+                class="text-none"
+                :disabled="scenarios.length < 2 || openIndex < 0"
+                data-testid="remove-scenario"
+                @click="removing = openIndex"
+              >
+                <span class="d-none d-md-inline">{{ $t('efmv.scenario.remove') }}</span>
+              </v-btn>
+            </span>
+          </div>
         </div>
         <!-- No animation when switching scenarios -->
         <v-window v-model="tab" class="scenario-window">
@@ -493,12 +532,9 @@ async function remove() {
             <ScenarioPanel
               v-model="scenarios[index]!"
               :index="index"
-              :can-remove="scenarios.length > 1"
               :errors="scenarioErrors(index)"
               :other-keys="otherKeys(index)"
               :title="titleOf(scenario)"
-              @duplicate="duplicateScenario(index)"
-              @remove="removing = index"
             />
           </v-window-item>
         </v-window>
