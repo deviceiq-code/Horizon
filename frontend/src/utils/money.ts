@@ -43,6 +43,12 @@ export function formatMoney(value: string, currency: string, language: string): 
   return new Intl.NumberFormat(language, { style: 'currency', currency }).format(Number(value))
 }
 
+/** The currency's symbol in the UI language ("R$" for BRL; "$" for USD in en). */
+export function currencySymbol(currency: string, language: string): string {
+  const parts = new Intl.NumberFormat(language, { style: 'currency', currency }).formatToParts(0)
+  return parts.find((part) => part.type === 'currency')?.value ?? currency
+}
+
 /** A decimal string as typed in the UI language ("100000.5" → "100.000,50" in pt-br). */
 export function toInputMoney(value: string, language: string, places = 2): string {
   return new Intl.NumberFormat(language, {

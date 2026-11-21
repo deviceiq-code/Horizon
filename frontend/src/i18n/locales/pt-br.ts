@@ -194,7 +194,6 @@ const ptBR: Messages = {
     },
     item: {
       outOfScope: 'Não é da vertical do cenário; altere a vertical ou remova o bem.',
-      position: 'Posicionamento',
       unitValueHint: 'Deixe vazio para usar o valor do Average Prices (mostrado em cinza).',
       unitValueRule: 'Informe um valor maior que zero.',
       pricedOn: 'cotado em {date}',

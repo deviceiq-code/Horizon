@@ -231,8 +231,10 @@ Multi-user web system for **operating lease residual value pricing**
     number (the scenario's Vertical picker — `VerticalScopePicker.vue`, each vertical
     followed by its sub-verticals — comes first and filters the asset picker; "+ Row" waits
     for it), Quantity, asset (class · specifications · price date or expired flag), Unit Value
-    (the average price's value as placeholder; empty = that value), Position, eFMV (the
-    curve's value at the term as placeholder; empty = that value), total, Weight (read only); plain fields fill the cells (focus/error shown on the cell), Tab goes through the
+    (the average price's value as placeholder; empty = that value; its Position chip below it
+    in the same cell), eFMV (the
+    curve's value at the term as placeholder; empty = that value), total, Weight (read only); money cells show the currency symbol on the left
+    (`utils/money.ts::currencySymbol`) and the number on the right; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
     row adds one), remove buttons appear on hover and are out of the Tab order; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and

@@ -10,7 +10,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { specSummary } from '@/modules/average-prices/specText'
-import { formatMoney, toInputMoney } from '@/utils/money'
+import { currencySymbol, toInputMoney } from '@/utils/money'
 import AveragePricePicker from './AveragePricePicker.vue'
 import VerticalScopePicker, { type VerticalScope } from './VerticalScopePicker.vue'
 import ScenarioTotalsBar from './ScenarioTotalsBar.vue'
@@ -217,6 +217,8 @@ function removeAsset(index: number) {
 const currency = computed(
   () => scenario.value.preview?.items.find((i) => i.currency)?.currency ?? 'BRL',
 )
+/** "R$": shown on the left of every money cell, the number on the right */
+const symbol = computed(() => currencySymbol(currency.value, locale.value))
 
 const itemError = (index: number) => {
   const errors = props.errors?.items?.[String(index)]
@@ -408,7 +410,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           <th class="text-end" style="width: 84px">{{ $t('efmv.item.quantity') }}</th>
           <th style="min-width: 260px">{{ $t('efmv.item.asset') }}</th>
           <th class="text-end" style="width: 170px">{{ $t('efmv.item.unitValue') }}</th>
-          <th style="width: 210px">{{ $t('efmv.item.position') }}</th>
           <th
             class="text-end"
             style="width: 170px"
@@ -425,7 +426,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
       </thead>
       <tbody>
         <tr v-if="!scenario.items.length">
-          <td colspan="9" class="text-medium-emphasis text-center py-6">
+          <td colspan="8" class="text-medium-emphasis text-center py-6">
             {{ $t('efmv.scenario.noAssets') }}
           </td>
         </tr>
@@ -540,7 +541,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               {{ message }}
             </div>
           </td>
-          <td class="cell-input" data-col="unit">
+          <!-- The value typed and, below it, how it compares with Average Prices -->
+          <td class="cell-input cell-stack" data-col="unit">
             <v-text-field
               v-model="item.unit_value"
               inputmode="decimal"
@@ -557,23 +559,26 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               :title="$t('efmv.item.unitValueHint')"
               data-testid="unit-value"
               @blur="tidyUnitValue(item)"
-            />
-          </td>
-          <td class="cell-text">
-            <v-chip
-              v-if="detail(i)?.position"
-              :color="POSITION_COLORS[detail(i)!.position!]"
-              :prepend-icon="POSITION_ICONS[detail(i)!.position!]"
-              size="small"
-              variant="tonal"
-              label
-              :title="$t(`efmv.position.${detail(i)!.position}Hint`)"
-              data-testid="position"
             >
-              {{ $t(`efmv.position.${detail(i)!.position}`) }}
-              ({{ signedPercent(detail(i)!.variation_percent!) }})
-            </v-chip>
-            <span v-else class="text-disabled">—</span>
+              <!-- Always shown (a prefix only shows once there is a value) -->
+              <template #prepend-inner
+                ><span class="symbol">{{ symbol }}</span></template
+              >
+            </v-text-field>
+            <div v-if="detail(i)?.position" class="position">
+              <v-chip
+                :color="POSITION_COLORS[detail(i)!.position!]"
+                :prepend-icon="POSITION_ICONS[detail(i)!.position!]"
+                size="x-small"
+                variant="tonal"
+                label
+                :title="$t(`efmv.position.${detail(i)!.position}Hint`)"
+                data-testid="position"
+              >
+                {{ $t(`efmv.position.${detail(i)!.position}`) }}
+                ({{ signedPercent(detail(i)!.variation_percent!) }})
+              </v-chip>
+            </div>
           </td>
           <td class="cell-input" data-col="efmv">
             <v-text-field
@@ -592,15 +597,24 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               :title="$t('efmv.item.efmvValueHint', { term: scenario.term })"
               data-testid="efmv-value"
               @blur="tidyEfmvValue(item)"
-            />
+            >
+              <!-- Always shown (a prefix only shows once there is a value) -->
+              <template #prepend-inner
+                ><span class="symbol">{{ symbol }}</span></template
+              >
+            </v-text-field>
           </td>
           <td
-            class="cell-text text-end text-no-wrap numeric font-weight-medium"
+            class="cell-text text-no-wrap numeric font-weight-medium"
             :class="{ 'text-disabled': detail(i)?.out_of_curve || detail(i)?.out_of_scope }"
           >
-            {{
-              detail(i)?.line_total ? formatMoney(detail(i)!.line_total!, currency, locale) : '—'
-            }}
+            <div v-if="detail(i)?.line_total" class="money">
+              <span class="symbol font-weight-regular">{{ symbol }}</span>
+              <span data-testid="line-total">{{
+                toInputMoney(detail(i)!.line_total!, locale)
+              }}</span>
+            </div>
+            <div v-else class="text-end">—</div>
           </td>
           <td class="cell-text text-end text-no-wrap numeric" data-testid="weight">
             {{
@@ -708,6 +722,28 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 .text-end-input :deep(input) {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Money: the currency symbol on the left, the number on the right */
+.money {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.symbol {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  white-space: nowrap;
+}
+.cell-input :deep(.v-field__prepend-inner) {
+  align-items: center;
+  padding-top: 0;
+}
+/* Unit value with its position below (the row grows) */
+.cell-stack .position {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px 6px;
+  margin-top: -8px;
 }
 
 /* Remove: only on the row under the mouse (or with keyboard focus) */

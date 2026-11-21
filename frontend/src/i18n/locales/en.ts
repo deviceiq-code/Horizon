@@ -196,7 +196,6 @@ const en = {
     },
     item: {
       outOfScope: "Not in the scenario's vertical; change the vertical or remove it.",
-      position: 'Position',
       unitValueHint: 'Leave empty to use the value of Average Prices (shown in gray).',
       unitValueRule: 'Enter a value greater than zero.',
       pricedOn: 'priced on {date}',

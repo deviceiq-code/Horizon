@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { decimalSeparator, formatMoney, parseMoney, toInputMoney, toInputNumber } from '../money'
+import {
+  decimalSeparator,
+  formatMoney,
+  parseMoney,
+  toInputMoney,
+  toInputNumber,
+  currencySymbol,
+} from '../money'
 
 describe('decimalSeparator', () => {
   it('follows the UI language', () => {
@@ -63,5 +70,11 @@ describe('toInputNumber', () => {
   it('round-trips through parseMoney', () => {
     expect(parseMoney(toInputNumber('1234567.89', 'pt-br', 2), 'pt-br')).toBe('1234567.89')
     expect(parseMoney(toInputNumber('1234567.89', 'en', 2), 'en')).toBe('1234567.89')
+  })
+
+  it('gives the currency symbol in the UI language', () => {
+    expect(currencySymbol('BRL', 'pt-br')).toBe('R$')
+    expect(currencySymbol('BRL', 'en')).toBe('R$')
+    expect(currencySymbol('USD', 'en')).toBe('$')
   })
 })

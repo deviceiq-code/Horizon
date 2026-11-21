@@ -195,7 +195,6 @@ const es: Messages = {
     },
     item: {
       outOfScope: 'No es de la vertical del escenario; cambie la vertical o quite el bien.',
-      position: 'Posicionamiento',
       unitValueHint: 'Deje vacío para usar el valor de los precios promedio (mostrado en gris).',
       unitValueRule: 'Ingrese un valor mayor que cero.',
       pricedOn: 'cotizado el {date}',
