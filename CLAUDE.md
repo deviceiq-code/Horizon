@@ -275,7 +275,11 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.
   - `src/composables/useValidationRules.ts` — translated field rules (required, email, maxLength).
   - `src/utils/countries.ts` — ISO country codes; names via `Intl.DisplayNames` in the UI language.
-  - In dev, Vite proxies `/api` to `http://localhost:8000`.
+  - In dev, Vite proxies `/api` to `http://localhost:8000` (Host header kept). Who may reach the
+    dev server comes from the root `.env` (`vite.config.ts`): `DEV_LISTEN_HOST` (localhost |
+    0.0.0.0) and `ALLOWED_HOSTS` (shared with Django; `*` = any). Django always listens on
+    127.0.0.1 (`runserver --insecure`, so the admin keeps its CSS with DEBUG=False). Opened to
+    other machines for tests → `DEBUG=False` (debug pages show the environment). See README.
 - Database: PostgreSQL 17 on the homelab (`TrueNAS-1:5432`, database `horizon_dev`).
   The test database (`test_horizon_dev`) is created/dropped by pytest-django.
 

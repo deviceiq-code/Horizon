@@ -42,6 +42,19 @@ cd frontend && npm run dev                        # UI at http://localhost:5173
 - Application: http://localhost:5173
 - Django admin: http://localhost:8000/admin
 
+### Access from other machines (tests)
+By default only this machine can open Horizon. To open it to the local network or, through
+NAT / port forwarding on the router, to the internet (tests only — still the dev servers), set
+in `.env`:
+```bash
+DEV_LISTEN_HOST=0.0.0.0   # Vite listens on every interface (port 5173)
+ALLOWED_HOSTS=*           # or the names/addresses used, e.g. 192.168.1.100,horizon.example.com
+DEBUG=False               # Django's debug pages would show the environment (database password)
+```
+and restart the servers. Django stays on 127.0.0.1 — only the Vite server (5173) is reachable;
+it forwards `/api` to Django keeping the address the browser used, so the CSRF check works
+without listing origins. Firewall/NAT rules are configured outside Horizon.
+
 ## Tests and quality
 ```bash
 cd backend  && uv run pytest && uv run ruff check .

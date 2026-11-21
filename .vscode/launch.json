@@ -8,7 +8,7 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/backend/manage.py",
-      "args": ["runserver", "127.0.0.1:8000"],
+      "args": ["runserver", "--insecure", "127.0.0.1:8000"],
       "cwd": "${workspaceFolder}/backend",
       "python": "${workspaceFolder}/backend/.venv/bin/python",
       "django": true,

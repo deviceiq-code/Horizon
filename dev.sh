@@ -41,7 +41,9 @@ service_port() {
 
 service_command() {
   case "$1" in
-    backend) echo "uv run python manage.py runserver 127.0.0.1:8000" ;;
+    # --insecure: the admin's static files are served even with DEBUG=False (e.g. while the
+    # dev servers are open to the internet for tests)
+    backend) echo "uv run python manage.py runserver --insecure 127.0.0.1:8000" ;;
     frontend) echo "npm run dev -- --port 5173 --strictPort" ;;
   esac
 }
