@@ -46,8 +46,11 @@ describe('suite apps and routes', () => {
     expect(router.currentRoute.value.path).toBe('/pricing/average-prices')
     await router.push('/catalogs/manufacturers')
     expect(router.currentRoute.value.path).toBe('/admin/catalogs/manufacturers')
+    // The former Roles tab is a page of its own
     await router.push('/users?tab=roles')
-    expect(router.currentRoute.value.fullPath).toBe('/admin/users?tab=roles')
+    expect(router.currentRoute.value.fullPath).toBe('/admin/roles')
+    await router.push('/admin/catalogs')
+    expect(router.currentRoute.value.path).toBe('/admin/catalogs/verticals')
   })
 
   it('Pricing, Remarketing (coming soon) and Administration; menus per app', () => {
@@ -65,12 +68,20 @@ describe('suite apps and routes', () => {
     ])
     expect(appModules('admin', true).map((m) => m.name)).toEqual([
       'customers',
-      'catalogs',
       'users',
+      'roles',
       'system-settings',
+      'catalogs-verticals',
+      'catalogs-asset-classes',
+      'catalogs-manufacturers',
     ])
-    // Users and System Settings are for administrators
-    expect(appModules('admin', false).map((m) => m.name)).toEqual(['customers', 'catalogs'])
+    // Users, Roles and System Settings are for administrators
+    expect(appModules('admin', false).map((m) => m.name)).toEqual([
+      'customers',
+      'catalogs-verticals',
+      'catalogs-asset-classes',
+      'catalogs-manufacturers',
+    ])
     setLanguage('en')
   })
 })
@@ -124,10 +135,10 @@ describe('AppBreadcrumbs', () => {
     wrapper.unmount()
   })
 
-  it('a Catalogs tab: Horizon › Administration › Catalogs › Asset Classes', async () => {
+  it('a catalog: Horizon › Administration › Asset Classes', async () => {
     const { wrapper, titles, links } = await crumbsAt('/admin/catalogs/asset-classes')
-    expect(titles).toEqual(['Horizon', 'Administration', 'Catalogs', 'Asset Classes'])
-    expect(links).toEqual(['/', '/admin/customers', '/admin/catalogs', null])
+    expect(titles).toEqual(['Horizon', 'Administration', 'Asset Classes'])
+    expect(links).toEqual(['/', '/admin/customers', null])
     wrapper.unmount()
   })
 })

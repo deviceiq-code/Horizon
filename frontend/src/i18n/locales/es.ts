@@ -70,6 +70,7 @@ const es: Messages = {
     },
   },
   menu: {
+    sections: { management: 'Gestión', catalogs: 'Catálogos' },
     collapse: 'Contraer Menú',
     apps: 'Apps',
     path: 'Ruta',
@@ -345,6 +346,7 @@ const es: Messages = {
   },
   manufacturers: {
     title: 'Fabricantes',
+    subtitle: 'Fabricantes de los bienes y cómo les va en el remarketing.',
     new: 'Nuevo Fabricante',
     edit: 'Editar Fabricante',
     fields: {
@@ -379,6 +381,8 @@ const es: Messages = {
   },
   assetClasses: {
     title: 'Clases de Activo',
+    subtitle:
+      'Tipos de bienes, su sub-vertical, calificaciones de remarketing y plantillas de especificación.',
     new: 'Nueva Clase de Activo',
     edit: 'Editar Clase de Activo',
     filters: {
@@ -433,6 +437,7 @@ const es: Messages = {
   },
   verticals: {
     title: 'Verticales de Negocio',
+    subtitle: 'Verticales de negocio y sus sub-verticales: riesgo y plazos permitidos.',
     new: 'Nueva Vertical de Negocio',
     edit: 'Editar Vertical de Negocio',
     fields: {
@@ -629,8 +634,9 @@ const es: Messages = {
   },
   users: {
     title: 'Usuarios',
-    subtitle:
-      'Personas que usan el sistema y sus roles. Solo los administradores pueden gestionarlos.',
+    subtitle: 'Personas que usan el sistema. Solo los administradores pueden gestionarlas.',
+    rolesSubtitle:
+      'Lo que los usuarios pueden hacer en el sistema. Los roles del sistema no se pueden cambiar.',
     tabs: {
       users: 'Usuarios',
       roles: 'Roles',

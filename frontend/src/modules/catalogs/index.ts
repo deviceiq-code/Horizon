@@ -1,41 +1,66 @@
+/**
+ * Small reference tables ("Catalogs"), shared by every app. Each one is a module of
+ * Administration in the side menu's "Catalogs" section, with its own page (CatalogPage.vue).
+ * To add one: its folder (api.ts, <Name>Tab.vue — usually a ServerCrudTable —, form dialog),
+ * an entry here and in MODULES (src/modules/index.ts).
+ */
+import { defineAsyncComponent, type Component } from 'vue'
 import type { AppModule } from '@/modules'
 
-import { CATALOG_TABS } from './tabs'
+export const CATALOGS_SECTION = 'menu.sections.catalogs'
 
-const catalogs: AppModule = {
-  name: 'catalogs',
-  icon: 'mdi-database-cog-outline',
-  titleKey: 'catalogs.title',
-  app: 'admin',
-  routes: [
-    {
-      // The menu links here; it opens the first tab and stays highlighted on every tab
-      path: 'catalogs',
-      name: 'catalogs',
-      component: () => import('./CatalogsView.vue'),
-      redirect: { name: CATALOG_TABS[0]!.name },
-      children: [
-        {
-          path: 'verticals',
-          name: 'catalogs-verticals',
-          meta: { titleKey: 'verticals.title' },
-          component: () => import('./verticals/VerticalsTab.vue'),
+function catalog(
+  name: string,
+  path: string,
+  icon: string,
+  key: string,
+  view: () => Promise<{ default: Component }>,
+): AppModule {
+  return {
+    name,
+    icon,
+    titleKey: `${key}.title`,
+    app: 'admin',
+    section: CATALOGS_SECTION,
+    routes: [
+      {
+        path: `catalogs/${path}`,
+        name,
+        component: () => import('./CatalogPage.vue'),
+        props: {
+          titleKey: `${key}.title`,
+          subtitleKey: `${key}.subtitle`,
+          view: defineAsyncComponent(view),
         },
-        {
-          path: 'asset-classes',
-          name: 'catalogs-asset-classes',
-          meta: { titleKey: 'assetClasses.title' },
-          component: () => import('./asset-classes/AssetClassesTab.vue'),
-        },
-        {
-          path: 'manufacturers',
-          name: 'catalogs-manufacturers',
-          meta: { titleKey: 'manufacturers.title' },
-          component: () => import('./manufacturers/ManufacturersTab.vue'),
-        },
-      ],
-    },
-  ],
+      },
+    ],
+  }
 }
 
-export default catalogs
+export const verticals = catalog(
+  'catalogs-verticals',
+  'verticals',
+  'mdi-shape-outline',
+  'verticals',
+  () => import('./verticals/VerticalsTab.vue'),
+)
+// The former Catalogs page (/admin/catalogs) opens its first table
+verticals.routes.push({ path: 'catalogs', name: 'catalogs', redirect: { name: verticals.name } })
+
+export const assetClasses = catalog(
+  'catalogs-asset-classes',
+  'asset-classes',
+  'mdi-tag-multiple-outline',
+  'assetClasses',
+  () => import('./asset-classes/AssetClassesTab.vue'),
+)
+
+export const manufacturers = catalog(
+  'catalogs-manufacturers',
+  'manufacturers',
+  'mdi-factory',
+  'manufacturers',
+  () => import('./manufacturers/ManufacturersTab.vue'),
+)
+
+export default [verticals, assetClasses, manufacturers]

@@ -72,6 +72,7 @@ const en = {
     },
   },
   menu: {
+    sections: { management: 'Management', catalogs: 'Catalogs' },
     collapse: 'Collapse Menu',
     apps: 'Apps',
     path: 'Path',
@@ -345,6 +346,7 @@ const en = {
   },
   manufacturers: {
     title: 'Manufacturers',
+    subtitle: 'Asset manufacturers and how they do in remarketing.',
     new: 'New Manufacturer',
     edit: 'Edit Manufacturer',
     fields: {
@@ -379,6 +381,8 @@ const en = {
   },
   assetClasses: {
     title: 'Asset Classes',
+    subtitle:
+      'Kinds of assets, their sub-vertical, remarketing ratings and specification templates.',
     new: 'New Asset Class',
     edit: 'Edit Asset Class',
     filters: {
@@ -433,6 +437,7 @@ const en = {
   },
   verticals: {
     title: 'Business Verticals',
+    subtitle: 'Business verticals and their sub-verticals: risk and allowed terms.',
     new: 'New Business Vertical',
     edit: 'Edit Business Vertical',
     fields: {
@@ -630,7 +635,8 @@ const en = {
   },
   users: {
     title: 'Users',
-    subtitle: 'People who use the system and their roles. Only administrators can manage them.',
+    subtitle: 'People who use the system. Only administrators can manage them.',
+    rolesSubtitle: 'What users can do in the system. System roles cannot be changed.',
     tabs: {
       users: 'Users',
       roles: 'Roles',

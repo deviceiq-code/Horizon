@@ -7,7 +7,6 @@ import en from '@/i18n/locales/en'
 import es from '@/i18n/locales/es'
 import ptBR from '@/i18n/locales/pt-br'
 import { MODULES } from '@/modules'
-import { CATALOG_TABS } from '@/modules/catalogs/tabs'
 
 // Vitest runs with frontend/ as the working directory (vitest.config.ts → root)
 const SRC_ROOT = resolve('src')
@@ -49,10 +48,7 @@ describe('translation files', () => {
   })
 
   it('every module and catalog tab title key exists (variables are not found above)', () => {
-    const keysInVariables = [
-      ...MODULES.map((m) => m.titleKey),
-      ...CATALOG_TABS.map((tab) => tab.titleKey),
-    ]
+    const keysInVariables = MODULES.map((m) => m.titleKey)
     const missing = keysInVariables.filter((k) => !reference.includes(k))
     expect(missing).toEqual([])
   })

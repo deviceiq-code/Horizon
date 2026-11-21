@@ -109,7 +109,13 @@ describe('MainLayout', () => {
 
   it('inside an app: its name, its pages in the side menu and the path', async () => {
     const { wrapper } = await mountLayout('/admin/catalogs/asset-classes')
-    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Administration')
+    // Administration's pages in two sections: Management and Catalogs
+    expect(inBody('[data-testid="app-title"]')!.textContent!.trim()).toBe('Management')
+    expect(inBody('[data-testid="section-menu.sections.catalogs"]')!.textContent!.trim()).toBe(
+      'Catalogs',
+    )
+    expect(inBody('[data-testid="menu-roles"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-catalogs-asset-classes"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-customers"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-users"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-average-prices"]')).toBeNull()
@@ -118,7 +124,7 @@ describe('MainLayout', () => {
     expect(inBody('[data-testid="menu-app-admin"]')).toBeNull()
     // The path is in the top bar
     expect(inBody('header [data-testid="breadcrumbs"]')!.textContent).toMatch(
-      /Horizon.*Administration.*Catalogs.*Asset Classes/,
+      /Horizon.*Administration.*Asset Classes/,
     )
     wrapper.unmount()
   })
@@ -142,7 +148,7 @@ describe('MainLayout', () => {
 
   it('the app launcher lists the apps; Remarketing is coming soon', async () => {
     const { wrapper } = await mountLayout('/pricing/average-prices')
-    expect(inBody('[data-testid="app-title"]')!.textContent).toBe('Pricing')
+    expect(inBody('[data-testid="app-title"]')!.textContent!.trim()).toBe('Pricing')
     await click('app-launcher')
     const menu = inBody('[data-testid="app-launcher-menu"]')!
     expect(menu.textContent).toContain('Pricing')

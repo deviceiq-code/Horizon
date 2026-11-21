@@ -13,7 +13,7 @@ import customers from './customers'
 import efmvAnalyses from './efmv-analyses'
 import pricingSettings from './pricing-settings'
 import systemSettings from './system-settings'
-import users from './users'
+import { roles, users } from './users'
 
 export interface AppModule {
   /** Route name of the module's main page (the menu links to it) */
@@ -28,6 +28,11 @@ export interface AppModule {
   routes: RouteRecordRaw[]
   /** Only administrators see it in the menu and can open its routes */
   adminOnly?: boolean
+  /**
+   * Translation key of its section in the side menu ("menu.sections.management"); without
+   * one, the section is named after the app
+   */
+  section?: string
 }
 
 /** Modules the user can open (admin-only ones need an administrator). */
@@ -39,10 +44,12 @@ export const MODULES: AppModule[] = [
   averagePrices,
   efmvAnalyses,
   pricingSettings,
+  // Administration: Management, then Catalogs
   customers,
-  catalogs,
   users,
+  roles,
   systemSettings,
+  ...catalogs,
 ]
 
 /** Modules of an app the user can open, in menu order. */

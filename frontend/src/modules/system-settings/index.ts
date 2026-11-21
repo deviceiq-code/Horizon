@@ -6,6 +6,7 @@ const systemSettings: AppModule = {
   icon: 'mdi-cog-outline',
   titleKey: 'settings.tabs.system',
   app: 'admin',
+  section: 'menu.sections.management',
   adminOnly: true,
   routes: [
     {

@@ -204,20 +204,25 @@ Multi-user web system for **operating lease residual value pricing**
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
     (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Alliances"
     (partnerships, incentive programs, discounts, fees) — both coming soon — and
-    "Administração" (`/admin/…`: Customers, Catalogs — shared by every app — plus Users and
-    System Settings, administrators only). App names have no "Horizon" and stay in English in
+    "Administração" (`/admin/…`, two side menu sections: Management — Customers, plus Users,
+    Roles and System Settings, administrators only — and Catalogs — Verticals, Asset Classes,
+    Manufacturers, shared by every app). App names have no "Horizon" and stay in English in
     every language; areas are translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
     prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
-    the prefix. Navigation: the top bar shows the path (`AppBreadcrumbs.vue`: Horizon › app › module ›
-    tab, from `meta.titleKey` — child routes such as Catalogs tabs set their own) and the app
-    launcher (`AppLauncher.vue`); the side menu lists the current app's modules and the other
-    apps; `/` is the suite's home (welcome banner + app cards). The user's own settings (`/settings`) open from the user menu.
+    the prefix. Navigation: the top bar shows the path (`AppBreadcrumbs.vue`: Horizon › app › module
+    (› page, from `meta.titleKey` — child routes set their own) and the app launcher
+    (`AppLauncher.vue`); the side menu lists the current app's modules by section (an
+    `AppModule.section` translation key, e.g. `menu.sections.management`; none: the app's name)
+    and the other apps; `/` is the suite's home (welcome banner + app cards). The user's own settings (`/settings`) open from the user menu.
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
     router and the side menu (`adminOnly: true` hides it from non-administrators and the router guard refuses its
-    routes). `account-managers/` is the reference module. `users/` (Users and Roles tabs,
-    `?tab=roles`; system roles show translated via `roleText.ts`).
-  - `src/modules/catalogs/` — the "Catalogs" page: one tab (and child route) per reference table,
-    listed in `tabs.ts`. A new small table is a new tab here, not a new module.
+    routes). `account-managers/` is the reference module. `users/` exports two modules,
+    `users` (`/admin/users`) and `roles` (`/admin/roles`; the former `?tab=roles` redirects;
+    system roles show translated via `roleText.ts`).
+  - `src/modules/catalogs/` — one module per reference table (section Catalogs of
+    Administration), each a page `CatalogPage.vue` (title, subtitle, the table's `<Name>Tab.vue`)
+    at `/admin/catalogs/<table>` (`/admin/catalogs` opens the first). A new small table is a new
+    entry in `catalogs/index.ts` (+ MODULES).
   - `src/components/ServerCrudTable.vue` — generic CRUD grid (search, New, edit/delete with
     confirmation, notifications; optional `expandable` + `expanded-row` slot; column filters:
     `filters` object + `filter.<key>` slots, a row under the titles turned on/off with the

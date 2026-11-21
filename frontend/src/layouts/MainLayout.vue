@@ -2,7 +2,8 @@
 /**
  * The frame of every signed-in page:
  * - Side menu (dark, the theme's "sidebar" color): the Horizon brand, Home, the current app's
- *   pages (a section named after the app) and the other apps; Settings at the bottom.
+ *   pages by section (a module's `section`, e.g. Management and Catalogs in Administration;
+ *   without one, a section named after the app) and the other apps; Settings at the bottom.
  *   Wide windows (≥ 1440 px) open it, narrower ones (e.g. 1366 × 768 notebooks) collapse it to
  *   icons (they expand while
  *   hovered); the button on the top bar opens/collapses it and the choice is remembered in this
@@ -37,6 +38,21 @@ const currentApp = computed(() => suiteApp(route.meta.app as string | undefined)
 const modules = computed(() =>
   currentApp.value ? appModules(currentApp.value.id, !!auth.user?.is_admin) : [],
 )
+/** The app's pages by section ("Management", "Catalogs"…; without one: the app's name) */
+const sections = computed(() => {
+  const groups: { title: string; key: string; modules: typeof modules.value }[] = []
+  for (const module of modules.value) {
+    const key = module.section ?? 'app'
+    let group = groups.find((g) => g.key === key)
+    if (!group) {
+      const title = module.section ? t(module.section) : appName(currentApp.value!, t)
+      group = { title, key, modules: [] }
+      groups.push(group)
+    }
+    group.modules.push(module)
+  }
+  return groups
+})
 /** The other apps the user can open (switching apps from the side menu) */
 const otherApps = computed(() =>
   SUITE_APPS.filter(
@@ -139,11 +155,13 @@ async function logout() {
         :title="$t('menu.home')"
       />
 
-      <!-- The current app and its pages -->
-      <template v-if="currentApp">
-        <div class="section" data-testid="app-title">{{ appName(currentApp, t) }}</div>
+      <!-- The current app's pages, by section -->
+      <template v-for="(group, index) in sections" :key="group.key">
+        <div class="section" :data-testid="index === 0 ? 'app-title' : `section-${group.key}`">
+          {{ group.title }}
+        </div>
         <v-list-item
-          v-for="module in modules"
+          v-for="module in group.modules"
           :key="module.name"
           :to="{ name: module.name }"
           :prepend-icon="module.icon"

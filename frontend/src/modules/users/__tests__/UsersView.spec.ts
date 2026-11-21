@@ -10,6 +10,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import { click, inBody, settle, typeInto } from '@/test-utils'
 import * as usersApi from '../api'
+import type { Component } from 'vue'
+import RolesView from '../RolesView.vue'
 import UsersView from '../UsersView.vue'
 
 vi.mock('../api', () => ({
@@ -109,7 +111,7 @@ const AM_ROLE: usersApi.Role = {
   users_count: 0,
 }
 
-async function mountView(path = '/users') {
+async function mountView(path = '/users', view: Component = UsersView) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useAuthStore().user = {
@@ -129,10 +131,13 @@ async function mountView(path = '/users') {
   }
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/users', name: 'users', component: UsersView }],
+    routes: [
+      { path: '/users', name: 'users', component: UsersView },
+      { path: '/roles', name: 'roles', component: RolesView },
+    ],
   })
   await router.push(path)
-  const wrapper = mount(UsersView, {
+  const wrapper = mount(view, {
     attachTo: document.body,
     global: { plugins: [vuetify, i18n, pinia, router] },
   })
@@ -263,7 +268,8 @@ describe('UsersView', () => {
   // --- Roles ---------------------------------------------------------------------------------
 
   it('lists roles; system roles cannot be edited or deleted', async () => {
-    const { wrapper } = await mountView('/users?tab=roles')
+    const { wrapper } = await mountView('/roles', RolesView)
+    expect(inBody('h1')!.textContent).toBe('Roles')
     const rows = document.body.querySelectorAll('tbody tr')
     expect(rows[0]!.textContent).toContain('Administrator')
     expect(rows[0]!.textContent).toContain('System')
@@ -276,9 +282,7 @@ describe('UsersView', () => {
 
   it('creates a role', async () => {
     api.createRole.mockResolvedValue({ ...ANALYST, id: 3, name: 'Pricing' })
-    const { wrapper, router } = await mountView()
-    await click('tab-roles')
-    expect(router.currentRoute.value.query.tab).toBe('roles')
+    const { wrapper } = await mountView('/roles', RolesView)
     await click('new')
     await typeInto('role-name', 'Pricing')
     await typeInto('role-description', 'Edits prices')
