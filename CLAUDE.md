@@ -238,7 +238,8 @@ Multi-user web system for **operating lease residual value pricing**
     in the same cell), eFMV (the
     curve's value at the term as placeholder; empty = that value; "25%" becomes its value when
     the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total (its Weight — share of the LO — below it, as a chip "Weight (50.69%)"); money cells show the currency symbol on the left
-    (`utils/money.ts::currencySymbol`) and the number on the right; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
+    (`utils/money.ts::currencySymbol`) and the number on the right, and share one layout
+    (`.money-cell`: a value line and a chip line of fixed heights) so they line up across the row; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
     row adds one), remove buttons appear on hover and are out of the Tab order; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and

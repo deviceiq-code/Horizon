@@ -557,7 +557,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             </div>
           </td>
           <!-- The value typed and, below it, how it compares with Average Prices -->
-          <td class="cell-input cell-stack" data-col="unit">
+          <td class="cell-input money-cell" data-col="unit">
             <v-text-field
               v-model="item.unit_value"
               inputmode="decimal"
@@ -580,8 +580,10 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 ><span class="symbol">{{ symbol }}</span></template
               >
             </v-text-field>
-            <div v-if="detail(i)?.position" class="position">
+            <div class="chip-line">
               <v-chip
+                v-if="detail(i)?.position"
+                class="cell-chip"
                 :color="POSITION_COLORS[detail(i)!.position!]"
                 :prepend-icon="POSITION_ICONS[detail(i)!.position!]"
                 size="x-small"
@@ -596,7 +598,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             </div>
           </td>
           <!-- The eFMV and, below it, what it is of the unit value -->
-          <td class="cell-input cell-stack" data-col="efmv">
+          <td class="cell-input money-cell" data-col="efmv">
             <v-text-field
               v-model="item.efmv_value"
               inputmode="decimal"
@@ -620,12 +622,13 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               >
             </v-text-field>
             <!-- Same look as the position below the unit value -->
-            <div v-if="detail(i)?.efmv_percent" class="below">
+            <div class="chip-line">
               <v-chip
+                v-if="detail(i)?.efmv_percent"
                 size="x-small"
                 variant="tonal"
                 label
-                class="numeric"
+                class="cell-chip numeric"
                 :title="$t('efmv.item.efmvPercentHint')"
                 data-testid="efmv-percent"
               >
@@ -638,7 +641,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             </div>
           </td>
           <td
-            class="cell-text text-no-wrap numeric font-weight-medium"
+            class="money-cell text-no-wrap numeric font-weight-medium"
             :class="{ 'text-disabled': detail(i)?.out_of_curve || detail(i)?.out_of_scope }"
           >
             <div v-if="detail(i)?.line_total" class="money">
@@ -647,14 +650,15 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 toInputMoney(detail(i)!.line_total!, locale)
               }}</span>
             </div>
-            <div v-else class="text-end">—</div>
+            <div v-else class="money justify-end">—</div>
             <!-- Its share of the scenario's LO, as the chips of the other columns -->
-            <div v-if="detail(i)?.weight_percent" class="chip-below">
+            <div class="chip-line">
               <v-chip
+                v-if="detail(i)?.weight_percent"
                 size="x-small"
                 variant="tonal"
                 label
-                class="numeric font-weight-regular"
+                class="cell-chip numeric font-weight-regular"
                 :title="$t('efmv.item.weightHint')"
                 data-testid="weight"
               >
@@ -773,11 +777,38 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
   font-variant-numeric: tabular-nums;
 }
 
-/* Money: the currency symbol on the left, the number on the right */
+/*
+ * Money cells (Unit Value, eFMV, Total) share one layout so their lines match across the row:
+ * the value (currency symbol on the left, number on the right) on a line of fixed height, then
+ * a line of fixed height for its chip (position, % of the unit value, weight).
+ */
+.sheet {
+  --value-height: 28px;
+  --chip-line-height: 24px;
+}
+.sheet td.money-cell {
+  padding: 6px 0 !important;
+}
+.money-cell :deep(.v-field__input) {
+  min-height: var(--value-height);
+}
 .money {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
+  height: var(--value-height);
+  padding-inline: 10px;
+}
+.chip-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: var(--chip-line-height);
+  padding-inline: 10px;
+}
+.cell-chip {
+  height: 20px !important;
 }
 .symbol {
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
@@ -786,19 +817,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 .cell-input :deep(.v-field__prepend-inner) {
   align-items: center;
   padding-top: 0;
-}
-/* Unit value with its position below (the row grows) */
-.chip-below {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 2px;
-}
-.cell-stack .position,
-.cell-stack .below {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 10px 6px;
-  margin-top: -8px;
 }
 
 /* Remove: only on the row under the mouse (or with keyboard focus) */
