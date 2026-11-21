@@ -25,7 +25,8 @@ export const SUITE_APPS: readonly SuiteApp[] = [
     path: 'pricing',
     name: 'Pricing',
     descriptionKey: 'apps.pricing.description',
-    icon: 'mdi-chart-timeline-variant',
+    // Not used by any module (Average Prices has mdi-chart-timeline-variant)
+    icon: 'mdi-sale-outline',
   },
   {
     id: 'remarketing',
