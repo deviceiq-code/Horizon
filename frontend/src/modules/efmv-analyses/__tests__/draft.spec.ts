@@ -78,12 +78,14 @@ describe('eFMV analysis draft', () => {
     expect(parseUnitValue('abc', 'en')).toBeNull()
     // eFMV values may be zero
     expect(parseEfmvValue('0', 'en')).toBe('0')
-    expect(parseEfmvValue('-1', 'en')).toBeNull()
+    // Negative: a disposal cost
+    expect(parseEfmvValue('-1.500,25', 'pt-br')).toBe('-1500.25')
+    expect(parseEfmvValue('abc', 'en')).toBeNull()
     // …or a percentage of the unit value
     expect(parseEfmvPercent('25%', 'en')).toBe('25')
     expect(parseEfmvPercent(' 12,5 % ', 'pt-br')).toBe('12.5')
     expect(parseEfmvPercent('25', 'en')).toBeNull()
-    expect(parseEfmvPercent('-5%', 'en')).toBeNull()
+    expect(parseEfmvPercent('-5%', 'en')).toBe('-5')
     expect(isEfmvInput('25%', 'en') && isEfmvInput('', 'en') && isEfmvInput('10', 'en')).toBe(true)
     expect(isEfmvInput('%', 'en')).toBe(false)
   })

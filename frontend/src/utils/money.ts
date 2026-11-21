@@ -31,6 +31,14 @@ export function parseMoney(text: string, language: string, places = 2): string |
   return withPlaces(canonical, places)
 }
 
+/** Like `parseMoney`, also accepting a leading minus ("-1.500,25" → "-1500.25"). */
+export function parseSignedMoney(text: string, language: string, places = 2): string | null {
+  const match = /^\s*([-−]?)\s*(.*)$/.exec(text)!
+  const value = parseMoney(match[2]!, language, places)
+  if (value === null) return null
+  return match[1] && Number(value) !== 0 ? `-${value}` : value
+}
+
 function withPlaces(canonical: string, places: number): string | null {
   const [, fraction = ''] = canonical.split('.')
   if (fraction.length > places) return null

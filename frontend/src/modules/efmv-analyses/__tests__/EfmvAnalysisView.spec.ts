@@ -573,8 +573,16 @@ describe('EfmvAnalysisView', () => {
     )
     expect(input().value).toBe('25,000.00')
     expect(inBody('[data-testid="efmv-percent"]')!.textContent!.trim()).toBe('% Value (25.00%)')
-    // A negative value is refused before saving
+    // Negative: a disposal cost
     await typeInto('efmv-value', '-5')
+    await debounce()
+    expect(efmv.previewScenario).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        items: [{ average_price: 7, quantity: 2, unit_value: '100000.00', efmv_value: '-5' }],
+      }),
+    )
+    // What is not a value nor a percentage is refused before saving
+    await typeInto('efmv-value', 'abc')
     await click('save')
     expect(efmv.updateEfmvAnalysis).not.toHaveBeenCalled()
     wrapper.unmount()

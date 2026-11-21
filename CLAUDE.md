@@ -108,7 +108,8 @@ Multi-user web system for **operating lease residual value pricing**
     `EfmvScenarioItem`s (an average price's `lineage` — the **current** version always counts —,
     a quantity and a `unit_value` typed by the analyst — when not typed, the current average
     price's value counts (`value_from_price` in previews) and is stored on save; the same
-    price may repeat in several rows — e.g. another value per delivery state; and an optional `efmv_value` — one unit at the end of the term, typed; null = the
+    price may repeat in several rows — e.g. another value per delivery state; and an optional `efmv_value` — one unit at the end of the term, typed; negative allowed (a
+    disposal cost; also as a negative %); null = the
     price's curve at the scenario's term, `pricing/curves.py::value_at`, returned as
     `curve_value` and followed when the term or the price changes, `efmv_from_curve`; or
     `efmv_percent` in the input — a % of the unit value, `calculations.percent_of_value`,

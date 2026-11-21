@@ -207,8 +207,8 @@ const ptBR: Messages = {
       weightPercent: 'Peso ({percent}%)',
       weightHint: 'Quanto o total da linha representa do LO do cenário.',
       efmvValueHint:
-        'Valor de uma unidade ao fim do prazo ({term} meses), ou um percentual do valor unitário (ex.: 25%). Deixe vazio para usar a curva do Average Prices (mostrado em cinza).',
-      efmvValueRule: 'Informe um valor ou um percentual (ex.: 25%) igual ou maior que zero.',
+        'Valor de uma unidade ao fim do prazo ({term} meses), ou um percentual do valor unitário (ex.: 25%); negativo quando o descarte é um custo. Deixe vazio para usar a curva do Average Prices (mostrado em cinza).',
+      efmvValueRule: 'Informe um valor ou um percentual (ex.: 25%, ou -5% para custo de descarte).',
       efmvPercent: '% Valor ({percent}%)',
       efmvPercentHint: 'O eFMV como percentual do valor unitário.',
       quantity: 'Quantidade',

@@ -762,6 +762,12 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
   padding-top: 0;
   padding-bottom: 0;
 }
+/* Fields use the same font size as the rest of the grid (Vuetify fields are larger) */
+.sheet :deep(.v-field),
+.sheet :deep(.v-field input),
+.sheet .symbol {
+  font-size: 0.875rem;
+}
 .text-end-input :deep(input) {
   text-align: right;
   font-variant-numeric: tabular-nums;

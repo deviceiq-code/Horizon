@@ -1,5 +1,5 @@
 /** What the analysis page edits before saving (figures always come from the API). */
-import { parseMoney, toInputMoney } from '@/utils/money'
+import { parseMoney, parseSignedMoney, toInputMoney } from '@/utils/money'
 import type { Scenario, ScenarioInput, ScenarioItem, ScenarioPreview } from './api'
 
 export interface ItemDraft {
@@ -112,11 +112,10 @@ export function parseUnitValue(text: string, language: string): string | null {
   return value !== null && Number(value) > 0 ? value : null
 }
 
-/** The eFMV value typed (zero allowed), as a canonical decimal string, or null when empty or
- * invalid. */
+/** The eFMV value typed, as a canonical decimal string, or null when empty or invalid. Zero
+ * and negative values are allowed (negative: no resale value and a disposal cost). */
 export function parseEfmvValue(text: string, language: string): string | null {
-  const value = parseMoney(text, language)
-  return value !== null && Number(value) >= 0 ? value : null
+  return parseSignedMoney(text, language)
 }
 
 /** The eFMV typed as a percentage of the unit value ("25%", "12,5 %" in pt-br), as a canonical
@@ -124,8 +123,8 @@ export function parseEfmvValue(text: string, language: string): string | null {
 export function parseEfmvPercent(text: string, language: string): string | null {
   const match = /^(.*?)\s*%\s*$/.exec(text.trim())
   if (!match) return null
-  const value = parseMoney(match[1]!, language)
-  return value !== null && Number(value) >= 0 ? value : null
+  // Negative allowed (a disposal cost)
+  return parseSignedMoney(match[1]!, language)
 }
 
 /** Whether what was typed in an eFMV cell is acceptable: empty, a value or a percentage. */

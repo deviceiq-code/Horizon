@@ -7,6 +7,7 @@ import {
   toInputMoney,
   toInputNumber,
   currencySymbol,
+  parseSignedMoney,
 } from '../money'
 
 describe('decimalSeparator', () => {
@@ -76,5 +77,15 @@ describe('toInputNumber', () => {
     expect(currencySymbol('BRL', 'pt-br')).toBe('R$')
     expect(currencySymbol('BRL', 'en')).toBe('R$')
     expect(currencySymbol('USD', 'en')).toBe('$')
+  })
+
+  it('reads signed money', () => {
+    expect(parseSignedMoney('-1.500,25', 'pt-br')).toBe('-1500.25')
+    expect(parseSignedMoney(' - 10', 'en')).toBe('-10')
+    expect(parseSignedMoney('−3', 'en')).toBe('-3')
+    expect(parseSignedMoney('-0', 'en')).toBe('0')
+    expect(parseSignedMoney('25', 'en')).toBe('25')
+    expect(parseSignedMoney('--1', 'en')).toBeNull()
+    expect(parseMoney('-1', 'en')).toBeNull()
   })
 })

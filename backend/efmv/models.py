@@ -159,7 +159,8 @@ class EfmvScenarioItem(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
-    # Value of one unit at the end of the term, typed by the analyst; null = the average
+    # Value of one unit at the end of the term, typed by the analyst — negative when disposing
+    # of it costs more than it is worth; null = the average
     # price's curve at the scenario's term (follows the term and the price's current version)
     efmv_value = models.DecimalField(
         _("eFMV value"),
@@ -167,7 +168,6 @@ class EfmvScenarioItem(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        validators=[MinValueValidator(Decimal("0"))],
     )
     position = models.PositiveSmallIntegerField(_("position"), default=0)
 

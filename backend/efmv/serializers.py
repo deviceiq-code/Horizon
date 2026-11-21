@@ -200,13 +200,15 @@ class ItemInputSerializer(serializers.Serializer):
     unit_value = serializers.DecimalField(
         max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False, allow_null=True
     )
-    # Typed by the analyst; when not sent, the curve's value at the scenario's term counts
+    # Typed by the analyst; when not sent, the curve's value at the scenario's term counts.
+    # Negative: no resale value and a disposal cost.
     efmv_value = serializers.DecimalField(
-        max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
+        max_digits=14, decimal_places=2, required=False, allow_null=True
     )
-    # Or typed as a percentage of the unit value ("25" = 25%): turned into `efmv_value`
+    # Or typed as a percentage of the unit value ("25" = 25%, "-5" = a cost): turned into
+    # `efmv_value`
     efmv_percent = serializers.DecimalField(
-        max_digits=6, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
+        max_digits=6, decimal_places=2, required=False, allow_null=True
     )
 
     def validate(self, attrs):

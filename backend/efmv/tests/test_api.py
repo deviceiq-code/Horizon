@@ -487,7 +487,9 @@ def test_scenario_preview_with_efmv_values(logged_client, prices):
         ]},
         content_type="application/json",
     )  # fmt: skip
-    assert r.status_code == 400
+    # Negative: a disposal cost
+    assert r.status_code == 200, r.json()
+    assert r.json()["items"][0]["efmv_value"] == "-1.00"
 
 
 def test_scenario_title_is_term_and_name(logged_client, managers, customers, prices):
@@ -551,6 +553,37 @@ def test_efmv_typed_as_a_percentage_of_the_unit_value(logged_client, managers, c
     r = post(logged_client, data)
     assert r.status_code == 201, r.json()
     assert [i["efmv_value"] for i in r.json()["scenarios"][0]["items"]] == ["25.00", "6250.00"]
+    # Negative: a disposal cost, as a value or as a percentage
+    negative = [
+        {
+            "average_price": prices["excavator"],
+            "quantity": 2,
+            "unit_value": "100",
+            "efmv_value": "-10",
+        },
+        {
+            "average_price": prices["tractor"],
+            "quantity": 1,
+            "unit_value": "100",
+            "efmv_percent": "-5",
+        },
+    ]
+    r = logged_client.post(
+        f"{URL}scenario-preview/",
+        {"term_months": 24, "items": negative},
+        content_type="application/json",
+    )
+    assert r.status_code == 200, r.json()
+    assert [(i["efmv_value"], i["efmv_percent"]) for i in r.json()["items"]] == [
+        ("-10.00", "-10.00"),
+        ("-5.00", "-5.00"),
+    ]
+    # (2 × -10 + -5) / 300
+    assert r.json()["totals"]["efmv_percent"] == "-8.33"
+    data["scenarios"][0]["items"] = negative
+    r = post(logged_client, data)
+    assert r.status_code == 201, r.json()
+    assert [i["efmv_value"] for i in r.json()["scenarios"][0]["items"]] == ["-10.00", "-5.00"]
     # Not both
     items[0]["efmv_value"] = "30"
     r = logged_client.post(
