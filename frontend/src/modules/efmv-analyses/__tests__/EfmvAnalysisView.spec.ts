@@ -516,6 +516,21 @@ describe('EfmvAnalysisView', () => {
     wrapper.unmount()
   })
 
+  it('after saving, the open scenario is still shown', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView({ id: 3 })
+    const shown = () =>
+      document.querySelector('.v-window-item--active [data-testid="scenario-0"]') !== null
+    expect(shown()).toBe(true)
+    await click('save')
+    await settle()
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalled()
+    expect(shown()).toBe(true)
+    expect(inBody('.v-tab--selected')!.textContent).toContain('Base')
+    wrapper.unmount()
+  })
+
   it('an empty row is left out when saving', async () => {
     efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
     efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)

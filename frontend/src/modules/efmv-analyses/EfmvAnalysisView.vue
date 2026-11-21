@@ -74,8 +74,15 @@ function fill(data: EfmvAnalysis) {
   customer.value = data.customer
   customerOptions.value = [data.customer_detail]
   customerKey.value++
-  const open = scenarios.value.findIndex((s) => s.key === tab.value)
-  scenarios.value = data.scenarios.map((s) => scenarioDraft(s, locale.value))
+  const previous = scenarios.value
+  const open = previous.findIndex((s) => s.key === tab.value)
+  // After saving, the scenarios keep their keys (same order as sent): new keys would replace
+  // every tab and window item while the open tab changes, and the window lost its selection
+  // (no scenario shown)
+  scenarios.value = data.scenarios.map((s, i) => ({
+    ...scenarioDraft(s, locale.value),
+    ...(previous[i] ? { key: previous[i].key } : {}),
+  }))
   // Stay on the same scenario after saving
   tab.value = scenarios.value[Math.max(open, 0)]?.key ?? null
 }
