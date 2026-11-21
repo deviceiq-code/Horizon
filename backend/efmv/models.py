@@ -120,7 +120,8 @@ def in_scope(vertical_id, sub_vertical_id, sub_vertical) -> bool:
 
 class EfmvScenarioItem(models.Model):
     """An asset of a scenario: an average price (any of its versions; the current one counts)
-    and how many."""
+    and how many. The same asset may be in several rows of a scenario (e.g. its value differs
+    by the state where it is delivered: freight and taxes)."""
 
     scenario = models.ForeignKey(
         EfmvScenario, on_delete=models.CASCADE, related_name="items", verbose_name=_("scenario")
@@ -151,11 +152,6 @@ class EfmvScenarioItem(models.Model):
         verbose_name = _("scenario asset")
         verbose_name_plural = _("scenario assets")
         ordering = ["position", "id"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["scenario", "price_lineage"], name="efmv_item_unique_price"
-            ),
-        ]
 
     def __str__(self):
         return f"{self.scenario} × {self.quantity}"

@@ -130,9 +130,7 @@ onBeforeUnmount(() => clearTimeout(timer))
 
 // --- Assets ------------------------------------------------------------------------------------
 
-const chosen = computed(() =>
-  scenario.value.items.map((i) => i.average_price).filter((id): id is number => id !== null),
-)
+// The same asset may be in several rows (e.g. a different value per delivery state)
 
 /** A new empty row: the asset is chosen in it (Asset column). */
 function addRow() {
@@ -450,7 +448,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               v-if="item.pending"
               label=""
               :placeholder="$t('efmv.scenario.chooseAsset')"
-              :exclude="chosen"
               :vertical="scenario.vertical"
               :sub-vertical="scenario.sub_vertical"
               prepend-inner-icon="mdi-magnify"

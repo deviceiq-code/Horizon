@@ -435,6 +435,9 @@ describe('EfmvAnalysisView', () => {
     await settle()
     expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(3)
     expect(inBody('[data-testid="add-asset"]')).not.toBeNull()
+    // An asset already in the scenario can be added again (e.g. another delivery state)
+    await openDropdown('add-asset')
+    expect(document.querySelector('.v-overlay--active')!.textContent).toContain('320 GC')
     wrapper.unmount()
   })
 

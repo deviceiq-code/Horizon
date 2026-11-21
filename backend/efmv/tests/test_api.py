@@ -163,14 +163,21 @@ def test_term_beyond_the_curve_is_refused(logged_client, managers, customers, pr
     assert "24" in errors["1"]["average_price"][0]
 
 
-def test_same_asset_twice_is_refused(logged_client, managers, customers, prices):
+def test_same_asset_in_several_rows(logged_client, managers, customers, prices):
+    # e.g. another value for deliveries in another state (freight and taxes)
     data = body(managers, customers, prices)
     data["scenarios"][0]["items"].append(
-        {"average_price": prices["excavator"], "quantity": 1, "unit_value": "1"}
+        {"average_price": prices["excavator"], "quantity": 1, "unit_value": "104000"}
     )
     r = post(logged_client, data)
-    assert r.status_code == 400
-    assert "2" in r.json()["scenarios"]["0"]["items"]
+    assert r.status_code == 201, r.json()
+    items = r.json()["scenarios"][0]["items"]
+    assert [(i["model"], i["unit_value"]) for i in items] == [
+        ("320 GC", "100000.00"),
+        ("Tractor 5E", "50000.00"),
+        ("320 GC", "104000.00"),
+    ]
+    assert r.json()["scenarios"][0]["totals"]["lo"] == "354000.00"
 
 
 def test_account_manager_must_serve_the_customer(logged_client, managers, customers, prices):

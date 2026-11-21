@@ -219,15 +219,11 @@ class ScenarioInputSerializer(serializers.Serializer):
         lineages = [item["average_price"].lineage for item in attrs["items"]]
         prices = current_prices(lineages)
         ctx = Context()
-        errors, seen = {}, set()
+        errors = {}
+        # The same asset may be in several rows (e.g. a different value per delivery state)
         for index, item in enumerate(attrs["items"]):
-            lineage = item["average_price"].lineage
-            row = prices.get(lineage)
-            if lineage in seen:
-                errors[str(index)] = {
-                    "average_price": [_("This asset is already in the scenario.")]
-                }
-            elif row is None:
+            row = prices.get(item["average_price"].lineage)
+            if row is None:
                 errors[str(index)] = {"average_price": [_("This average price was deleted.")]}
             elif not in_scope(vertical.pk, sub_vertical and sub_vertical.pk, row.sub_vertical):
                 errors[str(index)] = {
@@ -256,7 +252,6 @@ class ScenarioInputSerializer(serializers.Serializer):
             elif item.get("unit_value") is None:
                 # Not typed: the value of the average price counts
                 item["unit_value"] = row.original_value
-            seen.add(lineage)
         if errors:
             raise serializers.ValidationError({"items": errors})
         return attrs

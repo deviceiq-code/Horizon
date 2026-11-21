@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Search the current average prices and pick one (emits `pick`, then clears itself).
- * `exclude` hides the ones already added. Options read "Model (specification values)", with
+ * Every asset is offered, also those already in the scenario (it may repeat). Options read "Model (specification values)", with
  * the manufacturer and asset class below.
  */
 import { ref } from 'vue'
@@ -12,7 +12,6 @@ import { specSummary } from '@/modules/average-prices/specText'
 
 const props = defineProps<{
   label: string
-  exclude: number[]
   /** Only assets of this vertical / sub-vertical (the scenario's) */
   vertical?: number | null
   subVertical?: number | null
@@ -63,7 +62,6 @@ function onPick(value: number | number[] | null) {
     :model-value="selected"
     :label="label"
     :search="search"
-    :exclude="exclude"
     @update:model-value="onPick"
   />
 </template>
