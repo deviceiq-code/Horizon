@@ -2,8 +2,9 @@
  * eFMV analyses (Estimated Fair Market Value): for a customer and its account manager, one or
  * more scenarios (name, term, scope and assets from Average Prices with quantities). The API
  * computes every figure: per scenario the LO (Leasing Origination, total value of the assets),
- * the eFMV at the end of the lease (to come; per asset, the value of one unit at the end of
- * the term — the average price's curve at the term or typed by the analyst) and the HW/SW/SV shares.
+ * the eFMV at the end of the lease (the assets' eFMV weighted over the LO; per asset, the value
+ * of one unit at the end of the term — the average price's curve at the term or typed by the
+ * analyst) and the HW/SW/SV shares.
  */
 import { api, listQuery, type ListParams, type Paginated } from '@/api'
 import type { AccountManagerRef } from '@/modules/account-managers/api'
@@ -19,7 +20,9 @@ export interface CustomerRef {
 /** Figures of a scenario (decimal strings); percentages in 0–100 scale with 2 places. */
 export interface ScenarioTotals {
   lo: string
-  /** eFMV at the end of the lease, % of the LO — not computed yet */
+  /** Σ quantity × eFMV value: what the assets are worth at the end of the term */
+  efmv_total: string
+  /** eFMV at the end of the lease weighted over the LO (efmv_total / LO, %); null without LO */
   efmv_percent: string | null
   /** null while the scenario has no value */
   hw_percent: string | null
@@ -49,6 +52,8 @@ export interface ScenarioItem {
   curve_value?: string | null
   /** Not typed: the curve's value counts (it follows the term and the price's current version) */
   efmv_from_curve?: boolean
+  /** Share of the scenario's LO (%, 2 places); null when left out of the totals */
+  weight_percent?: string | null
   /** false: the average price was deleted (left out of the totals; removed when saving) */
   available: boolean
   /** Current version (null when deleted) */

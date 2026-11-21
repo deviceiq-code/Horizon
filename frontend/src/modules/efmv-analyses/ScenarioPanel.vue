@@ -407,12 +407,15 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             {{ $t('efmv.item.efmvValue') }}
           </th>
           <th class="text-end" style="width: 160px">{{ $t('efmv.item.total') }}</th>
+          <th class="text-end" style="width: 90px" :title="$t('efmv.item.weightHint')">
+            {{ $t('efmv.item.weight') }}
+          </th>
           <th style="width: 40px"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!scenario.items.length">
-          <td colspan="8" class="text-medium-emphasis text-center py-6">
+          <td colspan="9" class="text-medium-emphasis text-center py-6">
             {{ $t('efmv.scenario.noAssets') }}
           </td>
         </tr>
@@ -588,6 +591,13 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           >
             {{
               detail(i)?.line_total ? formatMoney(detail(i)!.line_total!, currency, locale) : '—'
+            }}
+          </td>
+          <td class="cell-text text-end text-no-wrap numeric" data-testid="weight">
+            {{
+              detail(i)?.weight_percent
+                ? `${$n(Number(detail(i)!.weight_percent), 'percentValue')}%`
+                : '—'
             }}
           </td>
           <td class="cell-action">

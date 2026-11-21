@@ -113,8 +113,10 @@ Multi-user web system for **operating lease residual value pricing**
     returns `is_outdated` (scenarios `has_expired`). Writes are nested (`scenarios` replaces them all); a
     term beyond an asset's curve (its last term) is refused per item. Figures come only from
     `efmv/calculations.py` (pure, tested): LO = Σ quantity × typed unit value; HW/SW/SV shares of
-    the LO with 2 places (Average Prices are hardware; SW and SV to come); eFMV at EOL (%, 2
-    places) not computed yet (null). `POST /scenario-preview/` gives the figures of a scenario
+    the LO with 2 places (Average Prices are hardware; SW and SV to come); eFMV at EOL = the items' eFMV
+    weighted over the LO (`efmv_total` = Σ quantity × eFMV value; `efmv_percent` = that / LO,
+    %, 2 places; null without LO); each counted item's `weight_percent` = its total / LO
+    (`calculations.weight_percent`; null when left out of the totals). `POST /scenario-preview/` gives the figures of a scenario
     being edited; deleted prices and items out of the curve are flagged and left out of them.
     `?search=` also finds a code. Customers: `?account_manager=<user id>` (primary or
     secondary) and `?is_active=`.
@@ -226,7 +228,7 @@ Multi-user web system for **operating lease residual value pricing**
     followed by its sub-verticals — comes first and filters the asset picker; "+ Row" waits
     for it), Quantity, asset (class · specifications · price date or expired flag), Unit Value
     (the average price's value as placeholder; empty = that value), Position, eFMV (the
-    curve's value at the term as placeholder; empty = that value), total; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
+    curve's value at the term as placeholder; empty = that value), total, Weight (read only); plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
     row adds one), remove buttons appear on hover and are out of the Tab order; figures
     from `/scenario-preview/` after each change). Tabs needing attention are marked and

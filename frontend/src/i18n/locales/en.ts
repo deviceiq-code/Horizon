@@ -205,6 +205,8 @@ const en = {
       asset: 'Asset',
       unitValue: 'Unit Value',
       efmvValue: 'eFMV',
+      weight: 'Weight',
+      weightHint: "Share of the row's total in the scenario's LO.",
       efmvValueHint:
         'Value of one unit at the end of the term ({term} months). Leave empty to use the curve of Average Prices (shown in gray).',
       efmvValueRule: 'Enter a value of zero or more.',
@@ -232,7 +234,8 @@ const en = {
       lo: 'LO',
       loHint: 'Leasing Origination: total value of the assets',
       efmv: 'eFMV at EOL',
-      efmvHint: 'Estimated Fair Market Value at the End of Lease, % of the LO (coming soon)',
+      efmvHint:
+        'Estimated Fair Market Value at the End of Lease: the eFMV of the assets weighted over the LO (Σ quantity × eFMV ÷ LO)',
       hw: 'HW',
       hwHint: 'Hardware share of the LO',
       sw: 'SW',

@@ -14,7 +14,7 @@ from pricing.positioning import is_expired, price_position, valid_until, variati
 from users.display import full_name_in, person_ref
 from users.models import is_account_manager
 
-from .calculations import Line, covers_term, line_total, scenario_totals
+from .calculations import Line, covers_term, line_total, scenario_totals, weight_percent
 from .models import EfmvAnalysis, EfmvScenario, EfmvScenarioItem, in_scope
 
 User = get_user_model()
@@ -67,8 +67,9 @@ def totals_payload(totals) -> dict:
     as_text = lambda value: None if value is None else str(value)  # noqa: E731
     return {
         "lo": str(totals.lo),
-        # eFMV at the end of the lease: to come
-        "efmv_percent": None,
+        # eFMV at the end of the lease: the items' eFMV weighted over the LO
+        "efmv_total": str(totals.efmv_total),
+        "efmv_percent": as_text(totals.efmv_percent),
         "hw_percent": as_text(totals.hw_percent),
         "sw_percent": as_text(totals.sw_percent),
         "sv_percent": as_text(totals.sv_percent),
@@ -119,7 +120,7 @@ def scenario_payload(
     price's curve at the term (`efmv_from_curve`). Items whose price was deleted, whose curve
     no longer reaches the term or that are outside the scenario's vertical are flagged and left
     out of the totals."""
-    lines, rows = [], []
+    lines, rows, counted = [], [], []
     for item_id, lineage, quantity, typed, typed_efmv in items:
         row = prices.get(lineage)
         unit_value = typed if typed is not None or row is None else row.original_value
@@ -136,6 +137,8 @@ def scenario_payload(
             "curve_value": None if from_curve is None else str(from_curve),
             "efmv_from_curve": typed_efmv is None and from_curve is not None,
             "available": row is not None,
+            # Share of the scenario's LO; null when left out of the totals
+            "weight_percent": None,
         }
         if row is None:
             entry.update(
@@ -154,11 +157,16 @@ def scenario_payload(
             entry["out_of_curve"] = out
             entry["out_of_scope"] = outside
             if not out and not outside and unit_value is not None:
-                lines.append(Line("hw", quantity, unit_value))
+                lines.append(Line("hw", quantity, unit_value, efmv_value))
+                counted.append(entry)
         rows.append(entry)
+    totals = scenario_totals(lines)
+    for entry, line in zip(counted, lines, strict=True):
+        weight = weight_percent(line.quantity, line.unit_value, totals.lo)
+        entry["weight_percent"] = None if weight is None else str(weight)
     return {
         "items": rows,
-        "totals": totals_payload(scenario_totals(lines)),
+        "totals": totals_payload(totals),
         "has_expired": any(entry["expired"] for entry in rows),
     }
 

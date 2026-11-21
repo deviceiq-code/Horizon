@@ -87,6 +87,7 @@ const EXCAVATOR: efmvApi.ScenarioItem = {
   currency: 'BRL',
   terms: [12, 24, 36],
   line_total: '200000.00',
+  weight_percent: '100.00',
   out_of_curve: false,
   priced_on: '2026-10-01',
   valid_until: '2027-10-01',
@@ -97,7 +98,8 @@ const EXCAVATOR: efmvApi.ScenarioItem = {
 
 const TOTALS: efmvApi.ScenarioTotals = {
   lo: '200000.00',
-  efmv_percent: null,
+  efmv_total: '85000.00',
+  efmv_percent: '42.50',
   hw_percent: '100.00',
   sw_percent: '0.00',
   sv_percent: '0.00',
@@ -285,8 +287,18 @@ describe('EfmvAnalysisView', () => {
       /Excavators · 2500 h, Cab: Yes · priced on 10\/0?1\/2026/,
     )
     expect(inBody('[data-testid="total-lo"]')!.textContent).toMatch(/200,000\.00/)
-    expect(inBody('[data-testid="total-efmv"]')!.textContent).toContain('—')
+    // The eFMV of the assets weighted over the LO, and what they are worth at the end
+    expect(inBody('[data-testid="total-efmv"]')!.textContent).toMatch(
+      /42\.50%\s*· R\$\s?85,000\.00/,
+    )
     expect(inBody('[data-testid="total-hw"]')!.textContent).toContain('100.00%')
+    // Last column: the row's share of the scenario's LO (read only)
+    const headers = [...document.querySelectorAll('[data-testid="assets"] th')].map((th) =>
+      th.textContent?.trim(),
+    )
+    expect(headers.filter(Boolean).pop()).toBe('Weight')
+    expect(inBody('[data-testid="weight"]')!.textContent?.trim()).toBe('100.00%')
+    expect(inBody('[data-testid="weight"] input')).toBeNull()
 
     efmv.createEfmvAnalysis.mockResolvedValue({ ...ANALYSIS, id: 4, code: 'EFMV-2026-0004' })
     await click('save')
@@ -530,7 +542,15 @@ describe('EfmvAnalysisView', () => {
     const { wrapper } = await mountView({ id: 3 })
     efmv.previewScenario.mockResolvedValue({
       items: [{ ...EXCAVATOR, out_of_scope: true }],
-      totals: { ...TOTALS, lo: '0.00', hw_percent: null, sw_percent: null, sv_percent: null },
+      totals: {
+        ...TOTALS,
+        lo: '0.00',
+        efmv_total: '0.00',
+        efmv_percent: null,
+        hw_percent: null,
+        sw_percent: null,
+        sv_percent: null,
+      },
       has_expired: false,
     })
     await pickOption('scenario-vertical', 'Yellow line')
@@ -566,7 +586,15 @@ describe('EfmvAnalysisView', () => {
     const { wrapper } = await mountView({ id: 3 })
     efmv.previewScenario.mockResolvedValue({
       items: [{ ...EXCAVATOR, out_of_curve: true, line_total: '200000.00' }],
-      totals: { ...TOTALS, lo: '0.00', hw_percent: null, sw_percent: null, sv_percent: null },
+      totals: {
+        ...TOTALS,
+        lo: '0.00',
+        efmv_total: '0.00',
+        efmv_percent: null,
+        hw_percent: null,
+        sw_percent: null,
+        sv_percent: null,
+      },
       has_expired: false,
     })
     await typeInto('scenario-term', '48')

@@ -18,7 +18,10 @@ const figures = computed(() => [
   { key: 'lo', main: true, label: 'efmv.totals.lo', hint: 'efmv.totals.loHint',
     text: props.totals ? formatMoney(props.totals.lo, props.currency, locale.value) : '—' },
   { key: 'efmv', main: true, label: 'efmv.totals.efmv', hint: 'efmv.totals.efmvHint',
-    text: percent(props.totals?.efmv_percent) },
+    text: percent(props.totals?.efmv_percent),
+    detail: props.totals?.efmv_percent
+      ? formatMoney(props.totals.efmv_total, props.currency, locale.value)
+      : '' },
   { key: 'hw', main: false, label: 'efmv.totals.hw', hint: 'efmv.totals.hwHint',
     text: percent(props.totals?.hw_percent) },
   { key: 'sw', main: false, label: 'efmv.totals.sw', hint: 'efmv.totals.swHint',
@@ -51,6 +54,13 @@ const figures = computed(() => [
           :class="figure.main ? 'text-h6' : 'text-subtitle-1'"
         >
           {{ figure.text }}
+          <span
+            v-if="'detail' in figure && figure.detail"
+            class="text-body-2 text-medium-emphasis ml-1"
+            data-testid="efmv-total"
+          >
+            · {{ figure.detail }}
+          </span>
         </div>
       </v-card>
     </div>

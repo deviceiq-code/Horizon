@@ -114,6 +114,7 @@ def test_create_with_totals(logged_client, managers, customers, prices):
     (scenario,) = data["scenarios"]
     assert scenario["name"] == "Base" and scenario["term_months"] == 24
     assert [i["line_total"] for i in scenario["items"]] == ["200000.00", "50000.00"]
+    assert [i["weight_percent"] for i in scenario["items"]] == ["80.00", "20.00"]
     assert scenario["items"][0]["terms"] == [12, 24, 36]
     assert [(spec["key"], spec["value"]) for spec in scenario["items"][0]["specs"]] == [
         ("hours", "2500"),
@@ -121,7 +122,9 @@ def test_create_with_totals(logged_client, managers, customers, prices):
     ]
     assert scenario["totals"] == {
         "lo": "250000.00",
-        "efmv_percent": None,
+        # 24 months: 2 × 55,000 + 30,000 = 140,000 of 250,000
+        "efmv_total": "140000.00",
+        "efmv_percent": "56.00",
         "hw_percent": "100.00",
         "sw_percent": "0.00",
         "sv_percent": "0.00",
@@ -273,6 +276,8 @@ def test_scenario_preview(logged_client, prices):
     assert post_preview.status_code == 200, r.json()
     data = r.json()
     assert [i["out_of_curve"] for i in data["items"]] == [False, True, False]
+    # Out of the curve: no weight (not in the LO)
+    assert [i["weight_percent"] for i in data["items"]] == ["51.69", None, "48.31"]
     assert data["totals"]["lo"] == "207000.00"
     # Not typed: the average price's value counts (shown as such)
     assert [i["position"] for i in data["items"]] == ["slightly_above", "compatible", "compatible"]
@@ -446,6 +451,8 @@ def test_efmv_value_comes_from_the_curve_at_the_term(logged_client, managers, cu
     r = logged_client.put(f"{URL}{r.json()['id']}/", data, content_type="application/json")
     items = r.json()["scenarios"][0]["items"]
     assert [i["efmv_value"] for i in items] == ["62500.00", "31500.00"]
+    # Weighted over the LO: (2 × 62,500 + 31,500) / 250,000
+    assert r.json()["scenarios"][0]["totals"]["efmv_percent"] == "62.60"
 
 
 def test_scenario_preview_with_efmv_values(logged_client, prices):

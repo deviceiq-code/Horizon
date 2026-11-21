@@ -1,6 +1,6 @@
 from decimal import Decimal as D
 
-from efmv.calculations import Line, covers_term, line_total, scenario_totals
+from efmv.calculations import Line, covers_term, line_total, scenario_totals, weight_percent
 
 
 def test_line_total_rounds_half_up():
@@ -31,6 +31,18 @@ def test_totals_without_lines():
     totals = scenario_totals([])
     assert totals.lo == D("0.00")
     assert totals.hw_percent is None
+    assert (totals.efmv_total, totals.efmv_percent) == (D("0.00"), None)
+
+
+def test_efmv_weighted_over_the_lo():
+    totals = scenario_totals(
+        [Line("hw", 2, D("100000"), D("55000")), Line("hw", 1, D("50000"), D("30000"))]
+    )
+    assert totals.efmv_total == D("140000.00")
+    assert totals.efmv_percent == D("56.00")
+    # Zero at the end of the term counts as such; thirds round half up
+    totals = scenario_totals([Line("hw", 1, D("3"), D("1")), Line("hw", 1, D("3"), D("0"))])
+    assert totals.efmv_percent == D("16.67")
 
 
 def test_covers_term():
@@ -38,3 +50,9 @@ def test_covers_term():
     assert covers_term([12, 24, 36], 30)
     assert not covers_term([12, 24, 36], 37)
     assert not covers_term([], 12)
+
+
+def test_weight_of_an_item():
+    assert weight_percent(2, D("100000"), D("250000")) == D("80.00")
+    assert weight_percent(1, D("1"), D("3")) == D("33.33")
+    assert weight_percent(1, D("1"), D("0")) is None

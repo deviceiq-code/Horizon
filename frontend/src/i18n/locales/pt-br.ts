@@ -203,6 +203,8 @@ const ptBR: Messages = {
       asset: 'Bem',
       unitValue: 'Valor Unitário',
       efmvValue: 'eFMV',
+      weight: 'Peso',
+      weightHint: 'Quanto o total da linha representa do LO do cenário.',
       efmvValueHint:
         'Valor de uma unidade ao fim do prazo ({term} meses). Deixe vazio para usar a curva do Average Prices (mostrado em cinza).',
       efmvValueRule: 'Informe um valor igual ou maior que zero.',
@@ -230,7 +232,8 @@ const ptBR: Messages = {
       lo: 'LO',
       loHint: 'Leasing Origination: valor total dos bens',
       efmv: 'eFMV no EOL',
-      efmvHint: 'Estimated Fair Market Value no fim do contrato (End of Lease), % do LO (em breve)',
+      efmvHint:
+        'Estimated Fair Market Value no fim do contrato (End of Lease): o eFMV dos bens ponderado sobre o LO (Σ quantidade × eFMV ÷ LO)',
       hw: 'HW',
       hwHint: 'Participação de hardware no LO',
       sw: 'SW',
