@@ -34,6 +34,8 @@ import {
   parseUnitValue,
   scenarioDraft,
   scenarioInput,
+  scenarioTitle,
+  titleKey,
   type ScenarioDraft,
   type ScenarioErrors,
 } from './draft'
@@ -74,22 +76,23 @@ function fill(data: EfmvAnalysis) {
   customer.value = data.customer
   customerOptions.value = [data.customer_detail]
   customerKey.value++
-  const previous = scenarios.value
-  const open = previous.findIndex((s) => s.key === tab.value)
-  // After saving, the scenarios keep their keys (same order as sent): new keys would replace
-  // every tab and window item while the open tab changes, and the window lost its selection
-  // (no scenario shown)
-  scenarios.value = data.scenarios.map((s, i) => ({
-    ...scenarioDraft(s, locale.value),
-    ...(previous[i] ? { key: previous[i].key } : {}),
-  }))
+  // After saving, the scenarios keep their keys (found by their official name, unique; the API
+  // returns them in its order): new keys would replace every tab and window item while the
+  // open tab changes, and the window lost its selection (no scenario shown)
+  const previous = new Map(scenarios.value.map((s) => [titleKey(s.term, s.name), s.key]))
+  scenarios.value = data.scenarios.map((s) => {
+    const draft = scenarioDraft(s, locale.value)
+    return { ...draft, key: previous.get(titleKey(draft.term, draft.name)) ?? draft.key }
+  })
   // Stay on the same scenario after saving
-  tab.value = scenarios.value[Math.max(open, 0)]?.key ?? null
+  const open = scenarios.value.find((s) => s.key === tab.value) ?? ordered.value[0]?.scenario
+  tab.value = open?.key ?? null
 }
 
 async function load() {
   if (isNew.value) {
-    scenarios.value = [blankScenario(t('efmv.scenario.defaultName', { n: 1 }))]
+    // Without a name: called by its term ("36 Months")
+    scenarios.value = [blankScenario()]
     tab.value = scenarios.value[0]!.key
     // An account manager starts their own analysis
     const me = auth.user
@@ -127,10 +130,42 @@ function onManagerChange(value: number | number[] | null) {
 const outdated = computed(() => scenarios.value.some((s) => s.preview?.has_expired))
 
 const names = computed(() => scenarios.value.map((s) => s.name))
-const otherNames = (index: number) => names.value.filter((_, i) => i !== index)
+/** Official names (term + name) of the scenarios; they must be different */
+const keys = computed(() => scenarios.value.map((s) => titleKey(s.term, s.name)))
+const otherKeys = (index: number) => keys.value.filter((_, i) => i !== index)
+
+/**
+ * Tabs in the order of the official names: the term (as a number), then the name — "12 Months",
+ * "36 Months", "36 Months - Desktops", "120 Months" (as the API orders them). `index` is the
+ * scenario's place in `scenarios`.
+ */
+const collator = computed(() => new Intl.Collator(locale.value, { sensitivity: 'base' }))
+const ordered = computed(() =>
+  scenarios.value
+    .map((scenario, index) => ({ scenario, index, term: parseTerm(scenario.term) }))
+    .sort(
+      (a, b) =>
+        (a.term ?? Infinity) - (b.term ?? Infinity) ||
+        collator.value.compare(a.scenario.name.trim(), b.scenario.name.trim()) ||
+        a.index - b.index,
+    ),
+)
+
+/** "36 Months - Desktops" / "60 Months" (the tab shows it) */
+const titleOf = (scenario: ScenarioDraft) =>
+  scenarioTitle(
+    scenario.term,
+    scenario.name,
+    (count) => t('efmv.scenario.termTitle', count),
+    t('efmv.scenario.untitled'),
+  )
 
 function addScenario() {
-  const name = nextScenarioName(t('efmv.scenario.defaultBase'), names.value)
+  // Without a name when its official name ("36 Months") is free
+  const fresh = blankScenario()
+  const name = keys.value.includes(titleKey(fresh.term, ''))
+    ? nextScenarioName(t('efmv.scenario.defaultBase'), names.value)
+    : ''
   const scenario = blankScenario(name)
   scenarios.value.push(scenario)
   tab.value = scenario.key
@@ -138,7 +173,9 @@ function addScenario() {
 
 function duplicateScenario(index: number) {
   const source = scenarios.value[index]!
-  const name = copyName(source.name, t('efmv.scenario.copy'), names.value)
+  const name = source.name.trim()
+    ? copyName(source.name, t('efmv.scenario.copy'), names.value)
+    : nextScenarioName(t('efmv.scenario.copyBase'), names.value)
   const copy = copyScenario(source, name)
   scenarios.value.splice(index + 1, 0, copy)
   tab.value = copy.key
@@ -175,12 +212,10 @@ function scenarioErrors(index: number): ScenarioErrors | undefined {
 /** Whether a scenario needs attention before saving (its tab is marked; saving opens it). */
 function hasIssues(index: number): boolean {
   const scenario = scenarios.value[index]!
-  const name = scenario.name.trim().toLowerCase()
   return (
     !!scenarioErrors(index) ||
-    !name ||
     scenario.name.length > 100 ||
-    otherNames(index).some((n) => n.trim().toLowerCase() === name) ||
+    otherKeys(index).includes(keys.value[index]!) ||
     parseTerm(scenario.term) === null ||
     scenario.vertical === null ||
     !!scenario.preview?.items.some((i) => i.out_of_scope) ||
@@ -405,7 +440,7 @@ async function remove() {
         <div class="d-flex align-center tabs-bar">
           <v-tabs v-model="tab" color="primary" show-arrows class="flex-grow-1" data-testid="tabs">
             <v-tab
-              v-for="(scenario, index) in scenarios"
+              v-for="{ scenario, index } in ordered"
               :key="scenario.key"
               :value="scenario.key"
               class="text-none"
@@ -428,7 +463,7 @@ async function remove() {
                 :title="$t('efmv.outdatedHint')"
                 data-testid="tab-expired"
               />
-              {{ scenario.name || $t('efmv.scenario.untitled') }}
+              {{ titleOf(scenario) }}
             </v-tab>
           </v-tabs>
           <v-btn
@@ -442,13 +477,17 @@ async function remove() {
             {{ $t('efmv.scenario.add') }}
           </v-btn>
         </div>
+        <!-- No animation when switching scenarios -->
         <v-window v-model="tab" class="scenario-window">
-          <!-- Eager: every scenario is validated and keeps its figures, open or not -->
+          <!-- Eager: every scenario is validated and keeps its figures, open or not; no animation
+               when switching scenarios -->
           <v-window-item
             v-for="(scenario, index) in scenarios"
             :key="scenario.key"
             :value="scenario.key"
             eager
+            :transition="false"
+            :reverse-transition="false"
             class="h-100"
           >
             <ScenarioPanel
@@ -456,7 +495,8 @@ async function remove() {
               :index="index"
               :can-remove="scenarios.length > 1"
               :errors="scenarioErrors(index)"
-              :other-names="otherNames(index)"
+              :other-keys="otherKeys(index)"
+              :title="titleOf(scenario)"
               @duplicate="duplicateScenario(index)"
               @remove="removing = index"
             />
@@ -468,7 +508,11 @@ async function remove() {
     <ConfirmDialog
       :model-value="removing !== null"
       :title="$t('efmv.scenario.removeTitle')"
-      :message="$t('efmv.scenario.removeConfirm', { name: scenarios[removing ?? -1]?.name ?? '' })"
+      :message="
+        $t('efmv.scenario.removeConfirm', {
+          name: removing === null ? '' : titleOf(scenarios[removing]!),
+        })
+      "
       :confirm-text="$t('efmv.scenario.remove')"
       @update:model-value="!$event && (removing = null)"
       @confirm="removeScenario"

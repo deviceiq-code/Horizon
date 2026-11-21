@@ -13,6 +13,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 
 from catalogs.models import MAX_TERM_MONTHS
 
@@ -67,7 +68,8 @@ class EfmvScenario(models.Model):
     analysis = models.ForeignKey(
         EfmvAnalysis, on_delete=models.CASCADE, related_name="scenarios", verbose_name=_("analysis")
     )
-    name = models.CharField(_("name"), max_length=100)
+    # Optional: the scenario is called by its term and this name (`title`)
+    name = models.CharField(_("name"), max_length=100, blank=True)
     term_months = models.PositiveSmallIntegerField(
         _("term (months)"), validators=[MinValueValidator(1), MaxValueValidator(MAX_TERM_MONTHS)]
     )
@@ -96,17 +98,38 @@ class EfmvScenario(models.Model):
     class Meta:
         verbose_name = _("scenario")
         verbose_name_plural = _("scenarios")
-        ordering = ["position", "id"]
+        # By official name: the term (as a number), then the name ("12 Months", "36 Months",
+        # "36 Months - Desktops", "120 Months")
+        ordering = ["term_months", Lower("name"), "id"]
         constraints = [
-            models.UniqueConstraint("analysis", Lower("name"), name="efmv_scenario_unique_name"),
+            # Unique official name (`title`): term + name
+            models.UniqueConstraint(
+                "analysis", "term_months", Lower("name"), name="efmv_scenario_unique_title"
+            ),
         ]
 
     def __str__(self):
-        return self.name
+        return self.title
+
+    @property
+    def title(self) -> str:
+        return scenario_title(self.term_months, self.name)
 
     def admits(self, sub_vertical) -> bool:
         """Whether an asset of this sub-vertical can be in the scenario."""
         return in_scope(self.vertical_id, self.sub_vertical_id, sub_vertical)
+
+
+def scenario_title(term_months: int, name: str) -> str:
+    """The official name of a scenario: its term and the name given, if any ("36 Months -
+    Desktops", "60 Months"), in the active language."""
+    months = ngettext("%(count)d Month", "%(count)d Months", term_months) % {"count": term_months}
+    return f"{months} - {name}" if name else months
+
+
+def title_key(term_months: int, name: str) -> tuple[int, str]:
+    """What makes two scenarios' official names equal (the name ignores case)."""
+    return term_months, name.casefold()
 
 
 def in_scope(vertical_id, sub_vertical_id, sub_vertical) -> bool:

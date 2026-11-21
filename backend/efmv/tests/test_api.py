@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
+from accounts.models import UserPreferences
 from catalogs.models import AssetClass, SubVertical, Vertical
 from customers.models import Customer
 from efmv.models import EfmvAnalysis, format_code
@@ -113,6 +114,8 @@ def test_create_with_totals(logged_client, managers, customers, prices):
     assert data["customer_detail"]["name"] == "Acme Ltda"
     (scenario,) = data["scenarios"]
     assert scenario["name"] == "Base" and scenario["term_months"] == 24
+    # Official name: term + name
+    assert scenario["title"] == "24 Months - Base"
     assert [i["line_total"] for i in scenario["items"]] == ["200000.00", "50000.00"]
     assert [i["weight_percent"] for i in scenario["items"]] == ["80.00", "20.00"]
     assert scenario["items"][0]["terms"] == [12, 24, 36]
@@ -253,7 +256,7 @@ def test_list_search_and_filters(logged_client, managers, customers, prices):
     post(logged_client, body(managers, customers, prices, customer=customers["beta"].pk))
     rows = logged_client.get(URL).json()["results"]
     assert len(rows) == 2
-    assert rows[1]["scenario_names"] == ["Base"]
+    assert rows[1]["scenario_names"] == ["24 Months - Base"]
     found = logged_client.get(URL, {"search": first["code"].lower()}).json()["results"]
     assert [r["id"] for r in found] == [first["id"]]
     found = logged_client.get(URL, {"search": "beta"}).json()["results"]
@@ -485,3 +488,35 @@ def test_scenario_preview_with_efmv_values(logged_client, prices):
         content_type="application/json",
     )  # fmt: skip
     assert r.status_code == 400
+
+
+def test_scenario_title_is_term_and_name(logged_client, managers, customers, prices):
+    base = {"term_months": 36, "vertical": industry(), "items": []}
+    scenarios = [
+        {**base, "name": " Desktops "},
+        {**base, "name": ""},  # the name may be empty
+        {**base, "term_months": 1},
+        {**base, "term_months": 60, "name": "Desktops"},  # same name, another term
+    ]
+    r = post(logged_client, body(managers, customers, prices, scenarios=scenarios))
+    assert r.status_code == 201, r.json()
+    # In the order of their official names: term (as a number), then name
+    assert [s["title"] for s in r.json()["scenarios"]] == [
+        "1 Month",
+        "36 Months",
+        "36 Months - Desktops",
+        "60 Months - Desktops",
+    ]
+    # Same term and no name twice: the same official name
+    r = post(logged_client, body(managers, customers, prices, scenarios=[base, base]))
+    assert r.status_code == 400
+    assert "name" in r.json()["scenarios"]["1"]
+
+
+def test_scenario_title_in_the_user_language(logged_client, user, managers, customers, prices):
+    preferences = UserPreferences.for_user(user)
+    preferences.language = "pt-br"
+    preferences.save()
+    scenario = {"name": "Desktops", "term_months": 36, "vertical": industry(), "items": []}
+    r = post(logged_client, body(managers, customers, prices, scenarios=[scenario]))
+    assert r.json()["scenarios"][0]["title"] == "36 Meses - Desktops"

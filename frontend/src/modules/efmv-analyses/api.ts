@@ -84,7 +84,10 @@ export interface ScenarioItem {
 
 export interface Scenario {
   id: number
+  /** As given by the analyst; may be empty */
   name: string
+  /** Official name: term + name ("36 Months - Desktops", "60 Months") */
+  title: string
   term_months: number
   scope: string
   /** The assets it admits: the vertical's, or only the sub-vertical's when set */
@@ -119,6 +122,7 @@ export interface EfmvAnalysisRow {
   code: string
   account_manager_detail: AccountManagerRef
   customer_detail: CustomerRef
+  /** The scenarios' official names (term + name) */
   scenario_names: string[]
   created_at: string
   created_by_name: string | null

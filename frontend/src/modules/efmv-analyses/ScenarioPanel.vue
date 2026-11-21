@@ -22,6 +22,7 @@ import {
   parseTerm,
   parseUnitValue,
   scenarioInput,
+  titleKey,
   type ItemDraft,
   type ScenarioDraft,
   type ScenarioErrors,
@@ -32,21 +33,29 @@ const props = defineProps<{
   index: number
   canRemove: boolean
   errors?: ScenarioErrors
-  /** Other scenarios' names (they must be different) */
-  otherNames: string[]
+  /** Other scenarios' official names (`titleKey`: term + name; they must be different) */
+  otherKeys: string[]
+  /** This scenario's official name ("36 Months - Desktops") */
+  title: string
 }>()
 const emit = defineEmits<{ remove: []; duplicate: [] }>()
 
 const { t, n, d, locale } = useI18n()
 const rules = useValidationRules()
 
+// Optional: the official name is the term + the name; it must be unique in the analysis
 const nameRules = [
-  rules.required,
   rules.maxLength(100),
   (v: string) =>
-    !props.otherNames.some((n) => n.trim().toLowerCase() === v.trim().toLowerCase()) ||
-    t('efmv.scenario.nameTaken'),
+    !props.otherKeys.includes(titleKey(scenario.value.term, v)) || t('efmv.scenario.nameTaken'),
 ]
+// The term is part of the official name: check the name again when it changes
+const nameField = ref<{ validate: () => Promise<string[]> } | null>(null)
+watch(
+  () => scenario.value.term,
+  () => nameField.value?.validate(),
+)
+
 const termRules = [
   rules.required,
   (v: string) => parseTerm(v) !== null || t('efmv.scenario.termRange', { max: MAX_TERM }),
@@ -273,8 +282,11 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
         <v-col cols="12" lg="6">
           <div class="d-flex ga-2">
             <v-text-field
+              ref="nameField"
               v-model="scenario.name"
-              :label="`${$t('efmv.scenario.name')} *`"
+              :label="$t('efmv.scenario.name')"
+              :hint="$t('efmv.scenario.nameHint', { title })"
+              persistent-hint
               :rules="nameRules"
               :error-messages="errors?.name"
               maxlength="100"

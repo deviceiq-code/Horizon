@@ -1050,3 +1050,11 @@ msgstr "A sub-vertical \"%(name)s\" está em uso (classes de ativo ou análises 
 
 msgid "eFMV value"
 msgstr "valor eFMV"
+
+msgid "%(count)d Month"
+msgid_plural "%(count)d Months"
+msgstr[0] "%(count)d Mês"
+msgstr[1] "%(count)d Meses"
+
+msgid "Another scenario already has this term and name."
+msgstr "Outro cenário já tem este prazo e nome."

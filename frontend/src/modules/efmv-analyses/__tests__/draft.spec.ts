@@ -8,6 +8,8 @@ import {
   parseTerm,
   parseUnitValue,
   scenarioInput,
+  scenarioTitle,
+  titleKey,
 } from '../draft'
 
 describe('eFMV analysis draft', () => {
@@ -23,6 +25,17 @@ describe('eFMV analysis draft', () => {
   it('names new scenarios with the first free number', () => {
     expect(nextScenarioName('Scenario', ['Scenario 1'])).toBe('Scenario 2')
     expect(nextScenarioName('Scenario', ['Base', 'scenario 3', 'Other'])).toBe('Scenario 4')
+  })
+
+  it('calls a scenario by its term and name', () => {
+    const months = (n: number) => (n === 1 ? '1 Month' : `${n} Months`)
+    expect(scenarioTitle('36', ' Desktops ', months, 'Untitled')).toBe('36 Months - Desktops')
+    expect(scenarioTitle('60', '', months, 'Untitled')).toBe('60 Months')
+    expect(scenarioTitle('1', 'A  B', months, 'Untitled')).toBe('1 Month - A B')
+    expect(scenarioTitle('', 'Desktops', months, 'Untitled')).toBe('Desktops')
+    expect(scenarioTitle('x', '', months, 'Untitled')).toBe('Untitled')
+    expect(titleKey(' 36', 'Desktops ')).toBe(titleKey('36', ' desktops'))
+    expect(titleKey('36', '')).not.toBe(titleKey('60', ''))
   })
 
   it('names copies', () => {

@@ -51,7 +51,7 @@ export const MAX_TERM = 360
 let next = 0
 export const newKey = () => ++next
 
-export function blankScenario(name: string): ScenarioDraft {
+export function blankScenario(name = ''): ScenarioDraft {
   return {
     key: newKey(),
     name,
@@ -136,6 +136,26 @@ export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput
         efmv_value: parseEfmvValue(i.efmv_value ?? '', language),
       })),
   }
+}
+
+/**
+ * The official name of a scenario: its term and the name given, if any ("36 Months - Desktops",
+ * "60 Months"). `months` translates the term ("36 Months"); the tab and the API show the same.
+ */
+export function scenarioTitle(
+  term: string,
+  name: string,
+  months: (count: number) => string,
+  untitled: string,
+): string {
+  const count = parseTerm(term)
+  const parts = [count === null ? '' : months(count), name.trim().replace(/\s+/g, ' ')]
+  return parts.filter(Boolean).join(' - ') || untitled
+}
+
+/** What makes two official names equal: the term and the name, ignoring case and spaces. */
+export function titleKey(term: string, name: string): string {
+  return `${parseTerm(term) ?? term.trim()}|${name.trim().replace(/\s+/g, ' ').toLowerCase()}`
 }
 
 /** First name "Scenario N" not used yet. */

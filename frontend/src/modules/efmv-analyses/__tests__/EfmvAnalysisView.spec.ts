@@ -117,6 +117,7 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
     {
       id: 1,
       name: 'Base',
+      title: '36 Months - Base',
       term_months: 36,
       scope: 'Fleet',
       vertical: 1,
@@ -351,8 +352,43 @@ describe('EfmvAnalysisView', () => {
     efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView({ id: 3 })
     await click('add-scenario')
-    expect(inBody('[data-testid="tab-1"]')!.textContent).toContain('Scenario 2')
+    // The official name is the term + the name; a new scenario has no name
+    expect(inBody('[data-testid="tab-0"]')!.textContent!.trim()).toBe('36 Months - Base')
+    expect(inBody('[data-testid="tab-1"]')!.textContent!.trim()).toBe('36 Months')
     expect(inBody('[data-testid="tab-1"]')!.className).toContain('v-tab--selected')
+    // Another one at 36 months would repeat "36 Months": it gets a name
+    await click('add-scenario')
+    expect(inBody('[data-testid="tab-2"]')!.textContent!.trim()).toBe('36 Months - Scenario 3')
+    // The tab follows the term and the name as they are typed
+    const names = () =>
+      document.querySelectorAll<HTMLInputElement>('[data-testid="scenario-name"] input')
+    names()[2]!.value = ''
+    names()[2]!.dispatchEvent(new Event('input'))
+    await settle()
+    const nameTaken = () =>
+      document
+        .querySelectorAll('[data-testid="scenario-name"]')[2]!
+        .className.includes('v-input--error')
+    expect(nameTaken()).toBe(true)
+    const terms = () =>
+      document.querySelectorAll<HTMLInputElement>('[data-testid="scenario-term"] input')
+    terms()[2]!.value = '60'
+    terms()[2]!.dispatchEvent(new Event('input'))
+    await settle()
+    expect(inBody('[data-testid="tab-2"]')!.textContent!.trim()).toBe('60 Months')
+    // Tabs in the order of the official names: term (as a number), then name
+    const tabs = () =>
+      [...document.querySelectorAll('[data-testid^="tab-"]')]
+        .filter((el) => /^tab-\d+$/.test((el as HTMLElement).dataset.testid!))
+        .map((el) => el.textContent!.trim())
+    expect(tabs()).toEqual(['36 Months', '36 Months - Base', '60 Months'])
+    terms()[2]!.value = '120'
+    terms()[2]!.dispatchEvent(new Event('input'))
+    terms()[1]!.value = '12'
+    terms()[1]!.dispatchEvent(new Event('input'))
+    await settle()
+    expect(tabs()).toEqual(['12 Months', '36 Months - Base', '120 Months'])
+    expect(nameTaken()).toBe(false)
     // Back to the first tab; the second gets an invalid term
     await click('tab-0')
     const term = document.querySelectorAll<HTMLInputElement>(

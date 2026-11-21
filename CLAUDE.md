@@ -97,7 +97,11 @@ Multi-user web system for **operating lease residual value pricing**
   - `efmv/` — **eFMV Analyses** (Pricing), `/api/efmv-analyses/`. `EfmvAnalysis`: code
     `EFMV-<year>-<NNNN>` (year + sequence, next number per year), account manager (user with the
     role; must be the customer's primary or secondary), customer, created by/at; ≥ 1
-    `EfmvScenario` (name unique per analysis case-insensitively, term 1–360 months, scope,
+    `EfmvScenario` (official name = `title`: "<term> Months - <name>", or "<term> Months" — the
+    name is optional — `efmv.models.scenario_title`, translated; unique per analysis by term +
+    name case-insensitively; the tab shows it (`draft.ts::scenarioTitle`) and the list's
+    `scenario_names` are titles; scenarios — and tabs — are ordered by term as a number, then
+    name; tabs switch without animation; term 1–360 months, scope,
     `vertical` — required by the API — and optional `sub_vertical` of it: the assets it admits,
     by the average price's sub-vertical; `efmv.models.in_scope`; items outside are flagged
     `out_of_scope` in previews and refused on save; Vertical/SubVertical PROTECT) with

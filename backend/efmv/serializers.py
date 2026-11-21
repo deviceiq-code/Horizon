@@ -15,7 +15,7 @@ from users.display import full_name_in, person_ref
 from users.models import is_account_manager
 
 from .calculations import Line, covers_term, line_total, scenario_totals, weight_percent
-from .models import EfmvAnalysis, EfmvScenario, EfmvScenarioItem, in_scope
+from .models import EfmvAnalysis, EfmvScenario, EfmvScenarioItem, in_scope, title_key
 
 User = get_user_model()
 
@@ -194,7 +194,8 @@ class ItemInputSerializer(serializers.Serializer):
 
 
 class ScenarioInputSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=100)
+    # Optional: the official name is the term + this name (EfmvScenario.title)
+    name = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     term_months = serializers.IntegerField(min_value=1, max_value=MAX_TERM_MONTHS)
     scope = serializers.CharField(required=False, allow_blank=True, default="")
     # The assets it admits: the vertical's, or only the sub-vertical's when one is chosen
@@ -205,10 +206,7 @@ class ScenarioInputSerializer(serializers.Serializer):
     items = ItemInputSerializer(many=True, required=False, default=list)
 
     def validate_name(self, value):
-        value = " ".join(value.split())
-        if not value:
-            raise serializers.ValidationError(_("This field may not be blank."))
-        return value
+        return " ".join(value.split())
 
     def validate(self, attrs):
         vertical, sub_vertical = attrs["vertical"], attrs.get("sub_vertical")
@@ -304,9 +302,11 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(_("Add at least one scenario."))
         errors, seen = {}, set()
         for index, scenario in enumerate(value):
-            key = scenario["name"].casefold()
+            key = title_key(scenario["term_months"], scenario["name"])
             if key in seen:
-                errors[str(index)] = {"name": [_("Scenario names must be different.")]}
+                errors[str(index)] = {
+                    "name": [_("Another scenario already has this term and name.")]
+                }
             seen.add(key)
         if errors:
             raise serializers.ValidationError(errors)
@@ -340,6 +340,8 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             {
                 "id": s.id,
                 "name": s.name,
+                # Official name: term + name ("36 Months - Desktops", "60 Months")
+                "title": s.title,
                 "term_months": s.term_months,
                 "scope": s.scope,
                 "vertical": s.vertical_id,
@@ -449,7 +451,7 @@ class EfmvAnalysisListSerializer(serializers.ModelSerializer):
     get_created_by_name = EfmvAnalysisSerializer.get_created_by_name
 
     def get_scenario_names(self, obj) -> list[str]:
-        return [s.name for s in obj.scenarios.all()]
+        return [s.title for s in obj.scenarios.all()]
 
 
 class ScenarioPreviewSerializer(serializers.Serializer):
