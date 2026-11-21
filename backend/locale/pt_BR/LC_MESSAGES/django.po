@@ -1061,3 +1061,18 @@ msgstr "Outro cenário já tem este prazo e nome."
 
 msgid "Send the eFMV as a value or as a percentage, not both."
 msgstr "Envie o eFMV como valor ou como percentual, não ambos."
+
+msgid "Automatic"
+msgstr "Automático"
+
+msgid "Small"
+msgstr "Pequeno"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Large"
+msgstr "Grande"
+
+msgid "interface size"
+msgstr "tamanho da interface"

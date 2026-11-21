@@ -26,6 +26,7 @@ const ME: User = {
     language: 'en',
     theme: 'system',
     color_theme: 'metallic_foundations',
+    ui_scale: 'auto',
     updated_at: '',
   },
 }

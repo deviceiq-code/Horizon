@@ -565,7 +565,9 @@ async function remove() {
    rest of it and only its assets scroll */
 @media (min-width: 960px) {
   .efmv-page {
-    height: calc(100dvh - var(--v-layout-top, 0px) - var(--horizon-path-bar-height));
+    height: calc(
+      100dvh / var(--ui-zoom, 1) - var(--v-layout-top, 0px) - var(--horizon-path-bar-height)
+    );
     display: flex;
     flex-direction: column;
   }

@@ -1,13 +1,14 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore, type User } from '@/stores/auth'
+import { usePreferencesStore } from '@/stores/preferences'
 import { useSystemSettingsStore } from '@/stores/systemSettings'
-import { inBody, settle } from '@/test-utils'
+import { click, inBody, settle } from '@/test-utils'
 import SettingsView from '../SettingsView.vue'
 
 const user = (is_admin: boolean): User => ({
@@ -21,6 +22,7 @@ const user = (is_admin: boolean): User => ({
     language: 'en',
     theme: 'system',
     color_theme: 'metallic_foundations',
+    ui_scale: 'auto',
     updated_at: '',
   },
 })
@@ -71,6 +73,17 @@ describe('SettingsView', () => {
     expect(inBody('[data-testid="color-themes"]')!.previousElementSibling!.textContent).toContain(
       'Color Theme',
     )
+    wrapper.unmount()
+  })
+
+  it('offers the interface size, automatic by default', async () => {
+    const { wrapper } = await mountAt('/settings', false)
+    const preferences = usePreferencesStore()
+    const save = vi.spyOn(preferences, 'save').mockResolvedValue()
+    expect(inBody('[data-testid="ui-scale-auto"]')!.className).toContain('v-btn--active')
+    expect(inBody('[data-testid="ui-scale-hint"]')!.textContent).toMatch(/now \d+%/)
+    await click('ui-scale-small')
+    expect(save).toHaveBeenCalledWith({ ui_scale: 'small' })
     wrapper.unmount()
   })
 })

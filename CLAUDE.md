@@ -176,7 +176,14 @@ Multi-user web system for **operating lease residual value pricing**
 - `frontend/` — Vue 3 + TypeScript + Vite + Vuetify 4 (Material Design, MDI icons) + Pinia + Vue Router + vue-i18n.
   - `src/api.ts` — HTTP client (sends session cookie, X-CSRFToken and Accept-Language headers).
   - `src/stores/auth.ts` — logged-in user state.
-  - `src/stores/preferences.ts` — language/theme in use; saved to the account via `PATCH /api/auth/preferences/`.
+  - `src/stores/preferences.ts` — language/theme/interface size in use; saved to the account via
+    `PATCH /api/auth/preferences/`.
+  - **Interface size** (`src/uiScale.ts`, applied in App.vue): CSS `zoom` on the page (Vuetify
+    sizes spacing/fields in px, so only scaling fonts would not do). Preference `ui_scale`
+    (`accounts.models.UiScale`): auto (default; by the window's width: ≤1366 px 0.88 → 1920 px
+    1 → ≥2560 px 1.1) | small 0.88 | normal 1 | large 1.1; chosen in Settings. The zoom is also
+    in `--ui-zoom`: heights tied to the window divide by it (`calc(100dvh / var(--ui-zoom, 1))`),
+    or they shrink with the zoom.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — top bar + side icon rail (expands on hover) for authenticated pages.
     The top bar shows only the signed-in user (photo or initials + name); clicking opens their

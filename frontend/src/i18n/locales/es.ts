@@ -737,6 +737,11 @@ const es: Messages = {
     },
   },
   settings: {
+    uiScale: 'Tamaño de la Interfaz',
+    uiScaleDescription: 'Tamaño de textos, campos y espaciados.',
+    uiScaleAutoHint:
+      'Automático sigue el ancho de la ventana: más pequeño en notebooks, más grande en pantallas anchas (ahora {percent}%).',
+    uiScales: { auto: 'Automático', small: 'Pequeño', normal: 'Normal', large: 'Grande' },
     title: 'Configuración',
     tabs: {
       user: 'Configuración del Usuario',

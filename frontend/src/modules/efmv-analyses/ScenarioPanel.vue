@@ -300,7 +300,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
     <div class="scenario-head pa-4 pb-2">
       <v-row dense>
         <v-col cols="12" lg="6">
-          <div class="d-flex ga-2">
+          <div class="d-flex ga-2 mb-2">
             <v-text-field
               ref="nameField"
               v-model="scenario.name"
@@ -833,7 +833,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 /* Only the assets scroll, under the fixed column titles: on wide screens the grid takes the
    rest of the window; on narrow ones it has a height of its own */
 .assets :deep(.v-table__wrapper) {
-  max-height: 60vh;
+  max-height: calc(60vh / var(--ui-zoom, 1));
   overflow-y: auto;
 }
 @media (min-width: 960px) {

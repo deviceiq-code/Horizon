@@ -116,3 +116,13 @@ def test_color_theme_defaults_and_changes(logged_client):
     r = _patch(logged_client, {"color_theme": "neon"})
     assert r.status_code == 400
     assert "color_theme" in r.json()
+
+
+def test_interface_size_defaults_to_automatic(logged_client):
+    assert logged_client.get("/api/auth/preferences/").json()["ui_scale"] == "auto"
+    for size in ("small", "normal", "large", "auto"):
+        r = _patch(logged_client, {"ui_scale": size})
+        assert (r.status_code, r.json()["ui_scale"]) == (200, size)
+    assert logged_client.get("/api/auth/me/").json()["preferences"]["ui_scale"] == "auto"
+    r = _patch(logged_client, {"ui_scale": "huge"})
+    assert r.status_code == 400 and "ui_scale" in r.json()

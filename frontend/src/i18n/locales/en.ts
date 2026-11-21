@@ -735,6 +735,11 @@ const en = {
     },
   },
   settings: {
+    uiScale: 'Interface Size',
+    uiScaleDescription: 'Size of text, fields and spacing.',
+    uiScaleAutoHint:
+      'Automatic follows the width of the window: smaller on notebooks, larger on wide screens (now {percent}%).',
+    uiScales: { auto: 'Automatic', small: 'Small', normal: 'Normal', large: 'Large' },
     title: 'Settings',
     tabs: {
       user: 'User Settings',

@@ -733,6 +733,11 @@ const ptBR: Messages = {
     },
   },
   settings: {
+    uiScale: 'Tamanho da Interface',
+    uiScaleDescription: 'Tamanho de textos, campos e espaçamentos.',
+    uiScaleAutoHint:
+      'Automático acompanha a largura da janela: menor em notebooks, maior em telas largas (agora {percent}%).',
+    uiScales: { auto: 'Automático', small: 'Pequeno', normal: 'Normal', large: 'Grande' },
     title: 'Configurações',
     tabs: {
       user: 'Configurações do Usuário',

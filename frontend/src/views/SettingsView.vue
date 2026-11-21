@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The user's own settings (language, mode, color theme), saved to their account. Global
+ * The user's own settings (language, mode, color theme, interface size), saved to their account. Global
  * settings are in Administration → System Settings.
  */
 import { ref } from 'vue'
@@ -9,6 +9,7 @@ import { LANGUAGES } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
 import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/stores/preferences'
 import { COLOR_THEMES } from '@/themes'
+import { UI_SCALE_ICONS, UI_SCALES, uiScaleFactor } from '@/uiScale'
 
 const { t } = useI18n()
 const preferences = usePreferencesStore()
@@ -17,6 +18,9 @@ const notifications = useNotificationsStore()
 const saving = ref(false)
 
 const THEMES = THEME_OPTIONS
+
+/** The scale "Automatic" gives in this window now ("88%") */
+const autoPercent = () => Math.round(uiScaleFactor('auto', window.innerWidth) * 100)
 
 /** Every change is saved right away; the notice already shows in the newly chosen language. */
 async function save(changes: PreferencesUpdate) {
@@ -128,6 +132,39 @@ async function save(changes: PreferencesUpdate) {
               />
             </div>
           </v-card>
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- Size of the interface (text, spacing, fields): automatic by the window's width -->
+    <v-card class="mt-4">
+      <v-card-item prepend-icon="mdi-magnify-plus-outline">
+        <v-card-title>{{ $t('settings.uiScale') }}</v-card-title>
+        <v-card-subtitle>{{ $t('settings.uiScaleDescription') }}</v-card-subtitle>
+      </v-card-item>
+      <v-card-text>
+        <v-btn-toggle
+          :model-value="preferences.uiScale"
+          mandatory
+          divided
+          variant="outlined"
+          color="primary"
+          :disabled="saving"
+          data-testid="ui-scale-toggle"
+          @update:model-value="save({ ui_scale: $event })"
+        >
+          <v-btn
+            v-for="scale in UI_SCALES"
+            :key="scale"
+            :value="scale"
+            :prepend-icon="UI_SCALE_ICONS[scale]"
+            :data-testid="`ui-scale-${scale}`"
+          >
+            {{ $t(`settings.uiScales.${scale}`) }}
+          </v-btn>
+        </v-btn-toggle>
+        <div class="text-caption text-medium-emphasis mt-2" data-testid="ui-scale-hint">
+          {{ $t('settings.uiScaleAutoHint', { percent: autoPercent() }) }}
         </div>
       </v-card-text>
     </v-card>

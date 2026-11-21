@@ -5,6 +5,7 @@ import { useTheme } from 'vuetify'
 import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore } from '@/stores/preferences'
 import { colorThemeById, vuetifyThemeName } from '@/themes'
+import { uiScaleFactor } from '@/uiScale'
 
 const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
@@ -36,6 +37,23 @@ watch(
       '--horizon-font-family',
       colorThemeById(id).fontFamily,
     ),
+  { immediate: true },
+)
+
+// Size of the interface: zoom of the whole page (text, spacing, fields), from the user's
+// choice or — "auto" — the window's width (src/uiScale.ts). `--ui-zoom` lets layouts that
+// use the window's height (vh) undo it (main.css).
+const windowWidth = ref(window.innerWidth)
+const onResize = () => (windowWidth.value = window.innerWidth)
+window.addEventListener('resize', onResize)
+onBeforeUnmount(() => window.removeEventListener('resize', onResize))
+watch(
+  () => uiScaleFactor(preferences.uiScale, windowWidth.value),
+  (scale) => {
+    const root = document.documentElement
+    root.style.zoom = scale === 1 ? '' : String(scale)
+    root.style.setProperty('--ui-zoom', String(scale))
+  },
   { immediate: true },
 )
 </script>

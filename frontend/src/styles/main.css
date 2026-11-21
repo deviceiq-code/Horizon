@@ -41,3 +41,10 @@ button {
     background: rgb(var(--v-theme-surface));
   }
 }
+
+/* Size of the interface: the page is zoomed (App.vue, src/uiScale.ts) and a zoomed element's
+   "vh" shrinks or grows with it — heights that must match the window divide by --ui-zoom
+   (e.g. calc(100dvh / var(--ui-zoom, 1))). */
+.v-application__wrap {
+  min-height: calc(100dvh / var(--ui-zoom, 1));
+}

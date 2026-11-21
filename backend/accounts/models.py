@@ -18,6 +18,16 @@ class ColorTheme(models.TextChoices):
     SLEEK_FUTURISTIC = "sleek_futuristic", "Sleek and Futuristic"
 
 
+class UiScale(models.TextChoices):
+    """Size of the interface (text, spacing, fields). "auto" follows the width of the browser
+    window: smaller on notebooks, larger on wide screens."""
+
+    AUTO = "auto", _("Automatic")
+    SMALL = "small", _("Small")
+    NORMAL = "normal", _("Normal")
+    LARGE = "large", _("Large")
+
+
 class UserPreferences(models.Model):
     """Settings each user picks on the settings page."""
 
@@ -39,6 +49,9 @@ class UserPreferences(models.Model):
         max_length=40,
         choices=ColorTheme,
         default=ColorTheme.METALLIC_FOUNDATIONS,
+    )
+    ui_scale = models.CharField(
+        _("interface size"), max_length=10, choices=UiScale, default=UiScale.AUTO
     )
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
