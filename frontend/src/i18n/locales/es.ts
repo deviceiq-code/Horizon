@@ -144,6 +144,7 @@ const es: Messages = {
   },
   efmv: {
     list: {
+      createdOn: 'Creado el {date}',
       scenario: 'Escenario',
       shares: 'HW / SW / SV',
       sharesHint: 'Participación de hardware, software y servicios en el LO',
@@ -229,6 +230,7 @@ const es: Messages = {
       'Algunos precios promedio usados superaron su validez; el análisis puede estar desactualizado.',
     fixErrors: 'Corrija los campos marcados en rojo.',
     fields: {
+      updatedAt: 'Última Actualización',
       vertical: 'Vertical',
       code: 'Código',
       accountManager: 'Account Manager',

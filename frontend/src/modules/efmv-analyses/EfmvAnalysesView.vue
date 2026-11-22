@@ -15,7 +15,8 @@ const headers = computed(() => [
   { title: t('efmv.fields.customer'), key: 'customer', minWidth: '220px' },
   { title: t('efmv.fields.accountManager'), key: 'account_manager' },
   { title: t('efmv.scenarios'), key: 'scenario_names', sortable: false },
-  { title: t('efmv.fields.createdAt'), key: 'created_at', width: 160 },
+  // The latest updated first (the list's default order)
+  { title: t('efmv.fields.updatedAt'), key: 'updated_at', width: 190, nowrap: true },
 ])
 
 const open = (row: EfmvAnalysisRow) =>
@@ -31,7 +32,7 @@ const open = (row: EfmvAnalysisRow) =>
       :fetch-page="listEfmvAnalyses"
       :delete-item="deleteEfmvAnalysis"
       :headers="headers"
-      :sort-by="[{ key: 'created_at', order: 'desc' }]"
+      :sort-by="[{ key: 'updated_at', order: 'desc' }]"
       :ordering-fields="{
         customer: 'customer__name',
         account_manager: 'account_manager__first_name',
@@ -77,10 +78,16 @@ const open = (row: EfmvAnalysisRow) =>
       <template #expanded-row="{ item }">
         <AnalysisScenariosPanel :analysis-id="item.id" @open="open(item)" />
       </template>
-      <template #[`item.created_at`]="{ item }">
-        <div class="text-no-wrap">{{ d(new Date(item.created_at), 'short') }}</div>
-        <div v-if="item.created_by_name" class="text-caption text-medium-emphasis">
-          {{ item.created_by_name }}
+      <template #[`item.updated_at`]="{ item }">
+        <div
+          class="text-no-wrap"
+          :title="$t('efmv.list.createdOn', { date: d(new Date(item.created_at), 'short') })"
+          data-testid="updated-at"
+        >
+          {{ d(new Date(item.updated_at), 'dateTime') }}
+        </div>
+        <div v-if="item.updated_by_name" class="text-caption text-medium-emphasis">
+          {{ item.updated_by_name }}
         </div>
       </template>
     </ServerCrudTable>

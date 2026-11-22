@@ -143,6 +143,7 @@ const ptBR: Messages = {
   },
   efmv: {
     list: {
+      createdOn: 'Criada em {date}',
       scenario: 'Cenário',
       shares: 'HW / SW / SV',
       sharesHint: 'Participação de hardware, software e serviços no LO',
@@ -229,6 +230,7 @@ const ptBR: Messages = {
       'Alguns preços médios usados passaram da validade; a análise pode estar desatualizada.',
     fixErrors: 'Corrija os campos marcados em vermelho.',
     fields: {
+      updatedAt: 'Última Atualização',
       vertical: 'Vertical',
       code: 'Código',
       accountManager: 'Account Manager',

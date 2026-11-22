@@ -63,6 +63,14 @@ class EfmvAnalysis(models.Model):
         verbose_name=_("created by"),
     )
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    # Who saved it last (its creator until someone saves it)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        related_name="+",
+        verbose_name=_("updated by"),
+    )
 
     class Meta:
         verbose_name = _("eFMV analysis")

@@ -145,6 +145,7 @@ const en = {
   },
   efmv: {
     list: {
+      createdOn: 'Created on {date}',
       scenario: 'Scenario',
       shares: 'HW / SW / SV',
       sharesHint: 'Shares of hardware, software and services in the LO',
@@ -229,6 +230,7 @@ const en = {
       'Some average prices used are past their validity; the analysis may be out of date.',
     fixErrors: 'Please fix the fields marked in red.',
     fields: {
+      updatedAt: 'Last Update',
       vertical: 'Vertical',
       code: 'Code',
       accountManager: 'Account Manager',

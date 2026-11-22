@@ -753,3 +753,23 @@ def test_services_are_saved_with_their_items(logged_client, managers, customers,
     )
     item = r.json()["scenarios"][0]["items"][0]
     assert (item["service"], item["net_unit_value"]) == (None, "100000.00")
+
+
+def test_the_list_shows_the_last_update_latest_first(
+    logged_client, user, managers, customers, prices
+):
+    first = post(logged_client, body(managers, customers, prices)).json()
+    second = post(logged_client, body(managers, customers, prices)).json()
+    rows = logged_client.get(URL).json()["results"]
+    assert [r["id"] for r in rows] == [second["id"], first["id"]]
+    # Saving the first one brings it to the top, with who saved it
+    scenarios = body(managers, customers, prices)["scenarios"]
+    r = logged_client.patch(
+        f"{URL}{first['id']}/", {"scenarios": scenarios}, content_type="application/json"
+    )
+    assert r.status_code == 200
+    rows = logged_client.get(URL).json()["results"]
+    assert [r["id"] for r in rows] == [first["id"], second["id"]]
+    assert rows[0]["updated_at"] >= rows[1]["updated_at"]
+    assert rows[0]["updated_by_name"]
+    assert EfmvAnalysis.objects.get(pk=first["id"]).updated_by == user

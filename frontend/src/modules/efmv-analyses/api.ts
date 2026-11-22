@@ -144,6 +144,9 @@ export interface EfmvAnalysisRow {
   scenario_names: string[]
   created_at: string
   created_by_name: string | null
+  /** When and by whom it was saved last (the list's default order: latest first) */
+  updated_at: string
+  updated_by_name: string | null
 }
 
 export interface ScenarioItemInput {

@@ -600,6 +600,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                         year=year,
                         sequence=(last or 0) + 1,
                         created_by=self.context["request"].user,
+                        updated_by=self.context["request"].user,
                     )
                     self._save_scenarios(analysis, scenarios)
                     return analysis
@@ -612,6 +613,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             for field, value in validated_data.items():
                 setattr(instance, field, value)
+            instance.updated_by = self.context["request"].user
             instance.save()
             if scenarios is not None:
                 self._save_scenarios(instance, scenarios)
@@ -619,13 +621,15 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
 
 
 class EfmvAnalysisListSerializer(serializers.ModelSerializer):
-    """An analysis as listed: code, customer, account manager and its scenarios' names."""
+    """An analysis as listed: code, customer, account manager, its scenarios' names, created and
+    last updated (when and by whom)."""
 
     code = serializers.CharField(read_only=True)
     account_manager_detail = serializers.SerializerMethodField()
     customer_detail = serializers.SerializerMethodField()
     scenario_names = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = EfmvAnalysis
@@ -637,12 +641,18 @@ class EfmvAnalysisListSerializer(serializers.ModelSerializer):
             "scenario_names",
             "created_at",
             "created_by_name",
+            "updated_at",
+            "updated_by_name",
         ]
         read_only_fields = fields
 
     get_account_manager_detail = EfmvAnalysisSerializer.get_account_manager_detail
     get_customer_detail = EfmvAnalysisSerializer.get_customer_detail
     get_created_by_name = EfmvAnalysisSerializer.get_created_by_name
+
+    def get_updated_by_name(self, obj) -> str | None:
+        user = obj.updated_by or obj.created_by
+        return full_name_in(self.context, user) if user else None
 
     def get_scenario_names(self, obj) -> list[str]:
         return [s.title for s in obj.scenarios.all()]

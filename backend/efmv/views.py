@@ -55,7 +55,12 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
     totals of a scenario being edited."""
 
     queryset = EfmvAnalysis.objects.select_related(
-        "account_manager", "customer", "created_by", "vertical", "sub_vertical__vertical"
+        "account_manager",
+        "customer",
+        "created_by",
+        "updated_by",
+        "vertical",
+        "sub_vertical__vertical",
     ).prefetch_related(
         Prefetch("scenarios", queryset=EfmvScenario.objects.prefetch_related("items"))
     )
@@ -67,8 +72,15 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
         "account_manager__last_name",
         "scenarios__name",
     ]
-    ordering_fields = ["code", "created_at", "customer__name", "account_manager__first_name"]
-    ordering = ["-created_at", "-id"]
+    ordering_fields = [
+        "code",
+        "created_at",
+        "updated_at",
+        "customer__name",
+        "account_manager__first_name",
+    ]
+    # The latest updated first
+    ordering = ["-updated_at", "-id"]
 
     def get_serializer_class(self):
         if self.action == "list":
