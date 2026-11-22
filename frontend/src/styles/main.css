@@ -34,6 +34,22 @@ button {
 .v-card--variant-elevated {
   box-shadow: var(--v-card-shadow) !important;
 }
+/* Menus (language, user, pickers…): rounded, a thin border and the cards' soft shadow */
+.v-menu > .v-overlay__content {
+  border-radius: 12px !important;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  box-shadow: var(--v-card-shadow) !important;
+  overflow: hidden;
+}
+.v-menu > .v-overlay__content > .v-list,
+.v-menu > .v-overlay__content > .v-card {
+  border-radius: inherit !important;
+  box-shadow: none !important;
+}
+.v-menu .v-list-item {
+  border-radius: 8px;
+  margin-inline: 6px;
+}
 /* Buttons: rounded corners (round icon buttons stay round), no capitals */
 .v-btn:not(.v-btn--icon) {
   border-radius: 10px;

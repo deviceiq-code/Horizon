@@ -35,6 +35,7 @@ async function choose(language: Language) {
         variant="text"
         prepend-icon="mdi-web"
         class="px-2 language-button"
+        :ripple="false"
         :aria-label="$t('language.select')"
         :title="$t('language.select')"
         data-testid="language"
@@ -65,5 +66,13 @@ async function choose(language: Language) {
 .language-button {
   font-weight: 600;
   min-width: 0;
+  color: rgba(var(--v-theme-on-background), 0.85);
+}
+.language-button :deep(.v-btn__prepend .v-icon) {
+  font-size: 22px;
+}
+/* A light background while its menu is open, as on hover */
+.language-button[aria-expanded='true'] :deep(.v-btn__overlay) {
+  opacity: 0.06;
 }
 </style>

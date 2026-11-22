@@ -232,15 +232,17 @@ async function logout() {
           icon="mdi-magnify"
           variant="text"
           size="small"
+          class="bar-icon"
           :title="$t('menu.search')"
           :aria-label="$t('menu.search')"
           data-testid="search"
           @click="comingSoon('menu.search')"
         />
         <v-btn
-          icon="mdi-book-open-variant-outline"
+          icon="mdi-book-open-outline"
           variant="text"
           size="small"
+          class="bar-icon"
           :title="$t('menu.docs')"
           :aria-label="$t('menu.docs')"
           data-testid="docs"
@@ -248,9 +250,10 @@ async function logout() {
         />
         <!-- Light / dark, right away (saved to the account) -->
         <v-btn
-          :icon="isDark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
+          :icon="isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent'"
           variant="text"
           size="small"
+          class="bar-icon"
           :title="$t(isDark ? 'menu.lightMode' : 'menu.darkMode')"
           :aria-label="$t(isDark ? 'menu.lightMode' : 'menu.darkMode')"
           data-testid="theme-switch"
@@ -261,6 +264,7 @@ async function logout() {
           icon="mdi-bell-outline"
           variant="text"
           size="small"
+          class="bar-icon"
           :title="$t('menu.notifications')"
           :aria-label="$t('menu.notifications')"
           data-testid="notifications"
@@ -273,7 +277,7 @@ async function logout() {
         <template #activator="{ props: menu }">
           <v-btn
             v-bind="menu"
-            variant="tonal"
+            variant="text"
             class="user-button text-none pl-1 pr-2 mr-2"
             rounded="pill"
             :ripple="false"
@@ -285,11 +289,12 @@ async function logout() {
               :src="
                 auth.user.photo_version ? userPhotoUrl(auth.user.id, auth.user.photo_version) : null
               "
-              :size="30"
+              :size="34"
               color="primary"
+              class="user-avatar"
             />
-            <span class="ml-2 d-none d-sm-inline">{{ auth.user.name }}</span>
-            <v-icon icon="mdi-chevron-down" size="small" class="ml-1" />
+            <span class="ml-2 d-none d-sm-inline user-name">{{ auth.user.name }}</span>
+            <v-icon icon="mdi-chevron-down" size="18" class="ml-1 bar-muted" />
           </v-btn>
         </template>
         <v-card min-width="260" class="user-menu" data-testid="user-menu">
@@ -307,19 +312,16 @@ async function logout() {
           <v-divider />
           <v-list density="compact" class="py-1">
             <v-list-item
-              prepend-icon="mdi-account-circle-outline"
               :title="$t('menu.profile')"
               data-testid="user-profile"
               @click="comingSoon('menu.profile')"
             />
             <v-list-item
               :to="{ name: 'settings' }"
-              prepend-icon="mdi-cog-outline"
               :title="$t('menu.settings')"
               data-testid="user-settings"
             />
             <v-list-item
-              prepend-icon="mdi-lifebuoy"
               :title="$t('menu.help')"
               data-testid="user-help"
               @click="comingSoon('menu.help')"
@@ -346,6 +348,29 @@ async function logout() {
 </template>
 
 <style scoped>
+/* --- Top bar: light icons, no backgrounds until hovered -------------------------------------- */
+.bar-icon {
+  color: rgba(var(--v-theme-on-background), 0.78);
+}
+.bar-icon :deep(.v-icon) {
+  font-size: 22px;
+}
+.bar-muted {
+  opacity: 0.6;
+}
+.user-name {
+  font-weight: 500;
+}
+/* User menu: the sign-out icon close to its text */
+.user-menu :deep(.v-list-item__spacer) {
+  width: 12px !important;
+}
+.user-avatar {
+  box-shadow:
+    0 0 0 2px rgba(var(--v-theme-surface), 1),
+    0 0 0 3px rgba(var(--v-border-color), 0.2);
+}
+
 /* --- Side menu ------------------------------------------------------------------------------- */
 .side-menu {
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;

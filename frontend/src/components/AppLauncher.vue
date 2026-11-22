@@ -26,8 +26,10 @@ function firstPage(app: SuiteApp) {
     <template #activator="{ props: menu }">
       <v-btn
         v-bind="menu"
-        icon="mdi-apps"
+        icon="mdi-dots-grid"
         variant="text"
+        size="small"
+        class="launcher-button"
         :aria-label="$t('apps.launcher')"
         :title="$t('apps.launcher')"
         data-testid="app-launcher"
@@ -60,3 +62,13 @@ function firstPage(app: SuiteApp) {
     </v-card>
   </v-menu>
 </template>
+
+<style scoped>
+/* Light, as the other icons of the top bar */
+.launcher-button {
+  color: rgba(var(--v-theme-on-background), 0.78);
+}
+.launcher-button :deep(.v-icon) {
+  font-size: 22px;
+}
+</style>
