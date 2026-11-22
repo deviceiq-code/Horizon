@@ -112,7 +112,10 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
                 "email": user.email,
                 "job_title": profile.job_title,
                 "photo_version": user_photo_version(user),
-                "verticals": [v.name for v in profile.verticals.order_by("name")],
+                # The verticals they work in: the ones a new analysis of theirs can be in
+                "verticals": [
+                    {"id": v.pk, "name": v.name} for v in profile.verticals.order_by("name")
+                ],
                 "analyses_count": analyses.count(),
                 "top_verticals": [
                     {"id": v["vertical_id"], "name": v["vertical__name"], "analyses": v["analyses"]}

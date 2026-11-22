@@ -144,6 +144,8 @@ const es: Messages = {
   },
   efmv: {
     wizard: {
+      noManagerVerticals:
+        'Este account manager aún no trabaja en ninguna vertical: un administrador las define en Usuarios.',
       subtitle: 'Defina las premisas del análisis; sus escenarios vienen después.',
       steps: {
         premises: 'Premisas',

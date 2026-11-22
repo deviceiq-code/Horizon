@@ -91,6 +91,15 @@ watch(
   },
   { immediate: true },
 )
+/** The verticals the account manager works in: the only ones offered (none until known) */
+const managerVerticals = computed(() => summary.value?.verticals.map((v) => v.id) ?? [])
+// Another account manager may not work in the vertical chosen
+watch(managerVerticals, (ids) => {
+  if (scope.value.vertical !== null && !ids.includes(scope.value.vertical)) {
+    scope.value = { vertical: null, sub_vertical: null }
+  }
+})
+
 /** Bar length of a vertical among the top ones (the first is the longest) */
 const barPercent = (count: number) =>
   Math.round((count / Math.max(1, summary.value?.top_verticals[0]?.analyses ?? 1)) * 100)
@@ -243,8 +252,15 @@ async function create() {
                 :label="`${$t('efmv.fields.vertical')} *`"
                 :rules="[() => scope.vertical !== null || t('validation.required')]"
                 :error-messages="[...(errors.vertical ?? []), ...(errors.sub_vertical ?? [])]"
-                :hint="$t('efmv.wizard.verticalHint')"
+                :verticals="managerVerticals"
+                :disabled="accountManager === null"
+                :hint="
+                  summary && !summary.verticals.length
+                    ? $t('efmv.wizard.noManagerVerticals')
+                    : $t('efmv.wizard.verticalHint')
+                "
                 persistent-hint
+                :no-data-text="$t('efmv.wizard.noManagerVerticals')"
                 data-testid="vertical"
               />
             </v-form>
@@ -333,7 +349,7 @@ async function create() {
                 </div>
                 <div v-if="summary.verticals.length" class="mt-4 text-body-2">
                   <span class="text-medium-emphasis">{{ $t('efmv.wizard.manager.worksIn') }}:</span>
-                  {{ summary.verticals.join(', ') }}
+                  {{ summary.verticals.map((v) => v.name).join(', ') }}
                 </div>
               </template>
             </v-card>

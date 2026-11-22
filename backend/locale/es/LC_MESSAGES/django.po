@@ -1082,3 +1082,6 @@ msgstr "No se puede cambiar después de crear el análisis."
 
 msgid "This asset is not in the analysis's vertical."
 msgstr "Este bien no es de la vertical del análisis."
+
+msgid "This account manager does not work in this vertical."
+msgstr "Este account manager no trabaja en esta vertical."

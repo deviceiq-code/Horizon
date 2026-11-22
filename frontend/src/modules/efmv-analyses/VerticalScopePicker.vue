@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * Which assets a scenario admits: a vertical (all its sub-verticals) or one sub-vertical of it.
- * One list, each vertical followed by its sub-verticals (indented); enabled verticals only.
+ * One list, each vertical followed by its sub-verticals (indented); enabled verticals only and,
+ * with `verticals`, only those (e.g. the ones the account manager works in).
  * v-model: { vertical, sub_vertical } (sub_vertical null = the whole vertical).
  */
 import { computed, onMounted, ref } from 'vue'
@@ -27,6 +28,8 @@ const props = defineProps<{
   currentLabel?: string | null
   rules?: ((value: unknown) => true | string)[]
   errorMessages?: string[]
+  /** Only these verticals (ids) are offered; absent: every enabled one */
+  verticals?: number[] | null
 }>()
 
 const subs = ref<SubVerticalOption[]>([])
@@ -48,6 +51,7 @@ const options = computed<ScopeOption[]>(() => {
   const list: ScopeOption[] = []
   const seen = new Set<number>()
   for (const sub of subs.value) {
+    if (props.verticals && !props.verticals.includes(sub.vertical.id)) continue
     if (!seen.has(sub.vertical.id)) {
       seen.add(sub.vertical.id)
       list.push({

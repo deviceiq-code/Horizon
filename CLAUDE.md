@@ -97,7 +97,8 @@ Multi-user web system for **operating lease residual value pricing**
   - `efmv/` — **eFMV Analyses** (Pricing), `/api/efmv-analyses/`. `EfmvAnalysis`: code
     `EFMV-<year>-<NNNN>` (year + sequence, next number per year), account manager (user with the
     role; must be the customer's primary or secondary), customer, `vertical` — required on
-    create — and optional `sub_vertical` of it (the assets its scenarios admit, by the average
+    create, one the account manager works in (their profile's verticals; 400 otherwise) — and
+    optional `sub_vertical` of it (the assets its scenarios admit, by the average
     price's sub-vertical; `efmv.models.in_scope`; items outside are flagged `out_of_scope` in
     previews and refused on save; Vertical/SubVertical PROTECT; `vertical_label` in the API):
     these premises are set on creation and cannot change (400); created by/at; ≥ 1
@@ -247,7 +248,8 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/modules/efmv-analyses/` — list (ServerCrudTable; deleting is only there) and, as
     child routes of a RouterView parent, `/pricing/efmv-analyses/new` — `EfmvWizardView.vue`,
     3 steps: Premises (account manager — the user by default when they have the role —,
-    `CustomerPicker.vue` with that account manager's customers, `VerticalScopePicker.vue`;
+    `CustomerPicker.vue` with that account manager's customers, `VerticalScopePicker.vue` with
+    only the verticals they work in (`verticals` prop);
     beside them the account manager's card from `GET /account-manager-summary/?account_manager=`:
     photo, analyses, top 5 verticals by analyses, active customers as primary AM), Services and
     Partnerships and Alliances (coming soon); "Create Analysis" posts the premises and a first

@@ -18,10 +18,12 @@ CNPJ_2 = "11.444.777/0001-61"
 
 
 @pytest.fixture
-def managers(db):
+def managers(catalog):
+    """Ana and Bruno, account managers who work in Industry (the vertical of the prices)."""
+    industry = catalog["yellow"].vertical
     return {
-        "ana": make_account_manager("Ana", "Lima", "ana@example.com"),
-        "bruno": make_account_manager("Bruno", "Reis", "bruno@example.com"),
+        "ana": make_account_manager("Ana", "Lima", "ana@example.com", [industry]),
+        "bruno": make_account_manager("Bruno", "Reis", "bruno@example.com", [industry]),
     }
 
 
@@ -398,6 +400,7 @@ def test_a_sub_vertical_narrows_the_assets(logged_client, managers, customers, p
 
 def test_assets_of_another_vertical_are_refused(logged_client, managers, customers, prices):
     other = Vertical.objects.create(name="Healthcare")
+    managers["ana"].profile.verticals.add(other)
     r = post(logged_client, body(managers, customers, prices, vertical=other.pk))
     assert r.status_code == 400
     assert set(r.json()["scenarios"]["0"]["items"]) == {"0", "1"}
@@ -407,6 +410,7 @@ def test_the_sub_vertical_must_be_of_the_vertical(
     logged_client, managers, customers, prices, catalog
 ):
     other = Vertical.objects.create(name="Healthcare")
+    managers["ana"].profile.verticals.add(other)
     data = body(managers, customers, prices, vertical=other.pk, sub_vertical=catalog["yellow"].pk)
     data["scenarios"][0]["items"] = []
     r = post(logged_client, data)
@@ -451,6 +455,7 @@ def test_account_manager_summary(logged_client, managers, customers, prices, cat
     for _ in range(2):
         assert post(logged_client, body(managers, customers, prices)).status_code == 201
     healthcare = Vertical.objects.create(name="Healthcare")
+    managers["ana"].profile.verticals.add(healthcare)
     data = body(managers, customers, prices, vertical=healthcare.pk)
     data["scenarios"][0]["items"] = []
     assert post(logged_client, data).status_code == 201
@@ -634,3 +639,18 @@ def test_efmv_typed_as_a_percentage_of_the_unit_value(logged_client, managers, c
         content_type="application/json",
     )
     assert r.status_code == 400
+
+
+def test_the_vertical_must_be_one_the_account_manager_works_in(
+    logged_client, managers, customers, prices
+):
+    other = Vertical.objects.create(name="Healthcare")
+    data = body(managers, customers, prices, vertical=other.pk)
+    data["scenarios"][0]["items"] = []
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert r.json()["vertical"] == ["This account manager does not work in this vertical."]
+    summary = logged_client.get(
+        f"{URL}account-manager-summary/", {"account_manager": managers["ana"].pk}
+    ).json()
+    assert summary["verticals"] == [{"id": industry(), "name": "Industry"}]

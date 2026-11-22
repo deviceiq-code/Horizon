@@ -145,6 +145,8 @@ const en = {
   },
   efmv: {
     wizard: {
+      noManagerVerticals:
+        'This account manager works in no vertical yet: an administrator sets them in Users.',
       subtitle: 'Set the premises of the analysis; its scenarios come next.',
       steps: {
         premises: 'Premises',

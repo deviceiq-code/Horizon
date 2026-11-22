@@ -143,6 +143,8 @@ const ptBR: Messages = {
   },
   efmv: {
     wizard: {
+      noManagerVerticals:
+        'Este account manager ainda não atua em nenhuma vertical: um administrador as define em Usuários.',
       subtitle: 'Defina as premissas da análise; os cenários vêm em seguida.',
       steps: {
         premises: 'Premissas',

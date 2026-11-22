@@ -74,13 +74,12 @@ function firstPage(app: SuiteApp) {
   padding: 32px;
   border-radius: 16px;
   color: #fff;
-  background:
-    linear-gradient(
-      120deg,
-      color-mix(in srgb, rgb(var(--v-theme-primary)) 80%, black) 0%,
-      color-mix(in srgb, rgb(var(--v-theme-primary)) 35%, rgb(var(--v-theme-sidebar))) 50%,
-      color-mix(in srgb, rgb(var(--v-theme-sidebar)) 75%, black) 100%
-    );
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, rgb(var(--v-theme-primary)) 80%, black) 0%,
+    color-mix(in srgb, rgb(var(--v-theme-primary)) 35%, rgb(var(--v-theme-sidebar))) 50%,
+    color-mix(in srgb, rgb(var(--v-theme-sidebar)) 75%, black) 100%
+  );
 }
 .welcome-waves {
   position: absolute;

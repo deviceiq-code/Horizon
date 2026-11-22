@@ -10,7 +10,7 @@ import * as verticalsApi from '@/modules/catalogs/verticals/api'
 import * as customersApi from '@/modules/customers/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
-import { click, inBody, pickOption, settle } from '@/test-utils'
+import { click, inBody, openDropdown, pickOption, settle } from '@/test-utils'
 import * as efmvApi from '../api'
 import EfmvWizardView from '../EfmvWizardView.vue'
 
@@ -41,7 +41,7 @@ const SUMMARY: efmvApi.AccountManagerSummary = {
   email: 'ana@example.com',
   job_title: 'Account Manager',
   photo_version: 'p1',
-  verticals: ['Industry'],
+  verticals: [{ id: 1, name: 'Industry' }],
   analyses_count: 7,
   top_verticals: [
     { id: 1, name: 'Industry', analyses: 5 },
@@ -115,6 +115,15 @@ describe('EfmvWizardView', () => {
           allowed_terms: [36],
           recommended_term: 36,
         },
+        {
+          id: 20,
+          name: 'General',
+          is_general: true,
+          label: 'Healthcare / General',
+          vertical: { id: 2, name: 'Healthcare', is_enabled: true },
+          allowed_terms: [36],
+          recommended_term: 36,
+        },
       ]),
     )
     efmv.getAccountManagerSummary.mockResolvedValue(SUMMARY)
@@ -169,6 +178,26 @@ describe('EfmvWizardView', () => {
       scenarios: [{ name: '', term_months: 36, scope: '', items: [] }],
     })
     expect(replace).toHaveBeenCalledWith({ name: 'efmv-analysis', params: { id: 4 } })
+    wrapper.unmount()
+  })
+
+  it('only the verticals the account manager works in are offered', async () => {
+    const { wrapper } = await mountWizard()
+    await openDropdown('vertical')
+    const offered = [...document.querySelectorAll('.v-overlay--active .v-list-item-title')].map(
+      (el) => el.textContent!.trim(),
+    )
+    expect(offered).toContain('Industry')
+    expect(offered).not.toContain('Healthcare')
+    wrapper.unmount()
+  })
+
+  it('an account manager without verticals: none to choose, and why', async () => {
+    efmv.getAccountManagerSummary.mockResolvedValue({ ...SUMMARY, verticals: [] })
+    const { wrapper } = await mountWizard()
+    expect(inBody('[data-testid="vertical"]')!.textContent).toContain('works in no vertical yet')
+    await click('wizard-next')
+    expect(currentStep()).toContain('Premises')
     wrapper.unmount()
   })
 

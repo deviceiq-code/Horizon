@@ -166,8 +166,8 @@ export interface AccountManagerSummary {
   email: string
   job_title: string
   photo_version: string | null
-  /** Business verticals of their profile */
-  verticals: string[]
+  /** Business verticals of their profile: the ones their analyses can be in */
+  verticals: { id: number; name: string }[]
   analyses_count: number
   /** Their 5 verticals with most analyses */
   top_verticals: { id: number; name: string; analyses: number }[]

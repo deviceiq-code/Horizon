@@ -12,7 +12,7 @@ from pricing.curves import value_at
 from pricing.models import AveragePrice, PricingSettings
 from pricing.positioning import is_expired, price_position, valid_until, variation_percent
 from users.display import full_name_in, person_ref
-from users.models import is_account_manager
+from users.models import UserProfile, is_account_manager
 
 from .calculations import (
     Line,
@@ -373,6 +373,15 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             )
         manager = attrs.get("account_manager") or getattr(self.instance, "account_manager", None)
         customer = attrs.get("customer") or getattr(self.instance, "customer", None)
+        if (
+            self.instance is None
+            and manager is not None
+            and vertical is not None
+            and not UserProfile.for_user(manager).verticals.filter(pk=vertical.pk).exists()
+        ):
+            raise serializers.ValidationError(
+                {"vertical": [_("This account manager does not work in this vertical.")]}
+            )
         if (
             manager
             and customer
