@@ -286,7 +286,7 @@ function addService(item: ItemDraft) {
 /** Removing a service: deducted, its value goes back to the asset (the API recomputes it) */
 function removeService(item: ItemDraft) {
   item.service = null
-  selected.value.delete(serviceRowId(item.key))
+  if (selected.value === serviceRowId(item.key)) selected.value = assetRowId(item.key)
 }
 
 function toggleServiceMode(item: ItemDraft) {
@@ -317,57 +317,54 @@ const serviceValueRules = [
   (v: string) => parseServiceInput(v ?? '', locale.value) !== null || t('efmv.service.valueRule'),
 ]
 
-// --- Selection: operations on several rows at once ---------------------------------------------
+// --- Selection: one row at a time (click it; right-click opens its menu) ---------------------
 
-/** Selected rows: an asset ("a:<key>") or its service ("s:<key>") */
-const selected = ref(new Set<string>())
+/** The selected row: an asset ("a:<key>") or its service ("s:<key>") */
+const selected = ref<string | null>(null)
 const assetRowId = (key: number) => `a:${key}`
 const serviceRowId = (key: number) => `s:${key}`
 
 function unselect(key: number) {
-  selected.value.delete(assetRowId(key))
-  selected.value.delete(serviceRowId(key))
-}
-
-function toggleRow(id: string, on: boolean) {
-  if (on) selected.value.add(id)
-  else selected.value.delete(id)
-}
-
-/** Every row (assets and their services) */
-const allRowIds = computed(() =>
-  scenario.value.items.flatMap((i) =>
-    i.service ? [assetRowId(i.key), serviceRowId(i.key)] : [assetRowId(i.key)],
-  ),
-)
-const allSelected = computed(
-  () => allRowIds.value.length > 0 && allRowIds.value.every((id) => selected.value.has(id)),
-)
-function toggleAll(on: boolean) {
-  selected.value = new Set(on ? allRowIds.value : [])
-}
-
-/** Selected assets that can get a service (chosen, none yet) */
-const canAddService = computed(() =>
-  scenario.value.items.some(
-    (i) => selected.value.has(assetRowId(i.key)) && !i.service && i.average_price !== null,
-  ),
-)
-
-/** Remove what is selected: assets (with their services) and services alone */
-function removeSelected() {
-  for (let index = scenario.value.items.length - 1; index >= 0; index--) {
-    const item = scenario.value.items[index]!
-    if (selected.value.has(assetRowId(item.key))) removeAsset(index)
-    else if (selected.value.has(serviceRowId(item.key))) removeService(item)
+  if (selected.value === assetRowId(key) || selected.value === serviceRowId(key)) {
+    selected.value = null
   }
-  selected.value = new Set()
 }
+
+/** The selected row's item, and whether the row is the item's service */
+const selection = computed(() => {
+  if (!selected.value) return null
+  const [kind, key] = selected.value.split(':')
+  const index = scenario.value.items.findIndex((i) => i.key === Number(key))
+  if (index < 0) return null
+  return { index, item: scenario.value.items[index]!, isService: kind === 's' }
+})
+
+/** The selected asset can get a service (it has an asset and no service yet) */
+const canAddService = computed(() => {
+  const current = selection.value
+  return (
+    !!current && !current.isService && !current.item.service && current.item.average_price !== null
+  )
+})
 
 function addServiceToSelected() {
-  for (const item of scenario.value.items) {
-    if (selected.value.has(assetRowId(item.key))) addService(item)
-  }
+  if (canAddService.value) addService(selection.value!.item)
+}
+
+/** Remove the selected row: an asset (with its service) or only a service */
+function removeSelected() {
+  const current = selection.value
+  if (!current) return
+  if (current.isService) removeService(current.item)
+  else removeAsset(current.index)
+  selected.value = null
+}
+
+// The row's menu (right click): the grid's toolbar options for that row
+const menu = ref({ open: false, x: 0, y: 0 })
+function openMenu(event: MouseEvent, rowId: string) {
+  selected.value = rowId
+  menu.value = { open: true, x: event.clientX, y: event.clientY }
 }
 
 /** The errors of an item's service, whatever their shape */
@@ -501,33 +498,30 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             {{ scopeLabel }}
           </v-chip>
         </div>
-        <!-- Operations on the selected rows -->
-        <template v-if="selected.size">
-          <span class="text-body-2 text-medium-emphasis" data-testid="selected-count">
-            {{ $t('efmv.selection.count', selected.size) }}
-          </span>
-          <v-btn
-            variant="tonal"
-            prepend-icon="mdi-wrench-outline"
-            class="text-none"
-            :disabled="!canAddService"
-            :title="$t('efmv.selection.addServiceHint')"
-            data-testid="add-service"
-            @click="addServiceToSelected"
-          >
-            {{ $t('efmv.selection.addService') }}
-          </v-btn>
-          <v-btn
-            variant="tonal"
-            color="error"
-            prepend-icon="mdi-delete-outline"
-            class="text-none"
-            data-testid="remove-selected"
-            @click="removeSelected"
-          >
-            {{ $t('efmv.selection.remove') }}
-          </v-btn>
-        </template>
+        <!-- On the selected row (click a row to select it; right click: the same options) -->
+        <v-btn
+          variant="tonal"
+          prepend-icon="mdi-wrench-outline"
+          class="text-none"
+          :disabled="!canAddService"
+          :title="$t('efmv.selection.addServiceHint')"
+          data-testid="add-service"
+          @click="addServiceToSelected"
+        >
+          {{ $t('efmv.selection.addService') }}
+        </v-btn>
+        <v-btn
+          variant="tonal"
+          color="error"
+          prepend-icon="mdi-delete-outline"
+          class="text-none"
+          :disabled="!selection"
+          :title="$t('efmv.selection.removeHint')"
+          data-testid="remove-selected"
+          @click="removeSelected"
+        >
+          {{ $t('efmv.selection.remove') }}
+        </v-btn>
         <v-btn
           variant="tonal"
           color="primary"
@@ -564,17 +558,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
     >
       <thead>
         <tr>
-          <th class="cell-check">
-            <v-checkbox-btn
-              :model-value="allSelected"
-              :indeterminate="selected.size > 0 && !allSelected"
-              :disabled="!scenario.items.length"
-              density="compact"
-              :aria-label="$t('efmv.selection.all')"
-              data-testid="select-all"
-              @update:model-value="toggleAll(!!$event)"
-            />
-          </th>
           <th class="row-number">#</th>
           <th class="text-end" style="width: 84px">{{ $t('efmv.item.quantity') }}</th>
           <th style="min-width: 260px">{{ $t('efmv.item.asset') }}</th>
@@ -587,12 +570,11 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             {{ $t('efmv.item.efmvValue') }}
           </th>
           <th class="text-end" style="width: 160px">{{ $t('efmv.item.total') }}</th>
-          <th style="width: 40px"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!scenario.items.length">
-          <td colspan="8" class="text-medium-emphasis text-center py-6">
+          <td colspan="6" class="text-medium-emphasis text-center py-6">
             {{ $t('efmv.scenario.noAssets') }}
           </td>
         </tr>
@@ -602,19 +584,13 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             :class="{
               'row-off':
                 detail(i)?.out_of_curve || detail(i)?.out_of_scope || item.average_price === null,
+              'row-selected': selected === assetRowId(item.key),
             }"
+            :aria-selected="selected === assetRowId(item.key)"
             data-testid="asset-row"
+            @click="selected = assetRowId(item.key)"
+            @contextmenu.prevent="openMenu($event, assetRowId(item.key))"
           >
-            <td class="cell-check">
-              <v-checkbox-btn
-                :model-value="selected.has(assetRowId(item.key))"
-                density="compact"
-                tabindex="-1"
-                :aria-label="$t('efmv.selection.row')"
-                data-testid="select-row"
-                @update:model-value="toggleRow(assetRowId(item.key), !!$event)"
-              />
-            </td>
             <td class="row-number">{{ i + 1 }}</td>
             <td class="cell-input" data-col="quantity">
               <v-text-field
@@ -842,37 +818,20 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 </v-chip>
               </div>
             </td>
-            <td class="cell-action">
-              <v-btn
-                icon="mdi-close"
-                variant="text"
-                size="x-small"
-                tabindex="-1"
-                class="remove"
-                :title="$t('efmv.item.remove')"
-                :aria-label="$t('efmv.item.remove')"
-                data-testid="remove-asset"
-                @click="removeAsset(i)"
-              />
-            </td>
           </tr>
           <!-- Its service (SV): per unit, the asset's quantity; eFMV 0 -->
           <tr
             v-if="item.service"
             class="service-row"
-            :class="{ 'row-off': detail(i)?.service?.too_high }"
+            :class="{
+              'row-off': detail(i)?.service?.too_high,
+              'row-selected': selected === serviceRowId(item.key),
+            }"
+            :aria-selected="selected === serviceRowId(item.key)"
             data-testid="service-row"
+            @click="selected = serviceRowId(item.key)"
+            @contextmenu.prevent="openMenu($event, serviceRowId(item.key))"
           >
-            <td class="cell-check">
-              <v-checkbox-btn
-                :model-value="selected.has(serviceRowId(item.key))"
-                density="compact"
-                tabindex="-1"
-                :aria-label="$t('efmv.selection.row')"
-                data-testid="select-service"
-                @update:model-value="toggleRow(serviceRowId(item.key), !!$event)"
-              />
-            </td>
             <!-- No number nor quantity: the service follows its asset's -->
             <td class="row-number" />
             <td class="cell-text" />
@@ -970,23 +929,42 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 </v-chip>
               </div>
             </td>
-            <td class="cell-action">
-              <v-btn
-                icon="mdi-close"
-                variant="text"
-                size="x-small"
-                tabindex="-1"
-                class="remove"
-                :title="$t('efmv.service.remove')"
-                :aria-label="$t('efmv.service.remove')"
-                data-testid="remove-service"
-                @click="removeService(item)"
-              />
-            </td>
           </tr>
         </template>
       </tbody>
     </v-table>
+
+    <!-- The row's menu (right click) -->
+    <v-menu
+      v-model="menu.open"
+      :target="[menu.x, menu.y]"
+      location="bottom start"
+      data-testid="row-menu"
+    >
+      <v-list density="compact" min-width="220" data-testid="row-menu-list">
+        <v-list-item
+          prepend-icon="mdi-plus"
+          :title="$t('efmv.selection.addRow')"
+          data-testid="menu-add-row"
+          @click="addRow"
+        />
+        <v-list-item
+          prepend-icon="mdi-wrench-outline"
+          :title="$t('efmv.selection.addService')"
+          :disabled="!canAddService"
+          data-testid="menu-add-service"
+          @click="addServiceToSelected"
+        />
+        <v-divider class="my-1" />
+        <v-list-item
+          prepend-icon="mdi-delete-outline"
+          :title="$t('efmv.selection.remove')"
+          base-color="error"
+          data-testid="menu-remove"
+          @click="removeSelected"
+        />
+      </v-list>
+    </v-menu>
   </div>
 </template>
 
@@ -1027,15 +1005,19 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
   font-weight: 600;
   white-space: nowrap;
 }
-/* Selection: a narrow first column */
-.sheet :deep(th.cell-check),
-.sheet :deep(td.cell-check) {
-  width: 40px;
-  padding: 0 4px !important;
-}
 /* Service rows: a light tint, under their asset */
 .sheet tbody tr.service-row > td:not(.row-number) {
   background: rgba(var(--v-theme-secondary), 0.04);
+}
+/* The selected row: tinted, a mark on its left */
+.sheet tbody tr {
+  cursor: default;
+}
+.sheet tbody tr.row-selected > td {
+  background: rgba(var(--v-theme-primary), 0.1) !important;
+}
+.sheet tbody tr.row-selected > td:first-child {
+  box-shadow: inset 3px 0 0 rgb(var(--v-theme-primary));
 }
 .row-number {
   width: 44px;
@@ -1135,17 +1117,6 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
   padding-top: 0;
 }
 
-/* Remove: only on the row under the mouse (or with keyboard focus) */
-.sheet td.cell-action {
-  padding: 0 4px !important;
-}
-.remove {
-  opacity: 0;
-}
-.sheet tbody tr:hover .remove,
-.remove:focus-visible {
-  opacity: 1;
-}
 /* Only the assets scroll, under the fixed column titles: on wide screens the grid takes the
    rest of the window; on narrow ones it has a height of its own */
 .assets :deep(.v-table__wrapper) {

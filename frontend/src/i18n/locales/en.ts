@@ -166,11 +166,10 @@ const en = {
       remove: 'Remove Service',
     },
     selection: {
-      all: 'Select All',
-      row: 'Select',
-      count: '{n} selected | {n} selected',
+      addRow: 'Add Row',
       addService: 'Add Service',
-      addServiceHint: 'A service row under each selected asset that has none.',
+      addServiceHint: 'A service row under the selected asset (one per asset).',
+      removeHint: 'The selected row: an asset (with its service) or a service.',
       remove: 'Remove',
     },
     wizard: {

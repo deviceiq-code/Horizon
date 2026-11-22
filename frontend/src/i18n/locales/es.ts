@@ -166,11 +166,10 @@ const es: Messages = {
       remove: 'Quitar Servicio',
     },
     selection: {
-      all: 'Seleccionar Todos',
-      row: 'Seleccionar',
-      count: '{n} seleccionado | {n} seleccionados',
+      addRow: 'Agregar Fila',
       addService: 'Agregar Servicio',
-      addServiceHint: 'Una fila de servicio bajo cada bien seleccionado que aún no tiene.',
+      addServiceHint: 'Una fila de servicio bajo el bien seleccionado (una por bien).',
+      removeHint: 'La fila seleccionada: un bien (con su servicio) o un servicio.',
       remove: 'Quitar',
     },
     wizard: {

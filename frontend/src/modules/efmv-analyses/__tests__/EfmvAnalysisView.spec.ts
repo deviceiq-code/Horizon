@@ -398,8 +398,8 @@ describe('EfmvAnalysisView', () => {
     const titles = [...document.querySelectorAll('[data-testid="assets"] th')].map((th) =>
       th.textContent?.trim(),
     )
-    // After the selection box and the row number
-    expect(titles.slice(0, 3)).toEqual(['', '#', 'Quantity'])
+    // After the row number
+    expect(titles.slice(0, 2)).toEqual(['#', 'Quantity'])
     expect((inBody('[data-testid="unit-value"] input') as HTMLInputElement).value).toBe(
       '100,000.00',
     )
@@ -591,15 +591,16 @@ describe('EfmvAnalysisView', () => {
     wrapper.unmount()
   })
 
-  it('selected assets get a service (SV) row under them; services can be removed', async () => {
+  it('the selected asset gets a service (SV) row under it; services can be removed', async () => {
     efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
     efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView()
-    // Nothing selected: no operations
-    expect(inBody('[data-testid="add-service"]')).toBeNull()
-    ;(inBody('[data-testid="select-row"] input') as HTMLInputElement).click()
-    await settle()
-    expect(inBody('[data-testid="selected-count"]')!.textContent).toContain('1 selected')
+    // Nothing selected: nothing to act on
+    expect(inBody('[data-testid="add-service"]')!.hasAttribute('disabled')).toBe(true)
+    expect(inBody('[data-testid="remove-selected"]')!.hasAttribute('disabled')).toBe(true)
+    // A click selects the row (one at a time)
+    await click('asset-row')
+    expect(inBody('[data-testid="asset-row"]')!.className).toContain('row-selected')
     efmv.previewScenario.mockResolvedValue({
       items: [
         {
@@ -627,16 +628,15 @@ describe('EfmvAnalysisView', () => {
     expect((inBody('[data-testid="service-value"] input') as HTMLInputElement).value).toBe('0.00')
     expect(inBody('[data-testid="service-mode"]')!.textContent).toContain('Added to the asset')
     const serviceCells = [...inBody('[data-testid="service-row"]')!.querySelectorAll('td')]
-    expect(serviceCells[1]!.textContent!.trim()).toBe('') // #
-    expect(serviceCells[2]!.textContent!.trim()).toBe('') // quantity
-    expect(serviceCells[5]!.textContent!.trim()).toBe('') // eFMV
+    expect(serviceCells[0]!.textContent!.trim()).toBe('') // #
+    expect(serviceCells[1]!.textContent!.trim()).toBe('') // quantity
+    expect(serviceCells[4]!.textContent!.trim()).toBe('') // eFMV
     // Units counted apart: 2 assets (HW, the row's quantity) with their 2 services (SV)
     const count = (kind: string) =>
       inBody(`[data-testid="asset-count-${kind}"]`)!.textContent!.replace(/\s+/g, ' ').trim()
     expect([count('hw'), count('sw'), count('sv')]).toEqual(['HW 2', 'SW 0', 'SV 2'])
-    // One service per asset: no second row
-    await click('add-service')
-    expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
+    // One service per asset: no second one
+    expect(inBody('[data-testid="add-service"]')!.hasAttribute('disabled')).toBe(true)
 
     // 8% deducted from the asset: the API resolves it
     await typeInto('service-value', '8%')
@@ -653,9 +653,13 @@ describe('EfmvAnalysisView', () => {
         ],
       }),
     )
-    // Removing the service (its value goes back to the asset: nothing is sent)
-    await click('remove-service')
+    // Removing the service — its row selected — (its value goes back to the asset: nothing sent)
+    await click('service-row')
+    expect(inBody('[data-testid="service-row"]')!.className).toContain('row-selected')
+    expect(inBody('[data-testid="asset-row"]')!.className).not.toContain('row-selected')
+    await click('remove-selected')
     expect(inBody('[data-testid="service-row"]')).toBeNull()
+    expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(1)
     expect(count('sv')).toBe('SV 0')
     await click('save')
     expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
@@ -702,12 +706,15 @@ describe('EfmvAnalysisView', () => {
     await settle()
     expect(field().value).toBe('92,000.00')
     // Without the service: the value typed again
-    await click('remove-service')
+    await click('service-row')
+    await click('remove-selected')
     expect(field().value).toBe('100,000.00')
     wrapper.unmount()
   })
 
-  it('removes the selected rows at once', async () => {
+  it("a right click selects the row and opens the toolbar's options", async () => {
+    // jsdom has no layout: the menu placed at the click asks what is under the pointer
+    document.elementsFromPoint = () => []
     efmv.getEfmvAnalysis.mockResolvedValue({
       ...ANALYSIS,
       scenarios: [
@@ -715,13 +722,29 @@ describe('EfmvAnalysisView', () => {
       ],
     })
     const { wrapper } = await mountView()
-    expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(2)
-    ;(inBody('[data-testid="select-all"] input') as HTMLInputElement).click()
+    const rows = () => document.querySelectorAll<HTMLElement>('[data-testid="asset-row"]')
+    expect(rows()).toHaveLength(2)
+    rows()[1]!.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 400 }),
+    )
     await settle()
-    expect(inBody('[data-testid="selected-count"]')!.textContent).toContain('2 selected')
-    await click('remove-selected')
-    expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(0)
-    expect(inBody('[data-testid="selected-count"]')).toBeNull()
+    expect(rows()[1]!.className).toContain('row-selected')
+    const menu = inBody('[data-testid="row-menu-list"]')!
+    expect(menu.textContent).toContain('Add Row')
+    expect(menu.textContent).toContain('Add Service')
+    expect(menu.textContent).toContain('Remove')
+    // Add a service to that asset from the menu
+    await click('menu-add-service')
+    expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
+    // Remove the first asset from its menu
+    rows()[0]!.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 }),
+    )
+    await settle()
+    await click('menu-remove')
+    expect(rows()).toHaveLength(1)
+    // No row selected now: the toolbar has nothing to act on
+    expect(inBody('[data-testid="remove-selected"]')!.hasAttribute('disabled')).toBe(true)
     wrapper.unmount()
   })
 

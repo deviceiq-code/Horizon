@@ -280,11 +280,12 @@ Multi-user web system for **operating lease residual value pricing**
     (the average price's value as placeholder; empty = that value; its Position chip below it
     in the same cell), eFMV (the
     curve's value at the term as placeholder; empty = that value; "25%" becomes its value when
-    the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total (its Weight — share of the LO — below it, as a chip "Weight (50.69%)"); a checkbox
-    per row (assets and services; select all on the header) with "Remove" and "Add Service" for
-    the selected ones; a service is a row under its asset showing only Asset (name; empty = the
+    the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total (its Weight — share of the LO — below it, as a chip "Weight (50.69%)"); a click selects
+    one row (asset or service; highlighted) and "Add Service" / "Remove" on the toolbar act on
+    it; a right click selects the row and opens a menu with the toolbar's options (Add Row, Add
+    Service, Remove); no remove column; a service is a row under its asset showing only Asset (name; empty = the
     placeholder "Service", sent as its name), Unit Value (value or %; a chip toggles
-    added/deducted) and Total, plus its own remove; deducted, the asset's Unit Value shows the
+    added/deducted) and Total; deducted, the asset's Unit Value shows the
     API's `net_unit_value` (highlighted) except while it is being edited (the value typed); money cells show the currency symbol on the left
     (`utils/money.ts::currencySymbol`) and the number on the right, and share one layout
     (`.money-cell`: a value line and a chip line of fixed heights) so they line up across the row; plain fields fill the cells (focus/error shown on the cell), Tab goes through the

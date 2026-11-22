@@ -165,11 +165,10 @@ const ptBR: Messages = {
       remove: 'Remover Serviço',
     },
     selection: {
-      all: 'Selecionar Todos',
-      row: 'Selecionar',
-      count: '{n} selecionado | {n} selecionados',
+      addRow: 'Adicionar Linha',
       addService: 'Adicionar Serviço',
-      addServiceHint: 'Uma linha de serviço sob cada bem selecionado que ainda não tem.',
+      addServiceHint: 'Uma linha de serviço sob o bem selecionado (uma por bem).',
+      removeHint: 'A linha selecionada: um bem (com seu serviço) ou um serviço.',
       remove: 'Remover',
     },
     wizard: {
