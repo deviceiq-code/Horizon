@@ -19,6 +19,8 @@ export interface Preferences {
   /** How dates and times are written (src/dateFormat.ts); "auto" follows the language */
   date_format: DateFormat
   time_format: TimeFormat
+  /** Smart Tools: entering a text field selects its content (src/smartTools.ts) */
+  select_on_focus: boolean
   updated_at: string
 }
 
@@ -29,6 +31,7 @@ export type PreferencesUpdate = Partial<{
   ui_scale: UiScale
   date_format: DateFormat
   time_format: TimeFormat
+  select_on_focus: boolean
 }>
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']
@@ -43,6 +46,7 @@ const THEME_STORAGE_KEY = 'horizon.theme'
 const COLOR_THEME_STORAGE_KEY = 'horizon.colorTheme'
 const UI_SCALE_STORAGE_KEY = 'horizon.uiScale'
 
+const SELECT_ON_FOCUS_STORAGE_KEY = 'horizon.selectOnFocus'
 const DATE_FORMAT_STORAGE_KEY = 'horizon.dateFormat'
 const TIME_FORMAT_STORAGE_KEY = 'horizon.timeFormat'
 
@@ -105,6 +109,10 @@ export const usePreferencesStore = defineStore('preferences', () => {
   const uiScale = ref<UiScale>(readStoredUiScale())
   const dateFormat = ref<DateFormat>(readStored(DATE_FORMAT_STORAGE_KEY, isDateFormat, 'auto'))
   const timeFormat = ref<TimeFormat>(readStored(TIME_FORMAT_STORAGE_KEY, isTimeFormat, 'auto'))
+  // On unless turned off (also before signing in)
+  const selectOnFocus = ref(
+    readStored(SELECT_ON_FOCUS_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
+  )
 
   /** Apply preferences to the UI without saving them to the account. */
   function apply(p: {
@@ -114,6 +122,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     ui_scale?: string
     date_format?: string
     time_format?: string
+    select_on_focus?: boolean
   }) {
     if (p.language && isSupportedLanguage(p.language)) {
       language.value = p.language
@@ -139,6 +148,10 @@ export const usePreferencesStore = defineStore('preferences', () => {
       timeFormat.value = p.time_format
       store(TIME_FORMAT_STORAGE_KEY, p.time_format)
     }
+    if (typeof p.select_on_focus === 'boolean') {
+      selectOnFocus.value = p.select_on_focus
+      store(SELECT_ON_FOCUS_STORAGE_KEY, String(p.select_on_focus))
+    }
   }
 
   /** Apply immediately and save to the account; if the API fails, roll back and rethrow. */
@@ -150,6 +163,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
       ui_scale: uiScale.value,
       date_format: dateFormat.value,
       time_format: timeFormat.value,
+      select_on_focus: selectOnFocus.value,
     }
     apply(changes)
     try {
@@ -164,5 +178,15 @@ export const usePreferencesStore = defineStore('preferences', () => {
     }
   }
 
-  return { language, theme, colorTheme, uiScale, dateFormat, timeFormat, apply, save }
+  return {
+    language,
+    theme,
+    colorTheme,
+    uiScale,
+    dateFormat,
+    timeFormat,
+    selectOnFocus,
+    apply,
+    save,
+  }
 })

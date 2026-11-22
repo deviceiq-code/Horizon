@@ -77,6 +77,9 @@ class UserPreferences(models.Model):
     time_format = models.CharField(
         _("time format"), max_length=10, choices=TimeFormat, default=TimeFormat.AUTO
     )
+    # Smart Tools (conveniences of the interface)
+    # Entering a text field selects its content (typing replaces it)
+    select_on_focus = models.BooleanField(_("select on focus"), default=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:

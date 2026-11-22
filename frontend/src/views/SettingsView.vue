@@ -233,6 +233,34 @@ async function save(changes: PreferencesUpdate) {
         </div>
       </v-card-text>
     </v-card>
+
+    <!-- Smart Tools: conveniences of the interface, each turned on or off (src/smartTools.ts) -->
+    <v-card class="mt-4" data-testid="smart-tools">
+      <v-card-item prepend-icon="mdi-auto-fix">
+        <v-card-title>{{ $t('settings.smartTools.title') }}</v-card-title>
+        <v-card-subtitle>{{ $t('settings.smartTools.description') }}</v-card-subtitle>
+      </v-card-item>
+      <v-card-text>
+        <v-switch
+          :model-value="preferences.selectOnFocus"
+          color="primary"
+          inset
+          hide-details
+          :disabled="saving"
+          data-testid="select-on-focus"
+          @update:model-value="save({ select_on_focus: !!$event })"
+        >
+          <template #label>
+            <div>
+              <div class="font-weight-medium">{{ $t('settings.smartTools.selectOnFocus') }}</div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ $t('settings.smartTools.selectOnFocusHint') }}
+              </div>
+            </div>
+          </template>
+        </v-switch>
+      </v-card-text>
+    </v-card>
   </v-container>
 </template>
 

@@ -1103,3 +1103,6 @@ msgstr "formato de data"
 
 msgid "time format"
 msgstr "formato de hora"
+
+msgid "select on focus"
+msgstr "selecionar ao entrar no campo"

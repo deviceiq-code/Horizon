@@ -128,6 +128,7 @@ async function mountView(path = '/users', view: Component = UsersView) {
       ui_scale: 'auto',
       date_format: 'auto',
       time_format: 'auto',
+      select_on_focus: true,
       updated_at: '',
     },
   }

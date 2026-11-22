@@ -25,6 +25,7 @@ const user = (is_admin: boolean): User => ({
     ui_scale: 'auto',
     date_format: 'auto',
     time_format: 'auto',
+    select_on_focus: true,
     updated_at: '',
   },
 })
@@ -104,6 +105,21 @@ describe('SettingsView', () => {
     expect(inBody('[data-testid="date-time-example"]')!.textContent).toMatch(
       /Now: \d{4}-\d{2}-\d{2}, \d{2}:\d{2}/,
     )
+    wrapper.unmount()
+  })
+
+  it('Smart Tools: select on focus, on by default, can be turned off', async () => {
+    const { wrapper } = await mountAt('/settings', false)
+    const preferences = usePreferencesStore()
+    const save = vi.spyOn(preferences, 'save').mockResolvedValue()
+    const card = inBody('[data-testid="smart-tools"]')!
+    expect(card.textContent).toContain('Smart Tools')
+    expect(card.textContent).toContain('Select on Focus')
+    const toggle = inBody('[data-testid="select-on-focus"] input') as HTMLInputElement
+    expect(toggle.checked).toBe(true)
+    toggle.click()
+    await settle()
+    expect(save).toHaveBeenCalledWith({ select_on_focus: false })
     wrapper.unmount()
   })
 })

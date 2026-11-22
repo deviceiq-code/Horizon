@@ -816,6 +816,14 @@ const es: Messages = {
     },
   },
   settings: {
+    smartTools: {
+      // A name: the same in every language
+      title: 'Smart Tools',
+      description: 'Facilidades de Horizon que puede activar o desactivar.',
+      selectOnFocus: 'Seleccionar al Entrar en el Campo',
+      selectOnFocusHint:
+        'Al entrar en un campo de texto, su contenido queda seleccionado y lo que escriba lo reemplaza (salvo campos de varias líneas).',
+    },
     dateTime: 'Fecha y Hora',
     dateTimeDescription: 'Cómo se escriben las fechas y horas en todo el sistema.',
     dateFormat: 'Formato de Fecha',

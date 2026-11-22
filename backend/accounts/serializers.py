@@ -13,6 +13,7 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "ui_scale",
             "date_format",
             "time_format",
+            "select_on_focus",
             "updated_at",
         ]
         read_only_fields = ["updated_at"]

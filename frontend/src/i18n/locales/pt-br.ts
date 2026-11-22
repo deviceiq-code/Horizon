@@ -813,6 +813,14 @@ const ptBR: Messages = {
     },
   },
   settings: {
+    smartTools: {
+      // A name: the same in every language
+      title: 'Smart Tools',
+      description: 'Facilidades do Horizon que você pode ligar ou desligar.',
+      selectOnFocus: 'Selecionar ao Entrar no Campo',
+      selectOnFocusHint:
+        'Ao entrar num campo de texto, seu conteúdo fica selecionado e o que você digitar o substitui (exceto campos de várias linhas).',
+    },
     dateTime: 'Data e Hora',
     dateTimeDescription: 'Como datas e horas são escritas em todo o sistema.',
     dateFormat: 'Formato da Data',

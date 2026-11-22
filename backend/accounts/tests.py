@@ -148,3 +148,10 @@ def test_date_and_time_formats_default_to_automatic(logged_client):
     assert logged_client.get("/api/auth/me/").json()["preferences"]["date_format"] == "ymd"
     r = _patch(logged_client, {"date_format": "dd.mm"})
     assert r.status_code == 400 and "date_format" in r.json()
+
+
+def test_select_on_focus_is_on_by_default(logged_client):
+    assert logged_client.get("/api/auth/preferences/").json()["select_on_focus"] is True
+    r = _patch(logged_client, {"select_on_focus": False})
+    assert (r.status_code, r.json()["select_on_focus"]) == (200, False)
+    assert logged_client.get("/api/auth/me/").json()["preferences"]["select_on_focus"] is False

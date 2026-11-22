@@ -6,6 +6,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore } from '@/stores/preferences'
 import { colorThemeById, vuetifyThemeName } from '@/themes'
 import { uiScaleFactor } from '@/uiScale'
+import { installSelectOnFocus } from '@/smartTools'
 
 const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
@@ -39,6 +40,10 @@ watch(
     ),
   { immediate: true },
 )
+
+// Smart Tools: entering a text field selects its content (when the user keeps it on)
+const removeSelectOnFocus = installSelectOnFocus(() => preferences.selectOnFocus)
+onBeforeUnmount(removeSelectOnFocus)
 
 // Size of the interface: zoom of the whole page (text, spacing, fields), from the user's
 // choice or — "auto" — the window's width (src/uiScale.ts). `--ui-zoom` lets layouts that

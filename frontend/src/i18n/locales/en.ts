@@ -813,6 +813,14 @@ const en = {
     },
   },
   settings: {
+    smartTools: {
+      // A name: the same in every language
+      title: 'Smart Tools',
+      description: 'Conveniences of Horizon you can turn on or off.',
+      selectOnFocus: 'Select on Focus',
+      selectOnFocusHint:
+        'Entering a text field selects its content, so typing replaces it (multi-line fields excepted).',
+    },
     dateTime: 'Date and Time',
     dateTimeDescription: 'How dates and times are written across the system.',
     dateFormat: 'Date Format',

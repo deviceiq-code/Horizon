@@ -186,6 +186,10 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/stores/auth.ts` — logged-in user state.
   - `src/stores/preferences.ts` — language/theme/interface size in use; saved to the account via
     `PATCH /api/auth/preferences/`.
+  - **Smart Tools** (Settings card; the name is not translated): conveniences each user turns
+    on or off, `src/smartTools.ts` installed in App.vue. "Select on Focus" (preference
+    `select_on_focus`, on by default; also kept in the browser for the login page): entering a
+    single-line text field selects its content (not textareas, read-only or empty fields).
   - **Date and time formats**: preferences `date_format` (auto — by the language — | dmy | mdy
     | ymd) and `time_format` (auto | 24h | 12h), chosen in Settings (`accounts.models.DateFormat`
     / `TimeFormat`). Format dates with `useDateFormat().d(value, 'short' | 'dateTime')`
