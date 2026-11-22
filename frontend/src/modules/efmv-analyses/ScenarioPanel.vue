@@ -88,7 +88,7 @@ function detail(index: number): ScenarioItem | null {
 async function refresh() {
   const term = parseTerm(scenario.value.term)
   if (term === null) return
-  const input = scenarioInput(scenario.value, locale.value)
+  const input = scenarioInput(scenario.value, locale.value, t('efmv.service.defaultName'))
   const current = ++request
   pending.value = true
   try {
@@ -213,6 +213,31 @@ function onGridKeydown(event: KeyboardEvent) {
   focusCell(row + step, column)
 }
 
+/**
+ * A service deducted from the asset leaves it worth less: the field shows that (the value the
+ * API gives) while it is not being edited; editing shows the value typed again.
+ */
+const editingUnit = ref<number | null>(null)
+function netShown(item: ItemDraft, index: number): boolean {
+  const service = detail(index)?.service
+  return (
+    item.service?.mode === 'deduct' &&
+    !!service &&
+    !service.too_high &&
+    !!detail(index)?.net_unit_value &&
+    editingUnit.value !== item.key
+  )
+}
+function unitShown(item: ItemDraft, index: number): string {
+  return netShown(item, index)
+    ? toInputMoney(detail(index)!.net_unit_value!, locale.value)
+    : item.unit_value
+}
+function onUnitBlur(item: ItemDraft) {
+  editingUnit.value = null
+  tidyUnitValue(item)
+}
+
 /** The value as the UI shows money ("100.000,00" in pt-br) once the field is left. */
 function tidyUnitValue(item: ItemDraft) {
   const value = parseUnitValue(item.unit_value, locale.value)
@@ -250,9 +275,9 @@ function removeAsset(index: number) {
 
 function addService(item: ItemDraft) {
   if (item.service || item.average_price === null) return
-  // Zero to start with, added to the asset; the name can be changed
+  // Zero to start with, added to the asset; no name: "Service" (the placeholder) is used
   item.service = {
-    name: t('efmv.service.defaultName'),
+    name: '',
     value: toInputMoney('0', locale.value),
     mode: 'add',
   }
@@ -697,7 +722,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             <!-- The value typed and, below it, how it compares with Average Prices -->
             <td class="cell-input money-cell" data-col="unit">
               <v-text-field
-                v-model="item.unit_value"
+                :model-value="unitShown(item, i)"
                 inputmode="decimal"
                 :placeholder="
                   detail(i)?.original_value ? toInputMoney(detail(i)!.original_value!, locale) : ''
@@ -706,6 +731,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 density="compact"
                 hide-details
                 class="text-end-input"
+                :class="{ 'net-shown': netShown(item, i) }"
                 :rules="item.average_price === null ? [] : unitValueRules"
                 :disabled="item.average_price === null"
                 :aria-label="$t('efmv.item.unitValue')"
@@ -717,7 +743,9 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                     : $t('efmv.item.unitValueHint')
                 "
                 data-testid="unit-value"
-                @blur="tidyUnitValue(item)"
+                @update:model-value="item.unit_value = $event"
+                @focus="editingUnit = item.key"
+                @blur="onUnitBlur(item)"
               >
                 <!-- Always shown (a prefix only shows once there is a value) -->
                 <template #prepend-inner
@@ -845,15 +873,9 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 @update:model-value="toggleRow(serviceRowId(item.key), !!$event)"
               />
             </td>
-            <td class="row-number">
-              <v-icon icon="mdi-subdirectory-arrow-right" size="small" />
-            </td>
-            <td
-              class="cell-text text-end numeric text-medium-emphasis"
-              data-testid="service-quantity"
-            >
-              {{ item.quantity }}
-            </td>
+            <!-- No number nor quantity: the service follows its asset's -->
+            <td class="row-number" />
+            <td class="cell-text" />
             <td class="cell-input" data-col="service-name">
               <v-text-field
                 v-model="item.service.name"
@@ -861,7 +883,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 density="compact"
                 hide-details
                 maxlength="100"
-                :rules="[(v: string) => !!v?.trim() || t('validation.required')]"
+                :placeholder="$t('efmv.service.defaultName')"
                 :aria-label="$t('efmv.service.name')"
                 data-testid="service-name"
               >
@@ -920,17 +942,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 </v-chip>
               </div>
             </td>
-            <!-- Services are not resold: no eFMV -->
-            <td
-              class="money-cell text-no-wrap numeric text-medium-emphasis"
-              :title="$t('efmv.service.efmvHint')"
-            >
-              <div class="money" data-testid="service-efmv">
-                <span class="symbol">{{ symbol }}</span>
-                <span>{{ toInputMoney('0', locale) }}</span>
-              </div>
-              <div class="chip-line" />
-            </td>
+            <!-- Services are not resold (no eFMV): nothing shown -->
+            <td class="cell-text" :title="$t('efmv.service.efmvHint')" />
             <td class="money-cell text-no-wrap numeric font-weight-medium">
               <div v-if="detail(i)?.service && !detail(i)!.service!.too_high" class="money">
                 <span class="symbol font-weight-regular">{{ symbol }}</span>
@@ -1069,6 +1082,11 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 .sheet :deep(.v-field input),
 .sheet .symbol {
   font-size: 0.875rem;
+}
+/* The asset's value without its deducted service (not the value typed) */
+.net-shown :deep(input) {
+  color: rgb(var(--v-theme-warning));
+  font-weight: 600;
 }
 .text-end-input :deep(input) {
   text-align: right;

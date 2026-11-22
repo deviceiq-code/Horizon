@@ -180,7 +180,11 @@ export function assetCounts(
 }
 
 /** Input for the API; assets whose price was deleted are left out. */
-export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput {
+export function scenarioInput(
+  s: ScenarioDraft,
+  language: string,
+  serviceName = 'Service',
+): ScenarioInput {
   return {
     name: s.name.trim(),
     term_months: parseTerm(s.term) ?? 0,
@@ -199,7 +203,8 @@ export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput
         // Its service, when it has one (none sent: none kept)
         ...(i.service && {
           service: {
-            name: i.service.name.trim(),
+            // Not named: the placeholder's name ("Service")
+            name: i.service.name.trim() || serviceName,
             mode: i.service.mode,
             ...(parseServiceInput(i.service.value, language) ?? { value: '0' }),
           },

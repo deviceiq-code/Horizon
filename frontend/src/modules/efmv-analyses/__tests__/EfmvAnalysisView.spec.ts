@@ -605,7 +605,7 @@ describe('EfmvAnalysisView', () => {
         {
           ...EXCAVATOR,
           service: {
-            name: 'Services',
+            name: 'Service',
             mode: 'add',
             value: '0.00',
             line_total: '0.00',
@@ -618,15 +618,18 @@ describe('EfmvAnalysisView', () => {
       has_expired: false,
     })
     await click('add-service')
-    // The service row: named "Services", zero, added to the asset, eFMV 0
+    // The service row: no name yet ("Service" shown), zero, added to the asset; only its
+    // asset, value and total (no number, quantity nor eFMV)
     expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
-    expect((inBody('[data-testid="service-name"] input') as HTMLInputElement).value).toBe(
-      'Services',
-    )
+    const name = inBody('[data-testid="service-name"] input') as HTMLInputElement
+    expect(name.placeholder).toBe('Service')
+    expect(name.value).toBe('')
     expect((inBody('[data-testid="service-value"] input') as HTMLInputElement).value).toBe('0.00')
     expect(inBody('[data-testid="service-mode"]')!.textContent).toContain('Added to the asset')
-    expect(inBody('[data-testid="service-quantity"]')!.textContent!.trim()).toBe('2')
-    expect(inBody('[data-testid="service-efmv"]')!.textContent).toContain('0.00')
+    const serviceCells = [...inBody('[data-testid="service-row"]')!.querySelectorAll('td')]
+    expect(serviceCells[1]!.textContent!.trim()).toBe('') // #
+    expect(serviceCells[2]!.textContent!.trim()).toBe('') // quantity
+    expect(serviceCells[5]!.textContent!.trim()).toBe('') // eFMV
     // Units counted apart: 2 assets (HW, the row's quantity) with their 2 services (SV)
     const count = (kind: string) =>
       inBody(`[data-testid="asset-count-${kind}"]`)!.textContent!.replace(/\s+/g, ' ').trim()
@@ -644,7 +647,8 @@ describe('EfmvAnalysisView', () => {
       expect.objectContaining({
         items: [
           expect.objectContaining({
-            service: { name: 'Services', mode: 'deduct', percent: '8' },
+            // Not named: the placeholder's name
+            service: { name: 'Service', mode: 'deduct', percent: '8' },
           }),
         ],
       }),
@@ -661,6 +665,45 @@ describe('EfmvAnalysisView', () => {
         }),
       ],
     })
+    wrapper.unmount()
+  })
+
+  it("a deducted service shows the asset's value without it (the value typed when editing)", async () => {
+    const service = { name: 'Warranty', mode: 'deduct' as const, value: '8000.00' }
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      scenarios: [
+        {
+          ...ANALYSIS.scenarios[0]!,
+          items: [
+            {
+              ...EXCAVATOR,
+              net_unit_value: '92000.00',
+              service: {
+                ...service,
+                line_total: '16000.00',
+                weight_percent: '8.00',
+                too_high: false,
+              },
+            },
+          ],
+        },
+      ],
+    })
+    const { wrapper } = await mountView()
+    const field = () => inBody('[data-testid="unit-value"] input') as HTMLInputElement
+    expect(field().value).toBe('92,000.00')
+    expect(inBody('[data-testid="unit-value"]')!.className).toContain('net-shown')
+    // Editing: the value typed
+    field().dispatchEvent(new Event('focus'))
+    await settle()
+    expect(field().value).toBe('100,000.00')
+    field().dispatchEvent(new Event('blur'))
+    await settle()
+    expect(field().value).toBe('92,000.00')
+    // Without the service: the value typed again
+    await click('remove-service')
+    expect(field().value).toBe('100,000.00')
     wrapper.unmount()
   })
 

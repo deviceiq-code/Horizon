@@ -153,7 +153,7 @@ const en = {
     service: {
       netHint: 'Without its service (deducted): {value}. The position and the eFMV % use it.',
       sv: 'SV',
-      defaultName: 'Services',
+      defaultName: 'Service',
       name: 'Service Name',
       value: 'Service Value',
       valueHint: "Per unit of the asset: a value or a percentage of the asset's value (e.g. 8%).",

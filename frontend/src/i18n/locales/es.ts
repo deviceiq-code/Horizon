@@ -153,7 +153,7 @@ const es: Messages = {
       netHint:
         'Sin su servicio (descontado): {value}. El posicionamiento y el % del eFMV usan este valor.',
       sv: 'SV',
-      defaultName: 'Servicios',
+      defaultName: 'Servicio',
       name: 'Nombre del Servicio',
       value: 'Valor del Servicio',
       valueHint: 'Por unidad del bien: un valor o un porcentaje del valor del bien (ej.: 8%).',

@@ -239,7 +239,9 @@ async function save() {
   try {
     // Only the scenarios: the premises do not change
     const saved = await updateEfmvAnalysis(props.id, {
-      scenarios: scenarios.value.map((s) => scenarioInput(s, locale.value)),
+      scenarios: scenarios.value.map((s) =>
+        scenarioInput(s, locale.value, t('efmv.service.defaultName')),
+      ),
     })
     notifications.notify(t('efmv.updated', { code: saved.code }))
     fill(saved)

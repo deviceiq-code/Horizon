@@ -152,7 +152,7 @@ const ptBR: Messages = {
       netHint:
         'Sem o serviço (subtraído): {value}. O posicionamento e o % do eFMV usam esse valor.',
       sv: 'SV',
-      defaultName: 'Serviços',
+      defaultName: 'Serviço',
       name: 'Nome do Serviço',
       value: 'Valor do Serviço',
       valueHint: 'Por unidade do bem: um valor ou um percentual do valor do bem (ex.: 8%).',

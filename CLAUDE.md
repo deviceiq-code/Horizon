@@ -282,8 +282,10 @@ Multi-user web system for **operating lease residual value pricing**
     curve's value at the term as placeholder; empty = that value; "25%" becomes its value when
     the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total (its Weight — share of the LO — below it, as a chip "Weight (50.69%)"); a checkbox
     per row (assets and services; select all on the header) with "Remove" and "Add Service" for
-    the selected ones; a service is a row under its asset (name editable, "Services" by default;
-    value or %; a chip toggles added/deducted; eFMV 0; its own remove); money cells show the currency symbol on the left
+    the selected ones; a service is a row under its asset showing only Asset (name; empty = the
+    placeholder "Service", sent as its name), Unit Value (value or %; a chip toggles
+    added/deducted) and Total, plus its own remove; deducted, the asset's Unit Value shows the
+    API's `net_unit_value` (highlighted) except while it is being edited (the value typed); money cells show the currency symbol on the left
     (`utils/money.ts::currencySymbol`) and the number on the right, and share one layout
     (`.money-cell`: a value line and a chip line of fixed heights) so they line up across the row; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last
