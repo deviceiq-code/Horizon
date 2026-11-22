@@ -11,10 +11,12 @@ import { useI18n } from 'vue-i18n'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { specSummary } from '@/modules/average-prices/specText'
 import { currencySymbol, toInputMoney } from '@/utils/money'
+import AssetCounts from './AssetCounts.vue'
 import AveragePricePicker from './AveragePricePicker.vue'
 import ScenarioTotalsBar from './ScenarioTotalsBar.vue'
 import { previewScenario, type PricePosition, type ScenarioItem } from './api'
 import {
+  assetCounts,
   MAX_TERM,
   newKey,
   isEfmvInput,
@@ -454,9 +456,8 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
       <div class="d-flex flex-wrap align-center ga-3 mt-3">
         <div class="text-subtitle-2 mr-auto">
           {{ $t('efmv.scenario.assets') }}
-          <v-chip size="x-small" variant="tonal" class="ml-1" data-testid="asset-count">
-            {{ scenario.items.length }}
-          </v-chip>
+          <!-- How many of each kind: HW, SW, SV -->
+          <AssetCounts :counts="assetCounts(scenario.items)" class="ml-1" />
           <!-- The analysis's vertical (set by the wizard): the assets offered are of it -->
           <v-chip
             v-if="scopeLabel"

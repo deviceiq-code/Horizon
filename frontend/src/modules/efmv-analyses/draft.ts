@@ -164,6 +164,19 @@ export function parseServiceInput(
   return percent ? { percent: parsed } : { value: parsed }
 }
 
+/**
+ * How many assets of each kind: HW — the assets (rows with an average price) —, SW (none yet)
+ * and SV — the services under them.
+ */
+export function assetCounts(items: { average_price: number | null; service?: unknown }[]): {
+  hw: number
+  sw: number
+  sv: number
+} {
+  const assets = items.filter((i) => i.average_price !== null)
+  return { hw: assets.length, sw: 0, sv: assets.filter((i) => !!i.service).length }
+}
+
 /** Input for the API; assets whose price was deleted are left out. */
 export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput {
   return {

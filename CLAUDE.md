@@ -252,7 +252,8 @@ Multi-user web system for **operating lease residual value pricing**
     go through `api()` with a `FormData` body. Sizes: `src/utils/bytes.ts`. Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
     UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
   - `src/modules/efmv-analyses/` — list (ServerCrudTable; deleting is only there; a row expands
-    to `AnalysisScenariosPanel.vue`: each scenario's LO, eFMV at EOL and HW/SW/SV bar, loaded
+    to `AnalysisScenariosPanel.vue`: each scenario's assets by kind, LO, eFMV at EOL and HW/SW/SV
+    bar, loaded
     from the analysis's GET when expanded) and, as
     child routes of a RouterView parent, `/pricing/efmv-analyses/new` — `EfmvWizardView.vue`,
     3 steps: Premises (account manager — the user by default when they have the role —,
@@ -268,7 +269,8 @@ Multi-user web system for **operating lease residual value pricing**
     `ScenarioTotalsBar.vue` on top; assets grid below — "+ Row" adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
-    number (the analysis's vertical, shown as a chip beside "Assets", filters the asset
+    number (assets counted by kind beside "Assets" — `AssetCounts.vue`, `draft.ts::assetCounts`:
+    HW assets, SW, SV services —; the analysis's vertical, shown as a chip beside "Assets", filters the asset
     picker), Quantity, asset (class · specifications · price date or expired flag), Unit Value
     (the average price's value as placeholder; empty = that value; its Position chip below it
     in the same cell), eFMV (the

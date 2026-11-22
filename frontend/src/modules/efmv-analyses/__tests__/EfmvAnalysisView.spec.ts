@@ -625,6 +625,10 @@ describe('EfmvAnalysisView', () => {
     expect(inBody('[data-testid="service-mode"]')!.textContent).toContain('Added to the asset')
     expect(inBody('[data-testid="service-quantity"]')!.textContent!.trim()).toBe('2')
     expect(inBody('[data-testid="service-efmv"]')!.textContent).toContain('0.00')
+    // Counted apart: 1 asset (HW) with 1 service (SV)
+    const count = (kind: string) =>
+      inBody(`[data-testid="asset-count-${kind}"]`)!.textContent!.replace(/\s+/g, ' ').trim()
+    expect([count('hw'), count('sw'), count('sv')]).toEqual(['HW 1', 'SW 0', 'SV 1'])
     // One service per asset: no second row
     await click('add-service')
     expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
@@ -646,6 +650,7 @@ describe('EfmvAnalysisView', () => {
     // Removing the service (its value goes back to the asset: nothing is sent)
     await click('remove-service')
     expect(inBody('[data-testid="service-row"]')).toBeNull()
+    expect(count('sv')).toBe('SV 0')
     await click('save')
     expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
       scenarios: [

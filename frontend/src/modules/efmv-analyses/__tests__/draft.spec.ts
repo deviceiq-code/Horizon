@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assetCounts,
   blankScenario,
   copyName,
   copyScenario,
@@ -109,6 +110,16 @@ describe('eFMV analysis draft', () => {
       mode: 'deduct',
       percent: '10',
     })
+  })
+
+  it('counts assets (HW) and their services (SV) apart', () => {
+    expect(
+      assetCounts([
+        { average_price: 7, service: { name: 'Warranty' } },
+        { average_price: 8, service: null },
+        { average_price: null }, // a row without an asset yet
+      ]),
+    ).toEqual({ hw: 2, sw: 0, sv: 1 })
   })
 
   it('copies a scenario with its own items', () => {

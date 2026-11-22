@@ -7,7 +7,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMoney } from '@/utils/money'
+import AssetCounts from './AssetCounts.vue'
 import { getEfmvAnalysis, type EfmvAnalysis, type Scenario } from './api'
+import { assetCounts } from './draft'
 
 const props = defineProps<{ analysisId: number }>()
 const emit = defineEmits<{ open: [] }>()
@@ -78,7 +80,9 @@ const scenarios = computed(() => analysis.value?.scenarios ?? [])
               {{ scenario.scope }}
             </div>
           </td>
-          <td class="text-end numeric">{{ scenario.items.length }}</td>
+          <td class="text-end">
+            <AssetCounts :counts="assetCounts(scenario.items)" />
+          </td>
           <td class="text-end numeric text-no-wrap" data-testid="scenario-lo">
             {{ money(scenario, scenario.totals.lo) }}
           </td>
