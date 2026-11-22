@@ -8,7 +8,6 @@ import { i18n, setLanguage } from '@/i18n'
 import * as pricesApi from '@/modules/average-prices/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
-import { usePreferencesStore } from '@/stores/preferences'
 import { click, inBody, openDropdown, pickOption, settle, typeInto } from '@/test-utils'
 import * as efmvApi from '../api'
 import EfmvAnalysisView from '../EfmvAnalysisView.vue'
@@ -753,19 +752,21 @@ describe('EfmvAnalysisView', () => {
     wrapper.unmount()
   })
 
-  it('Smart Tools: the scope is written from the assets until the analyst writes it', async () => {
+  it('Smart Tools: the scope written from the assets is the placeholder; typed text is kept', async () => {
     efmv.getEfmvAnalysis.mockResolvedValue({
       ...ANALYSIS,
       scenarios: [{ ...ANALYSIS.scenarios[0]!, scope: '' }],
     })
+    efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView()
     const scope = () => inBody('[data-testid="scenario-scope"] textarea') as HTMLTextAreaElement
-    // Empty: the suggestion that came with the analysis
-    expect(scope().value).toBe('Caterpillar Excavators')
+    // Empty: the text from the assets, in gray (nothing written in the field)
+    expect(scope().value).toBe('')
+    expect(scope().placeholder).toBe('Caterpillar Excavators')
     expect(inBody('[data-testid="scenario-scope"]')!.textContent).toContain(
-      'Written from the assets',
+      'Empty: the text in gray',
     )
-    // A change in the grid: written again
+    // It follows the assets
     efmv.previewScenario.mockResolvedValue({
       items: [EXCAVATOR],
       totals: TOTALS,
@@ -774,35 +775,34 @@ describe('EfmvAnalysisView', () => {
     })
     await typeInto('quantity', '3')
     await debounce()
-    expect(scope().value).toBe('Caterpillar Excavators and Komatsu Loaders')
-    // Typed: the analyst's (further changes keep it)
+    expect(scope().placeholder).toBe('Caterpillar Excavators and Komatsu Loaders')
+    // Typed: the analyst's; changes in the grid never touch it
     await typeInto('scenario-scope', 'Yellow line fleet')
-    efmv.previewScenario.mockResolvedValue({
-      items: [EXCAVATOR],
-      totals: TOTALS,
-      has_expired: false,
-      scope_suggestion: 'Caterpillar Excavators',
-    })
     await typeInto('quantity', '4')
     await debounce()
     expect(scope().value).toBe('Yellow line fleet')
-    // The wand: from the assets again
+    // The wand puts the text from the assets in the field, to edit it
     await click('scope-write')
-    expect(scope().value).toBe('Caterpillar Excavators')
+    expect(scope().value).toBe('Caterpillar Excavators and Komatsu Loaders')
+    // Saved as typed (empty when not typed)
+    await click('save')
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
+      scenarios: [expect.objectContaining({ scope: 'Caterpillar Excavators and Komatsu Loaders' })],
+    })
     wrapper.unmount()
   })
 
-  it('Smart Tools: no automatic scope when turned off', async () => {
+  it('Smart Tools: no text from the assets when turned off', async () => {
     efmv.getEfmvAnalysis.mockResolvedValue({
       ...ANALYSIS,
       scenarios: [{ ...ANALYSIS.scenarios[0]!, scope: '' }],
     })
-    usePreferencesStore().apply({ auto_scope: false })
+    localStorage.setItem('horizon.autoScope', 'false')
     const { wrapper } = await mountView()
-    expect((inBody('[data-testid="scenario-scope"] textarea') as HTMLTextAreaElement).value).toBe(
-      '',
-    )
-    usePreferencesStore().apply({ auto_scope: true })
+    const scope = inBody('[data-testid="scenario-scope"] textarea') as HTMLTextAreaElement
+    expect(scope.placeholder).not.toBe('Caterpillar Excavators')
+    expect(inBody('[data-testid="scope-write"]')!.hasAttribute('disabled')).toBe(true)
+    localStorage.removeItem('horizon.autoScope')
     wrapper.unmount()
   })
 

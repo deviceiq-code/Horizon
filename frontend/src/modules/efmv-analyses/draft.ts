@@ -35,10 +35,9 @@ export interface ScenarioDraft {
   term: string
   scope: string
   items: ItemDraft[]
-  /** Smart Tools: the scope written from the assets (the API's latest) */
+  /** Smart Tools: the scope written from the assets (the API's latest); shown in gray while the
+   * scope is empty, and what an empty scope means */
   suggestion: string
-  /** The scope follows the suggestion: empty or as written by it (typing takes it over) */
-  scopeAuto: boolean
   /** Latest figures from the API, item by item in the same order as `items` */
   preview: ScenarioPreview | null
 }
@@ -75,7 +74,6 @@ export function blankScenario(name = ''): ScenarioDraft {
     scope: '',
     items: [],
     suggestion: '',
-    scopeAuto: true,
     preview: null,
   }
 }
@@ -103,7 +101,6 @@ export function scenarioDraft(s: Scenario, language: string): ScenarioDraft {
         : null,
     })),
     suggestion: s.scope_suggestion ?? '',
-    scopeAuto: !s.scope.trim() || s.scope.trim() === (s.scope_suggestion ?? '').trim(),
     preview: {
       items: s.items,
       totals: s.totals,

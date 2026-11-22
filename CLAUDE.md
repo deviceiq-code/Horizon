@@ -196,8 +196,9 @@ Multi-user web system for **operating lease residual value pricing**
     is written from their assets — `efmv/scope.py::scope_summary` (pure): units by manufacturer
     and asset class (plural, in the user's language), groups under the threshold left out,
     manufacturers' classes together, at most 3 parts + "other assets"; services not included —
-    returned as `scope_suggestion` (preview and analysis); the form follows it while the scope is
-    empty or equal to it (`draft.scopeAuto`); typing takes it over; a wand writes it again.
+    returned as `scope_suggestion` (preview and analysis): the Scope field's placeholder (in gray;
+    an empty scope means it, also in the list's expanded rows); typed text is the analyst's and
+    never changed; a wand copies it into the field to edit it.
   - **Date and time formats**: preferences `date_format` (auto — by the language — | dmy | mdy
     | ymd) and `time_format` (auto | 24h | 12h), chosen in Settings (`accounts.models.DateFormat`
     / `TimeFormat`). Format dates with `useDateFormat().d(value, 'short' | 'dateTime')`

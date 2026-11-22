@@ -237,8 +237,8 @@ const es: Messages = {
       createdAt: 'Creado',
     },
     scenario: {
-      scopeAutoHint: 'Escrito a partir de los bienes (Smart Tools). Al escribir, pasa a ser suyo.',
-      scopeWrite: 'Escribir a Partir de los Bienes',
+      scopeAutoHint: 'Vacío: vale el texto en gris, escrito a partir de los bienes (Smart Tools).',
+      scopeWrite: 'Usar el Texto de los Bienes',
       addShort: 'Agregar Nuevo',
       duplicateShort: 'Duplicar',
       removeShort: 'Quitar',

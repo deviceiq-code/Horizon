@@ -237,8 +237,8 @@ const en = {
       createdAt: 'Created',
     },
     scenario: {
-      scopeAutoHint: 'Written from the assets (Smart Tools). Typing makes it yours.',
-      scopeWrite: 'Write from the Assets',
+      scopeAutoHint: 'Empty: the text in gray, written from the assets (Smart Tools), counts.',
+      scopeWrite: 'Use the Text from the Assets',
       addShort: 'Add New',
       duplicateShort: 'Duplicate',
       removeShort: 'Remove',

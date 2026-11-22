@@ -237,9 +237,8 @@ const ptBR: Messages = {
       createdAt: 'Criada em',
     },
     scenario: {
-      scopeAutoHint:
-        'Escrito a partir dos bens (Smart Tools). Ao digitar, o texto passa a ser seu.',
-      scopeWrite: 'Escrever a Partir dos Bens',
+      scopeAutoHint: 'Vazio: vale o texto em cinza, escrito a partir dos bens (Smart Tools).',
+      scopeWrite: 'Usar o Texto dos Bens',
       addShort: 'Adicionar Novo',
       duplicateShort: 'Duplicar',
       removeShort: 'Remover',

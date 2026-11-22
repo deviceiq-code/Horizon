@@ -76,8 +76,13 @@ const scenarios = computed(() => analysis.value?.scenarios ?? [])
         <tr v-for="scenario in scenarios" :key="scenario.id" data-testid="analysis-scenario">
           <td class="font-weight-medium">
             <a href="#" class="text-primary" @click.prevent="emit('open')">{{ scenario.title }}</a>
-            <div v-if="scenario.scope" class="text-caption text-medium-emphasis text-truncate">
-              {{ scenario.scope }}
+            <!-- Empty: the scope written from the assets (Smart Tools) -->
+            <div
+              v-if="scenario.scope || scenario.scope_suggestion"
+              class="text-caption text-medium-emphasis text-truncate"
+              data-testid="scenario-scope"
+            >
+              {{ scenario.scope || scenario.scope_suggestion }}
             </div>
           </td>
           <td class="text-end">
