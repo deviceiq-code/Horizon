@@ -44,6 +44,8 @@ const MINING_GENERAL = sub(30, 'General', MINING, true)
 const EXCAVATORS: assetClassesApi.AssetClass = {
   id: 100,
   name: 'Excavators',
+  plural_name: 'Excavators',
+  translations: {},
   icon: 'mdi-excavator',
   sub_vertical: YELLOW_LINE.id,
   sub_vertical_detail: YELLOW_LINE,
@@ -302,6 +304,9 @@ describe('AssetClassesTab', () => {
     )
     expect(api.createAssetClass).toHaveBeenCalledWith({
       name: 'Mobile cranes',
+      // Suggested from the name (English rule); translations left empty (English counts)
+      plural_name: 'Mobile cranes',
+      translations: { 'pt-br': { name: '', plural: '' }, es: { name: '', plural: '' } },
       icon: 'mdi-crane',
       sub_vertical: YELLOW_LINE.id,
       liquidity: '3.5',
@@ -381,6 +386,8 @@ describe('AssetClassesTab', () => {
 
     expect(api.updateAssetClass).toHaveBeenCalledWith(100, {
       name: 'Excavators',
+      plural_name: 'Excavators',
+      translations: { 'pt-br': { name: '', plural: '' }, es: { name: '', plural: '' } },
       icon: 'mdi-excavator',
       sub_vertical: YELLOW_LINE.id,
       liquidity: '4.5',

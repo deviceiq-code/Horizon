@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -80,6 +83,16 @@ class UserPreferences(models.Model):
     # Smart Tools (conveniences of the interface)
     # Entering a text field selects its content (typing replaces it)
     select_on_focus = models.BooleanField(_("select on focus"), default=True)
+    # eFMV scenarios: the scope written from their assets while it is not written by hand
+    auto_scope = models.BooleanField(_("automatic scope"), default=True)
+    # …leaving out the groups of assets under this % of the units
+    scope_threshold = models.DecimalField(
+        _("negligible below (%)"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("5"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:

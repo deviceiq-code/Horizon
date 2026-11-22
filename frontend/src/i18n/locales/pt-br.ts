@@ -237,6 +237,9 @@ const ptBR: Messages = {
       createdAt: 'Criada em',
     },
     scenario: {
+      scopeAutoHint:
+        'Escrito a partir dos bens (Smart Tools). Ao digitar, o texto passa a ser seu.',
+      scopeWrite: 'Escrever a Partir dos Bens',
       addShort: 'Adicionar Novo',
       duplicateShort: 'Duplicar',
       removeShort: 'Remover',
@@ -420,6 +423,10 @@ const ptBR: Messages = {
     deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
   },
   assetClasses: {
+    translations: {
+      title: 'Traduções',
+      subtitle: 'O nome e o plural em outros idiomas. Vazios: os em inglês.',
+    },
     title: 'Classes de Ativo',
     subtitle: 'Tipos de bens, sua sub-vertical, notas de remarketing e modelos de especificação.',
     new: 'Nova Classe de Ativo',
@@ -431,6 +438,8 @@ const ptBR: Messages = {
       all: 'Todos',
     },
     fields: {
+      pluralName: 'Nome no Plural',
+      pluralNameHint: 'Usado quando vários são citados (ex.: o escopo dos cenários de eFMV).',
       name: 'Nome da Classe de Ativo',
       icon: 'Ícone',
       subVertical: 'Vertical de Negócio / Sub-Vertical',
@@ -820,6 +829,12 @@ const ptBR: Messages = {
       selectOnFocus: 'Selecionar ao Entrar no Campo',
       selectOnFocusHint:
         'Ao entrar num campo de texto, seu conteúdo fica selecionado e o que você digitar o substitui (exceto campos de várias linhas).',
+      autoScope: 'Escopo Automático',
+      autoScopeHint:
+        'Cenários de eFMV: o escopo é escrito a partir dos bens (fabricantes e classes de ativo) até você escrevê-lo.',
+      scopeThreshold: 'Desprezível Abaixo de',
+      scopeThresholdHint: 'Bens com menos unidades que essa fração do cenário ficam de fora.',
+      scopeThresholdRule: 'Informe um percentual de 0 a 100.',
     },
     dateTime: 'Data e Hora',
     dateTimeDescription: 'Como datas e horas são escritas em todo o sistema.',

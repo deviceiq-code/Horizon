@@ -7,7 +7,8 @@
  * (saving refuses them).
  */
 import { useDateFormat } from '@/composables/useDateFormat'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { usePreferencesStore } from '@/stores/preferences'
 import { useI18n } from 'vue-i18n'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { specSummary } from '@/modules/average-prices/specText'
@@ -102,9 +103,12 @@ async function refresh() {
     // Put the details back in the positions of `items` (deleted prices were not sent)
     const sent = [...preview.items]
     const old = scenario.value.preview?.items ?? []
+    scenario.value.suggestion = preview.scope_suggestion ?? ''
+    applyAutoScope()
     scenario.value.preview = {
       totals: preview.totals,
       has_expired: preview.has_expired,
+      scope_suggestion: preview.scope_suggestion,
       items: scenario.value.items.map((item, i) =>
         item.average_price === null
           ? (old[i] ?? deletedItem(item.quantity))
@@ -150,6 +154,29 @@ watch(watched, () => {
   timer = setTimeout(refresh, 350)
 })
 onBeforeUnmount(() => clearTimeout(timer))
+
+// --- Smart Tools: the scope written from the assets ---------------------------------------------
+
+const preferences = usePreferencesStore()
+
+/** While the scope is not written by hand, it follows what the assets say */
+function applyAutoScope() {
+  const s = scenario.value
+  if (preferences.autoScope && s.scopeAuto && s.scope !== s.suggestion) s.scope = s.suggestion
+}
+onMounted(applyAutoScope)
+
+/** Typing takes the scope over (emptying it gives it back to the assets) */
+function onScopeInput(value: string) {
+  scenario.value.scope = value
+  scenario.value.scopeAuto = !value.trim() || value.trim() === scenario.value.suggestion.trim()
+}
+
+/** The wand: write it from the assets again (and follow them) */
+function writeScope() {
+  scenario.value.scope = scenario.value.suggestion
+  scenario.value.scopeAuto = true
+}
 
 // --- Assets ------------------------------------------------------------------------------------
 
@@ -459,16 +486,39 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
             />
           </div>
           <v-textarea
-            v-model="scenario.scope"
+            :model-value="scenario.scope"
             :label="$t('efmv.scenario.scope')"
             :placeholder="$t('efmv.scenario.scopeHint')"
             :error-messages="errors?.scope"
+            :hint="
+              preferences.autoScope && scenario.scopeAuto && scenario.suggestion
+                ? $t('efmv.scenario.scopeAutoHint')
+                : undefined
+            "
+            persistent-hint
             rows="2"
             no-resize
             density="compact"
             hide-details="auto"
             data-testid="scenario-scope"
-          />
+            @update:model-value="onScopeInput"
+          >
+            <!-- Smart Tools: write it from the assets -->
+            <template #append-inner>
+              <v-btn
+                icon="mdi-auto-fix"
+                variant="text"
+                size="small"
+                density="comfortable"
+                color="primary"
+                :disabled="!scenario.suggestion || scenario.scope === scenario.suggestion"
+                :title="$t('efmv.scenario.scopeWrite')"
+                :aria-label="$t('efmv.scenario.scopeWrite')"
+                data-testid="scope-write"
+                @click="writeScope"
+              />
+            </template>
+          </v-textarea>
         </v-col>
         <v-col cols="12" lg="6">
           <ScenarioTotalsBar

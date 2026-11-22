@@ -773,3 +773,35 @@ def test_the_list_shows_the_last_update_latest_first(
     assert rows[0]["updated_at"] >= rows[1]["updated_at"]
     assert rows[0]["updated_by_name"]
     assert EfmvAnalysis.objects.get(pk=first["id"]).updated_by == user
+
+
+def test_the_scope_is_written_from_the_assets(logged_client, user, managers, customers, prices):
+    from accounts.models import UserPreferences
+    from catalogs.models import AssetClass
+
+    excavators = AssetClass.objects.get(name="Excavators")
+    excavators.plural_name = "Excavators"
+    excavators.translations = {"pt-br": {"name": "Escavadeira", "plural": "Escavadeiras"}}
+    excavators.save()
+    items = [
+        {"average_price": prices["excavator"], "quantity": 20},
+        # 1 of 21 units (4.8%): negligible by default
+        {"average_price": prices["tractor"], "quantity": 1},
+    ]
+    data = _preview(logged_client, items)
+    assert data["scope_suggestion"] == "Caterpillar Excavators"
+    # The user's threshold
+    preferences = UserPreferences.for_user(user)
+    preferences.scope_threshold = Decimal("1")
+    preferences.save()
+    data = _preview(logged_client, items)
+    # Tractors: a class without a plural yet → the English rule
+    assert data["scope_suggestion"] == "Caterpillar Excavators and John Deere Tractors"
+    # In the user's language (Spanish not translated: English)
+    preferences.language = "pt-br"
+    preferences.save()
+    data = _preview(logged_client, items)
+    assert data["scope_suggestion"] == "Escavadeiras Caterpillar e Tractors John Deere"
+    # Also with the analysis
+    analysis = post(logged_client, body(managers, customers, prices)).json()
+    assert analysis["scenarios"][0]["scope_suggestion"].startswith("Escavadeiras Caterpillar")

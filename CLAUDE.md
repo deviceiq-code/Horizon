@@ -58,7 +58,9 @@ Multi-user web system for **operating lease residual value pricing**
     (DB annotation with the same formula). Pending decision: whether technology_renewal (5 = fast
     renewal, usually bad for remarketing) should count inverted, and weights.
     `Manufacturer`: name (unique), ratings, enabled.
-    `AssetClass`: name (unique per sub-vertical), icon (`mdi-*`; offered list in the frontend's
+    `AssetClass`: name (English, unique per sub-vertical), `plural_name` (English, required;
+    not sent = `catalogs/names.py::english_plural`), `translations` ({"pt-br": {name, plural},
+    "es": …}, optional — empty: English; `names.localized`; folded in the form), icon (`mdi-*`; offered list in the frontend's
     `asset-classes/icons.ts`), `sub_vertical` FK with PROTECT (only sub-verticals of enabled
     verticals can be assigned; a sub-vertical/vertical with asset classes cannot be removed),
     ratings, keywords (ArrayField, lowercase, unique, max 30 × 50 chars; searchable), notes,
@@ -190,6 +192,12 @@ Multi-user web system for **operating lease residual value pricing**
     on or off, `src/smartTools.ts` installed in App.vue. "Select on Focus" (preference
     `select_on_focus`, on by default; also kept in the browser for the login page): entering a
     single-line text field selects its content (not textareas, read-only or empty fields).
+    "Automatic Scope" (`auto_scope`, on; `scope_threshold` %, default 5): eFMV scenarios' scope
+    is written from their assets — `efmv/scope.py::scope_summary` (pure): units by manufacturer
+    and asset class (plural, in the user's language), groups under the threshold left out,
+    manufacturers' classes together, at most 3 parts + "other assets"; services not included —
+    returned as `scope_suggestion` (preview and analysis); the form follows it while the scope is
+    empty or equal to it (`draft.scopeAuto`); typing takes it over; a wand writes it again.
   - **Date and time formats**: preferences `date_format` (auto — by the language — | dmy | mdy
     | ymd) and `time_format` (auto | 24h | 12h), chosen in Settings (`accounts.models.DateFormat`
     / `TimeFormat`). Format dates with `useDateFormat().d(value, 'short' | 'dateTime')`

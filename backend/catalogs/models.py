@@ -214,7 +214,12 @@ class AssetClass(models.Model):
     - usage_breadth: how broad its use and applications are (0 very narrow, 5 very broad).
     """
 
+    # In English (the default language)
     name = models.CharField(_("name"), max_length=100)
+    plural_name = models.CharField(_("plural name"), max_length=100)
+    # The name and plural in other languages, optional ({"pt-br": {"name", "plural"}, ...};
+    # empty: English). See catalogs/names.py.
+    translations = models.JSONField(_("translations"), default=dict, blank=True)
     icon = models.CharField(_("icon"), max_length=60, default=DEFAULT_ASSET_ICON)
     sub_vertical = models.ForeignKey(
         SubVertical,

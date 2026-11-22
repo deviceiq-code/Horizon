@@ -21,6 +21,9 @@ export interface Preferences {
   time_format: TimeFormat
   /** Smart Tools: entering a text field selects its content (src/smartTools.ts) */
   select_on_focus: boolean
+  /** Smart Tools: eFMV scenarios' scope written from their assets; negligible below (%) */
+  auto_scope: boolean
+  scope_threshold: string
   updated_at: string
 }
 
@@ -32,6 +35,8 @@ export type PreferencesUpdate = Partial<{
   date_format: DateFormat
   time_format: TimeFormat
   select_on_focus: boolean
+  auto_scope: boolean
+  scope_threshold: string
 }>
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']
@@ -47,6 +52,8 @@ const COLOR_THEME_STORAGE_KEY = 'horizon.colorTheme'
 const UI_SCALE_STORAGE_KEY = 'horizon.uiScale'
 
 const SELECT_ON_FOCUS_STORAGE_KEY = 'horizon.selectOnFocus'
+const AUTO_SCOPE_STORAGE_KEY = 'horizon.autoScope'
+const SCOPE_THRESHOLD_STORAGE_KEY = 'horizon.scopeThreshold'
 const DATE_FORMAT_STORAGE_KEY = 'horizon.dateFormat'
 const TIME_FORMAT_STORAGE_KEY = 'horizon.timeFormat'
 
@@ -113,6 +120,16 @@ export const usePreferencesStore = defineStore('preferences', () => {
   const selectOnFocus = ref(
     readStored(SELECT_ON_FOCUS_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
   )
+  const autoScope = ref(
+    readStored(AUTO_SCOPE_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
+  )
+  const scopeThreshold = ref(
+    readStored(
+      SCOPE_THRESHOLD_STORAGE_KEY,
+      (v): v is string => typeof v === 'string' && /^\d+(\.\d+)?$/.test(v),
+      '5.00',
+    ),
+  )
 
   /** Apply preferences to the UI without saving them to the account. */
   function apply(p: {
@@ -123,6 +140,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
     date_format?: string
     time_format?: string
     select_on_focus?: boolean
+    auto_scope?: boolean
+    scope_threshold?: string
   }) {
     if (p.language && isSupportedLanguage(p.language)) {
       language.value = p.language
@@ -152,6 +171,14 @@ export const usePreferencesStore = defineStore('preferences', () => {
       selectOnFocus.value = p.select_on_focus
       store(SELECT_ON_FOCUS_STORAGE_KEY, String(p.select_on_focus))
     }
+    if (typeof p.auto_scope === 'boolean') {
+      autoScope.value = p.auto_scope
+      store(AUTO_SCOPE_STORAGE_KEY, String(p.auto_scope))
+    }
+    if (typeof p.scope_threshold === 'string' && p.scope_threshold) {
+      scopeThreshold.value = p.scope_threshold
+      store(SCOPE_THRESHOLD_STORAGE_KEY, p.scope_threshold)
+    }
   }
 
   /** Apply immediately and save to the account; if the API fails, roll back and rethrow. */
@@ -164,6 +191,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
       date_format: dateFormat.value,
       time_format: timeFormat.value,
       select_on_focus: selectOnFocus.value,
+      auto_scope: autoScope.value,
+      scope_threshold: scopeThreshold.value,
     }
     apply(changes)
     try {
@@ -186,6 +215,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
     dateFormat,
     timeFormat,
     selectOnFocus,
+    autoScope,
+    scopeThreshold,
     apply,
     save,
   }

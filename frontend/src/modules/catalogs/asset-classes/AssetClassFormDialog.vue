@@ -15,6 +15,8 @@ import {
   type AssetClassInput,
 } from './api'
 import { DEFAULT_ASSET_ICON } from './icons'
+import { LANGUAGES } from '@/i18n'
+import { englishPlural } from './names'
 
 /** Create (assetClass = null) or edit an asset class. */
 const props = defineProps<{ assetClass: AssetClass | null }>()
@@ -24,11 +26,34 @@ const emit = defineEmits<{ saved: [assetClass: AssetClass, created: boolean] }>(
 const { t } = useI18n()
 const rules = useValidationRules()
 
-const FIELDS = ['name', 'icon', 'sub_vertical', ...REMARKETING_RATINGS, 'keywords', 'notes']
+const FIELDS = [
+  'name',
+  'plural_name',
+  'translations',
+  'icon',
+  'sub_vertical',
+  ...REMARKETING_RATINGS,
+  'keywords',
+  'notes',
+]
+
+/** The other languages: an optional name and plural each (empty: English) */
+const OTHER_LANGUAGES = LANGUAGES.filter((language) => language.code !== 'en')
+const emptyTranslations = () =>
+  Object.fromEntries(OTHER_LANGUAGES.map((l) => [l.code, { name: '', plural: '' }]))
+
+// The plural follows the name (English rule) until it is typed
+const pluralTouched = ref(false)
+function onNameChange(name: string) {
+  clearError('name')
+  if (!pluralTouched.value) form.value.plural_name = englishPlural(name)
+}
 
 function emptyForm(): AssetClassInput {
   return {
     name: '',
+    plural_name: '',
+    translations: emptyTranslations(),
     icon: DEFAULT_ASSET_ICON,
     sub_vertical: null,
     liquidity: '0.0',
@@ -59,6 +84,16 @@ watch(open, (isOpen) => {
   form.value = a
     ? {
         name: a.name,
+        plural_name: a.plural_name ?? englishPlural(a.name),
+        translations: {
+          ...emptyTranslations(),
+          ...Object.fromEntries(
+            Object.entries(a.translations ?? {}).map(([code, entry]) => [
+              code,
+              { name: entry.name ?? '', plural: entry.plural ?? '' },
+            ]),
+          ),
+        },
         icon: a.icon,
         sub_vertical: a.sub_vertical,
         liquidity: a.liquidity,
@@ -72,6 +107,8 @@ watch(open, (isOpen) => {
     : emptyForm()
   fieldErrors.value = {}
   generalError.value = ''
+  // Editing: the plural is the one saved (it only follows the name while it is the suggested)
+  pluralTouched.value = !!a && a.plural_name !== englishPlural(a.name)
   openCount.value += 1
 })
 
@@ -83,7 +120,11 @@ async function submit() {
   fieldErrors.value = {}
   generalError.value = ''
   try {
-    const data = { ...form.value, name: form.value.name.trim() }
+    const data = {
+      ...form.value,
+      name: form.value.name.trim(),
+      plural_name: form.value.plural_name.trim(),
+    }
     const saved = props.assetClass
       ? await updateAssetClass(props.assetClass.id, data)
       : await createAssetClass(data)
@@ -131,7 +172,17 @@ function clearError(field: string) {
                 maxlength="100"
                 autofocus
                 data-testid="name"
-                @update:model-value="clearError('name')"
+                @update:model-value="onNameChange"
+              />
+              <v-text-field
+                v-model="form.plural_name"
+                :label="$t('assetClasses.fields.pluralName')"
+                :hint="$t('assetClasses.fields.pluralNameHint')"
+                :rules="[rules.required, rules.maxLength(100)]"
+                :error-messages="fieldErrors.plural_name"
+                maxlength="100"
+                data-testid="plural-name"
+                @update:model-value="((pluralTouched = true), clearError('plural_name'))"
               />
               <SubVerticalPicker
                 :key="openCount"
@@ -145,6 +196,57 @@ function clearError(field: string) {
               />
             </div>
           </div>
+
+          <!-- The name in other languages (optional: empty = English); folded until opened -->
+          <v-expansion-panels
+            variant="accordion"
+            class="mb-4 translations"
+            data-testid="translations"
+          >
+            <v-expansion-panel elevation="0">
+              <v-expansion-panel-title class="px-3" data-testid="translations-toggle">
+                <div>
+                  <div class="text-subtitle-1">{{ $t('assetClasses.translations.title') }}</div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('assetClasses.translations.subtitle') }}
+                  </div>
+                </div>
+              </v-expansion-panel-title>
+              <v-expansion-panel-text eager>
+                <div
+                  v-for="language in OTHER_LANGUAGES"
+                  :key="language.code"
+                  class="d-flex flex-wrap ga-3 align-start"
+                  :data-testid="`translation-${language.code}`"
+                >
+                  <div class="translation-language text-body-2 pt-3">{{ language.name }}</div>
+                  <v-text-field
+                    v-model="form.translations[language.code]!.name"
+                    :label="$t('assetClasses.fields.name')"
+                    :placeholder="form.name"
+                    persistent-placeholder
+                    maxlength="100"
+                    class="flex-grow-1"
+                    density="compact"
+                    :data-testid="`translation-${language.code}-name`"
+                  />
+                  <v-text-field
+                    v-model="form.translations[language.code]!.plural"
+                    :label="$t('assetClasses.fields.pluralName')"
+                    :placeholder="form.plural_name"
+                    persistent-placeholder
+                    maxlength="100"
+                    class="flex-grow-1"
+                    density="compact"
+                    :data-testid="`translation-${language.code}-plural`"
+                  />
+                </div>
+                <div v-if="fieldErrors.translations" class="text-caption text-error mb-2">
+                  {{ fieldErrors.translations.join(' ') }}
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
 
           <!-- Remarketing rating -->
           <div class="text-subtitle-1 mt-2">{{ $t('assetClasses.remarketing.title') }}</div>
@@ -203,3 +305,13 @@ function clearError(field: string) {
     </v-card>
   </v-dialog>
 </template>
+
+<style scoped>
+.translations {
+  border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 10px;
+}
+.translation-language {
+  flex: 0 0 160px;
+}
+</style>

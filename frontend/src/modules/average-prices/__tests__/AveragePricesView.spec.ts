@@ -54,6 +54,8 @@ const TRACKS = {
 const EXCAVATORS: assetClassesApi.AssetClass = {
   id: 5,
   name: 'Excavators',
+  plural_name: 'Excavators',
+  translations: {},
   icon: 'mdi-excavator',
   sub_vertical: 11,
   sub_vertical_detail: {

@@ -155,3 +155,12 @@ def test_select_on_focus_is_on_by_default(logged_client):
     r = _patch(logged_client, {"select_on_focus": False})
     assert (r.status_code, r.json()["select_on_focus"]) == (200, False)
     assert logged_client.get("/api/auth/me/").json()["preferences"]["select_on_focus"] is False
+
+
+def test_automatic_scope_on_by_default_with_a_5_percent_threshold(logged_client):
+    data = logged_client.get("/api/auth/preferences/").json()
+    assert (data["auto_scope"], data["scope_threshold"]) == (True, "5.00")
+    r = _patch(logged_client, {"auto_scope": False, "scope_threshold": "12.5"})
+    assert (r.json()["auto_scope"], r.json()["scope_threshold"]) == (False, "12.50")
+    r = _patch(logged_client, {"scope_threshold": "150"})
+    assert r.status_code == 400 and "scope_threshold" in r.json()

@@ -1,3 +1,4 @@
+import type { ClassTranslation } from './names'
 import { api, listQuery, type ListParams, type Paginated } from '@/api'
 import type { SubVerticalOption } from '../verticals/api'
 
@@ -30,7 +31,11 @@ export interface SpecField {
 
 export interface AssetClass {
   id: number
+  /** In English (the default language) */
   name: string
+  plural_name: string
+  /** Name and plural in other languages, optional (empty: English) — {"pt-br": {...}} */
+  translations: Record<string, ClassTranslation>
   /** MDI icon name, e.g. "mdi-forklift" */
   icon: string
   /** Sub-vertical id (required) */
@@ -56,7 +61,14 @@ export interface AssetClass {
 
 export type AssetClassInput = Pick<
   AssetClass,
-  'name' | 'icon' | RemarketingRating | 'keywords' | 'notes' | 'is_enabled'
+  | 'name'
+  | 'plural_name'
+  | 'translations'
+  | 'icon'
+  | RemarketingRating
+  | 'keywords'
+  | 'notes'
+  | 'is_enabled'
 > & {
   /** null only while editing a new asset class */
   sub_vertical: number | null

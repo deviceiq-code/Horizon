@@ -2,11 +2,13 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from accounts.models import UserPreferences
 from catalogs.models import MAX_TERM_MONTHS, SubVertical
+from catalogs.names import english_plural, localized
 from catalogs.serializers import sub_vertical_label
 from pricing.curves import value_at
 from pricing.models import AveragePrice, PricingSettings
@@ -32,6 +34,7 @@ from .models import (
     in_scope,
     title_key,
 )
+from .scope import ScopeGroup, scope_summary
 
 User = get_user_model()
 
@@ -93,12 +96,20 @@ def totals_payload(totals) -> dict:
 
 
 class Context:
-    """What positioning needs, read once per request: the control panel and today."""
+    """What positioning and the scope need, read once per request: the control panel, today,
+    the language and the user's negligible threshold for the scope."""
 
-    def __init__(self):
+    def __init__(self, request=None):
         self.settings = PricingSettings.current()
         self.limits = self.settings.limits()
         self.today = timezone.localdate()
+        self.language = translation.get_language() or "en"
+        user = getattr(request, "user", None)
+        self.scope_threshold = (
+            UserPreferences.for_user(user).scope_threshold
+            if user is not None and user.is_authenticated
+            else Decimal("5")
+        )
 
     def expired(self, row: AveragePrice) -> bool:
         return is_expired(
@@ -158,7 +169,7 @@ def scenario_payload(
     price was deleted, whose curve no longer reaches the term, that are outside the analysis's
     vertical or whose deducted service is worth as much as the asset are flagged and left out
     of the totals."""
-    lines, rows, counted = [], [], []
+    lines, rows, counted, groups = [], [], [], []
     for item in items:
         quantity = item["quantity"]
         row = prices.get(item["lineage"])
@@ -220,6 +231,21 @@ def scenario_payload(
             outside = not in_scope(*scope, row.sub_vertical)
             entry.update(asset_detail(row))
             entry.update(price_check(row, net, ctx))
+            # For the scope: the asset's manufacturer and class (its plural, in the language)
+            asset_class = row.asset_class
+            groups.append(
+                ScopeGroup(
+                    row.manufacturer.name,
+                    localized(
+                        asset_class.name,
+                        asset_class.plural_name or english_plural(asset_class.name),
+                        asset_class.translations,
+                        ctx.language,
+                        many=True,
+                    ),
+                    quantity,
+                )
+            )
             entry["out_of_curve"] = out
             entry["out_of_scope"] = outside
             if not out and not outside and net is not None and not service_too_high:
@@ -238,6 +264,9 @@ def scenario_payload(
         "items": rows,
         "totals": totals_payload(totals),
         "has_expired": any(entry["expired"] for entry in rows),
+        # Smart Tools: the scope written from the assets (the form uses it while the scope is
+        # not written by hand)
+        "scope_suggestion": scope_summary(groups, ctx.language, ctx.scope_threshold),
     }
 
 
@@ -534,7 +563,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
         scenarios = list(instance.scenarios.all())
         items = {s.pk: list(s.items.all()) for s in scenarios}
         prices = current_prices(i.price_lineage for its in items.values() for i in its)
-        ctx = Context()
+        ctx = Context(self.context.get("request"))
         data["scenarios"] = [
             {
                 "id": s.id,
@@ -680,7 +709,8 @@ class ScenarioPreviewSerializer(serializers.Serializer):
         ]
         prices = current_prices(item["lineage"] for item in items)
         scope = (instance.get("vertical"), instance.get("sub_vertical"))
-        return scenario_payload(instance["term_months"], items, prices, Context(), scope)
+        ctx = Context(self.context.get("request"))
+        return scenario_payload(instance["term_months"], items, prices, ctx, scope)
 
 
 # Silence "imported but unused" for names used only in type contexts

@@ -1106,3 +1106,21 @@ msgstr "formato de hora"
 
 msgid "select on focus"
 msgstr "selecionar ao entrar no campo"
+
+msgid "plural name"
+msgstr "nome no plural"
+
+msgid "translations"
+msgstr "traduções"
+
+msgid "automatic scope"
+msgstr "escopo automático"
+
+msgid "negligible below (%)"
+msgstr "desprezível abaixo de (%)"
+
+msgid "Translations are given per language: %(languages)s."
+msgstr "As traduções são dadas por idioma: %(languages)s."
+
+msgid "Each translation has a name and a plural."
+msgstr "Cada tradução tem um nome e um plural."

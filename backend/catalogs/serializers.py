@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.utils.translation import gettext_lazy as _
@@ -20,6 +21,7 @@ from .models import (
     Vertical,
     general_names,
 )
+from .names import english_plural
 from .specs import MAX_FIELDS, MAX_OPTIONS, SpecError, normalize_template
 
 
@@ -292,6 +294,8 @@ class AssetClassSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "plural_name",
+            "translations",
             "icon",
             "sub_vertical",
             "sub_vertical_detail",
@@ -307,7 +311,11 @@ class AssetClassSerializer(serializers.ModelSerializer):
         # The template is edited through /api/catalogs/asset-classes/<id>/spec-template/
         read_only_fields = ["id", "spec_template", "created_at", "updated_at"]
         # Not filled in = 0 stars (model default); null is not accepted
-        extra_kwargs = {field: {"allow_null": False} for field in REMARKETING_RATINGS}
+        extra_kwargs = {
+            **{field: {"allow_null": False} for field in REMARKETING_RATINGS},
+            # Not sent: the English plural of the name (to_internal_value)
+            "plural_name": {"required": False},
+        }
         # Uniqueness of the name within the sub-vertical is checked in validate() (friendlier)
         validators = []
 
@@ -316,6 +324,40 @@ class AssetClassSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError(_("This field may not be blank."))
         return value
+
+    def validate_plural_name(self, value):
+        value = _collapse_spaces(value)
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        return value
+
+    def to_internal_value(self, data):
+        # Not sent (e.g. older clients): the English plural of the name, by the usual rules
+        values = super().to_internal_value(data)
+        if "name" in values and not values.get("plural_name") and "plural_name" not in data:
+            values["plural_name"] = english_plural(values["name"])
+        return values
+
+    def validate_translations(self, value):
+        """{"pt-br": {"name": "...", "plural": "..."}, ...}: the other languages, optional."""
+        others = {code for code, _name in settings.LANGUAGES if code != "en"}
+        if not isinstance(value, dict) or not set(value) <= others:
+            raise serializers.ValidationError(
+                _("Translations are given per language: %(languages)s.")
+                % {"languages": ", ".join(sorted(others))}
+            )
+        clean = {}
+        for code, entry in value.items():
+            if not isinstance(entry, dict) or not set(entry) <= {"name", "plural"}:
+                raise serializers.ValidationError(_("Each translation has a name and a plural."))
+            texts = {key: _collapse_spaces(str(entry.get(key) or "")) for key in ("name", "plural")}
+            if any(len(text) > 100 for text in texts.values()):
+                raise serializers.ValidationError(
+                    _("Ensure this field has no more than %(max)s characters.") % {"max": 100}
+                )
+            if any(texts.values()):
+                clean[code] = texts
+        return clean
 
     def validate_icon(self, value):
         value = (value or "").strip()

@@ -14,6 +14,8 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "date_format",
             "time_format",
             "select_on_focus",
+            "auto_scope",
+            "scope_threshold",
             "updated_at",
         ]
         read_only_fields = ["updated_at"]

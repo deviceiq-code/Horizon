@@ -141,7 +141,7 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="scenario-preview")
     def scenario_preview(self, request):
-        serializer = ScenarioPreviewSerializer(data=request.data)
+        serializer = ScenarioPreviewSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         return Response(serializer.to_representation(serializer.validated_data))
 

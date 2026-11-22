@@ -237,6 +237,8 @@ const es: Messages = {
       createdAt: 'Creado',
     },
     scenario: {
+      scopeAutoHint: 'Escrito a partir de los bienes (Smart Tools). Al escribir, pasa a ser suyo.',
+      scopeWrite: 'Escribir a Partir de los Bienes',
       addShort: 'Agregar Nuevo',
       duplicateShort: 'Duplicar',
       removeShort: 'Quitar',
@@ -421,6 +423,10 @@ const es: Messages = {
     deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
   },
   assetClasses: {
+    translations: {
+      title: 'Traducciones',
+      subtitle: 'El nombre y el plural en otros idiomas. Vacíos: los en inglés.',
+    },
     title: 'Clases de Activo',
     subtitle:
       'Tipos de bienes, su sub-vertical, calificaciones de remarketing y plantillas de especificación.',
@@ -433,6 +439,8 @@ const es: Messages = {
       all: 'Todos',
     },
     fields: {
+      pluralName: 'Nombre en Plural',
+      pluralNameHint: 'Usado cuando se nombran varios (ej.: el alcance de los escenarios de eFMV).',
       name: 'Nombre de la Clase de Activo',
       icon: 'Icono',
       subVertical: 'Vertical de Negocio / Subvertical',
@@ -823,6 +831,13 @@ const es: Messages = {
       selectOnFocus: 'Seleccionar al Entrar en el Campo',
       selectOnFocusHint:
         'Al entrar en un campo de texto, su contenido queda seleccionado y lo que escriba lo reemplaza (salvo campos de varias líneas).',
+      autoScope: 'Alcance Automático',
+      autoScopeHint:
+        'Escenarios de eFMV: el alcance se escribe a partir de los bienes (fabricantes y clases de activo) hasta que usted lo escriba.',
+      scopeThreshold: 'Despreciable por Debajo de',
+      scopeThresholdHint:
+        'Los bienes con menos unidades que esta fracción del escenario quedan fuera.',
+      scopeThresholdRule: 'Ingrese un porcentaje de 0 a 100.',
     },
     dateTime: 'Fecha y Hora',
     dateTimeDescription: 'Cómo se escriben las fechas y horas en todo el sistema.',

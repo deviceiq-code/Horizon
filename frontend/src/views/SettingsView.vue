@@ -4,7 +4,9 @@
  * saved to their account. Global
  * settings are in Administration → System Settings.
  */
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { normalizeDecimal } from '@/utils/decimal'
+import { toInputNumber } from '@/utils/money'
 import { useI18n } from 'vue-i18n'
 import { LANGUAGES } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -14,13 +16,33 @@ import { UI_SCALE_ICONS, UI_SCALES, uiScaleFactor } from '@/uiScale'
 import { DATE_FORMATS, TIME_FORMATS } from '@/dateFormat'
 import { useDateFormat } from '@/composables/useDateFormat'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
 
 const saving = ref(false)
 
 const THEMES = THEME_OPTIONS
+
+// Smart Tools: the negligible threshold of the automatic scope (0–100 %), saved when left
+const threshold = ref(toInputNumber(preferences.scopeThreshold, locale.value))
+watch(
+  () => preferences.scopeThreshold,
+  (value) => (threshold.value = toInputNumber(value, locale.value)),
+)
+const thresholdValue = () => normalizeDecimal(threshold.value)
+const thresholdRule = () => {
+  const value = Number(thresholdValue())
+  return (
+    (threshold.value.trim() !== '' && value >= 0 && value <= 100) ||
+    t('settings.smartTools.scopeThresholdRule')
+  )
+}
+function saveThreshold() {
+  if (thresholdRule() !== true) return
+  const value = thresholdValue()
+  if (Number(value) !== Number(preferences.scopeThreshold)) save({ scope_threshold: value })
+}
 
 // Date and time: an example with the formats chosen (now)
 const { d } = useDateFormat()
@@ -259,12 +281,50 @@ async function save(changes: PreferencesUpdate) {
             </div>
           </template>
         </v-switch>
+        <v-divider class="my-4" />
+        <v-switch
+          :model-value="preferences.autoScope"
+          color="primary"
+          inset
+          hide-details
+          :disabled="saving"
+          data-testid="auto-scope"
+          @update:model-value="save({ auto_scope: !!$event })"
+        >
+          <template #label>
+            <div>
+              <div class="font-weight-medium">{{ $t('settings.smartTools.autoScope') }}</div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ $t('settings.smartTools.autoScopeHint') }}
+              </div>
+            </div>
+          </template>
+        </v-switch>
+        <v-text-field
+          v-if="preferences.autoScope"
+          v-model="threshold"
+          :label="$t('settings.smartTools.scopeThreshold')"
+          :hint="$t('settings.smartTools.scopeThresholdHint')"
+          persistent-hint
+          suffix="%"
+          inputmode="decimal"
+          :rules="[thresholdRule]"
+          :disabled="saving"
+          density="compact"
+          class="threshold mt-3 ml-14"
+          data-testid="scope-threshold"
+          @blur="saveThreshold"
+          @keydown.enter="saveThreshold"
+        />
       </v-card-text>
     </v-card>
   </v-container>
 </template>
 
 <style scoped>
+.threshold {
+  max-width: 260px;
+}
 .color-theme {
   cursor: pointer;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));

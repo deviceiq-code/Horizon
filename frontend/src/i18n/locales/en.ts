@@ -237,6 +237,8 @@ const en = {
       createdAt: 'Created',
     },
     scenario: {
+      scopeAutoHint: 'Written from the assets (Smart Tools). Typing makes it yours.',
+      scopeWrite: 'Write from the Assets',
       addShort: 'Add New',
       duplicateShort: 'Duplicate',
       removeShort: 'Remove',
@@ -420,6 +422,10 @@ const en = {
     deleteConfirm: 'Delete "{name}"? This cannot be undone.',
   },
   assetClasses: {
+    translations: {
+      title: 'Translations',
+      subtitle: 'The name and plural in other languages. Empty: the English ones.',
+    },
     title: 'Asset Classes',
     subtitle:
       'Kinds of assets, their sub-vertical, remarketing ratings and specification templates.',
@@ -432,6 +438,8 @@ const en = {
       all: 'All',
     },
     fields: {
+      pluralName: 'Plural Name',
+      pluralNameHint: 'Used where several are named (e.g. the scope of eFMV scenarios).',
       name: 'Asset Class Name',
       icon: 'Icon',
       subVertical: 'Business Vertical / Sub-Vertical',
@@ -820,6 +828,12 @@ const en = {
       selectOnFocus: 'Select on Focus',
       selectOnFocusHint:
         'Entering a text field selects its content, so typing replaces it (multi-line fields excepted).',
+      autoScope: 'Automatic Scope',
+      autoScopeHint:
+        'eFMV scenarios: the scope is written from their assets (manufacturers and asset classes) until you write it yourself.',
+      scopeThreshold: 'Negligible Below',
+      scopeThresholdHint: 'Assets with fewer units than this share of the scenario are left out.',
+      scopeThresholdRule: 'Enter a percentage from 0 to 100.',
     },
     dateTime: 'Date and Time',
     dateTimeDescription: 'How dates and times are written across the system.',

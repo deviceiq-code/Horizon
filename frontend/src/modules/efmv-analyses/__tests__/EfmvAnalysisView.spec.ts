@@ -8,6 +8,7 @@ import { i18n, setLanguage } from '@/i18n'
 import * as pricesApi from '@/modules/average-prices/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
+import { usePreferencesStore } from '@/stores/preferences'
 import { click, inBody, openDropdown, pickOption, settle, typeInto } from '@/test-utils'
 import * as efmvApi from '../api'
 import EfmvAnalysisView from '../EfmvAnalysisView.vue'
@@ -112,6 +113,7 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
       items: [EXCAVATOR],
       totals: TOTALS,
       has_expired: false,
+      scope_suggestion: 'Caterpillar Excavators',
     },
   ],
   created_at: '2026-11-20T10:00:00Z',
@@ -137,6 +139,8 @@ async function mountView(props: { id: number } = { id: 3 }, roles = ['Account Ma
       date_format: 'auto',
       time_format: 'auto',
       select_on_focus: true,
+      auto_scope: true,
+      scope_threshold: '5.00',
       updated_at: '',
     },
   }
@@ -746,6 +750,59 @@ describe('EfmvAnalysisView', () => {
     expect(rows()).toHaveLength(1)
     // No row selected now: the toolbar has nothing to act on
     expect(inBody('[data-testid="remove-selected"]')!.hasAttribute('disabled')).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('Smart Tools: the scope is written from the assets until the analyst writes it', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      scenarios: [{ ...ANALYSIS.scenarios[0]!, scope: '' }],
+    })
+    const { wrapper } = await mountView()
+    const scope = () => inBody('[data-testid="scenario-scope"] textarea') as HTMLTextAreaElement
+    // Empty: the suggestion that came with the analysis
+    expect(scope().value).toBe('Caterpillar Excavators')
+    expect(inBody('[data-testid="scenario-scope"]')!.textContent).toContain(
+      'Written from the assets',
+    )
+    // A change in the grid: written again
+    efmv.previewScenario.mockResolvedValue({
+      items: [EXCAVATOR],
+      totals: TOTALS,
+      has_expired: false,
+      scope_suggestion: 'Caterpillar Excavators and Komatsu Loaders',
+    })
+    await typeInto('quantity', '3')
+    await debounce()
+    expect(scope().value).toBe('Caterpillar Excavators and Komatsu Loaders')
+    // Typed: the analyst's (further changes keep it)
+    await typeInto('scenario-scope', 'Yellow line fleet')
+    efmv.previewScenario.mockResolvedValue({
+      items: [EXCAVATOR],
+      totals: TOTALS,
+      has_expired: false,
+      scope_suggestion: 'Caterpillar Excavators',
+    })
+    await typeInto('quantity', '4')
+    await debounce()
+    expect(scope().value).toBe('Yellow line fleet')
+    // The wand: from the assets again
+    await click('scope-write')
+    expect(scope().value).toBe('Caterpillar Excavators')
+    wrapper.unmount()
+  })
+
+  it('Smart Tools: no automatic scope when turned off', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      scenarios: [{ ...ANALYSIS.scenarios[0]!, scope: '' }],
+    })
+    usePreferencesStore().apply({ auto_scope: false })
+    const { wrapper } = await mountView()
+    expect((inBody('[data-testid="scenario-scope"] textarea') as HTMLTextAreaElement).value).toBe(
+      '',
+    )
+    usePreferencesStore().apply({ auto_scope: true })
     wrapper.unmount()
   })
 

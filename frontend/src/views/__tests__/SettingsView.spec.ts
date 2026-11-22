@@ -26,6 +26,8 @@ const user = (is_admin: boolean): User => ({
     date_format: 'auto',
     time_format: 'auto',
     select_on_focus: true,
+    auto_scope: true,
+    scope_threshold: '5.00',
     updated_at: '',
   },
 })

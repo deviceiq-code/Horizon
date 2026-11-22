@@ -112,6 +112,8 @@ export interface Scenario {
   totals: ScenarioTotals
   /** Some average price used is past its validity */
   has_expired: boolean
+  /** Smart Tools: the scope written from its assets (the user's language and threshold) */
+  scope_suggestion: string
 }
 
 export interface EfmvAnalysis {
@@ -200,6 +202,8 @@ export interface ScenarioPreview {
   items: ScenarioItem[]
   totals: ScenarioTotals
   has_expired: boolean
+  /** Smart Tools: the scope written from the assets */
+  scope_suggestion?: string
 }
 
 const BASE = '/efmv-analyses/'
