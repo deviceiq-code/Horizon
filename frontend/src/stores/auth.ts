@@ -13,6 +13,9 @@ export interface User {
   roles: string[]
   /** Photo version (GET /api/users/<id>/photo/?v=…), null without a photo */
   photo_version: string | null
+  email?: string
+  /** The roles for display (system ones show translated, users/roleText.ts) */
+  role_refs?: { name: string; key: string; is_system: boolean }[]
   preferences: Preferences
 }
 

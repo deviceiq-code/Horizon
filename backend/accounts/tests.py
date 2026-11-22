@@ -126,3 +126,15 @@ def test_interface_size_defaults_to_automatic(logged_client):
     assert logged_client.get("/api/auth/me/").json()["preferences"]["ui_scale"] == "auto"
     r = _patch(logged_client, {"ui_scale": "huge"})
     assert r.status_code == 400 and "ui_scale" in r.json()
+
+
+def test_me_has_the_email_and_the_roles_for_display(logged_client, user):
+    from users.models import Role
+
+    user.email = "fernando@example.com"
+    user.save()
+    admin = Role.objects.get(key="administrator")
+    admin.users.add(user)
+    data = logged_client.get("/api/auth/me/").json()
+    assert data["email"] == "fernando@example.com"
+    assert data["role_refs"] == [{"name": admin.name, "key": "administrator", "is_system": True}]

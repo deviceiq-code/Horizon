@@ -19,6 +19,22 @@ function firstPage(app: SuiteApp) {
   <v-container fluid class="module-page" style="max-width: 1200px">
     <!-- Welcome banner: the theme's primary color fading into the side menu's -->
     <div class="welcome mb-6" data-testid="welcome">
+      <!-- Soft waves across the banner (white, nearly transparent: they suit every theme) -->
+      <svg
+        class="welcome-waves"
+        viewBox="0 0 1440 200"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M0 110 C 220 70 420 60 640 78 C 860 96 1040 62 1240 70 C 1340 74 1400 86 1440 92 L1440 200 L0 200 Z"
+          fill="rgba(255, 255, 255, 0.07)"
+        />
+        <path
+          d="M0 150 C 260 118 520 128 760 140 C 1000 152 1220 120 1440 128 L1440 200 L0 200 Z"
+          fill="rgba(255, 255, 255, 0.05)"
+        />
+      </svg>
       <h1 class="welcome-title">{{ $t('home.welcome', { name: auth.user?.name }) }}</h1>
       <p class="welcome-text">{{ $t('home.text') }}</p>
     </div>
@@ -53,17 +69,29 @@ function firstPage(app: SuiteApp) {
 
 <style scoped>
 .welcome {
+  position: relative;
+  overflow: hidden;
   padding: 32px;
   border-radius: 16px;
   color: #fff;
   background:
-    radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 55%),
     linear-gradient(
       120deg,
-      rgb(var(--v-theme-primary)) 0%,
-      color-mix(in srgb, rgb(var(--v-theme-primary)) 45%, rgb(var(--v-theme-sidebar))) 55%,
-      rgb(var(--v-theme-sidebar)) 100%
+      color-mix(in srgb, rgb(var(--v-theme-primary)) 80%, black) 0%,
+      color-mix(in srgb, rgb(var(--v-theme-primary)) 35%, rgb(var(--v-theme-sidebar))) 50%,
+      color-mix(in srgb, rgb(var(--v-theme-sidebar)) 75%, black) 100%
     );
+}
+.welcome-waves {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.welcome-title,
+.welcome-text {
+  position: relative;
 }
 /* Over the generic page title rule (main.css): larger, white */
 .welcome .welcome-title {

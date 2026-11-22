@@ -192,9 +192,12 @@ Multi-user web system for **operating lease residual value pricing**
     section "Apps" with the other apps, Settings at the bottom; open from 1440 px, collapsed to
     icons below (they expand on hover); the top bar's button opens/collapses it and the choice
     is remembered in the browser (`horizon.sideMenu.wide|narrow`). Phones: a drawer.
-    Light top bar: that button, the path (`AppBreadcrumbs.vue`), the app launcher and the
-    signed-in user (photo or initials + name; their menu: appearance, Settings, Sign out).
-    Language and theme are changed in Settings (the language selector stays on the login page).
+    Light top bar: that button, the path (`AppBreadcrumbs.vue`); then Search, Documentation and
+    Notifications (coming soon: a notice), the light/dark switch, the language
+    (`LanguageSelector.vue`: globe + code, also on the login page), the app launcher and the
+    signed-in user (photo or initials + name; their menu: name, e-mail and roles — `/api/auth/me/`
+    `email`, `role_refs` —, Profile and Help & Support coming soon, Settings, Sign out).
+    Settings also has language, mode, color theme and interface size.
     Module pages use `<v-container fluid class="module-page">` (full width, 24 px margin;
     `src/styles/main.css`, which also sets the shared look: cards 16 px corners + soft shadow
     `--v-card-shadow`, buttons/fields 10 px corners, page titles `h1` 24 px semibold, normal
@@ -213,7 +216,7 @@ Multi-user web system for **operating lease residual value pricing**
     (› page, from `meta.titleKey` — child routes set their own) and the app launcher
     (`AppLauncher.vue`); the side menu lists the current app's modules by section (an
     `AppModule.section` translation key, e.g. `menu.sections.management`; none: the app's name)
-    and the other apps; `/` is the suite's home (welcome banner + app cards). The user's own settings (`/settings`) open from the user menu.
+    and the other apps; `/` is the suite's home (welcome banner with soft waves + app cards). The user's own settings (`/settings`) open from the user menu.
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
     router and the side menu (`adminOnly: true` hides it from non-administrators and the router guard refuses its
     routes). `account-managers/` is the reference module. `users/` exports two modules,

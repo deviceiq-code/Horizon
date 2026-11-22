@@ -27,6 +27,12 @@ def _user_data(user):
         # Administrators can do everything (users, roles, system settings…)
         "is_admin": is_administrator(user),
         "roles": sorted(role.name for role in user.roles.all()),
+        # The same roles for display: system ones (with a key) show translated in the UI
+        "role_refs": [
+            {"name": role.name, "key": role.key, "is_system": role.is_system}
+            for role in sorted(user.roles.all(), key=lambda role: role.name)
+        ],
+        "email": user.email,
         # The user's photo (GET /api/users/<id>/photo/?v=<version>), null without one
         "photo_version": user_photo_version(user),
         "preferences": UserPreferencesSerializer(preferences).data,

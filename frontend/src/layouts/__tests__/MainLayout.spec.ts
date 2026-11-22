@@ -9,6 +9,7 @@ import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
 import { moduleRoutes } from '@/modules'
 import { useAuthStore, type User } from '@/stores/auth'
+import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore } from '@/stores/preferences'
 import { click, inBody, settle } from '@/test-utils'
 import MainLayout from '../MainLayout.vue'
@@ -22,6 +23,8 @@ const ME: User = {
   is_admin: true,
   roles: ['Administrator'],
   photo_version: 'abc',
+  email: 'fernando@example.com',
+  role_refs: [{ name: 'Administrator', key: 'administrator', is_system: true }],
   preferences: {
     language: 'en',
     theme: 'system',
@@ -62,18 +65,24 @@ describe('MainLayout', () => {
     document.body.innerHTML = ''
   })
 
-  it('the top bar shows only the user (photo and name); the menu signs out', async () => {
+  it("the user's menu: who they are and their roles, Settings and Sign out", async () => {
     const { wrapper, auth, router } = await mountLayout()
     const me = inBody('[data-testid="me"]')!
     expect(me.textContent).toContain('Fernando Almeida')
     expect(me.querySelector('img')!.getAttribute('src')).toBe('/api/users/1/photo/?v=abc')
-    // No language selector nor sign-out button in the bar itself
     expect(inBody('header')!.textContent).not.toContain('Sign out')
-    expect(inBody('header [aria-label="Select language"]')).toBeNull()
 
     const logout = vi.spyOn(auth, 'logout').mockResolvedValue()
     await click('me')
-    expect(inBody('[data-testid="user-menu"]')!.textContent).toContain('Sign out')
+    const menu = inBody('[data-testid="user-menu"]')!
+    expect(menu.textContent).toContain('fernando@example.com')
+    // System roles show translated
+    expect(
+      [...menu.querySelectorAll('[data-testid="user-role"]')].map((c) => c.textContent!.trim()),
+    ).toEqual(['Administrator'])
+    for (const item of ['Profile', 'Settings', 'Help & Support', 'Sign out']) {
+      expect(menu.textContent).toContain(item)
+    }
     await click('logout')
     expect(logout).toHaveBeenCalled()
     await settle()
@@ -81,18 +90,29 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('the user menu changes the appearance (saved to the account)', async () => {
+  it('the top bar switches light/dark and the language (saved to the account)', async () => {
     const { wrapper } = await mountLayout()
     const preferences = usePreferencesStore()
-    preferences.theme = 'system'
     const save = vi.spyOn(preferences, 'save').mockResolvedValue()
-    await click('me')
-    const menu = inBody('[data-testid="user-menu"]')!
-    expect(menu.textContent).toContain('Appearance')
-    expect(inBody('[data-testid="theme-system"]')!.className).toContain('v-btn--active')
-
-    await click('theme-dark')
+    // Light now: the button turns it dark
+    await click('theme-switch')
     expect(save).toHaveBeenCalledWith({ theme: 'dark' })
+    // The language: its code on the bar; each language by its own name in the menu
+    expect(inBody('[data-testid="language"]')!.textContent).toContain('EN')
+    await click('language')
+    expect(inBody('[data-testid="language-menu"]')!.textContent).toContain('Português (Brasil)')
+    expect(inBody('[data-testid="language-en"]')!.className).toContain('v-list-item--active')
+    await click('language-pt-br')
+    expect(save).toHaveBeenCalledWith({ language: 'pt-br' })
+    wrapper.unmount()
+  })
+
+  it('search, documentation and notifications are coming soon', async () => {
+    const { wrapper } = await mountLayout()
+    await click('search')
+    expect(useNotificationsStore().text).toBe('Search: coming soon.')
+    await click('notifications')
+    expect(useNotificationsStore().text).toBe('Notifications: coming soon.')
     wrapper.unmount()
   })
 

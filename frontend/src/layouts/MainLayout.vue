@@ -8,21 +8,25 @@
  *   icons (they expand while
  *   hovered); the button on the top bar opens/collapses it and the choice is remembered in this
  *   browser, separately for wide and narrow windows. Phones: a drawer over the page.
- * - Top bar (light): that button, the path of the page, the app launcher and the user.
+ * - Top bar (light): that button, the path of the page; then search, documentation and
+ *   notifications (to come), light/dark mode, language, the app launcher and the user's menu
+ *   (who they are and their roles; Profile and Help to come; Settings; Sign out).
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import { useDisplay } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
 import { appName, SUITE_APPS, suiteApp, type AppId } from '@/apps'
 import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
 import AppLauncher from '@/components/AppLauncher.vue'
+import LanguageSelector from '@/components/LanguageSelector.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import { appModules } from '@/modules'
 import { userPhotoUrl } from '@/modules/users/api'
+import { roleName } from '@/modules/users/roleText'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { THEME_OPTIONS, usePreferencesStore, type Theme } from '@/stores/preferences'
+import { usePreferencesStore, type Theme } from '@/stores/preferences'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -108,10 +112,23 @@ function toggleMenu() {
   }
 }
 
-// --- User menu ---------------------------------------------------------------------------------
+// --- Top bar -----------------------------------------------------------------------------------
 
 const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
+const vuetifyTheme = useTheme()
+/** The interface is dark now (the user's mode, or the system's when following it) */
+const isDark = computed(() => vuetifyTheme.current.value.dark)
+
+/** Buttons whose features are not there yet */
+function comingSoon(key: string) {
+  notifications.notify(t('menu.comingSoon', { feature: t(key) }))
+}
+
+/** The user's roles as shown (system roles translated) */
+const roleNames = computed(() =>
+  (auth.user?.role_refs ?? []).map((role) => roleName({ id: 0, ...role }, t)),
+)
 
 async function setTheme(theme: Theme) {
   if (theme === preferences.theme) return
@@ -209,15 +226,56 @@ async function logout() {
     <!-- Where the page is: Horizon › Pricing › Average Prices -->
     <AppBreadcrumbs class="flex-grow-1" />
     <template #append>
-      <AppLauncher />
-      <!-- Only the signed-in user; their menu holds the account actions (language and theme
-           are in Settings) -->
-      <v-menu v-if="auth.user" location="bottom end" :close-on-content-click="false">
+      <div class="d-flex align-center ga-1 mr-1">
+        <!-- Search, documentation and notifications: to come -->
+        <v-btn
+          icon="mdi-magnify"
+          variant="text"
+          size="small"
+          :title="$t('menu.search')"
+          :aria-label="$t('menu.search')"
+          data-testid="search"
+          @click="comingSoon('menu.search')"
+        />
+        <v-btn
+          icon="mdi-book-open-variant-outline"
+          variant="text"
+          size="small"
+          :title="$t('menu.docs')"
+          :aria-label="$t('menu.docs')"
+          data-testid="docs"
+          @click="comingSoon('menu.docs')"
+        />
+        <!-- Light / dark, right away (saved to the account) -->
+        <v-btn
+          :icon="isDark ? 'mdi-white-balance-sunny' : 'mdi-weather-night'"
+          variant="text"
+          size="small"
+          :title="$t(isDark ? 'menu.lightMode' : 'menu.darkMode')"
+          :aria-label="$t(isDark ? 'menu.lightMode' : 'menu.darkMode')"
+          data-testid="theme-switch"
+          @click="setTheme(isDark ? 'light' : 'dark')"
+        />
+        <LanguageSelector />
+        <v-btn
+          icon="mdi-bell-outline"
+          variant="text"
+          size="small"
+          :title="$t('menu.notifications')"
+          :aria-label="$t('menu.notifications')"
+          data-testid="notifications"
+          @click="comingSoon('menu.notifications')"
+        />
+        <AppLauncher />
+      </div>
+      <!-- The signed-in user: who they are, their pages and signing out -->
+      <v-menu v-if="auth.user" location="bottom end">
         <template #activator="{ props: menu }">
           <v-btn
             v-bind="menu"
-            variant="text"
-            class="user-button text-none px-2 mr-1"
+            variant="tonal"
+            class="user-button text-none pl-1 pr-2 mr-2"
+            rounded="pill"
             :ripple="false"
             :aria-label="$t('menu.account')"
             data-testid="me"
@@ -227,55 +285,57 @@ async function logout() {
               :src="
                 auth.user.photo_version ? userPhotoUrl(auth.user.id, auth.user.photo_version) : null
               "
-              :size="32"
+              :size="30"
               color="primary"
             />
             <span class="ml-2 d-none d-sm-inline">{{ auth.user.name }}</span>
             <v-icon icon="mdi-chevron-down" size="small" class="ml-1" />
           </v-btn>
         </template>
-        <v-list density="compact" min-width="320" data-testid="user-menu">
-          <!-- Appearance: applied right away and saved to the account -->
-          <v-list-subheader>{{ $t('settings.appearance') }}</v-list-subheader>
-          <div class="px-3 pb-2">
-            <v-btn-toggle
-              :model-value="preferences.theme"
-              mandatory
-              divided
-              density="compact"
-              variant="outlined"
-              color="primary"
-              class="w-100"
-              data-testid="theme-toggle"
-              @update:model-value="setTheme"
-            >
-              <v-btn
-                v-for="option in THEME_OPTIONS"
-                :key="option.value"
-                :value="option.value"
-                :prepend-icon="option.icon"
-                class="flex-grow-1 text-none"
-                size="small"
-                :data-testid="`theme-${option.value}`"
-              >
-                {{ $t(`settings.themes.${option.value}`) }}
-              </v-btn>
-            </v-btn-toggle>
+        <v-card min-width="260" class="user-menu" data-testid="user-menu">
+          <div class="pa-4 pb-3">
+            <div class="font-weight-bold">{{ auth.user.name }}</div>
+            <div v-if="auth.user.email" class="text-body-2 text-medium-emphasis">
+              {{ auth.user.email }}
+            </div>
+            <div v-if="roleNames.length" class="d-flex flex-wrap ga-1 mt-2">
+              <v-chip v-for="role in roleNames" :key="role" size="small" data-testid="user-role">
+                {{ role }}
+              </v-chip>
+            </div>
           </div>
-          <v-divider class="my-1" />
-          <v-list-item
-            :to="{ name: 'settings' }"
-            prepend-icon="mdi-cog-outline"
-            :title="$t('menu.settings')"
-            data-testid="user-settings"
-          />
-          <v-list-item
-            prepend-icon="mdi-logout"
-            :title="$t('common.logout')"
-            data-testid="logout"
-            @click="logout"
-          />
-        </v-list>
+          <v-divider />
+          <v-list density="compact" class="py-1">
+            <v-list-item
+              prepend-icon="mdi-account-circle-outline"
+              :title="$t('menu.profile')"
+              data-testid="user-profile"
+              @click="comingSoon('menu.profile')"
+            />
+            <v-list-item
+              :to="{ name: 'settings' }"
+              prepend-icon="mdi-cog-outline"
+              :title="$t('menu.settings')"
+              data-testid="user-settings"
+            />
+            <v-list-item
+              prepend-icon="mdi-lifebuoy"
+              :title="$t('menu.help')"
+              data-testid="user-help"
+              @click="comingSoon('menu.help')"
+            />
+          </v-list>
+          <v-divider />
+          <v-list density="compact" class="py-1">
+            <v-list-item
+              prepend-icon="mdi-logout"
+              :title="$t('common.logout')"
+              base-color="error"
+              data-testid="logout"
+              @click="logout"
+            />
+          </v-list>
+        </v-card>
       </v-menu>
     </template>
   </v-app-bar>
