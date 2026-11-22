@@ -207,6 +207,7 @@ const es: Messages = {
       createdAt: 'Creado',
     },
     scenario: {
+      addShort: 'Agregar Nuevo',
       duplicateShort: 'Duplicar',
       removeShort: 'Quitar',
       vertical: 'Vertical',

@@ -208,6 +208,7 @@ const en = {
       createdAt: 'Created',
     },
     scenario: {
+      addShort: 'Add New',
       duplicateShort: 'Duplicate',
       removeShort: 'Remove',
       vertical: 'Vertical',

@@ -413,7 +413,7 @@ async function save() {
               data-testid="add-scenario"
               @click="addScenario"
             >
-              <span class="d-none d-md-inline">{{ $t('efmv.scenario.add') }}</span>
+              <span class="d-none d-md-inline">{{ $t('efmv.scenario.addShort') }}</span>
             </v-btn>
             <v-divider vertical class="my-2" />
             <v-btn

@@ -315,12 +315,12 @@ describe('EfmvAnalysisView', () => {
     for (const id of ['add-scenario', 'duplicate-scenario', 'remove-scenario']) {
       expect(toolbar.querySelector(`[data-testid="${id}"]`)).not.toBeNull()
     }
-    // Only "Add" says "Scenario"; the full names are in the tooltips
+    // Short names on the buttons; the full ones in the tooltips
     expect(
       ['add-scenario', 'duplicate-scenario', 'remove-scenario'].map((id) =>
         toolbar.querySelector(`[data-testid="${id}"]`)!.textContent!.trim(),
       ),
-    ).toEqual(['Add Scenario', 'Duplicate', 'Remove'])
+    ).toEqual(['Add New', 'Duplicate', 'Remove'])
     expect(inBody('[data-testid="duplicate-scenario"]')!.getAttribute('title')).toBe(
       'Duplicate Scenario',
     )

@@ -207,6 +207,7 @@ const ptBR: Messages = {
       createdAt: 'Criada em',
     },
     scenario: {
+      addShort: 'Adicionar Novo',
       duplicateShort: 'Duplicar',
       removeShort: 'Remover',
       vertical: 'Vertical',
