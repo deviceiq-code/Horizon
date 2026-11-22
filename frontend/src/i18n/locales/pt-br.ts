@@ -142,6 +142,11 @@ const ptBR: Messages = {
     },
   },
   efmv: {
+    list: {
+      scenario: 'Cenário',
+      shares: 'HW / SW / SV',
+      sharesHint: 'Participação de hardware, software e serviços no LO',
+    },
     service: {
       netHint:
         'Sem o serviço (subtraído): {value}. O posicionamento e o % do eFMV usam esse valor.',

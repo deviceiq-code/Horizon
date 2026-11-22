@@ -251,7 +251,9 @@ Multi-user web system for **operating lease residual value pricing**
     click to enlarge; menu: file, `PhotoSearchDialog.vue`, `PhotoUrlDialog.vue`) and `PriceDocuments.vue` ("Documents" tab; drag and drop). File uploads
     go through `api()` with a `FormData` body. Sizes: `src/utils/bytes.ts`. Money typed by users: `src/utils/money.ts` (`parseMoney` accepts the
     UI language's thousands/decimal separators, returns canonical strings; `formatMoney` displays).
-  - `src/modules/efmv-analyses/` — list (ServerCrudTable; deleting is only there) and, as
+  - `src/modules/efmv-analyses/` — list (ServerCrudTable; deleting is only there; a row expands
+    to `AnalysisScenariosPanel.vue`: each scenario's LO, eFMV at EOL and HW/SW/SV bar, loaded
+    from the analysis's GET when expanded) and, as
     child routes of a RouterView parent, `/pricing/efmv-analyses/new` — `EfmvWizardView.vue`,
     3 steps: Premises (account manager — the user by default when they have the role —,
     `CustomerPicker.vue` with that account manager's customers, `VerticalScopePicker.vue` with

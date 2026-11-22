@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
+import AnalysisScenariosPanel from './AnalysisScenariosPanel.vue'
 import { deleteEfmvAnalysis, listEfmvAnalyses, type EfmvAnalysisRow } from './api'
 
 const { t, d } = useI18n()
@@ -41,6 +42,7 @@ const open = (row: EfmvAnalysisRow) =>
       :delete-title="$t('efmv.deleteTitle')"
       :delete-message="(row: EfmvAnalysisRow) => $t('efmv.deleteConfirm', { code: row.code })"
       :deleted-text="$t('efmv.deletedText')"
+      :expandable="(row: EfmvAnalysisRow) => row.scenario_names.length > 0"
       edit-icon="mdi-open-in-app"
       :edit-title="$t('efmv.open')"
       @create="router.push({ name: 'efmv-analysis-new' })"
@@ -70,6 +72,10 @@ const open = (row: EfmvAnalysisRow) =>
             {{ name }}
           </v-chip>
         </div>
+      </template>
+      <!-- Expanded: each scenario's figures (loaded on demand) -->
+      <template #expanded-row="{ item }">
+        <AnalysisScenariosPanel :analysis-id="item.id" @open="open(item)" />
       </template>
       <template #[`item.created_at`]="{ item }">
         <div class="text-no-wrap">{{ d(new Date(item.created_at), 'short') }}</div>

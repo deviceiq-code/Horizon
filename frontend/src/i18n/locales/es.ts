@@ -143,6 +143,11 @@ const es: Messages = {
     },
   },
   efmv: {
+    list: {
+      scenario: 'Escenario',
+      shares: 'HW / SW / SV',
+      sharesHint: 'Participación de hardware, software y servicios en el LO',
+    },
     service: {
       netHint:
         'Sin su servicio (descontado): {value}. El posicionamiento y el % del eFMV usan este valor.',

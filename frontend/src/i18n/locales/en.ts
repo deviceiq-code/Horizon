@@ -144,6 +144,11 @@ const en = {
     },
   },
   efmv: {
+    list: {
+      scenario: 'Scenario',
+      shares: 'HW / SW / SV',
+      sharesHint: 'Shares of hardware, software and services in the LO',
+    },
     service: {
       netHint: 'Without its service (deducted): {value}. The position and the eFMV % use it.',
       sv: 'SV',
