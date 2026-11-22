@@ -1,5 +1,6 @@
 <script setup lang="ts">
 /** Set the photo from the address of an image on the internet (the server downloads it). */
+import FormDialog from '@/components/FormDialog.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -42,39 +43,39 @@ async function save() {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="560">
-    <v-card :title="$t('averagePrices.photo.fromUrlTitle')">
-      <v-form @submit.prevent="save">
-        <v-card-text>
-          <p class="text-body-2 text-medium-emphasis mb-3">
-            {{ $t('averagePrices.photo.fromUrlHint') }}
-          </p>
-          <v-text-field
-            v-model="url"
-            :label="$t('averagePrices.photo.imageUrl')"
-            placeholder="https://…/photo.jpg"
-            prepend-inner-icon="mdi-link-variant"
-            :error-messages="errors"
-            autofocus
-            data-testid="photo-url"
-            @update:model-value="errors = []"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="open = false">{{ $t('common.cancel') }}</v-btn>
-          <v-btn
-            type="submit"
-            color="primary"
-            variant="flat"
-            :disabled="!url.trim()"
-            :loading="saving"
-            data-testid="photo-url-save"
-          >
-            {{ $t('averagePrices.photo.useThis') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+  <FormDialog
+    v-model="open"
+    :title="$t('averagePrices.photo.fromUrlTitle')"
+    icon="mdi-link-variant"
+    max-width="560"
+    @submit="save"
+  >
+    <p class="text-body-2 text-medium-emphasis mb-3">
+      {{ $t('averagePrices.photo.fromUrlHint') }}
+    </p>
+    <v-text-field
+      v-model="url"
+      :label="$t('averagePrices.photo.imageUrl')"
+      placeholder="https://…/photo.jpg"
+      prepend-inner-icon="mdi-link-variant"
+      :error-messages="errors"
+      autofocus
+      data-testid="photo-url"
+      @update:model-value="errors = []"
+    />
+
+    <template #actions>
+      <v-btn variant="text" @click="open = false">{{ $t('common.cancel') }}</v-btn>
+      <v-btn
+        type="submit"
+        color="primary"
+        variant="flat"
+        :disabled="!url.trim()"
+        :loading="saving"
+        data-testid="photo-url-save"
+      >
+        {{ $t('averagePrices.photo.useThis') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>

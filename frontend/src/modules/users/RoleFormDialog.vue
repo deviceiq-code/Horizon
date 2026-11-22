@@ -1,5 +1,6 @@
 <script setup lang="ts">
 /** Create (role = null) or edit a role created in the app (system roles are read-only). */
+import FormDialog from '@/components/FormDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -56,42 +57,45 @@ async function submit() {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="560" :persistent="saving">
-    <v-card :title="isEdit ? $t('users.roles.edit') : $t('users.roles.new')">
-      <v-form ref="formRef" @submit.prevent="submit">
-        <v-card-text>
-          <v-text-field
-            v-model="form.name"
-            :label="$t('users.roles.fields.name')"
-            :rules="[rules.required, rules.maxLength(80)]"
-            :error-messages="fieldErrors.name"
-            maxlength="80"
-            autofocus
-            data-testid="role-name"
-            @update:model-value="fieldErrors.name = []"
-          />
-          <v-textarea
-            v-model="form.description"
-            :label="$t('users.roles.fields.description')"
-            :error-messages="fieldErrors.description"
-            rows="3"
-            auto-grow
-            data-testid="role-description"
-          />
-          <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
-            {{ generalError }}
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="open = false">
-            {{ $t('common.cancel') }}
-          </v-btn>
-          <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
-            {{ $t('common.save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+  <FormDialog
+    ref="formRef"
+    v-model="open"
+    :title="isEdit ? $t('users.roles.edit') : $t('users.roles.new')"
+    :subtitle="role?.name ?? null"
+    icon="mdi-shield-account-outline"
+    max-width="560"
+    :persistent="saving"
+    @submit="submit"
+  >
+    <v-text-field
+      v-model="form.name"
+      :label="$t('users.roles.fields.name')"
+      :rules="[rules.required, rules.maxLength(80)]"
+      :error-messages="fieldErrors.name"
+      maxlength="80"
+      autofocus
+      data-testid="role-name"
+      @update:model-value="fieldErrors.name = []"
+    />
+    <v-textarea
+      v-model="form.description"
+      :label="$t('users.roles.fields.description')"
+      :error-messages="fieldErrors.description"
+      rows="3"
+      auto-grow
+      data-testid="role-description"
+    />
+    <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
+      {{ generalError }}
+    </v-alert>
+
+    <template #actions>
+      <v-btn variant="text" :disabled="saving" @click="open = false">
+        {{ $t('common.cancel') }}
+      </v-btn>
+      <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
+        {{ $t('common.save') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>

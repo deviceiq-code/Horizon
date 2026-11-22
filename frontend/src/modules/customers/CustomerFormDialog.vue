@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormDialog from '@/components/FormDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -162,259 +163,252 @@ function clearError(field: string) {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="880" scrollable :persistent="saving">
-    <v-card :title="isEdit ? $t('customers.edit') : $t('customers.new')">
-      <v-form
-        ref="formRef"
-        class="d-flex flex-column"
-        style="min-height: 0"
-        @submit.prevent="submit"
-      >
-        <v-card-text>
-          <!-- Identification -->
-          <div class="text-subtitle-2 text-medium-emphasis mb-2">
-            {{ $t('customers.sections.identification') }}
-          </div>
-          <v-row dense>
-            <v-col cols="12" md="8">
-              <v-text-field
-                v-model="form.name"
-                :label="$t('customers.fields.name')"
-                :rules="[rules.required, rules.maxLength(200)]"
-                :error-messages="fieldErrors.name"
-                maxlength="200"
-                autofocus
-                data-testid="name"
-                @update:model-value="clearError('name')"
-              />
-            </v-col>
-            <v-col cols="12" md="4">
-              <v-autocomplete
-                v-model="form.country"
-                :items="countries"
-                item-title="name"
-                item-value="code"
-                :label="$t('customers.fields.country')"
-                :error-messages="fieldErrors.country"
-                data-testid="country"
-                @update:model-value="clearError('country')"
-              />
-            </v-col>
-            <v-col cols="12" md="8">
-              <v-text-field
-                v-model="form.trade_name"
-                :label="$t('customers.fields.tradeName')"
-                :rules="[rules.maxLength(200)]"
-                :error-messages="fieldErrors.trade_name"
-                maxlength="200"
-                @update:model-value="clearError('trade_name')"
-              />
-            </v-col>
-            <v-col cols="12" md="4">
-              <v-text-field
-                v-model="form.tax_id"
-                :label="
-                  isBrazil ? $t('customers.fields.taxIdBrazil') : $t('customers.fields.taxId')
-                "
-                :rules="[rules.required, rules.maxLength(30)]"
-                :error-messages="fieldErrors.tax_id"
-                maxlength="30"
-                data-testid="tax-id"
-                @update:model-value="clearError('tax_id')"
-              />
-            </v-col>
-          </v-row>
+  <FormDialog
+    ref="formRef"
+    v-model="open"
+    :title="isEdit ? $t('customers.edit') : $t('customers.new')"
+    :subtitle="customer?.name ?? null"
+    icon="mdi-domain"
+    max-width="880"
+    :persistent="saving"
+    @submit="submit"
+  >
+    <!-- Identification -->
+    <div class="text-subtitle-2 text-medium-emphasis mb-2">
+      {{ $t('customers.sections.identification') }}
+    </div>
+    <v-row dense>
+      <v-col cols="12" md="8">
+        <v-text-field
+          v-model="form.name"
+          :label="$t('customers.fields.name')"
+          :rules="[rules.required, rules.maxLength(200)]"
+          :error-messages="fieldErrors.name"
+          maxlength="200"
+          autofocus
+          data-testid="name"
+          @update:model-value="clearError('name')"
+        />
+      </v-col>
+      <v-col cols="12" md="4">
+        <v-autocomplete
+          v-model="form.country"
+          :items="countries"
+          item-title="name"
+          item-value="code"
+          :label="$t('customers.fields.country')"
+          :error-messages="fieldErrors.country"
+          data-testid="country"
+          @update:model-value="clearError('country')"
+        />
+      </v-col>
+      <v-col cols="12" md="8">
+        <v-text-field
+          v-model="form.trade_name"
+          :label="$t('customers.fields.tradeName')"
+          :rules="[rules.maxLength(200)]"
+          :error-messages="fieldErrors.trade_name"
+          maxlength="200"
+          @update:model-value="clearError('trade_name')"
+        />
+      </v-col>
+      <v-col cols="12" md="4">
+        <v-text-field
+          v-model="form.tax_id"
+          :label="isBrazil ? $t('customers.fields.taxIdBrazil') : $t('customers.fields.taxId')"
+          :rules="[rules.required, rules.maxLength(30)]"
+          :error-messages="fieldErrors.tax_id"
+          maxlength="30"
+          data-testid="tax-id"
+          @update:model-value="clearError('tax_id')"
+        />
+      </v-col>
+    </v-row>
 
-          <!-- Contact -->
-          <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">
-            {{ $t('customers.sections.contact') }}
-          </div>
-          <v-row dense>
-            <v-col cols="12" md="8">
-              <v-text-field
-                v-model="form.email"
-                :label="$t('customers.fields.email')"
-                type="email"
-                :rules="[rules.email, rules.maxLength(254)]"
-                :error-messages="fieldErrors.email"
-                maxlength="254"
-                data-testid="email"
-                @update:model-value="clearError('email')"
-              />
-            </v-col>
-            <v-col cols="12" md="4">
-              <v-text-field
-                v-model="form.phone"
-                :label="$t('customers.fields.phone')"
-                type="tel"
-                :rules="[rules.maxLength(30)]"
-                :error-messages="fieldErrors.phone"
-                maxlength="30"
-                @update:model-value="clearError('phone')"
-              />
-            </v-col>
-          </v-row>
+    <!-- Contact -->
+    <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">
+      {{ $t('customers.sections.contact') }}
+    </div>
+    <v-row dense>
+      <v-col cols="12" md="8">
+        <v-text-field
+          v-model="form.email"
+          :label="$t('customers.fields.email')"
+          type="email"
+          :rules="[rules.email, rules.maxLength(254)]"
+          :error-messages="fieldErrors.email"
+          maxlength="254"
+          data-testid="email"
+          @update:model-value="clearError('email')"
+        />
+      </v-col>
+      <v-col cols="12" md="4">
+        <v-text-field
+          v-model="form.phone"
+          :label="$t('customers.fields.phone')"
+          type="tel"
+          :rules="[rules.maxLength(30)]"
+          :error-messages="fieldErrors.phone"
+          maxlength="30"
+          @update:model-value="clearError('phone')"
+        />
+      </v-col>
+    </v-row>
 
-          <!-- Address -->
-          <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">
-            {{ $t('customers.sections.address') }}
-          </div>
-          <v-row dense>
-            <v-col cols="12" sm="4" md="3">
-              <v-text-field
-                v-model="form.postal_code"
-                :label="
-                  isBrazil
-                    ? $t('customers.fields.postalCodeBrazil')
-                    : $t('customers.fields.postalCode')
-                "
-                :rules="[rules.maxLength(10)]"
-                :error-messages="fieldErrors.postal_code"
-                maxlength="10"
-                @update:model-value="clearError('postal_code')"
-              />
-            </v-col>
-            <v-col cols="12" sm="8" md="7">
-              <v-text-field
-                v-model="form.street"
-                :label="$t('customers.fields.street')"
-                :rules="[rules.maxLength(200)]"
-                :error-messages="fieldErrors.street"
-                maxlength="200"
-                @update:model-value="clearError('street')"
-              />
-            </v-col>
-            <v-col cols="4" md="2">
-              <v-text-field
-                v-model="form.number"
-                :label="$t('customers.fields.number')"
-                :rules="[rules.maxLength(20)]"
-                :error-messages="fieldErrors.number"
-                maxlength="20"
-                @update:model-value="clearError('number')"
-              />
-            </v-col>
-            <v-col cols="8" md="4">
-              <v-text-field
-                v-model="form.complement"
-                :label="$t('customers.fields.complement')"
-                :rules="[rules.maxLength(100)]"
-                :error-messages="fieldErrors.complement"
-                maxlength="100"
-                @update:model-value="clearError('complement')"
-              />
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-text-field
-                v-model="form.district"
-                :label="$t('customers.fields.district')"
-                :rules="[rules.maxLength(100)]"
-                :error-messages="fieldErrors.district"
-                maxlength="100"
-                @update:model-value="clearError('district')"
-              />
-            </v-col>
-            <v-col cols="8" md="3">
-              <v-text-field
-                v-model="form.city"
-                :label="$t('customers.fields.city')"
-                :rules="[rules.maxLength(100)]"
-                :error-messages="fieldErrors.city"
-                maxlength="100"
-                @update:model-value="clearError('city')"
-              />
-            </v-col>
-            <v-col cols="4" md="2">
-              <v-autocomplete
-                v-if="isBrazil"
-                v-model="form.state"
-                :items="stateOptions"
-                :label="$t('customers.fields.state')"
-                :error-messages="fieldErrors.state"
-                clearable
-                @update:model-value="clearError('state')"
-              />
-              <v-text-field
-                v-else
-                v-model="form.state"
-                :label="$t('customers.fields.state')"
-                :rules="[rules.maxLength(50)]"
-                :error-messages="fieldErrors.state"
-                maxlength="50"
-                @update:model-value="clearError('state')"
-              />
-            </v-col>
-          </v-row>
+    <!-- Address -->
+    <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">
+      {{ $t('customers.sections.address') }}
+    </div>
+    <v-row dense>
+      <v-col cols="12" sm="4" md="3">
+        <v-text-field
+          v-model="form.postal_code"
+          :label="
+            isBrazil ? $t('customers.fields.postalCodeBrazil') : $t('customers.fields.postalCode')
+          "
+          :rules="[rules.maxLength(10)]"
+          :error-messages="fieldErrors.postal_code"
+          maxlength="10"
+          @update:model-value="clearError('postal_code')"
+        />
+      </v-col>
+      <v-col cols="12" sm="8" md="7">
+        <v-text-field
+          v-model="form.street"
+          :label="$t('customers.fields.street')"
+          :rules="[rules.maxLength(200)]"
+          :error-messages="fieldErrors.street"
+          maxlength="200"
+          @update:model-value="clearError('street')"
+        />
+      </v-col>
+      <v-col cols="4" md="2">
+        <v-text-field
+          v-model="form.number"
+          :label="$t('customers.fields.number')"
+          :rules="[rules.maxLength(20)]"
+          :error-messages="fieldErrors.number"
+          maxlength="20"
+          @update:model-value="clearError('number')"
+        />
+      </v-col>
+      <v-col cols="8" md="4">
+        <v-text-field
+          v-model="form.complement"
+          :label="$t('customers.fields.complement')"
+          :rules="[rules.maxLength(100)]"
+          :error-messages="fieldErrors.complement"
+          maxlength="100"
+          @update:model-value="clearError('complement')"
+        />
+      </v-col>
+      <v-col cols="12" md="3">
+        <v-text-field
+          v-model="form.district"
+          :label="$t('customers.fields.district')"
+          :rules="[rules.maxLength(100)]"
+          :error-messages="fieldErrors.district"
+          maxlength="100"
+          @update:model-value="clearError('district')"
+        />
+      </v-col>
+      <v-col cols="8" md="3">
+        <v-text-field
+          v-model="form.city"
+          :label="$t('customers.fields.city')"
+          :rules="[rules.maxLength(100)]"
+          :error-messages="fieldErrors.city"
+          maxlength="100"
+          @update:model-value="clearError('city')"
+        />
+      </v-col>
+      <v-col cols="4" md="2">
+        <v-autocomplete
+          v-if="isBrazil"
+          v-model="form.state"
+          :items="stateOptions"
+          :label="$t('customers.fields.state')"
+          :error-messages="fieldErrors.state"
+          clearable
+          @update:model-value="clearError('state')"
+        />
+        <v-text-field
+          v-else
+          v-model="form.state"
+          :label="$t('customers.fields.state')"
+          :rules="[rules.maxLength(50)]"
+          :error-messages="fieldErrors.state"
+          maxlength="50"
+          @update:model-value="clearError('state')"
+        />
+      </v-col>
+    </v-row>
 
-          <!-- Relationship -->
-          <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">
-            {{ $t('customers.sections.relationship') }}
-          </div>
-          <v-row dense>
-            <v-col cols="12" md="8">
-              <AccountManagerPicker
-                :key="`primary-${openCount}`"
-                v-model="form.primary_account_manager"
-                :initial-options="initialPrimary"
-                :label="$t('customers.fields.primaryAccountManager')"
-                :rules="primaryRules"
-                :error-messages="fieldErrors.primary_account_manager"
-                :no-data-text="$t('accountManagers.noneFound')"
-                prepend-inner-icon="mdi-star"
-                data-testid="primary-account-manager"
-                @update:model-value="onPrimaryChange"
-              />
-            </v-col>
-            <v-col cols="12" md="4" class="d-flex align-center">
-              <v-switch
-                v-model="form.is_active"
-                :label="$t('customers.fields.active')"
-                color="primary"
-                hide-details
-                inset
-              />
-            </v-col>
-            <v-col cols="12">
-              <AccountManagerPicker
-                :key="`secondary-${openCount}`"
-                v-model="form.secondary_account_managers"
-                multiple
-                :initial-options="initialSecondaries"
-                :exclude="excludedFromSecondaries"
-                :label="$t('customers.fields.secondaryAccountManagers')"
-                :error-messages="fieldErrors.secondary_account_managers"
-                :no-data-text="$t('accountManagers.noneFound')"
-                data-testid="secondary-account-managers"
-                @update:model-value="clearError('secondary_account_managers')"
-              />
-            </v-col>
-            <v-col cols="12">
-              <v-textarea
-                v-model="form.notes"
-                :label="$t('customers.fields.notes')"
-                :error-messages="fieldErrors.notes"
-                rows="3"
-                auto-grow
-                @update:model-value="clearError('notes')"
-              />
-            </v-col>
-          </v-row>
+    <!-- Relationship -->
+    <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">
+      {{ $t('customers.sections.relationship') }}
+    </div>
+    <v-row dense>
+      <v-col cols="12" md="8">
+        <AccountManagerPicker
+          :key="`primary-${openCount}`"
+          v-model="form.primary_account_manager"
+          :initial-options="initialPrimary"
+          :label="$t('customers.fields.primaryAccountManager')"
+          :rules="primaryRules"
+          :error-messages="fieldErrors.primary_account_manager"
+          :no-data-text="$t('accountManagers.noneFound')"
+          prepend-inner-icon="mdi-star"
+          data-testid="primary-account-manager"
+          @update:model-value="onPrimaryChange"
+        />
+      </v-col>
+      <v-col cols="12" md="4" class="d-flex align-center">
+        <v-switch
+          v-model="form.is_active"
+          :label="$t('customers.fields.active')"
+          color="primary"
+          hide-details
+          inset
+        />
+      </v-col>
+      <v-col cols="12">
+        <AccountManagerPicker
+          :key="`secondary-${openCount}`"
+          v-model="form.secondary_account_managers"
+          multiple
+          :initial-options="initialSecondaries"
+          :exclude="excludedFromSecondaries"
+          :label="$t('customers.fields.secondaryAccountManagers')"
+          :error-messages="fieldErrors.secondary_account_managers"
+          :no-data-text="$t('accountManagers.noneFound')"
+          data-testid="secondary-account-managers"
+          @update:model-value="clearError('secondary_account_managers')"
+        />
+      </v-col>
+      <v-col cols="12">
+        <v-textarea
+          v-model="form.notes"
+          :label="$t('customers.fields.notes')"
+          :error-messages="fieldErrors.notes"
+          rows="3"
+          auto-grow
+          @update:model-value="clearError('notes')"
+        />
+      </v-col>
+    </v-row>
 
-          <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
-            {{ generalError }}
-          </v-alert>
-        </v-card-text>
+    <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
+      {{ generalError }}
+    </v-alert>
 
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="open = false">
-            {{ $t('common.cancel') }}
-          </v-btn>
-          <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
-            {{ $t('common.save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+    <template #actions>
+      <v-btn variant="text" :disabled="saving" @click="open = false">
+        {{ $t('common.cancel') }}
+      </v-btn>
+      <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
+        {{ $t('common.save') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>

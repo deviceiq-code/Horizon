@@ -333,7 +333,13 @@ Multi-user web system for **operating lease residual value pricing**
     one card each (e.g. `src/components/SystemSettingsCard.vue`).
   - `src/stores/systemSettings.ts` — system settings (loaded once).
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
-  - `src/components/ConfirmDialog.vue` — generic confirmation dialog.
+  - **Every form dialog has three parts** — `src/components/FormDialog.vue`: header (basic
+    information about the form: icon, title, a subtitle such as the record being edited;
+    `heading` slot to replace them, `header` slot for more fixed content such as tabs or a
+    search field), body (default slot: the other controls — **the only part that scrolls**) and
+    footer (`actions` slot: only the form's buttons, on the right). The whole dialog is one
+    form (`@submit`, exposed `validate()`); never nest another `v-form` inside it.
+  - `src/components/ConfirmDialog.vue` — generic confirmation dialog (a FormDialog too).
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.
   - `src/composables/useValidationRules.ts` — translated field rules (required, email, maxLength).
   - `src/utils/countries.ts` — ISO country codes; names via `Intl.DisplayNames` in the UI language.

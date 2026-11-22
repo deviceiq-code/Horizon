@@ -4,6 +4,7 @@
  * starts with manufacturer + model + asset class and can be edited; picking an image makes the
  * server download it as the photo (with the page it was found on as its source).
  */
+import FormDialog from '@/components/FormDialog.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -93,93 +94,97 @@ const hostOf = (url: string) => {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="980" scrollable>
-    <v-card :title="$t('averagePrices.photo.searchTitle')">
-      <v-card-text>
-        <v-form class="d-flex ga-2 mb-3" @submit.prevent="search(query)">
-          <v-text-field
-            v-model="query"
-            :label="$t('averagePrices.photo.searchQuery')"
-            prepend-inner-icon="mdi-magnify"
-            density="compact"
-            hide-details
-            data-testid="photo-search-query"
-          />
-          <v-btn type="submit" color="primary" variant="tonal" :loading="searching">
-            {{ $t('common.search') }}
-          </v-btn>
-        </v-form>
-
-        <v-progress-linear v-if="searching" indeterminate class="mb-3" />
-        <v-alert v-if="searchError" type="error" variant="tonal" data-testid="photo-search-error">
-          {{ searchError }}
-        </v-alert>
-        <p
-          v-else-if="!searching && !results.length"
-          class="text-medium-emphasis"
-          data-testid="photo-search-empty"
-        >
-          {{ $t('averagePrices.photo.noResults') }}
-        </p>
-
-        <div class="results">
-          <template v-for="result in results" :key="result.image">
-            <button
-              v-if="!broken.has(result.image)"
-              type="button"
-              class="result"
-              :class="{ 'result--selected': selected?.image === result.image }"
-              :title="result.title"
-              :aria-pressed="selected?.image === result.image"
-              data-testid="photo-result"
-              @click="selected = result"
-              @dblclick="((selected = result), useSelected())"
-            >
-              <img
-                :src="result.thumbnail"
-                :alt="result.title"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-                @error="broken = new Set(broken).add(result.image)"
-              />
-              <span class="result__caption text-caption text-truncate">
-                {{ hostOf(result.source || result.image) }}
-                <span v-if="result.resolution"> · {{ result.resolution }}</span>
-              </span>
-            </button>
-          </template>
-        </div>
-
-        <v-alert
-          v-if="saveError"
-          type="error"
-          variant="tonal"
+  <FormDialog
+    v-model="open"
+    :title="$t('averagePrices.photo.searchTitle')"
+    icon="mdi-image-search-outline"
+    max-width="980"
+    @submit="search(query)"
+  >
+    <!-- What is searched: fixed above the results -->
+    <template #header>
+      <div class="d-flex ga-2 mt-4">
+        <v-text-field
+          v-model="query"
+          :label="$t('averagePrices.photo.searchQuery')"
+          prepend-inner-icon="mdi-magnify"
           density="compact"
-          class="mt-3"
-          data-testid="photo-save-error"
-        >
-          {{ saveError }}
-        </v-alert>
-        <p class="text-caption text-medium-emphasis mt-3 mb-0">
-          {{ $t('averagePrices.photo.copyrightHint') }}
-        </p>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn variant="text" @click="open = false">{{ $t('common.cancel') }}</v-btn>
-        <v-btn
-          color="primary"
-          variant="flat"
-          :disabled="!selected"
-          :loading="saving"
-          data-testid="photo-use"
-          @click="useSelected"
-        >
-          {{ $t('averagePrices.photo.useThis') }}
+          hide-details
+          data-testid="photo-search-query"
+        />
+        <v-btn type="submit" color="primary" variant="tonal" :loading="searching">
+          {{ $t('common.search') }}
         </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+      </div>
+    </template>
+
+    <v-progress-linear v-if="searching" indeterminate class="mb-3" />
+    <v-alert v-if="searchError" type="error" variant="tonal" data-testid="photo-search-error">
+      {{ searchError }}
+    </v-alert>
+    <p
+      v-else-if="!searching && !results.length"
+      class="text-medium-emphasis"
+      data-testid="photo-search-empty"
+    >
+      {{ $t('averagePrices.photo.noResults') }}
+    </p>
+
+    <div class="results">
+      <template v-for="result in results" :key="result.image">
+        <button
+          v-if="!broken.has(result.image)"
+          type="button"
+          class="result"
+          :class="{ 'result--selected': selected?.image === result.image }"
+          :title="result.title"
+          :aria-pressed="selected?.image === result.image"
+          data-testid="photo-result"
+          @click="selected = result"
+          @dblclick="((selected = result), useSelected())"
+        >
+          <img
+            :src="result.thumbnail"
+            :alt="result.title"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            @error="broken = new Set(broken).add(result.image)"
+          />
+          <span class="result__caption text-caption text-truncate">
+            {{ hostOf(result.source || result.image) }}
+            <span v-if="result.resolution"> · {{ result.resolution }}</span>
+          </span>
+        </button>
+      </template>
+    </div>
+
+    <v-alert
+      v-if="saveError"
+      type="error"
+      variant="tonal"
+      density="compact"
+      class="mt-3"
+      data-testid="photo-save-error"
+    >
+      {{ saveError }}
+    </v-alert>
+    <p class="text-caption text-medium-emphasis mt-3 mb-0">
+      {{ $t('averagePrices.photo.copyrightHint') }}
+    </p>
+    <template #actions>
+      <v-btn variant="text" @click="open = false">{{ $t('common.cancel') }}</v-btn>
+      <v-btn
+        color="primary"
+        variant="flat"
+        :disabled="!selected"
+        :loading="saving"
+        data-testid="photo-use"
+        @click="useSelected"
+      >
+        {{ $t('averagePrices.photo.useThis') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>
 
 <style scoped>

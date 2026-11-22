@@ -7,6 +7,7 @@
  * the business verticals they work in. The server checks the rules (CPF, password, duplicates)
  * and refuses locking yourself out (409, shown here).
  */
+import FormDialog from '@/components/FormDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -273,305 +274,308 @@ async function submit() {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="860" scrollable :persistent="saving">
-    <v-card :title="isEdit ? $t('users.edit') : $t('users.new')">
-      <v-form ref="formRef" @submit.prevent="submit">
-        <v-tabs v-model="tab" color="primary" density="compact" class="px-4">
-          <v-tab value="account" data-testid="tab-account">{{
-            $t('users.formTabs.account')
-          }}</v-tab>
-          <v-tab value="personal" data-testid="tab-personal">{{
-            $t('users.formTabs.personal')
-          }}</v-tab>
-          <v-tab value="employment" data-testid="tab-employment">{{
-            $t('users.formTabs.employment')
-          }}</v-tab>
-          <v-tab v-if="isAccountManager" value="accountManager" data-testid="tab-account-manager">
-            {{ $t('users.formTabs.accountManager') }}
-          </v-tab>
-        </v-tabs>
-        <v-divider />
-        <v-card-text style="min-height: 420px">
-          <!-- Every tab stays mounted (eager) so the form validates all of them -->
-          <v-window v-model="tab">
-            <v-window-item value="account" eager>
-              <PhotoField
-                v-model="photo"
-                :name="nameForInitials"
-                :current-url="currentPhoto"
-                class="mb-4"
-              />
-              <v-text-field
-                v-model="form.username"
-                :label="$t('users.fields.username')"
-                :rules="[rules.required, rules.maxLength(150)]"
-                :error-messages="fieldErrors.username"
-                maxlength="150"
-                autocomplete="off"
-                name="username"
-                data-testid="username"
-                @update:model-value="fieldErrors.username = []"
-              />
-              <v-row dense>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.first_name"
-                    :label="$t('users.fields.firstName')"
-                    :rules="[rules.maxLength(150)]"
-                    :error-messages="fieldErrors.first_name"
-                    maxlength="150"
-                    name="first_name"
-                    data-testid="first-name"
-                  />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.last_name"
-                    :label="$t('users.fields.lastName')"
-                    :rules="[rules.maxLength(150)]"
-                    :error-messages="fieldErrors.last_name"
-                    maxlength="150"
-                    name="last_name"
-                    data-testid="last-name"
-                  />
-                </v-col>
-              </v-row>
-              <v-text-field
-                v-model="form.email"
-                :label="$t('users.fields.email')"
-                type="email"
-                :rules="[rules.email]"
-                :error-messages="fieldErrors.email"
-                name="email"
-                data-testid="email"
-                @update:model-value="fieldErrors.email = []"
-              />
-              <v-select
-                v-model="form.roles"
-                :items="roleItems"
-                :label="$t('users.fields.roles')"
-                :error-messages="fieldErrors.roles"
-                multiple
-                chips
-                closable-chips
-                data-testid="roles"
-              />
-              <v-switch
-                v-model="form.is_active"
-                :label="$t(form.is_active ? 'users.status.active' : 'users.status.inactive')"
-                :hint="$t('users.activeHint')"
-                :disabled="isMe"
-                persistent-hint
-                color="primary"
-                inset
-                class="mb-2"
-                data-testid="is-active"
-              />
+  <FormDialog
+    ref="formRef"
+    v-model="open"
+    :title="isEdit ? $t('users.edit') : $t('users.new')"
+    :subtitle="user ? `${user.first_name} ${user.last_name}`.trim() || user.username : null"
+    icon="mdi-account-outline"
+    max-width="860"
+    :persistent="saving"
+    @submit="submit"
+  >
+    <template #header>
+      <v-tabs v-model="tab" color="primary" density="compact" class="px-4">
+        <v-tab value="account" data-testid="tab-account">{{ $t('users.formTabs.account') }}</v-tab>
+        <v-tab value="personal" data-testid="tab-personal">{{
+          $t('users.formTabs.personal')
+        }}</v-tab>
+        <v-tab value="employment" data-testid="tab-employment">{{
+          $t('users.formTabs.employment')
+        }}</v-tab>
+        <v-tab v-if="isAccountManager" value="accountManager" data-testid="tab-account-manager">
+          {{ $t('users.formTabs.accountManager') }}
+        </v-tab>
+      </v-tabs>
+      <v-divider />
+    </template>
+    <!-- Every tab stays mounted (eager) so the form validates all of them -->
+    <v-window v-model="tab">
+      <v-window-item value="account" eager>
+        <PhotoField
+          v-model="photo"
+          :name="nameForInitials"
+          :current-url="currentPhoto"
+          class="mb-4"
+        />
+        <v-text-field
+          v-model="form.username"
+          :label="$t('users.fields.username')"
+          :rules="[rules.required, rules.maxLength(150)]"
+          :error-messages="fieldErrors.username"
+          maxlength="150"
+          autocomplete="off"
+          name="username"
+          data-testid="username"
+          @update:model-value="fieldErrors.username = []"
+        />
+        <v-row dense>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.first_name"
+              :label="$t('users.fields.firstName')"
+              :rules="[rules.maxLength(150)]"
+              :error-messages="fieldErrors.first_name"
+              maxlength="150"
+              name="first_name"
+              data-testid="first-name"
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.last_name"
+              :label="$t('users.fields.lastName')"
+              :rules="[rules.maxLength(150)]"
+              :error-messages="fieldErrors.last_name"
+              maxlength="150"
+              name="last_name"
+              data-testid="last-name"
+            />
+          </v-col>
+        </v-row>
+        <v-text-field
+          v-model="form.email"
+          :label="$t('users.fields.email')"
+          type="email"
+          :rules="[rules.email]"
+          :error-messages="fieldErrors.email"
+          name="email"
+          data-testid="email"
+          @update:model-value="fieldErrors.email = []"
+        />
+        <v-select
+          v-model="form.roles"
+          :items="roleItems"
+          :label="$t('users.fields.roles')"
+          :error-messages="fieldErrors.roles"
+          multiple
+          chips
+          closable-chips
+          data-testid="roles"
+        />
+        <v-switch
+          v-model="form.is_active"
+          :label="$t(form.is_active ? 'users.status.active' : 'users.status.inactive')"
+          :hint="$t('users.activeHint')"
+          :disabled="isMe"
+          persistent-hint
+          color="primary"
+          inset
+          class="mb-2"
+          data-testid="is-active"
+        />
 
-              <div class="text-subtitle-2 mt-2">{{ $t('users.fields.password') }}</div>
-              <p v-if="isEdit" class="text-caption text-medium-emphasis mb-2">
-                {{ $t('users.passwordKeep') }}
-              </p>
-              <v-row dense>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.password"
-                    :label="$t(isEdit ? 'users.fields.newPassword' : 'users.fields.password')"
-                    :type="showPassword ? 'text' : 'password'"
-                    :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-                    :rules="passwordRules"
-                    :error-messages="fieldErrors.password"
-                    autocomplete="new-password"
-                    name="password"
-                    data-testid="password"
-                    @click:append-inner="showPassword = !showPassword"
-                    @update:model-value="fieldErrors.password = []"
-                  />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.confirm"
-                    :label="$t('users.fields.passwordConfirm')"
-                    :type="showPassword ? 'text' : 'password'"
-                    :rules="confirmRules"
-                    autocomplete="new-password"
-                    data-testid="password-confirm"
-                  />
-                </v-col>
-              </v-row>
-            </v-window-item>
+        <div class="text-subtitle-2 mt-2">{{ $t('users.fields.password') }}</div>
+        <p v-if="isEdit" class="text-caption text-medium-emphasis mb-2">
+          {{ $t('users.passwordKeep') }}
+        </p>
+        <v-row dense>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.password"
+              :label="$t(isEdit ? 'users.fields.newPassword' : 'users.fields.password')"
+              :type="showPassword ? 'text' : 'password'"
+              :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+              :rules="passwordRules"
+              :error-messages="fieldErrors.password"
+              autocomplete="new-password"
+              name="password"
+              data-testid="password"
+              @click:append-inner="showPassword = !showPassword"
+              @update:model-value="fieldErrors.password = []"
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.confirm"
+              :label="$t('users.fields.passwordConfirm')"
+              :type="showPassword ? 'text' : 'password'"
+              :rules="confirmRules"
+              autocomplete="new-password"
+              data-testid="password-confirm"
+            />
+          </v-col>
+        </v-row>
+      </v-window-item>
 
-            <v-window-item value="personal" eager>
-              <v-row dense>
-                <v-col cols="12" sm="5">
-                  <v-select
-                    v-model="form.id_document_type"
-                    :items="documentTypes"
-                    :label="$t('users.fields.idDocumentType')"
-                    :error-messages="fieldErrors.id_document_type"
-                    clearable
-                    name="id_document_type"
-                    data-testid="id-document-type"
-                    @update:model-value="fieldErrors.id_document_type = []"
-                  />
-                </v-col>
-                <v-col cols="12" sm="7">
-                  <v-text-field
-                    v-model="form.id_document_number"
-                    :label="$t('users.fields.idDocumentNumber')"
-                    :error-messages="fieldErrors.id_document_number"
-                    maxlength="40"
-                    name="id_document_number"
-                    data-testid="id-document-number"
-                    @update:model-value="fieldErrors.id_document_number = []"
-                  />
-                </v-col>
-                <v-col cols="12" sm="7">
-                  <v-autocomplete
-                    v-model="form.nationality"
-                    :items="countries"
-                    :label="$t('users.fields.nationality')"
-                    :error-messages="fieldErrors.nationality"
-                    clearable
-                    name="nationality"
-                    data-testid="nationality"
-                  />
-                </v-col>
-                <v-col cols="12" sm="5">
-                  <v-text-field
-                    v-model="form.birth_date"
-                    type="date"
-                    :label="$t('users.fields.birthDate')"
-                    :error-messages="fieldErrors.birth_date"
-                    name="birth_date"
-                    data-testid="birth-date"
-                    @update:model-value="fieldErrors.birth_date = []"
-                  />
-                </v-col>
-              </v-row>
-            </v-window-item>
+      <v-window-item value="personal" eager>
+        <v-row dense>
+          <v-col cols="12" sm="5">
+            <v-select
+              v-model="form.id_document_type"
+              :items="documentTypes"
+              :label="$t('users.fields.idDocumentType')"
+              :error-messages="fieldErrors.id_document_type"
+              clearable
+              name="id_document_type"
+              data-testid="id-document-type"
+              @update:model-value="fieldErrors.id_document_type = []"
+            />
+          </v-col>
+          <v-col cols="12" sm="7">
+            <v-text-field
+              v-model="form.id_document_number"
+              :label="$t('users.fields.idDocumentNumber')"
+              :error-messages="fieldErrors.id_document_number"
+              maxlength="40"
+              name="id_document_number"
+              data-testid="id-document-number"
+              @update:model-value="fieldErrors.id_document_number = []"
+            />
+          </v-col>
+          <v-col cols="12" sm="7">
+            <v-autocomplete
+              v-model="form.nationality"
+              :items="countries"
+              :label="$t('users.fields.nationality')"
+              :error-messages="fieldErrors.nationality"
+              clearable
+              name="nationality"
+              data-testid="nationality"
+            />
+          </v-col>
+          <v-col cols="12" sm="5">
+            <v-text-field
+              v-model="form.birth_date"
+              type="date"
+              :label="$t('users.fields.birthDate')"
+              :error-messages="fieldErrors.birth_date"
+              name="birth_date"
+              data-testid="birth-date"
+              @update:model-value="fieldErrors.birth_date = []"
+            />
+          </v-col>
+        </v-row>
+      </v-window-item>
 
-            <v-window-item value="employment" eager>
-              <v-row dense>
-                <v-col cols="12" sm="5">
-                  <v-text-field
-                    v-model="form.employee_number"
-                    :label="$t('users.fields.employeeNumber')"
-                    :error-messages="fieldErrors.employee_number"
-                    maxlength="30"
-                    name="employee_number"
-                    data-testid="employee-number"
-                    @update:model-value="fieldErrors.employee_number = []"
-                  />
-                </v-col>
-                <v-col cols="12" sm="7">
-                  <v-text-field
-                    v-model="form.job_title"
-                    :label="$t('users.fields.jobTitle')"
-                    maxlength="100"
-                    name="job_title"
-                    data-testid="job-title"
-                  />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.department"
-                    :label="$t('users.fields.department')"
-                    maxlength="100"
-                    name="department"
-                    data-testid="department"
-                  />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.work_location"
-                    :label="$t('users.fields.workLocation')"
-                    maxlength="100"
-                    name="work_location"
-                    data-testid="work-location"
-                  />
-                </v-col>
-                <v-col cols="12" sm="7">
-                  <RemoteAutocomplete
-                    :key="openCount"
-                    v-model="form.manager"
-                    :label="$t('users.fields.manager')"
-                    :search="searchUsers"
-                    :initial-options="managerInitial"
-                    :error-messages="fieldErrors.manager"
-                    data-testid="manager"
-                  />
-                </v-col>
-                <v-col cols="12" sm="5">
-                  <v-text-field
-                    v-model="form.hire_date"
-                    type="date"
-                    :label="$t('users.fields.hireDate')"
-                    :error-messages="fieldErrors.hire_date"
-                    name="hire_date"
-                    data-testid="hire-date"
-                    @update:model-value="fieldErrors.hire_date = []"
-                  />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.phone"
-                    :label="$t('users.fields.phone')"
-                    type="tel"
-                    maxlength="30"
-                    name="phone"
-                    data-testid="phone"
-                  />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form.mobile_phone"
-                    :label="$t('users.fields.mobilePhone')"
-                    type="tel"
-                    maxlength="30"
-                    name="mobile_phone"
-                    data-testid="mobile-phone"
-                  />
-                </v-col>
-              </v-row>
-            </v-window-item>
+      <v-window-item value="employment" eager>
+        <v-row dense>
+          <v-col cols="12" sm="5">
+            <v-text-field
+              v-model="form.employee_number"
+              :label="$t('users.fields.employeeNumber')"
+              :error-messages="fieldErrors.employee_number"
+              maxlength="30"
+              name="employee_number"
+              data-testid="employee-number"
+              @update:model-value="fieldErrors.employee_number = []"
+            />
+          </v-col>
+          <v-col cols="12" sm="7">
+            <v-text-field
+              v-model="form.job_title"
+              :label="$t('users.fields.jobTitle')"
+              maxlength="100"
+              name="job_title"
+              data-testid="job-title"
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.department"
+              :label="$t('users.fields.department')"
+              maxlength="100"
+              name="department"
+              data-testid="department"
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.work_location"
+              :label="$t('users.fields.workLocation')"
+              maxlength="100"
+              name="work_location"
+              data-testid="work-location"
+            />
+          </v-col>
+          <v-col cols="12" sm="7">
+            <RemoteAutocomplete
+              :key="openCount"
+              v-model="form.manager"
+              :label="$t('users.fields.manager')"
+              :search="searchUsers"
+              :initial-options="managerInitial"
+              :error-messages="fieldErrors.manager"
+              data-testid="manager"
+            />
+          </v-col>
+          <v-col cols="12" sm="5">
+            <v-text-field
+              v-model="form.hire_date"
+              type="date"
+              :label="$t('users.fields.hireDate')"
+              :error-messages="fieldErrors.hire_date"
+              name="hire_date"
+              data-testid="hire-date"
+              @update:model-value="fieldErrors.hire_date = []"
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.phone"
+              :label="$t('users.fields.phone')"
+              type="tel"
+              maxlength="30"
+              name="phone"
+              data-testid="phone"
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field
+              v-model="form.mobile_phone"
+              :label="$t('users.fields.mobilePhone')"
+              type="tel"
+              maxlength="30"
+              name="mobile_phone"
+              data-testid="mobile-phone"
+            />
+          </v-col>
+        </v-row>
+      </v-window-item>
 
-            <v-window-item v-if="isAccountManager" value="accountManager" eager>
-              <p class="text-body-2 text-medium-emphasis mb-3">
-                {{ $t('users.verticalsHint') }}
-              </p>
-              <VerticalPicker
-                :key="openCount"
-                v-model="form.verticals"
-                multiple
-                :initial-options="user?.verticals_detail ?? []"
-                :label="$t('users.fields.verticals')"
-                :error-messages="fieldErrors.verticals"
-                data-testid="verticals"
-              />
-            </v-window-item>
-          </v-window>
+      <v-window-item v-if="isAccountManager" value="accountManager" eager>
+        <p class="text-body-2 text-medium-emphasis mb-3">
+          {{ $t('users.verticalsHint') }}
+        </p>
+        <VerticalPicker
+          :key="openCount"
+          v-model="form.verticals"
+          multiple
+          :initial-options="user?.verticals_detail ?? []"
+          :label="$t('users.fields.verticals')"
+          :error-messages="fieldErrors.verticals"
+          data-testid="verticals"
+        />
+      </v-window-item>
+    </v-window>
 
-          <v-alert
-            v-if="generalError"
-            type="error"
-            variant="tonal"
-            density="compact"
-            data-testid="general-error"
-          >
-            {{ generalError }}
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="open = false">
-            {{ $t('common.cancel') }}
-          </v-btn>
-          <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
-            {{ $t('common.save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+    <v-alert
+      v-if="generalError"
+      type="error"
+      variant="tonal"
+      density="compact"
+      data-testid="general-error"
+    >
+      {{ generalError }}
+    </v-alert>
+
+    <template #actions>
+      <v-btn variant="text" :disabled="saving" @click="open = false">
+        {{ $t('common.cancel') }}
+      </v-btn>
+      <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
+        {{ $t('common.save') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>

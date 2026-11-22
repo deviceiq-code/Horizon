@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormDialog from '@/components/FormDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -145,165 +146,159 @@ function clearError(field: string) {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="760" scrollable :persistent="saving">
-    <v-card :title="isEdit ? $t('assetClasses.edit') : $t('assetClasses.new')">
-      <v-form
-        ref="formRef"
-        class="d-flex flex-column"
-        style="min-height: 0"
-        @submit.prevent="submit"
-      >
-        <v-card-text>
-          <!-- Identification -->
-          <div class="d-flex flex-wrap ga-4 align-start">
-            <IconPicker
-              v-model="form.icon"
-              :label="$t('assetClasses.fields.icon')"
-              :error-messages="fieldErrors.icon"
-              data-testid="icon"
-              @update:model-value="clearError('icon')"
-            />
-            <div class="flex-grow-1" style="min-width: 280px">
-              <v-text-field
-                v-model="form.name"
-                :label="$t('assetClasses.fields.name')"
-                :rules="[rules.required, rules.maxLength(100)]"
-                :error-messages="fieldErrors.name"
-                maxlength="100"
-                autofocus
-                data-testid="name"
-                @update:model-value="onNameChange"
-              />
-              <v-text-field
-                v-model="form.plural_name"
-                :label="$t('assetClasses.fields.pluralName')"
-                :hint="$t('assetClasses.fields.pluralNameHint')"
-                :rules="[rules.required, rules.maxLength(100)]"
-                :error-messages="fieldErrors.plural_name"
-                maxlength="100"
-                data-testid="plural-name"
-                @update:model-value="((pluralTouched = true), clearError('plural_name'))"
-              />
-              <SubVerticalPicker
-                :key="openCount"
-                v-model="form.sub_vertical"
-                :initial-option="assetClass?.sub_vertical_detail ?? null"
-                :label="$t('assetClasses.fields.subVertical')"
-                :rules="subVerticalRules"
-                :error-messages="fieldErrors.sub_vertical"
-                data-testid="sub-vertical"
-                @update:model-value="clearError('sub_vertical')"
-              />
+  <FormDialog
+    ref="formRef"
+    v-model="open"
+    :title="isEdit ? $t('assetClasses.edit') : $t('assetClasses.new')"
+    :subtitle="assetClass ? `${assetClass.name} · ${assetClass.sub_vertical_detail.label}` : null"
+    icon="mdi-tag-multiple-outline"
+    max-width="760"
+    :persistent="saving"
+    @submit="submit"
+  >
+    <!-- Identification -->
+    <div class="d-flex flex-wrap ga-4 align-start">
+      <IconPicker
+        v-model="form.icon"
+        :label="$t('assetClasses.fields.icon')"
+        :error-messages="fieldErrors.icon"
+        data-testid="icon"
+        @update:model-value="clearError('icon')"
+      />
+      <div class="flex-grow-1" style="min-width: 280px">
+        <v-text-field
+          v-model="form.name"
+          :label="$t('assetClasses.fields.name')"
+          :rules="[rules.required, rules.maxLength(100)]"
+          :error-messages="fieldErrors.name"
+          maxlength="100"
+          autofocus
+          data-testid="name"
+          @update:model-value="onNameChange"
+        />
+        <v-text-field
+          v-model="form.plural_name"
+          :label="$t('assetClasses.fields.pluralName')"
+          :hint="$t('assetClasses.fields.pluralNameHint')"
+          :rules="[rules.required, rules.maxLength(100)]"
+          :error-messages="fieldErrors.plural_name"
+          maxlength="100"
+          data-testid="plural-name"
+          @update:model-value="((pluralTouched = true), clearError('plural_name'))"
+        />
+        <SubVerticalPicker
+          :key="openCount"
+          v-model="form.sub_vertical"
+          :initial-option="assetClass?.sub_vertical_detail ?? null"
+          :label="$t('assetClasses.fields.subVertical')"
+          :rules="subVerticalRules"
+          :error-messages="fieldErrors.sub_vertical"
+          data-testid="sub-vertical"
+          @update:model-value="clearError('sub_vertical')"
+        />
+      </div>
+    </div>
+
+    <!-- The name in other languages (optional: empty = English); folded until opened -->
+    <v-expansion-panels variant="accordion" class="mb-4 translations" data-testid="translations">
+      <v-expansion-panel elevation="0">
+        <v-expansion-panel-title class="px-3" data-testid="translations-toggle">
+          <div>
+            <div class="text-subtitle-1">{{ $t('assetClasses.translations.title') }}</div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ $t('assetClasses.translations.subtitle') }}
             </div>
           </div>
-
-          <!-- The name in other languages (optional: empty = English); folded until opened -->
-          <v-expansion-panels
-            variant="accordion"
-            class="mb-4 translations"
-            data-testid="translations"
+        </v-expansion-panel-title>
+        <v-expansion-panel-text eager>
+          <div
+            v-for="language in OTHER_LANGUAGES"
+            :key="language.code"
+            class="d-flex flex-wrap ga-3 align-start"
+            :data-testid="`translation-${language.code}`"
           >
-            <v-expansion-panel elevation="0">
-              <v-expansion-panel-title class="px-3" data-testid="translations-toggle">
-                <div>
-                  <div class="text-subtitle-1">{{ $t('assetClasses.translations.title') }}</div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('assetClasses.translations.subtitle') }}
-                  </div>
-                </div>
-              </v-expansion-panel-title>
-              <v-expansion-panel-text eager>
-                <div
-                  v-for="language in OTHER_LANGUAGES"
-                  :key="language.code"
-                  class="d-flex flex-wrap ga-3 align-start"
-                  :data-testid="`translation-${language.code}`"
-                >
-                  <div class="translation-language text-body-2 pt-3">{{ language.name }}</div>
-                  <v-text-field
-                    v-model="form.translations[language.code]!.name"
-                    :label="$t('assetClasses.fields.name')"
-                    :placeholder="form.name"
-                    persistent-placeholder
-                    maxlength="100"
-                    class="flex-grow-1"
-                    density="compact"
-                    :data-testid="`translation-${language.code}-name`"
-                  />
-                  <v-text-field
-                    v-model="form.translations[language.code]!.plural"
-                    :label="$t('assetClasses.fields.pluralName')"
-                    :placeholder="form.plural_name"
-                    persistent-placeholder
-                    maxlength="100"
-                    class="flex-grow-1"
-                    density="compact"
-                    :data-testid="`translation-${language.code}-plural`"
-                  />
-                </div>
-                <div v-if="fieldErrors.translations" class="text-caption text-error mb-2">
-                  {{ fieldErrors.translations.join(' ') }}
-                </div>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
+            <div class="translation-language text-body-2 pt-3">{{ language.name }}</div>
+            <v-text-field
+              v-model="form.translations[language.code]!.name"
+              :label="$t('assetClasses.fields.name')"
+              :placeholder="form.name"
+              persistent-placeholder
+              maxlength="100"
+              class="flex-grow-1"
+              density="compact"
+              :data-testid="`translation-${language.code}-name`"
+            />
+            <v-text-field
+              v-model="form.translations[language.code]!.plural"
+              :label="$t('assetClasses.fields.pluralName')"
+              :placeholder="form.plural_name"
+              persistent-placeholder
+              maxlength="100"
+              class="flex-grow-1"
+              density="compact"
+              :data-testid="`translation-${language.code}-plural`"
+            />
+          </div>
+          <div v-if="fieldErrors.translations" class="text-caption text-error mb-2">
+            {{ fieldErrors.translations.join(' ') }}
+          </div>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
-          <!-- Remarketing rating -->
-          <div class="text-subtitle-1 mt-2">{{ $t('assetClasses.remarketing.title') }}</div>
-          <p class="text-body-2 text-medium-emphasis mb-3">
-            {{ $t('assetClasses.remarketing.subtitle') }}
-          </p>
-          <RemarketingEditor
-            :ratings="form"
-            :fields="REMARKETING_RATINGS"
-            i18n-prefix="assetClasses.remarketing"
-            :errors="fieldErrors"
-            class="mb-4"
-            @edited="clearError"
-          />
+    <!-- Remarketing rating -->
+    <div class="text-subtitle-1 mt-2">{{ $t('assetClasses.remarketing.title') }}</div>
+    <p class="text-body-2 text-medium-emphasis mb-3">
+      {{ $t('assetClasses.remarketing.subtitle') }}
+    </p>
+    <RemarketingEditor
+      :ratings="form"
+      :fields="REMARKETING_RATINGS"
+      i18n-prefix="assetClasses.remarketing"
+      :errors="fieldErrors"
+      class="mb-4"
+      @edited="clearError"
+    />
 
-          <!-- Keywords, notes, status -->
-          <KeywordsField
-            v-model="form.keywords"
-            :label="$t('assetClasses.fields.keywords')"
-            :error-messages="fieldErrors.keywords"
-            class="mb-2"
-            data-testid="keywords"
-            @update:model-value="clearError('keywords')"
-          />
-          <v-textarea
-            v-model="form.notes"
-            :label="$t('assetClasses.fields.notes')"
-            :error-messages="fieldErrors.notes"
-            rows="2"
-            auto-grow
-            data-testid="notes"
-            @update:model-value="clearError('notes')"
-          />
-          <v-switch
-            v-model="form.is_enabled"
-            :label="$t('catalogs.fields.enabled')"
-            color="primary"
-            inset
-            hide-details
-            data-testid="enabled"
-          />
-          <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
-            {{ generalError }}
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="open = false">
-            {{ $t('common.cancel') }}
-          </v-btn>
-          <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
-            {{ $t('common.save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+    <!-- Keywords, notes, status -->
+    <KeywordsField
+      v-model="form.keywords"
+      :label="$t('assetClasses.fields.keywords')"
+      :error-messages="fieldErrors.keywords"
+      class="mb-2"
+      data-testid="keywords"
+      @update:model-value="clearError('keywords')"
+    />
+    <v-textarea
+      v-model="form.notes"
+      :label="$t('assetClasses.fields.notes')"
+      :error-messages="fieldErrors.notes"
+      rows="2"
+      auto-grow
+      data-testid="notes"
+      @update:model-value="clearError('notes')"
+    />
+    <v-switch
+      v-model="form.is_enabled"
+      :label="$t('catalogs.fields.enabled')"
+      color="primary"
+      inset
+      hide-details
+      data-testid="enabled"
+    />
+    <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
+      {{ generalError }}
+    </v-alert>
+
+    <template #actions>
+      <v-btn variant="text" :disabled="saving" @click="open = false">
+        {{ $t('common.cancel') }}
+      </v-btn>
+      <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
+        {{ $t('common.save') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>
 
 <style scoped>

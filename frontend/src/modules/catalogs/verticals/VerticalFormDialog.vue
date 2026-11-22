@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormDialog from '@/components/FormDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -153,88 +154,85 @@ function clearError(field: string) {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="1000" scrollable :persistent="saving">
-    <v-card :title="isEdit ? $t('verticals.edit') : $t('verticals.new')">
-      <v-form
-        ref="formRef"
-        class="d-flex flex-column"
-        style="min-height: 0"
-        @submit.prevent="submit"
+  <FormDialog
+    ref="formRef"
+    v-model="open"
+    :title="isEdit ? $t('verticals.edit') : $t('verticals.new')"
+    :subtitle="vertical?.name ?? null"
+    icon="mdi-shape-outline"
+    max-width="1000"
+    :persistent="saving"
+    @submit="submit"
+  >
+    <v-row dense>
+      <v-col cols="12" md="6">
+        <v-text-field
+          v-model="form.name"
+          :label="$t('verticals.fields.name')"
+          :rules="[rules.required, rules.maxLength(100)]"
+          :error-messages="fieldErrors.name"
+          maxlength="100"
+          autofocus
+          data-testid="name"
+          @update:model-value="clearError('name')"
+        />
+      </v-col>
+      <v-col cols="12" md="6" class="d-flex align-center">
+        <v-switch
+          v-model="form.is_enabled"
+          :label="$t('verticals.fields.enabled')"
+          color="primary"
+          inset
+          hide-details
+          data-testid="enabled"
+        />
+      </v-col>
+      <v-col cols="12">
+        <v-textarea
+          v-model="form.notes"
+          :label="$t('verticals.fields.notes')"
+          :error-messages="fieldErrors.notes"
+          rows="2"
+          auto-grow
+          data-testid="notes"
+          @update:model-value="clearError('notes')"
+        />
+      </v-col>
+    </v-row>
+
+    <div class="text-subtitle-1 mb-1">{{ $t('verticals.subVerticals') }}</div>
+    <p class="text-body-2 text-medium-emphasis mb-3">
+      {{ $t('verticals.subVerticalsHint') }}
+    </p>
+    <v-progress-linear v-if="loadingDefaults" indeterminate class="mb-3" />
+    <SubVerticalsEditor
+      v-else-if="defaults"
+      v-model="form.sub_verticals"
+      :max-term="defaults.max_term_months"
+      :row-errors="subRowErrors"
+      :list-errors="subListErrors"
+      :disabled="saving"
+      @edited="onSubEdited"
+    />
+
+    <v-alert v-if="generalError" type="error" variant="tonal" density="compact" class="mt-3">
+      {{ generalError }}
+    </v-alert>
+
+    <template #actions>
+      <v-btn variant="text" :disabled="saving" @click="open = false">
+        {{ $t('common.cancel') }}
+      </v-btn>
+      <v-btn
+        type="submit"
+        color="primary"
+        variant="flat"
+        :loading="saving"
+        :disabled="busy || !defaults"
+        data-testid="save"
       >
-        <v-card-text>
-          <v-row dense>
-            <v-col cols="12" md="6">
-              <v-text-field
-                v-model="form.name"
-                :label="$t('verticals.fields.name')"
-                :rules="[rules.required, rules.maxLength(100)]"
-                :error-messages="fieldErrors.name"
-                maxlength="100"
-                autofocus
-                data-testid="name"
-                @update:model-value="clearError('name')"
-              />
-            </v-col>
-            <v-col cols="12" md="6" class="d-flex align-center">
-              <v-switch
-                v-model="form.is_enabled"
-                :label="$t('verticals.fields.enabled')"
-                color="primary"
-                inset
-                hide-details
-                data-testid="enabled"
-              />
-            </v-col>
-            <v-col cols="12">
-              <v-textarea
-                v-model="form.notes"
-                :label="$t('verticals.fields.notes')"
-                :error-messages="fieldErrors.notes"
-                rows="2"
-                auto-grow
-                data-testid="notes"
-                @update:model-value="clearError('notes')"
-              />
-            </v-col>
-          </v-row>
-
-          <div class="text-subtitle-1 mb-1">{{ $t('verticals.subVerticals') }}</div>
-          <p class="text-body-2 text-medium-emphasis mb-3">
-            {{ $t('verticals.subVerticalsHint') }}
-          </p>
-          <v-progress-linear v-if="loadingDefaults" indeterminate class="mb-3" />
-          <SubVerticalsEditor
-            v-else-if="defaults"
-            v-model="form.sub_verticals"
-            :max-term="defaults.max_term_months"
-            :row-errors="subRowErrors"
-            :list-errors="subListErrors"
-            :disabled="saving"
-            @edited="onSubEdited"
-          />
-
-          <v-alert v-if="generalError" type="error" variant="tonal" density="compact" class="mt-3">
-            {{ generalError }}
-          </v-alert>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="open = false">
-            {{ $t('common.cancel') }}
-          </v-btn>
-          <v-btn
-            type="submit"
-            color="primary"
-            variant="flat"
-            :loading="saving"
-            :disabled="busy || !defaults"
-            data-testid="save"
-          >
-            {{ $t('common.save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+        {{ $t('common.save') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>

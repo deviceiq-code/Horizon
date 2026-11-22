@@ -5,6 +5,7 @@
  * specification fields (its sub-vertical's template). Values typed are resolved by the API
  * preview (value ↔ % and warnings), never computed here.
  */
+import FormDialog from '@/components/FormDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -246,146 +247,140 @@ async function submit() {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="980" scrollable :persistent="saving">
-    <v-card
-      :title="isNewVersion ? $t('averagePrices.newVersion') : $t('averagePrices.new')"
-      :subtitle="isNewVersion ? $t('averagePrices.newVersionHint') : undefined"
-    >
-      <v-form
-        ref="formRef"
-        class="d-flex flex-column"
-        style="min-height: 0"
-        @submit.prevent="submit"
+  <FormDialog
+    ref="formRef"
+    v-model="open"
+    :title="isNewVersion ? $t('averagePrices.newVersion') : $t('averagePrices.new')"
+    :subtitle="source ? `${source.manufacturer.name} ${source.model}` : null"
+    icon="mdi-chart-timeline-variant"
+    max-width="980"
+    :persistent="saving"
+    @submit="submit"
+  >
+    <v-progress-linear v-if="loadingSource" indeterminate class="mb-4" />
+
+    <!-- Asset -->
+    <div class="text-subtitle-1 mb-2">{{ $t('averagePrices.sections.asset') }}</div>
+    <v-row dense>
+      <v-col cols="12" md="7">
+        <AssetClassPicker
+          :key="`asset-${openCount}`"
+          v-model="assetClassId"
+          :initial-option="assetClass"
+          :label="$t('averagePrices.fields.assetClass')"
+          :rules="required"
+          :error-messages="fieldErrors.asset_class"
+          data-testid="asset-class"
+          @selected="onAssetClassSelected"
+        />
+      </v-col>
+      <v-col cols="12" md="5">
+        <ManufacturerPicker
+          :key="`manufacturer-${openCount}`"
+          v-model="manufacturerId"
+          :initial-option="source?.manufacturer ?? null"
+          :label="$t('averagePrices.fields.manufacturer')"
+          :rules="required"
+          :error-messages="fieldErrors.manufacturer"
+          data-testid="manufacturer"
+        />
+      </v-col>
+      <v-col cols="12">
+        <v-text-field
+          v-model="model"
+          :label="$t('averagePrices.fields.model')"
+          :rules="[rules.required, rules.maxLength(150)]"
+          :error-messages="fieldErrors.model"
+          maxlength="150"
+          data-testid="model"
+        />
+      </v-col>
+      <v-col cols="12">
+        <v-textarea
+          v-model="description"
+          :label="$t('averagePrices.fields.description')"
+          :hint="$t('averagePrices.descriptionHint')"
+          persistent-hint
+          :error-messages="fieldErrors.description"
+          rows="3"
+          auto-grow
+          data-testid="description"
+        />
+      </v-col>
+    </v-row>
+
+    <!-- Specifications (template of the sub-vertical) -->
+    <template v-if="subVertical">
+      <div class="text-subtitle-1 mt-4">{{ $t('averagePrices.sections.specs') }}</div>
+      <p class="text-body-2 text-medium-emphasis mb-2">{{ subVertical.label }}</p>
+      <SpecValuesInput
+        v-model="specs"
+        :template="template"
+        :asset-class-id="assetClass?.id ?? null"
+        :errors="specErrors"
+      />
+    </template>
+
+    <!-- Values -->
+    <div class="text-subtitle-1 mt-4 mb-2">{{ $t('averagePrices.sections.values') }}</div>
+    <v-text-field
+      v-model="originalText"
+      :label="$t('averagePrices.fields.originalValue')"
+      :prefix="CURRENCY"
+      inputmode="decimal"
+      :rules="originalRules"
+      :error-messages="fieldErrors.original_value"
+      style="max-width: 320px"
+      data-testid="original-value"
+    />
+    <p v-if="!subVertical" class="text-body-2 text-medium-emphasis">
+      {{ $t('averagePrices.chooseAssetClassFirst') }}
+    </p>
+    <template v-else>
+      <p class="text-body-2 text-medium-emphasis mb-2">
+        {{ $t('averagePrices.termsHint') }}
+      </p>
+      <TermPointsInput
+        v-model="entries"
+        :terms="terms"
+        :currency="CURRENCY"
+        :resolved="resolved"
+        :errors="termErrors"
+      />
+      <v-alert
+        v-if="resolved?.increasing_terms.length"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mt-3"
+        data-testid="increasing-warning"
       >
-        <v-card-text>
-          <v-progress-linear v-if="loadingSource" indeterminate class="mb-4" />
+        {{
+          $t('averagePrices.increasingWarning', {
+            terms: resolved.increasing_terms.join(', '),
+          })
+        }}
+      </v-alert>
+    </template>
 
-          <!-- Asset -->
-          <div class="text-subtitle-1 mb-2">{{ $t('averagePrices.sections.asset') }}</div>
-          <v-row dense>
-            <v-col cols="12" md="7">
-              <AssetClassPicker
-                :key="`asset-${openCount}`"
-                v-model="assetClassId"
-                :initial-option="assetClass"
-                :label="$t('averagePrices.fields.assetClass')"
-                :rules="required"
-                :error-messages="fieldErrors.asset_class"
-                data-testid="asset-class"
-                @selected="onAssetClassSelected"
-              />
-            </v-col>
-            <v-col cols="12" md="5">
-              <ManufacturerPicker
-                :key="`manufacturer-${openCount}`"
-                v-model="manufacturerId"
-                :initial-option="source?.manufacturer ?? null"
-                :label="$t('averagePrices.fields.manufacturer')"
-                :rules="required"
-                :error-messages="fieldErrors.manufacturer"
-                data-testid="manufacturer"
-              />
-            </v-col>
-            <v-col cols="12">
-              <v-text-field
-                v-model="model"
-                :label="$t('averagePrices.fields.model')"
-                :rules="[rules.required, rules.maxLength(150)]"
-                :error-messages="fieldErrors.model"
-                maxlength="150"
-                data-testid="model"
-              />
-            </v-col>
-            <v-col cols="12">
-              <v-textarea
-                v-model="description"
-                :label="$t('averagePrices.fields.description')"
-                :hint="$t('averagePrices.descriptionHint')"
-                persistent-hint
-                :error-messages="fieldErrors.description"
-                rows="3"
-                auto-grow
-                data-testid="description"
-              />
-            </v-col>
-          </v-row>
+    <v-alert v-if="generalError" type="error" variant="tonal" density="compact" class="mt-3">
+      {{ generalError }}
+    </v-alert>
 
-          <!-- Specifications (template of the sub-vertical) -->
-          <template v-if="subVertical">
-            <div class="text-subtitle-1 mt-4">{{ $t('averagePrices.sections.specs') }}</div>
-            <p class="text-body-2 text-medium-emphasis mb-2">{{ subVertical.label }}</p>
-            <SpecValuesInput
-              v-model="specs"
-              :template="template"
-              :asset-class-id="assetClass?.id ?? null"
-              :errors="specErrors"
-            />
-          </template>
-
-          <!-- Values -->
-          <div class="text-subtitle-1 mt-4 mb-2">{{ $t('averagePrices.sections.values') }}</div>
-          <v-text-field
-            v-model="originalText"
-            :label="$t('averagePrices.fields.originalValue')"
-            :prefix="CURRENCY"
-            inputmode="decimal"
-            :rules="originalRules"
-            :error-messages="fieldErrors.original_value"
-            style="max-width: 320px"
-            data-testid="original-value"
-          />
-          <p v-if="!subVertical" class="text-body-2 text-medium-emphasis">
-            {{ $t('averagePrices.chooseAssetClassFirst') }}
-          </p>
-          <template v-else>
-            <p class="text-body-2 text-medium-emphasis mb-2">
-              {{ $t('averagePrices.termsHint') }}
-            </p>
-            <TermPointsInput
-              v-model="entries"
-              :terms="terms"
-              :currency="CURRENCY"
-              :resolved="resolved"
-              :errors="termErrors"
-            />
-            <v-alert
-              v-if="resolved?.increasing_terms.length"
-              type="warning"
-              variant="tonal"
-              density="compact"
-              class="mt-3"
-              data-testid="increasing-warning"
-            >
-              {{
-                $t('averagePrices.increasingWarning', {
-                  terms: resolved.increasing_terms.join(', '),
-                })
-              }}
-            </v-alert>
-          </template>
-
-          <v-alert v-if="generalError" type="error" variant="tonal" density="compact" class="mt-3">
-            {{ generalError }}
-          </v-alert>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="open = false">
-            {{ $t('common.cancel') }}
-          </v-btn>
-          <v-btn
-            type="submit"
-            color="primary"
-            variant="flat"
-            :loading="saving"
-            :disabled="loadingSource"
-            data-testid="save"
-          >
-            {{ isNewVersion ? $t('averagePrices.saveNewVersion') : $t('common.save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+    <template #actions>
+      <v-btn variant="text" :disabled="saving" @click="open = false">
+        {{ $t('common.cancel') }}
+      </v-btn>
+      <v-btn
+        type="submit"
+        color="primary"
+        variant="flat"
+        :loading="saving"
+        :disabled="loadingSource"
+        data-testid="save"
+      >
+        {{ isNewVersion ? $t('averagePrices.saveNewVersion') : $t('common.save') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>

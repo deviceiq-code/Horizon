@@ -4,6 +4,7 @@
  * API) and every version of the row with their average (also computed by the API). Any version
  * can be opened or erased from the history.
  */
+import FormDialog from '@/components/FormDialog.vue'
 import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -103,9 +104,14 @@ async function onVersionDeleted(erased: AveragePrice) {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="980" scrollable>
-    <v-card>
-      <v-card-item>
+  <FormDialog
+    v-model="open"
+    :title="row ? `${row.manufacturer.name} ${row.model}` : $t('averagePrices.title')"
+    max-width="980"
+  >
+    <!-- What the price is: its photo, name, class and status -->
+    <template #heading>
+      <v-card-item class="pa-0">
         <template v-if="row" #prepend>
           <PricePhoto
             :key="row.id"
@@ -132,172 +138,162 @@ async function onVersionDeleted(erased: AveragePrice) {
           </v-chip>
         </template>
       </v-card-item>
+    </template>
 
-      <v-card-text style="min-height: 240px">
-        <v-progress-linear v-if="loading" indeterminate class="mb-4" />
-        <v-alert v-if="loadError" type="error" variant="tonal">{{
-          $t('common.loadError')
-        }}</v-alert>
+    <v-progress-linear v-if="loading" indeterminate class="mb-4" />
+    <v-alert v-if="loadError" type="error" variant="tonal">{{ $t('common.loadError') }}</v-alert>
 
-        <template v-if="row">
-          <!-- Summary -->
-          <v-row dense class="mb-2">
-            <v-col cols="12" sm="4">
-              <div class="text-caption text-medium-emphasis">
-                {{ $t('averagePrices.fields.originalValue') }}
-              </div>
-              <div class="text-h6" data-testid="detail-original">
-                {{ money(row.original_value) }}
-              </div>
-            </v-col>
-            <v-col cols="12" sm="4">
-              <div class="text-caption text-medium-emphasis">
-                {{ $t('averagePrices.fields.createdAt') }}
-              </div>
-              <div>{{ dateTime(row.created_at) }}</div>
-              <div v-if="row.created_by_name" class="text-caption text-medium-emphasis">
-                {{ row.created_by_name }}
-              </div>
-            </v-col>
-            <v-col cols="12" sm="4">
-              <div class="text-caption text-medium-emphasis">
-                {{ $t('averagePrices.fields.manufacturer') }}
-              </div>
-              <div>{{ row.manufacturer.name }}</div>
-            </v-col>
-          </v-row>
-          <template v-if="row.description">
-            <div class="text-caption text-medium-emphasis">
-              {{ $t('averagePrices.fields.description') }}
-            </div>
-            <p class="mb-3" style="white-space: pre-line">{{ row.description }}</p>
-          </template>
-          <div
-            v-if="row.specs.length"
-            class="d-flex flex-wrap ga-2 mb-4"
-            data-testid="detail-specs"
-          >
-            <v-chip v-for="spec in row.specs" :key="spec.key" size="small" variant="outlined">
-              <span class="text-medium-emphasis mr-1">{{ spec.label }}:</span>
-              <span class="font-weight-medium">{{ specText(spec, t, n) }}</span>
-            </v-chip>
+    <template v-if="row">
+      <!-- Summary -->
+      <v-row dense class="mb-2">
+        <v-col cols="12" sm="4">
+          <div class="text-caption text-medium-emphasis">
+            {{ $t('averagePrices.fields.originalValue') }}
           </div>
+          <div class="text-h6" data-testid="detail-original">
+            {{ money(row.original_value) }}
+          </div>
+        </v-col>
+        <v-col cols="12" sm="4">
+          <div class="text-caption text-medium-emphasis">
+            {{ $t('averagePrices.fields.createdAt') }}
+          </div>
+          <div>{{ dateTime(row.created_at) }}</div>
+          <div v-if="row.created_by_name" class="text-caption text-medium-emphasis">
+            {{ row.created_by_name }}
+          </div>
+        </v-col>
+        <v-col cols="12" sm="4">
+          <div class="text-caption text-medium-emphasis">
+            {{ $t('averagePrices.fields.manufacturer') }}
+          </div>
+          <div>{{ row.manufacturer.name }}</div>
+        </v-col>
+      </v-row>
+      <template v-if="row.description">
+        <div class="text-caption text-medium-emphasis">
+          {{ $t('averagePrices.fields.description') }}
+        </div>
+        <p class="mb-3" style="white-space: pre-line">{{ row.description }}</p>
+      </template>
+      <div v-if="row.specs.length" class="d-flex flex-wrap ga-2 mb-4" data-testid="detail-specs">
+        <v-chip v-for="spec in row.specs" :key="spec.key" size="small" variant="outlined">
+          <span class="text-medium-emphasis mr-1">{{ spec.label }}:</span>
+          <span class="font-weight-medium">{{ specText(spec, t, n) }}</span>
+        </v-chip>
+      </div>
 
-          <v-alert
-            v-if="row.increasing_terms.length"
-            type="warning"
-            variant="tonal"
-            density="compact"
+      <v-alert
+        v-if="row.increasing_terms.length"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mb-3"
+      >
+        {{ $t('averagePrices.increasingWarning', { terms: row.increasing_terms.join(', ') }) }}
+      </v-alert>
+
+      <v-tabs v-model="tab" color="primary" density="compact" class="mb-2">
+        <v-tab value="terms">{{ $t('averagePrices.tabs.terms') }}</v-tab>
+        <v-tab value="curve" data-testid="tab-curve">{{ $t('averagePrices.tabs.curve') }}</v-tab>
+        <v-tab value="history" data-testid="tab-history">
+          {{ $t('averagePrices.tabs.history', history.length) }}
+        </v-tab>
+        <v-tab value="documents" data-testid="tab-documents">
+          {{ $t('averagePrices.documents.title', documentsCount) }}
+        </v-tab>
+      </v-tabs>
+
+      <v-window v-model="tab">
+        <v-window-item value="terms">
+          <v-table density="compact" data-testid="detail-terms">
+            <thead>
+              <tr>
+                <th>{{ $t('averagePrices.fields.term') }}</th>
+                <th>{{ $t('averagePrices.fields.enteredAs') }}</th>
+                <th class="text-end">{{ $t('averagePrices.fields.value') }}</th>
+                <th class="text-end">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="point in row.points" :key="point.term_months">
+                <td>{{ $t('verticals.months', point.term_months) }}</td>
+                <td class="text-medium-emphasis">
+                  {{ $t(`averagePrices.modes.${point.mode}`) }}
+                </td>
+                <td class="text-end font-weight-medium">{{ money(point.value) }}</td>
+                <td class="text-end">{{ percent(point.percent) }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-window-item>
+
+        <v-window-item value="curve">
+          <p class="text-body-2 text-medium-emphasis mb-2">
+            {{ $t('averagePrices.curveHint') }}
+          </p>
+          <v-table density="compact" fixed-header height="360" data-testid="detail-curve">
+            <thead>
+              <tr>
+                <th>{{ $t('averagePrices.fields.month') }}</th>
+                <th class="text-end">{{ $t('averagePrices.fields.value') }}</th>
+                <th class="text-end">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="point in row.curve"
+                :key="point.month"
+                :class="{ 'font-weight-bold bg-surface-light': point.is_anchor }"
+                data-testid="curve-row"
+              >
+                <td>{{ point.month }}</td>
+                <td class="text-end">{{ money(point.value) }}</td>
+                <td class="text-end">{{ percent(point.percent) }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-window-item>
+
+        <v-window-item value="history">
+          <VersionsAverageCard
+            v-if="average && average.count > 1"
+            :average="average"
+            :currency="row.currency"
             class="mb-3"
-          >
-            {{ $t('averagePrices.increasingWarning', { terms: row.increasing_terms.join(', ') }) }}
-          </v-alert>
+          />
+          <PriceVersionsList
+            :versions="history"
+            :active-id="shownId"
+            data-testid="detail-history"
+            @open="load($event.id)"
+            @deleted="onVersionDeleted"
+          />
+        </v-window-item>
+        <v-window-item value="documents">
+          <PriceDocuments
+            :key="row.id"
+            :row-id="row.id"
+            :can-edit="!row.deleted_at"
+            @changed="onDocumentsChanged"
+          />
+        </v-window-item>
+      </v-window>
+    </template>
 
-          <v-tabs v-model="tab" color="primary" density="compact" class="mb-2">
-            <v-tab value="terms">{{ $t('averagePrices.tabs.terms') }}</v-tab>
-            <v-tab value="curve" data-testid="tab-curve">{{
-              $t('averagePrices.tabs.curve')
-            }}</v-tab>
-            <v-tab value="history" data-testid="tab-history">
-              {{ $t('averagePrices.tabs.history', history.length) }}
-            </v-tab>
-            <v-tab value="documents" data-testid="tab-documents">
-              {{ $t('averagePrices.documents.title', documentsCount) }}
-            </v-tab>
-          </v-tabs>
-
-          <v-window v-model="tab">
-            <v-window-item value="terms">
-              <v-table density="compact" data-testid="detail-terms">
-                <thead>
-                  <tr>
-                    <th>{{ $t('averagePrices.fields.term') }}</th>
-                    <th>{{ $t('averagePrices.fields.enteredAs') }}</th>
-                    <th class="text-end">{{ $t('averagePrices.fields.value') }}</th>
-                    <th class="text-end">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="point in row.points" :key="point.term_months">
-                    <td>{{ $t('verticals.months', point.term_months) }}</td>
-                    <td class="text-medium-emphasis">
-                      {{ $t(`averagePrices.modes.${point.mode}`) }}
-                    </td>
-                    <td class="text-end font-weight-medium">{{ money(point.value) }}</td>
-                    <td class="text-end">{{ percent(point.percent) }}</td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </v-window-item>
-
-            <v-window-item value="curve">
-              <p class="text-body-2 text-medium-emphasis mb-2">
-                {{ $t('averagePrices.curveHint') }}
-              </p>
-              <v-table density="compact" fixed-header height="360" data-testid="detail-curve">
-                <thead>
-                  <tr>
-                    <th>{{ $t('averagePrices.fields.month') }}</th>
-                    <th class="text-end">{{ $t('averagePrices.fields.value') }}</th>
-                    <th class="text-end">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="point in row.curve"
-                    :key="point.month"
-                    :class="{ 'font-weight-bold bg-surface-light': point.is_anchor }"
-                    data-testid="curve-row"
-                  >
-                    <td>{{ point.month }}</td>
-                    <td class="text-end">{{ money(point.value) }}</td>
-                    <td class="text-end">{{ percent(point.percent) }}</td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </v-window-item>
-
-            <v-window-item value="history">
-              <VersionsAverageCard
-                v-if="average && average.count > 1"
-                :average="average"
-                :currency="row.currency"
-                class="mb-3"
-              />
-              <PriceVersionsList
-                :versions="history"
-                :active-id="shownId"
-                data-testid="detail-history"
-                @open="load($event.id)"
-                @deleted="onVersionDeleted"
-              />
-            </v-window-item>
-            <v-window-item value="documents">
-              <PriceDocuments
-                :key="row.id"
-                :row-id="row.id"
-                :can-edit="!row.deleted_at"
-                @changed="onDocumentsChanged"
-              />
-            </v-window-item>
-          </v-window>
-        </template>
-      </v-card-text>
-
-      <v-card-actions>
-        <v-btn
-          v-if="row && row.is_current && !row.deleted_at"
-          variant="tonal"
-          color="primary"
-          prepend-icon="mdi-file-replace-outline"
-          data-testid="detail-new-version"
-          @click="emit('newVersion', row)"
-        >
-          {{ $t('averagePrices.newVersion') }}
-        </v-btn>
-        <v-spacer />
-        <v-btn variant="text" @click="open = false">{{ $t('common.close') }}</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <template #actions>
+      <v-btn
+        v-if="row && row.is_current && !row.deleted_at"
+        variant="tonal"
+        color="primary"
+        prepend-icon="mdi-file-replace-outline"
+        data-testid="detail-new-version"
+        @click="emit('newVersion', row)"
+      >
+        {{ $t('averagePrices.newVersion') }}
+      </v-btn>
+      <v-spacer />
+      <v-btn variant="text" @click="open = false">{{ $t('common.close') }}</v-btn>
+    </template>
+  </FormDialog>
 </template>

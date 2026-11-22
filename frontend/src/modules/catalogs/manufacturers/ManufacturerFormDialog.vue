@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormDialog from '@/components/FormDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -85,61 +86,59 @@ function clearError(field: string) {
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="680" scrollable :persistent="saving">
-    <v-card :title="isEdit ? $t('manufacturers.edit') : $t('manufacturers.new')">
-      <v-form
-        ref="formRef"
-        class="d-flex flex-column"
-        style="min-height: 0"
-        @submit.prevent="submit"
-      >
-        <v-card-text>
-          <v-text-field
-            v-model="form.name"
-            :label="$t('manufacturers.fields.name')"
-            :rules="[rules.required, rules.maxLength(100)]"
-            :error-messages="fieldErrors.name"
-            maxlength="100"
-            autofocus
-            data-testid="name"
-            @update:model-value="clearError('name')"
-          />
+  <FormDialog
+    ref="formRef"
+    v-model="open"
+    :title="isEdit ? $t('manufacturers.edit') : $t('manufacturers.new')"
+    :subtitle="manufacturer?.name ?? null"
+    icon="mdi-factory"
+    max-width="680"
+    :persistent="saving"
+    @submit="submit"
+  >
+    <v-text-field
+      v-model="form.name"
+      :label="$t('manufacturers.fields.name')"
+      :rules="[rules.required, rules.maxLength(100)]"
+      :error-messages="fieldErrors.name"
+      maxlength="100"
+      autofocus
+      data-testid="name"
+      @update:model-value="clearError('name')"
+    />
 
-          <div class="text-subtitle-1">{{ $t('manufacturers.remarketing.title') }}</div>
-          <p class="text-body-2 text-medium-emphasis mb-3">
-            {{ $t('manufacturers.remarketing.subtitle') }}
-          </p>
-          <RemarketingEditor
-            :ratings="form"
-            :fields="MANUFACTURER_RATINGS"
-            i18n-prefix="manufacturers.remarketing"
-            :errors="fieldErrors"
-            class="mb-4"
-            @edited="clearError"
-          />
+    <div class="text-subtitle-1">{{ $t('manufacturers.remarketing.title') }}</div>
+    <p class="text-body-2 text-medium-emphasis mb-3">
+      {{ $t('manufacturers.remarketing.subtitle') }}
+    </p>
+    <RemarketingEditor
+      :ratings="form"
+      :fields="MANUFACTURER_RATINGS"
+      i18n-prefix="manufacturers.remarketing"
+      :errors="fieldErrors"
+      class="mb-4"
+      @edited="clearError"
+    />
 
-          <v-switch
-            v-model="form.is_enabled"
-            :label="$t('catalogs.fields.enabled')"
-            color="primary"
-            inset
-            hide-details
-            data-testid="enabled"
-          />
-          <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
-            {{ generalError }}
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="open = false">
-            {{ $t('common.cancel') }}
-          </v-btn>
-          <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
-            {{ $t('common.save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-form>
-    </v-card>
-  </v-dialog>
+    <v-switch
+      v-model="form.is_enabled"
+      :label="$t('catalogs.fields.enabled')"
+      color="primary"
+      inset
+      hide-details
+      data-testid="enabled"
+    />
+    <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
+      {{ generalError }}
+    </v-alert>
+
+    <template #actions>
+      <v-btn variant="text" :disabled="saving" @click="open = false">
+        {{ $t('common.cancel') }}
+      </v-btn>
+      <v-btn type="submit" color="primary" variant="flat" :loading="saving" data-testid="save">
+        {{ $t('common.save') }}
+      </v-btn>
+    </template>
+  </FormDialog>
 </template>
