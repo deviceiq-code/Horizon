@@ -18,8 +18,8 @@ const scenario = (id: number, title: string, totals: Partial<efmvApi.ScenarioTot
     term_months: 36,
     scope: '',
     items: [
-      { average_price: 7, currency: 'BRL', service: { name: 'Warranty' } },
-      { average_price: 8, currency: 'BRL', service: null },
+      { average_price: 7, quantity: 10, currency: 'BRL', service: { name: 'Warranty' } },
+      { average_price: 8, quantity: 3, currency: 'BRL', service: null },
     ],
     has_expired: false,
     totals: {
@@ -65,9 +65,9 @@ describe('AnalysisScenariosPanel', () => {
     const rows = document.querySelectorAll('[data-testid="analysis-scenario"]')
     expect(rows).toHaveLength(2)
     expect(rows[0]!.textContent).toContain('36 Months')
-    // Assets counted by kind: 2 HW, 1 of them with a service
+    // Units counted by kind: 13 HW, 10 of them with a service
     expect(rows[0]!.querySelector('[data-testid="asset-counts"]')!.textContent).toMatch(
-      /HW\s*2.*SW\s*0.*SV\s*1/,
+      /HW\s*13.*SW\s*0.*SV\s*10/,
     )
     expect(inBody('[data-testid="scenario-lo"]')!.textContent).toMatch(/R\$\s?210,000\.00/)
     expect(inBody('[data-testid="scenario-efmv"]')!.textContent).toMatch(/52\.38%.*110,000\.00/)

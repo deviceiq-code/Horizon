@@ -270,7 +270,7 @@ Multi-user web system for **operating lease residual value pricing**
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
     number (assets counted by kind beside "Assets" — `AssetCounts.vue`, `draft.ts::assetCounts`:
-    HW assets, SW, SV services —; the analysis's vertical, shown as a chip beside "Assets", filters the asset
+    units by quantity: HW assets, SW, SV services —; the analysis's vertical, shown as a chip beside "Assets", filters the asset
     picker), Quantity, asset (class · specifications · price date or expired flag), Unit Value
     (the average price's value as placeholder; empty = that value; its Position chip below it
     in the same cell), eFMV (the

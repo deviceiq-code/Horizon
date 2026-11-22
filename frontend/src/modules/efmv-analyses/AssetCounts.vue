@@ -1,5 +1,8 @@
 <script setup lang="ts">
-/** How many assets of each kind a scenario has: HW (assets), SW (to come) and SV (services). */
+/**
+ * How many units of each kind a scenario has, by quantity: HW (assets), SW (to come) and SV
+ * (services).
+ */
 defineProps<{ counts: { hw: number; sw: number; sv: number } }>()
 
 const KINDS = [

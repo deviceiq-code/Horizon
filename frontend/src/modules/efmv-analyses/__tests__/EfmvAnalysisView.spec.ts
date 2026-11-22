@@ -625,10 +625,10 @@ describe('EfmvAnalysisView', () => {
     expect(inBody('[data-testid="service-mode"]')!.textContent).toContain('Added to the asset')
     expect(inBody('[data-testid="service-quantity"]')!.textContent!.trim()).toBe('2')
     expect(inBody('[data-testid="service-efmv"]')!.textContent).toContain('0.00')
-    // Counted apart: 1 asset (HW) with 1 service (SV)
+    // Units counted apart: 2 assets (HW, the row's quantity) with their 2 services (SV)
     const count = (kind: string) =>
       inBody(`[data-testid="asset-count-${kind}"]`)!.textContent!.replace(/\s+/g, ' ').trim()
-    expect([count('hw'), count('sw'), count('sv')]).toEqual(['HW 1', 'SW 0', 'SV 1'])
+    expect([count('hw'), count('sw'), count('sv')]).toEqual(['HW 2', 'SW 0', 'SV 2'])
     // One service per asset: no second row
     await click('add-service')
     expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)

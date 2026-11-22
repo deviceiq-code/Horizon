@@ -165,16 +165,18 @@ export function parseServiceInput(
 }
 
 /**
- * How many assets of each kind: HW — the assets (rows with an average price) —, SW (none yet)
- * and SV — the services under them.
+ * How many units of each kind, by quantity: HW — the assets (rows with an average price) —, SW
+ * (none yet) and SV — their services (as many as their asset). A quantity being typed that is
+ * not a whole number yet counts as 0.
  */
-export function assetCounts(items: { average_price: number | null; service?: unknown }[]): {
-  hw: number
-  sw: number
-  sv: number
-} {
+export function assetCounts(
+  items: { average_price: number | null; quantity: number; service?: unknown }[],
+): { hw: number; sw: number; sv: number } {
+  const units = (i: { quantity: number }) =>
+    Number.isInteger(i.quantity) && i.quantity > 0 ? i.quantity : 0
   const assets = items.filter((i) => i.average_price !== null)
-  return { hw: assets.length, sw: 0, sv: assets.filter((i) => !!i.service).length }
+  const sum = (list: typeof assets) => list.reduce((total, i) => total + units(i), 0)
+  return { hw: sum(assets), sw: 0, sv: sum(assets.filter((i) => !!i.service)) }
 }
 
 /** Input for the API; assets whose price was deleted are left out. */

@@ -112,14 +112,15 @@ describe('eFMV analysis draft', () => {
     })
   })
 
-  it('counts assets (HW) and their services (SV) apart', () => {
+  it('counts units (quantities) of assets (HW) and of their services (SV) apart', () => {
     expect(
       assetCounts([
-        { average_price: 7, service: { name: 'Warranty' } },
-        { average_price: 8, service: null },
-        { average_price: null }, // a row without an asset yet
+        { average_price: 7, quantity: 10, service: { name: 'Warranty' } },
+        { average_price: 8, quantity: 3, service: null },
+        { average_price: null, quantity: 1 }, // a row without an asset yet
+        { average_price: 9, quantity: Number.NaN }, // a quantity being typed
       ]),
-    ).toEqual({ hw: 2, sw: 0, sv: 1 })
+    ).toEqual({ hw: 13, sw: 0, sv: 10 })
   })
 
   it('copies a scenario with its own items', () => {
