@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * The user's own settings (language, mode, color theme, interface size), saved to their account. Global
+ * The user's own settings (language, mode, color theme, interface size, date and time formats),
+ * saved to their account. Global
  * settings are in Administration → System Settings.
  */
 import { ref } from 'vue'
@@ -10,6 +11,8 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/stores/preferences'
 import { COLOR_THEMES } from '@/themes'
 import { UI_SCALE_ICONS, UI_SCALES, uiScaleFactor } from '@/uiScale'
+import { DATE_FORMATS, TIME_FORMATS } from '@/dateFormat'
+import { useDateFormat } from '@/composables/useDateFormat'
 
 const { t } = useI18n()
 const preferences = usePreferencesStore()
@@ -18,6 +21,10 @@ const notifications = useNotificationsStore()
 const saving = ref(false)
 
 const THEMES = THEME_OPTIONS
+
+// Date and time: an example with the formats chosen (now)
+const { d } = useDateFormat()
+const now = new Date()
 
 /** The scale "Automatic" gives in this window now ("88%") */
 const autoPercent = () => Math.round(uiScaleFactor('auto', window.innerWidth) * 100)
@@ -165,6 +172,64 @@ async function save(changes: PreferencesUpdate) {
         </v-btn-toggle>
         <div class="text-caption text-medium-emphasis mt-2" data-testid="ui-scale-hint">
           {{ $t('settings.uiScaleAutoHint', { percent: autoPercent() }) }}
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- How dates and times are written: by the language, or fixed -->
+    <v-card class="mt-4">
+      <v-card-item prepend-icon="mdi-calendar-clock-outline">
+        <v-card-title>{{ $t('settings.dateTime') }}</v-card-title>
+        <v-card-subtitle>{{ $t('settings.dateTimeDescription') }}</v-card-subtitle>
+      </v-card-item>
+      <v-card-text>
+        <div class="text-body-2 mb-2">{{ $t('settings.dateFormat') }}</div>
+        <v-btn-toggle
+          :model-value="preferences.dateFormat"
+          mandatory
+          divided
+          variant="outlined"
+          color="primary"
+          :disabled="saving"
+          class="flex-wrap"
+          data-testid="date-format"
+          @update:model-value="save({ date_format: $event })"
+        >
+          <v-btn
+            v-for="format in DATE_FORMATS"
+            :key="format"
+            :value="format"
+            class="text-none"
+            :data-testid="`date-format-${format}`"
+          >
+            {{ $t(`settings.dateFormats.${format}`) }}
+          </v-btn>
+        </v-btn-toggle>
+
+        <div class="text-body-2 mt-5 mb-2">{{ $t('settings.timeFormat') }}</div>
+        <v-btn-toggle
+          :model-value="preferences.timeFormat"
+          mandatory
+          divided
+          variant="outlined"
+          color="primary"
+          :disabled="saving"
+          data-testid="time-format"
+          @update:model-value="save({ time_format: $event })"
+        >
+          <v-btn
+            v-for="format in TIME_FORMATS"
+            :key="format"
+            :value="format"
+            class="text-none"
+            :data-testid="`time-format-${format}`"
+          >
+            {{ $t(`settings.timeFormats.${format}`) }}
+          </v-btn>
+        </v-btn-toggle>
+
+        <div class="text-body-2 text-medium-emphasis mt-4" data-testid="date-time-example">
+          {{ $t('settings.dateTimeExample', { example: d(now, 'dateTime') }) }}
         </div>
       </v-card-text>
     </v-card>

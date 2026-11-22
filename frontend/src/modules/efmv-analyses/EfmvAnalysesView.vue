@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -6,7 +7,9 @@ import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import AnalysisScenariosPanel from './AnalysisScenariosPanel.vue'
 import { deleteEfmvAnalysis, listEfmvAnalyses, type EfmvAnalysisRow } from './api'
 
-const { t, d } = useI18n()
+const { t } = useI18n()
+// Dates in the formats the user chose (Settings)
+const { d } = useDateFormat()
 const router = useRouter()
 const table = ref<{ reload: () => Promise<void> } | null>(null)
 

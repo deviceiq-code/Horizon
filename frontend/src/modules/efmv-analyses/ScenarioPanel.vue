@@ -6,6 +6,7 @@
  * (`preview`); nothing is computed here. Assets whose curve stops before the term are flagged
  * (saving refuses them).
  */
+import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useValidationRules } from '@/composables/useValidationRules'
@@ -46,7 +47,9 @@ const props = defineProps<{
   scopeLabel: string | null
 }>()
 
-const { t, n, d, locale } = useI18n()
+const { t, n, locale } = useI18n()
+// Dates in the formats the user chose (Settings)
+const { d } = useDateFormat()
 const rules = useValidationRules()
 
 // Optional: the official name is the term + the name; it must be unique in the analysis

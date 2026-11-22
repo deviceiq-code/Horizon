@@ -1091,3 +1091,15 @@ msgstr "Envie o serviço como valor ou como percentual, não ambos."
 
 msgid "The service cannot be worth more than the asset."
 msgstr "O serviço não pode valer mais do que o bem."
+
+msgid "24 hours"
+msgstr "24 horas"
+
+msgid "12 hours (AM/PM)"
+msgstr "12 horas (AM/PM)"
+
+msgid "date format"
+msgstr "formato de data"
+
+msgid "time format"
+msgstr "formato de hora"

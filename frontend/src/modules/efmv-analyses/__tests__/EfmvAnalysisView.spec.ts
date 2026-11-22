@@ -134,6 +134,8 @@ async function mountView(props: { id: number } = { id: 3 }, roles = ['Account Ma
       theme: 'light',
       color_theme: 'metallic_foundations',
       ui_scale: 'auto',
+      date_format: 'auto',
+      time_format: 'auto',
       updated_at: '',
     },
   }

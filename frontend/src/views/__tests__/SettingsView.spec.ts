@@ -23,6 +23,8 @@ const user = (is_admin: boolean): User => ({
     theme: 'system',
     color_theme: 'metallic_foundations',
     ui_scale: 'auto',
+    date_format: 'auto',
+    time_format: 'auto',
     updated_at: '',
   },
 })
@@ -84,6 +86,24 @@ describe('SettingsView', () => {
     expect(inBody('[data-testid="ui-scale-hint"]')!.textContent).toMatch(/now \d+%/)
     await click('ui-scale-small')
     expect(save).toHaveBeenCalledWith({ ui_scale: 'small' })
+    wrapper.unmount()
+  })
+
+  it('changes the date and time formats, with an example', async () => {
+    const { wrapper } = await mountAt('/settings', false)
+    const preferences = usePreferencesStore()
+    const save = vi.spyOn(preferences, 'save').mockResolvedValue()
+    expect(inBody('[data-testid="date-format-auto"]')!.className).toContain('v-btn--active')
+    await click('date-format-ymd')
+    expect(save).toHaveBeenCalledWith({ date_format: 'ymd' })
+    await click('time-format-24h')
+    expect(save).toHaveBeenCalledWith({ time_format: '24h' })
+    // The example follows the formats in use
+    preferences.apply({ date_format: 'ymd', time_format: '24h' })
+    await settle()
+    expect(inBody('[data-testid="date-time-example"]')!.textContent).toMatch(
+      /Now: \d{4}-\d{2}-\d{2}, \d{2}:\d{2}/,
+    )
     wrapper.unmount()
   })
 })

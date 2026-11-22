@@ -29,6 +29,23 @@ class UiScale(models.TextChoices):
     LARGE = "large", _("Large")
 
 
+class DateFormat(models.TextChoices):
+    """How dates are written. "auto": as usual in the interface's language."""
+
+    AUTO = "auto", _("Automatic")
+    DMY = "dmy", "DD/MM/YYYY"
+    MDY = "mdy", "MM/DD/YYYY"
+    YMD = "ymd", "YYYY-MM-DD"
+
+
+class TimeFormat(models.TextChoices):
+    """How times are written. "auto": as usual in the interface's language."""
+
+    AUTO = "auto", _("Automatic")
+    H24 = "24h", _("24 hours")
+    H12 = "12h", _("12 hours (AM/PM)")
+
+
 class UserPreferences(models.Model):
     """Settings each user picks on the settings page."""
 
@@ -53,6 +70,12 @@ class UserPreferences(models.Model):
     )
     ui_scale = models.CharField(
         _("interface size"), max_length=10, choices=UiScale, default=UiScale.AUTO
+    )
+    date_format = models.CharField(
+        _("date format"), max_length=10, choices=DateFormat, default=DateFormat.AUTO
+    )
+    time_format = models.CharField(
+        _("time format"), max_length=10, choices=TimeFormat, default=TimeFormat.AUTO
     )
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 

@@ -138,3 +138,13 @@ def test_me_has_the_email_and_the_roles_for_display(logged_client, user):
     data = logged_client.get("/api/auth/me/").json()
     assert data["email"] == "fernando@example.com"
     assert data["role_refs"] == [{"name": admin.name, "key": "administrator", "is_system": True}]
+
+
+def test_date_and_time_formats_default_to_automatic(logged_client):
+    data = logged_client.get("/api/auth/preferences/").json()
+    assert (data["date_format"], data["time_format"]) == ("auto", "auto")
+    r = _patch(logged_client, {"date_format": "ymd", "time_format": "12h"})
+    assert (r.status_code, r.json()["date_format"], r.json()["time_format"]) == (200, "ymd", "12h")
+    assert logged_client.get("/api/auth/me/").json()["preferences"]["date_format"] == "ymd"
+    r = _patch(logged_client, {"date_format": "dd.mm"})
+    assert r.status_code == 400 and "date_format" in r.json()

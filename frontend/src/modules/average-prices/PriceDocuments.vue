@@ -4,6 +4,7 @@
  * the row: list, upload (button or drag and drop, several files at once), open/download and
  * delete. What is accepted (type, size) is decided by the API; its messages are shown per file.
  */
+import { useDateFormat } from '@/composables/useDateFormat'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError, deleteErrorMessage } from '@/api'
@@ -26,7 +27,9 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ changed: [count: number] }>()
 
-const { t, locale, d } = useI18n()
+const { t, locale } = useI18n()
+// Dates in the formats the user chose (Settings)
+const { d } = useDateFormat()
 const notifications = useNotificationsStore()
 
 const documents = ref<PriceDocument[]>([])

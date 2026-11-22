@@ -4,6 +4,7 @@
  * API) and every version of the row with their average (also computed by the API). Any version
  * can be opened or erased from the history.
  */
+import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatMoney } from '@/utils/money'
@@ -24,7 +25,9 @@ const props = defineProps<{ rowId: number | null }>()
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ newVersion: [row: AveragePrice]; changed: [] }>()
 
-const { t, locale, n, d } = useI18n()
+const { t, locale, n } = useI18n()
+// Dates in the formats the user chose (Settings)
+const { d } = useDateFormat()
 
 const shownId = ref<number | null>(null)
 const row = ref<AveragePriceDetail | null>(null)

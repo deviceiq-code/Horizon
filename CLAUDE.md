@@ -186,6 +186,10 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/stores/auth.ts` — logged-in user state.
   - `src/stores/preferences.ts` — language/theme/interface size in use; saved to the account via
     `PATCH /api/auth/preferences/`.
+  - **Date and time formats**: preferences `date_format` (auto — by the language — | dmy | mdy
+    | ymd) and `time_format` (auto | 24h | 12h), chosen in Settings (`accounts.models.DateFormat`
+    / `TimeFormat`). Format dates with `useDateFormat().d(value, 'short' | 'dateTime')`
+    (`src/dateFormat.ts`), never vue-i18n's `d`/`$d`.
   - **Interface size** (`src/uiScale.ts`, applied in App.vue): CSS `zoom` on the page (Vuetify
     sizes spacing/fields in px, so only scaling fonts would not do). Preference `ui_scale`
     (`accounts.models.UiScale`): auto (default; by the window's width: ≤1366 px 0.88 → 1920 px
@@ -361,7 +365,7 @@ Multi-user web system for **operating lease residual value pricing**
     ("Allowed Terms (months)"). E.g. "Asset Classes", "Classes de Ativo", "Valores por Prazo".
   - Frontend: **no hard-coded visible text in templates/code** — always `$t('key')` / `t('key')`,
     with the key added to `en.ts`, `pt-br.ts` and `es.ts`. The test `src/i18n/__tests__/i18n.spec.ts`
-    fails if a key is missing. Dates/numbers: `$d(value, 'short')`, `$n(value, 'decimal')`.
+    fails if a key is missing. Dates: `useDateFormat().d(value, 'short')` (the user's formats); numbers: `$n(value, 'decimal')`.
   - Backend: user-facing text with `gettext`/`gettext_lazy as _` (English msgids).
     Translations in `backend/locale/`. Without `gettext` installed, compile with
     `uvx --from babel pybabel compile -d locale -D django` (or `sudo apt install gettext` and use

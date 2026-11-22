@@ -4,6 +4,7 @@
  * term. Any version can be erased here for good (after confirmation); the API then makes the
  * newest version left the current one. Used in the detail's history and the grid's expanded rows.
  */
+import { useDateFormat } from '@/composables/useDateFormat'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { deleteErrorMessage } from '@/api'
@@ -20,7 +21,9 @@ defineProps<{
 }>()
 const emit = defineEmits<{ open: [version: AveragePrice]; deleted: [version: AveragePrice] }>()
 
-const { t, locale, n, d } = useI18n()
+const { t, locale, n } = useI18n()
+// Dates in the formats the user chose (Settings)
+const { d } = useDateFormat()
 const notifications = useNotificationsStore()
 
 const money = (version: AveragePrice, value: string) =>

@@ -110,6 +110,8 @@ describe('AppBreadcrumbs', () => {
         theme: 'system',
         color_theme: 'metallic_foundations',
         ui_scale: 'auto',
+        date_format: 'auto',
+        time_format: 'auto',
         updated_at: '',
       },
     }

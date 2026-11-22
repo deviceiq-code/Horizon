@@ -817,6 +817,13 @@ const es: Messages = {
     },
   },
   settings: {
+    dateTime: 'Fecha y Hora',
+    dateTimeDescription: 'Cómo se escriben las fechas y horas en todo el sistema.',
+    dateFormat: 'Formato de Fecha',
+    timeFormat: 'Formato de Hora',
+    dateFormats: { auto: 'Por el Idioma', dmy: 'DD/MM/AAAA', mdy: 'MM/DD/AAAA', ymd: 'AAAA-MM-DD' },
+    timeFormats: { auto: 'Por el Idioma', '24h': '24 Horas', '12h': '12 Horas (AM/PM)' },
+    dateTimeExample: 'Ahora: {example}',
     uiScale: 'Tamaño de la Interfaz',
     uiScaleDescription: 'Tamaño de textos, campos y espaciados.',
     uiScaleAutoHint:

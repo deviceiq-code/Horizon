@@ -5,6 +5,7 @@
  * versions expand to list them; a version can be deleted there or in the detail (the newest
  * one left becomes current). Deleting from the grid hides every version (all kept).
  */
+import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
@@ -22,7 +23,9 @@ import {
   type AveragePriceDetail,
 } from './api'
 
-const { t, locale, n, d } = useI18n()
+const { t, locale, n } = useI18n()
+// Dates in the formats the user chose (Settings)
+const { d } = useDateFormat()
 const notifications = useNotificationsStore()
 
 const table = ref<{ reload: () => Promise<void> } | null>(null)

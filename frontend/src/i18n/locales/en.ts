@@ -814,6 +814,18 @@ const en = {
     },
   },
   settings: {
+    dateTime: 'Date and Time',
+    dateTimeDescription: 'How dates and times are written across the system.',
+    dateFormat: 'Date Format',
+    timeFormat: 'Time Format',
+    dateFormats: {
+      auto: 'By the Language',
+      dmy: 'DD/MM/YYYY',
+      mdy: 'MM/DD/YYYY',
+      ymd: 'YYYY-MM-DD',
+    },
+    timeFormats: { auto: 'By the Language', '24h': '24 Hours', '12h': '12 Hours (AM/PM)' },
+    dateTimeExample: 'Now: {example}',
     uiScale: 'Interface Size',
     uiScaleDescription: 'Size of text, fields and spacing.',
     uiScaleAutoHint:

@@ -5,6 +5,7 @@
  * tab per scenario (at least one); on wide screens the page fills the window and only the
  * assets of the open scenario scroll. Figures come from the API.
  */
+import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -38,7 +39,9 @@ import {
 
 const props = defineProps<{ id: number }>()
 
-const { t, d, locale } = useI18n()
+const { t, locale } = useI18n()
+// Dates in the formats the user chose (Settings)
+const { d } = useDateFormat()
 const notifications = useNotificationsStore()
 
 const loading = ref(false)

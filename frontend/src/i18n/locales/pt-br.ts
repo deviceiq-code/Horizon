@@ -814,6 +814,13 @@ const ptBR: Messages = {
     },
   },
   settings: {
+    dateTime: 'Data e Hora',
+    dateTimeDescription: 'Como datas e horas são escritas em todo o sistema.',
+    dateFormat: 'Formato da Data',
+    timeFormat: 'Formato da Hora',
+    dateFormats: { auto: 'Pelo Idioma', dmy: 'DD/MM/AAAA', mdy: 'MM/DD/AAAA', ymd: 'AAAA-MM-DD' },
+    timeFormats: { auto: 'Pelo Idioma', '24h': '24 Horas', '12h': '12 Horas (AM/PM)' },
+    dateTimeExample: 'Agora: {example}',
     uiScale: 'Tamanho da Interface',
     uiScaleDescription: 'Tamanho de textos, campos e espaçamentos.',
     uiScaleAutoHint:

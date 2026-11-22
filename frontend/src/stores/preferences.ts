@@ -4,6 +4,7 @@ import { api } from '@/api'
 import { currentLanguage, isSupportedLanguage, setLanguage, type Language } from '@/i18n'
 import { DEFAULT_COLOR_THEME, isColorTheme } from '@/themes'
 import { isUiScale, type UiScale } from '@/uiScale'
+import { isDateFormat, isTimeFormat, type DateFormat, type TimeFormat } from '@/dateFormat'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -15,6 +16,9 @@ export interface Preferences {
   color_theme: string
   /** Size of the interface (src/uiScale.ts); "auto" follows the window's width */
   ui_scale: UiScale
+  /** How dates and times are written (src/dateFormat.ts); "auto" follows the language */
+  date_format: DateFormat
+  time_format: TimeFormat
   updated_at: string
 }
 
@@ -23,6 +27,8 @@ export type PreferencesUpdate = Partial<{
   theme: Theme
   color_theme: string
   ui_scale: UiScale
+  date_format: DateFormat
+  time_format: TimeFormat
 }>
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']
@@ -36,6 +42,19 @@ export const THEME_OPTIONS: readonly { value: Theme; icon: string }[] = [
 const THEME_STORAGE_KEY = 'horizon.theme'
 const COLOR_THEME_STORAGE_KEY = 'horizon.colorTheme'
 const UI_SCALE_STORAGE_KEY = 'horizon.uiScale'
+
+const DATE_FORMAT_STORAGE_KEY = 'horizon.dateFormat'
+const TIME_FORMAT_STORAGE_KEY = 'horizon.timeFormat'
+
+function readStored<T extends string>(key: string, valid: (v: unknown) => v is T, fallback: T): T {
+  try {
+    const stored = localStorage.getItem(key)
+    if (valid(stored)) return stored
+  } catch {
+    /* storage unavailable */
+  }
+  return fallback
+}
 
 function readStoredUiScale(): UiScale {
   try {
@@ -84,9 +103,18 @@ export const usePreferencesStore = defineStore('preferences', () => {
   const theme = ref<Theme>(readStoredTheme())
   const colorTheme = ref<string>(readStoredColorTheme())
   const uiScale = ref<UiScale>(readStoredUiScale())
+  const dateFormat = ref<DateFormat>(readStored(DATE_FORMAT_STORAGE_KEY, isDateFormat, 'auto'))
+  const timeFormat = ref<TimeFormat>(readStored(TIME_FORMAT_STORAGE_KEY, isTimeFormat, 'auto'))
 
   /** Apply preferences to the UI without saving them to the account. */
-  function apply(p: { language?: string; theme?: Theme; color_theme?: string; ui_scale?: string }) {
+  function apply(p: {
+    language?: string
+    theme?: Theme
+    color_theme?: string
+    ui_scale?: string
+    date_format?: string
+    time_format?: string
+  }) {
     if (p.language && isSupportedLanguage(p.language)) {
       language.value = p.language
       setLanguage(p.language)
@@ -103,6 +131,14 @@ export const usePreferencesStore = defineStore('preferences', () => {
       uiScale.value = p.ui_scale
       store(UI_SCALE_STORAGE_KEY, p.ui_scale)
     }
+    if (isDateFormat(p.date_format)) {
+      dateFormat.value = p.date_format
+      store(DATE_FORMAT_STORAGE_KEY, p.date_format)
+    }
+    if (isTimeFormat(p.time_format)) {
+      timeFormat.value = p.time_format
+      store(TIME_FORMAT_STORAGE_KEY, p.time_format)
+    }
   }
 
   /** Apply immediately and save to the account; if the API fails, roll back and rethrow. */
@@ -112,6 +148,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
       theme: theme.value,
       color_theme: colorTheme.value,
       ui_scale: uiScale.value,
+      date_format: dateFormat.value,
+      time_format: timeFormat.value,
     }
     apply(changes)
     try {
@@ -126,5 +164,5 @@ export const usePreferencesStore = defineStore('preferences', () => {
     }
   }
 
-  return { language, theme, colorTheme, uiScale, apply, save }
+  return { language, theme, colorTheme, uiScale, dateFormat, timeFormat, apply, save }
 })
