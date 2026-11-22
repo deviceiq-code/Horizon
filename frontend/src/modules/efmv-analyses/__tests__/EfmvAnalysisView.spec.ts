@@ -396,8 +396,8 @@ describe('EfmvAnalysisView', () => {
     const titles = [...document.querySelectorAll('[data-testid="assets"] th')].map((th) =>
       th.textContent?.trim(),
     )
-    // After the row number
-    expect(titles.slice(0, 2)).toEqual(['#', 'Quantity'])
+    // After the selection box and the row number
+    expect(titles.slice(0, 3)).toEqual(['', '#', 'Quantity'])
     expect((inBody('[data-testid="unit-value"] input') as HTMLInputElement).value).toBe(
       '100,000.00',
     )
@@ -586,6 +586,92 @@ describe('EfmvAnalysisView', () => {
     expect(efmv.updateEfmvAnalysis).toHaveBeenCalled()
     expect(shown()).toBe(true)
     expect(inBody('.v-tab--selected')!.textContent).toContain('Base')
+    wrapper.unmount()
+  })
+
+  it('selected assets get a service (SV) row under them; services can be removed', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView()
+    // Nothing selected: no operations
+    expect(inBody('[data-testid="add-service"]')).toBeNull()
+    ;(inBody('[data-testid="select-row"] input') as HTMLInputElement).click()
+    await settle()
+    expect(inBody('[data-testid="selected-count"]')!.textContent).toContain('1 selected')
+    efmv.previewScenario.mockResolvedValue({
+      items: [
+        {
+          ...EXCAVATOR,
+          service: {
+            name: 'Services',
+            mode: 'add',
+            value: '0.00',
+            line_total: '0.00',
+            weight_percent: '0.00',
+            too_high: false,
+          },
+        },
+      ],
+      totals: TOTALS,
+      has_expired: false,
+    })
+    await click('add-service')
+    // The service row: named "Services", zero, added to the asset, eFMV 0
+    expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
+    expect((inBody('[data-testid="service-name"] input') as HTMLInputElement).value).toBe(
+      'Services',
+    )
+    expect((inBody('[data-testid="service-value"] input') as HTMLInputElement).value).toBe('0.00')
+    expect(inBody('[data-testid="service-mode"]')!.textContent).toContain('Added to the asset')
+    expect(inBody('[data-testid="service-quantity"]')!.textContent!.trim()).toBe('2')
+    expect(inBody('[data-testid="service-efmv"]')!.textContent).toContain('0.00')
+    // One service per asset: no second row
+    await click('add-service')
+    expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
+
+    // 8% deducted from the asset: the API resolves it
+    await typeInto('service-value', '8%')
+    await click('service-mode')
+    expect(inBody('[data-testid="service-mode"]')!.textContent).toContain('Deducted')
+    await debounce()
+    expect(efmv.previewScenario).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            service: { name: 'Services', mode: 'deduct', percent: '8' },
+          }),
+        ],
+      }),
+    )
+    // Removing the service (its value goes back to the asset: nothing is sent)
+    await click('remove-service')
+    expect(inBody('[data-testid="service-row"]')).toBeNull()
+    await click('save')
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
+      scenarios: [
+        expect.objectContaining({
+          items: [{ average_price: 7, quantity: 2, unit_value: '100000.00', efmv_value: null }],
+        }),
+      ],
+    })
+    wrapper.unmount()
+  })
+
+  it('removes the selected rows at once', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      scenarios: [
+        { ...ANALYSIS.scenarios[0]!, items: [EXCAVATOR, { ...EXCAVATOR, id: 2, quantity: 5 }] },
+      ],
+    })
+    const { wrapper } = await mountView()
+    expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(2)
+    ;(inBody('[data-testid="select-all"] input') as HTMLInputElement).click()
+    await settle()
+    expect(inBody('[data-testid="selected-count"]')!.textContent).toContain('2 selected')
+    await click('remove-selected')
+    expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(0)
+    expect(inBody('[data-testid="selected-count"]')).toBeNull()
     wrapper.unmount()
   })
 

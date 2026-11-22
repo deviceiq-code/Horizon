@@ -142,6 +142,30 @@ const ptBR: Messages = {
     },
   },
   efmv: {
+    service: {
+      netHint:
+        'Sem o serviço (subtraído): {value}. O posicionamento e o % do eFMV usam esse valor.',
+      sv: 'SV',
+      defaultName: 'Serviços',
+      name: 'Nome do Serviço',
+      value: 'Valor do Serviço',
+      valueHint: 'Por unidade do bem: um valor ou um percentual do valor do bem (ex.: 8%).',
+      valueRule: 'Informe um valor ou um percentual igual ou maior que zero.',
+      add: 'Somado ao bem',
+      deduct: 'Subtraído do bem',
+      modeHint: 'Clique para somar ao valor do bem ou subtrair dele.',
+      tooHigh: 'Vale mais que o bem (ou, subtraído, o bem inteiro).',
+      efmvHint: 'Serviços não são revendidos: nada resta ao fim do prazo.',
+      remove: 'Remover Serviço',
+    },
+    selection: {
+      all: 'Selecionar Todos',
+      row: 'Selecionar',
+      count: '{n} selecionado | {n} selecionados',
+      addService: 'Adicionar Serviço',
+      addServiceHint: 'Uma linha de serviço sob cada bem selecionado que ainda não tem.',
+      remove: 'Remover',
+    },
     wizard: {
       noManagerVerticals:
         'Este account manager ainda não atua em nenhuma vertical: um administrador as define em Usuários.',

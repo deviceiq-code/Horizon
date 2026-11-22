@@ -9,6 +9,10 @@ Per scenario:
   Σ quantity × eFMV value (one unit at the end of the term) / LO, as a percentage with 2
   decimal places.
 - Weight of an item: its total (quantity × unit value) as a percentage of the LO, 2 places.
+- Services (SV) of an item: per unit, the item's quantity; added on top of the asset's value or
+  deducted from it (the asset is then worth the rest: `split_service`); never worth more than
+  the asset. Their eFMV is 0, so
+  they lower the eFMV at EOL.
 """
 
 from collections.abc import Iterable, Sequence
@@ -87,6 +91,20 @@ def percent_of_value(value: Decimal, percent: Decimal) -> Decimal:
     """`percent` % of `value`, in money (2 places, half up): an eFMV typed as a percentage
     of the unit value ("25%" of 100.00 → 25.00)."""
     return (value * percent / HUNDRED).quantize(CENTS, rounding=ROUND_HALF_UP)
+
+
+def split_service(
+    unit_value: Decimal, service_value: Decimal, deduct: bool
+) -> tuple[Decimal, Decimal] | None:
+    """(asset's unit value, service's unit value) of an item with a service. Deducted, the
+    service comes out of the value typed for the asset. None when the service is worth more
+    than the asset or, deducted, when it would leave the asset with nothing."""
+    if service_value > unit_value:
+        return None
+    if not deduct:
+        return unit_value, service_value
+    rest = unit_value - service_value
+    return (rest, service_value) if rest >= CENTS else None
 
 
 def covers_term(anchor_terms: Sequence[int], term_months: int) -> bool:

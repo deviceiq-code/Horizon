@@ -25,6 +25,7 @@ import {
   copyScenario,
   nextScenarioName,
   isEfmvInput,
+  parseServiceInput,
   parseTerm,
   parseUnitValue,
   scenarioDraft,
@@ -198,9 +199,11 @@ function hasIssues(index: number): boolean {
         (!Number.isInteger(i.quantity) ||
           i.quantity < 1 ||
           (!!i.unit_value.trim() && parseUnitValue(i.unit_value, locale.value) === null) ||
-          !isEfmvInput(i.efmv_value, locale.value)),
+          !isEfmvInput(i.efmv_value, locale.value) ||
+          (!!i.service &&
+            (!i.service.name.trim() || parseServiceInput(i.service.value, locale.value) === null))),
     ) ||
-    !!scenario.preview?.items.some((i) => i.out_of_curve)
+    !!scenario.preview?.items.some((i) => i.out_of_curve || i.service?.too_high)
   )
 }
 

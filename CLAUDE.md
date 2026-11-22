@@ -111,7 +111,13 @@ Multi-user web system for **operating lease residual value pricing**
     a quantity and a `unit_value` typed by the analyst — when not typed, the current average
     price's value counts (`value_from_price` in previews) and is stored on save; the same
     price may repeat in several rows — e.g. another value per delivery state; and an optional `efmv_value` — one unit at the end of the term, typed; negative allowed (a
-    disposal cost; also as a negative %); null = the
+    disposal cost; also as a negative %); and at most one service (SV: `service_name` — empty =
+    none —, `service_value` per unit, ≥ 0, typed as money or `percent` of the asset's value as
+    typed, `service_mode` add | deduct; never worth more than the asset nor, deducted, all of
+    it — `calculations.split_service`): added, it adds to the LO; deducted, the asset is worth
+    the rest (`net_unit_value`: positioned, totalled, its eFMV % is of it); its eFMV is 0 so the
+    eFMV at EOL goes down; the item's quantity; API `service` {name, mode, value, line_total,
+    weight_percent, too_high} or null; null = the
     price's curve at the scenario's term, `pricing/curves.py::value_at`, returned as
     `curve_value` and followed when the term or the price changes, `efmv_from_curve`; or
     `efmv_percent` in the input — a % of the unit value, `calculations.percent_of_value`,
@@ -265,7 +271,10 @@ Multi-user web system for **operating lease residual value pricing**
     (the average price's value as placeholder; empty = that value; its Position chip below it
     in the same cell), eFMV (the
     curve's value at the term as placeholder; empty = that value; "25%" becomes its value when
-    the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total (its Weight — share of the LO — below it, as a chip "Weight (50.69%)"); money cells show the currency symbol on the left
+    the cell is left; its % of the unit value below it, as a chip "% Value (50.69%)"), total (its Weight — share of the LO — below it, as a chip "Weight (50.69%)"); a checkbox
+    per row (assets and services; select all on the header) with "Remove" and "Add Service" for
+    the selected ones; a service is a row under its asset (name editable, "Services" by default;
+    value or %; a chip toggles added/deducted; eFMV 0; its own remove); money cells show the currency symbol on the left
     (`utils/money.ts::currencySymbol`) and the number on the right, and share one layout
     (`.money-cell`: a value line and a chip line of fixed heights) so they line up across the row; plain fields fill the cells (focus/error shown on the cell), Tab goes through the
     editable cells, Enter/↓ and Shift+Enter/↑ move rows in the same column (Enter on the last

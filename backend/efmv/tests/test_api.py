@@ -654,3 +654,102 @@ def test_the_vertical_must_be_one_the_account_manager_works_in(
         f"{URL}account-manager-summary/", {"account_manager": managers["ana"].pk}
     ).json()
     assert summary["verticals"] == [{"id": industry(), "name": "Industry"}]
+
+
+def _preview(client, items, term=24):
+    r = client.post(
+        f"{URL}scenario-preview/",
+        {"term_months": term, "items": items},
+        content_type="application/json",
+    )
+    assert r.status_code == 200, r.json()
+    return r.json()
+
+
+def test_a_service_added_to_an_asset(logged_client, prices):
+    # 2 excavators at 100,000 (curve at 24 months: 55,000) with a warranty of 5,000 each
+    data = _preview(logged_client, [{
+        "average_price": prices["excavator"], "quantity": 2, "unit_value": "100000",
+        "service": {"name": "Warranty", "value": "5000", "mode": "add"},
+    }])  # fmt: skip
+    item = data["items"][0]
+    assert (item["net_unit_value"], item["line_total"]) == ("100000.00", "200000.00")
+    assert item["service"] == {
+        "name": "Warranty",
+        "mode": "add",
+        "value": "5000.00",
+        "line_total": "10000.00",
+        "weight_percent": "4.76",
+        "too_high": False,
+    }
+    totals = data["totals"]
+    assert totals["lo"] == "210000.00"
+    assert (totals["hw_percent"], totals["sv_percent"]) == ("95.24", "4.76")
+    # 110,000 left at the end of 210,000: lower than 55% without the service
+    assert totals["efmv_percent"] == "52.38"
+
+
+def test_a_service_deducted_from_the_asset(logged_client, prices):
+    # Typed 107,000 with 7% of it as a service inside: the asset itself is worth 99,510
+    data = _preview(logged_client, [{
+        "average_price": prices["excavator"], "quantity": 1, "unit_value": "107000",
+        "service": {"name": "Warranty", "percent": "7", "mode": "deduct"},
+    }])  # fmt: skip
+    item = data["items"][0]
+    assert (item["unit_value"], item["net_unit_value"]) == ("107000.00", "99510.00")
+    assert item["service"]["value"] == "7490.00"
+    # Positioned (and its eFMV %) by what the asset is worth without the service
+    assert (item["variation_percent"], item["position"]) == ("-0.49", "compatible")
+    assert item["efmv_percent"] == "55.27"
+    # The LO is what was typed: the service only moves from HW to SV
+    assert data["totals"]["lo"] == "107000.00"
+    assert data["totals"]["sv_percent"] == "7.00"
+
+
+def test_a_service_cannot_be_worth_more_than_the_asset(logged_client, prices):
+    data = _preview(logged_client, [{
+        "average_price": prices["excavator"], "quantity": 1, "unit_value": "1000",
+        "service": {"name": "Warranty", "value": "1500", "mode": "add"},
+    }])  # fmt: skip
+    assert data["items"][0]["service"]["too_high"] is True
+    assert data["totals"]["lo"] == "0.00"
+
+
+def test_a_deducted_service_cannot_take_the_whole_asset(logged_client, managers, customers, prices):
+    service = {"name": "Warranty", "value": "100000", "mode": "deduct"}
+    data = _preview(logged_client, [{
+        "average_price": prices["excavator"], "quantity": 1, "unit_value": "100000",
+        "service": service,
+    }])  # fmt: skip
+    assert data["items"][0]["service"]["too_high"] is True
+    assert data["totals"]["lo"] == "0.00"
+    body_ = body(managers, customers, prices)
+    body_["scenarios"][0]["items"][0]["service"] = service
+    r = post(logged_client, body_)
+    assert r.status_code == 400
+    assert "service" in r.json()["scenarios"]["0"]["items"]["0"]
+
+
+def test_services_are_saved_with_their_items(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["items"][0]["service"] = {
+        "name": " Warranty  plus ",
+        "percent": "10",
+        "mode": "deduct",
+    }
+    data["scenarios"][0]["items"][1]["service"] = {"name": "Services", "value": "0"}
+    r = post(logged_client, data)
+    assert r.status_code == 201, r.json()
+    analysis = logged_client.get(f"{URL}{r.json()['id']}/").json()
+    first, second = analysis["scenarios"][0]["items"]
+    # Stored as the value it gave
+    assert (first["service"]["name"], first["service"]["value"]) == ("Warranty plus", "10000.00")
+    assert (first["service"]["mode"], first["net_unit_value"]) == ("deduct", "90000.00")
+    assert (second["service"]["value"], second["service"]["mode"]) == ("0.00", "add")
+    # Removing a service: the asset is worth what was typed again
+    data["scenarios"][0]["items"][0]["service"] = None
+    r = logged_client.patch(
+        f"{URL}{r.json()['id']}/", {"scenarios": data["scenarios"]}, content_type="application/json"
+    )
+    item = r.json()["scenarios"][0]["items"][0]
+    assert (item["service"], item["net_unit_value"]) == (None, "100000.00")

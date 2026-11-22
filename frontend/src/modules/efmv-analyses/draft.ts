@@ -14,7 +14,19 @@ export interface ItemDraft {
   efmv_value: string
   /** A new row whose asset is not chosen yet (left out when saving) */
   pending?: boolean
+  /** Its service (SV), shown as a row under it; at most one */
+  service?: ServiceDraft | null
 }
+
+/** An item's service: a name, a value per unit (money or "8%") added to or deducted from it. */
+export interface ServiceDraft {
+  name: string
+  /** As typed, in the UI language ("1.000,00" or "8%") */
+  value: string
+  mode: ServiceMode
+}
+
+export type ServiceMode = 'add' | 'deduct'
 
 export interface ScenarioDraft {
   key: number
@@ -34,7 +46,14 @@ export interface ScenarioErrors {
   scope?: string[]
   items?: Record<
     string,
-    { average_price?: string[]; quantity?: string[]; unit_value?: string[]; efmv_value?: string[] }
+    {
+      average_price?: string[]
+      quantity?: string[]
+      unit_value?: string[]
+      efmv_value?: string[]
+      /** The service's own errors, or by field ({"name": [...]}) */
+      service?: string[] | Record<string, string[]>
+    }
   >
 }
 
@@ -69,6 +88,13 @@ export function scenarioDraft(s: Scenario, language: string): ScenarioDraft {
       // Typed only when it is not the curve's (that one stays the placeholder)
       efmv_value:
         i.efmv_value == null || i.efmv_from_curve ? '' : toInputMoney(i.efmv_value, language),
+      service: i.service
+        ? {
+            name: i.service.name,
+            value: toInputMoney(i.service.value, language),
+            mode: i.service.mode,
+          }
+        : null,
     })),
     preview: { items: s.items, totals: s.totals, has_expired: s.has_expired },
   }
@@ -80,7 +106,7 @@ export function copyScenario(s: ScenarioDraft, name: string): ScenarioDraft {
     ...s,
     key: newKey(),
     name,
-    items: s.items.map((i) => ({ ...i, key: newKey() })),
+    items: s.items.map((i) => ({ ...i, key: newKey(), service: i.service && { ...i.service } })),
     preview: s.preview && { ...s.preview, items: [...s.preview.items] },
   }
 }
@@ -123,6 +149,21 @@ export function isEfmvInput(text: string, language: string): boolean {
   )
 }
 
+/**
+ * A service's value as typed: money or a percentage of the asset's value ("8%"), zero or more
+ * (empty = zero); null when it is neither.
+ */
+export function parseServiceInput(
+  text: string,
+  language: string,
+): { value: string } | { percent: string } | null {
+  if (!text.trim()) return { value: '0' }
+  const percent = /^(.*?)\s*%\s*$/.exec(text.trim())
+  const parsed = parseMoney(percent ? percent[1]! : text, language)
+  if (parsed === null || Number(parsed) < 0) return null
+  return percent ? { percent: parsed } : { value: parsed }
+}
+
 /** Input for the API; assets whose price was deleted are left out. */
 export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput {
   return {
@@ -139,6 +180,14 @@ export function scenarioInput(s: ScenarioDraft, language: string): ScenarioInput
         // "25%": a percentage of the unit value, turned into a value by the API
         ...(parseEfmvPercent(i.efmv_value ?? '', language) !== null && {
           efmv_percent: parseEfmvPercent(i.efmv_value, language)!,
+        }),
+        // Its service, when it has one (none sent: none kept)
+        ...(i.service && {
+          service: {
+            name: i.service.name.trim(),
+            mode: i.service.mode,
+            ...(parseServiceInput(i.service.value, language) ?? { value: '0' }),
+          },
         }),
       })),
   }

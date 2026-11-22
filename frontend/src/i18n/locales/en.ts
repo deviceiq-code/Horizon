@@ -144,6 +144,29 @@ const en = {
     },
   },
   efmv: {
+    service: {
+      netHint: 'Without its service (deducted): {value}. The position and the eFMV % use it.',
+      sv: 'SV',
+      defaultName: 'Services',
+      name: 'Service Name',
+      value: 'Service Value',
+      valueHint: "Per unit of the asset: a value or a percentage of the asset's value (e.g. 8%).",
+      valueRule: 'Enter a value or a percentage of zero or more.',
+      add: 'Added to the asset',
+      deduct: 'Deducted from the asset',
+      modeHint: "Click to add it on top of the asset's value or deduct it from it.",
+      tooHigh: 'Worth more than the asset (or, deducted, all of it).',
+      efmvHint: 'Services are not resold: nothing left at the end of the term.',
+      remove: 'Remove Service',
+    },
+    selection: {
+      all: 'Select All',
+      row: 'Select',
+      count: '{n} selected | {n} selected',
+      addService: 'Add Service',
+      addServiceHint: 'A service row under each selected asset that has none.',
+      remove: 'Remove',
+    },
     wizard: {
       noManagerVerticals:
         'This account manager works in no vertical yet: an administrator sets them in Users.',

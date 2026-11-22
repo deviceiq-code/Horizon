@@ -143,6 +143,13 @@ def in_scope(vertical_id, sub_vertical_id, sub_vertical) -> bool:
     return sub_vertical.vertical_id == vertical_id
 
 
+class ServiceMode(models.TextChoices):
+    """How a service's value relates to its asset's: on top of it, or part of it."""
+
+    ADD = "add", _("Added to the asset")
+    DEDUCT = "deduct", _("Deducted from the asset")
+
+
 class EfmvScenarioItem(models.Model):
     """An asset of a scenario: an average price (any of its versions; the current one counts)
     and how many. The same asset may be in several rows of a scenario (e.g. its value differs
@@ -170,6 +177,21 @@ class EfmvScenarioItem(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
+    )
+    # Its service (SV), at most one, shown as a row under it: e.g. a warranty. Per unit (the
+    # item's quantity); added to the asset's value or deducted from it (the asset is then worth
+    # less, and positioned so); eFMV 0 (services are not resold). No name = no service.
+    service_name = models.CharField(_("service"), max_length=100, blank=True)
+    service_value = models.DecimalField(
+        _("service value"),
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    service_mode = models.CharField(
+        _("service mode"), max_length=10, choices=ServiceMode, default=ServiceMode.ADD
     )
     position = models.PositiveSmallIntegerField(_("position"), default=0)
 

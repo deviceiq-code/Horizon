@@ -1085,3 +1085,9 @@ msgstr "Este bem não é da vertical da análise."
 
 msgid "This account manager does not work in this vertical."
 msgstr "Este account manager não atua nesta vertical."
+
+msgid "Send the service as a value or as a percentage, not both."
+msgstr "Envie o serviço como valor ou como percentual, não ambos."
+
+msgid "The service cannot be worth more than the asset."
+msgstr "O serviço não pode valer mais do que o bem."

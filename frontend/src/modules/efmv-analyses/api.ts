@@ -42,6 +42,10 @@ export interface ScenarioItem {
   quantity: number
   /** The value that counts: typed by the analyst or, when not typed, the average price's */
   unit_value: string | null
+  /** The asset's own value: without its service when the service was deducted from it */
+  net_unit_value?: string | null
+  /** Its service (SV): eFMV 0; per unit, the item's quantity */
+  service?: ItemService | null
   /** Not typed: the average price's value counts (stored with the analysis when saved) */
   value_from_price?: boolean
   /** quantity × unit value; null without a value */
@@ -82,6 +86,18 @@ export interface ScenarioItem {
   out_of_curve: boolean
   /** Not of the scenario's vertical / sub-vertical (left out of the totals; refused on save) */
   out_of_scope?: boolean
+}
+
+export interface ItemService {
+  name: string
+  mode: 'add' | 'deduct'
+  /** Per unit (resolved when typed as a percentage) */
+  value: string
+  line_total: string
+  /** Share of the scenario's LO */
+  weight_percent: string | null
+  /** Deducted, it would leave nothing of the asset (refused on save) */
+  too_high: boolean
 }
 
 export interface Scenario {
@@ -140,6 +156,8 @@ export interface ScenarioItemInput {
   efmv_value: string | null
   /** Or typed as a percentage of the unit value ("25" = 25%); the API turns it into a value */
   efmv_percent?: string
+  /** Its service: a value per unit or a percentage of the asset's value */
+  service?: { name: string; mode: 'add' | 'deduct'; value?: string; percent?: string }
 }
 
 export interface ScenarioInput {

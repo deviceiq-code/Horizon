@@ -7,6 +7,7 @@ from efmv.calculations import (
     line_total,
     percent_of_value,
     scenario_totals,
+    split_service,
     weight_percent,
 )
 
@@ -77,3 +78,25 @@ def test_efmv_as_a_percentage_of_the_unit_value():
     assert efmv_percent_of_unit(D("55000"), D("100000")) == D("55.00")
     assert efmv_percent_of_unit(D("1"), D("3")) == D("33.33")
     assert efmv_percent_of_unit(D("1"), D("0")) is None
+
+
+def test_a_service_added_or_deducted():
+    assert split_service(D("10000"), D("1000"), deduct=False) == (D("10000"), D("1000"))
+    assert split_service(D("10000"), D("1000"), deduct=True) == (D("9000"), D("1000"))
+    assert split_service(D("10000"), D("0"), deduct=True) == (D("10000"), D("0"))
+    # Nothing would be left of the asset
+    assert split_service(D("1000"), D("1000"), deduct=True) is None
+    # Never worth more than the asset; added, it may be worth as much
+    assert split_service(D("1000"), D("1000.01"), deduct=False) is None
+    assert split_service(D("1000"), D("1000"), deduct=False) == (D("1000"), D("1000"))
+
+
+def test_services_count_in_the_lo_but_not_in_the_efmv():
+    # 2 × 10,000 (eFMV 4,000 each) and a warranty of 1,000 per unit on top
+    totals = scenario_totals(
+        [Line("hw", 2, D("10000"), D("4000")), Line("sv", 2, D("1000"), D("0"))]
+    )
+    assert totals.lo == D("22000.00")
+    assert (totals.hw_percent, totals.sv_percent) == (D("90.91"), D("9.09"))
+    # 8,000 of 22,000: lower than the 40% without the service
+    assert totals.efmv_percent == D("36.36")

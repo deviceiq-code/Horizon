@@ -7,6 +7,7 @@ import {
   isEfmvInput,
   parseEfmvPercent,
   parseEfmvValue,
+  parseServiceInput,
   parseTerm,
   parseUnitValue,
   scenarioInput,
@@ -84,6 +85,30 @@ describe('eFMV analysis draft', () => {
     expect(parseEfmvPercent('-5%', 'en')).toBe('-5')
     expect(isEfmvInput('25%', 'en') && isEfmvInput('', 'en') && isEfmvInput('10', 'en')).toBe(true)
     expect(isEfmvInput('%', 'en')).toBe(false)
+  })
+
+  it('reads a service as a value or a percentage, zero or more', () => {
+    expect(parseServiceInput('1.500,25', 'pt-br')).toEqual({ value: '1500.25' })
+    expect(parseServiceInput('8%', 'en')).toEqual({ percent: '8' })
+    expect(parseServiceInput('', 'en')).toEqual({ value: '0' })
+    expect(parseServiceInput('-5', 'en')).toBeNull()
+    expect(parseServiceInput('abc', 'en')).toBeNull()
+    const scenario = blankScenario()
+    scenario.items = [
+      {
+        key: 1,
+        average_price: 7,
+        quantity: 2,
+        unit_value: '',
+        efmv_value: '',
+        service: { name: ' Warranty ', value: '10%', mode: 'deduct' },
+      },
+    ]
+    expect(scenarioInput(scenario, 'en').items[0]!.service).toEqual({
+      name: 'Warranty',
+      mode: 'deduct',
+      percent: '10',
+    })
   })
 
   it('copies a scenario with its own items', () => {

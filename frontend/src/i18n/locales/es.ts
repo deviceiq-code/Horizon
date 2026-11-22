@@ -143,6 +143,30 @@ const es: Messages = {
     },
   },
   efmv: {
+    service: {
+      netHint:
+        'Sin su servicio (descontado): {value}. El posicionamiento y el % del eFMV usan este valor.',
+      sv: 'SV',
+      defaultName: 'Servicios',
+      name: 'Nombre del Servicio',
+      value: 'Valor del Servicio',
+      valueHint: 'Por unidad del bien: un valor o un porcentaje del valor del bien (ej.: 8%).',
+      valueRule: 'Ingrese un valor o un porcentaje igual o mayor que cero.',
+      add: 'Sumado al bien',
+      deduct: 'Descontado del bien',
+      modeHint: 'Haga clic para sumarlo al valor del bien o descontarlo.',
+      tooHigh: 'Vale más que el bien (o, descontado, el bien entero).',
+      efmvHint: 'Los servicios no se revenden: nada queda al final del plazo.',
+      remove: 'Quitar Servicio',
+    },
+    selection: {
+      all: 'Seleccionar Todos',
+      row: 'Seleccionar',
+      count: '{n} seleccionado | {n} seleccionados',
+      addService: 'Agregar Servicio',
+      addServiceHint: 'Una fila de servicio bajo cada bien seleccionado que aún no tiene.',
+      remove: 'Quitar',
+    },
     wizard: {
       noManagerVerticals:
         'Este account manager aún no trabaja en ninguna vertical: un administrador las define en Usuarios.',

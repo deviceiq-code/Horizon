@@ -21,9 +21,17 @@ from .calculations import (
     line_total,
     percent_of_value,
     scenario_totals,
+    split_service,
     weight_percent,
 )
-from .models import EfmvAnalysis, EfmvScenario, EfmvScenarioItem, in_scope, title_key
+from .models import (
+    EfmvAnalysis,
+    EfmvScenario,
+    EfmvScenarioItem,
+    ServiceMode,
+    in_scope,
+    title_key,
+)
 
 User = get_user_model()
 
@@ -115,49 +123,89 @@ def price_check(row: AveragePrice, unit_value, ctx: Context) -> dict:
     return data
 
 
+def resolve_service(service: dict | None, unit_value) -> dict | None:
+    """A service's unit value (typed, or a percentage of the asset's value as typed, before any
+    deduction) and the asset's value with it (`split_service`; None when deducting it would
+    leave the asset with nothing)."""
+    if not service or unit_value is None:
+        return None
+    value = service.get("value")
+    if value is None:
+        percent = service.get("percent")
+        value = percent_of_value(unit_value, percent) if percent is not None else Decimal("0")
+    split = split_service(unit_value, value, service.get("mode") == ServiceMode.DEDUCT)
+    return {
+        "name": service.get("name", ""),
+        "mode": service.get("mode", ServiceMode.ADD),
+        "value": value,
+        "asset_value": split[0] if split else None,
+    }
+
+
 def scenario_payload(
     term_months: int,
-    items: list[tuple],
+    items: list[dict],
     prices: dict,
     ctx: Context,
     scope: tuple = (None, None),
 ) -> dict:
-    """`items`: (item id or None, lineage, quantity, typed unit value or None, typed eFMV value
-    or None[, eFMV typed as a % of the unit value or None]); `scope`: the analysis's (vertical
-    id, sub-vertical id). Without a typed value the
-    average price's value counts (`value_from_price`); without a typed eFMV value, the average
-    price's curve at the term (`efmv_from_curve`). Items whose price was deleted, whose curve
-    no longer reaches the term or that are outside the analysis's vertical are flagged and left
-    out of the totals."""
+    """`items`: {id, lineage, quantity, unit_value, efmv_value, efmv_percent, service} — typed
+    values or None; `service`: None or {name, mode, value or percent}. `scope`: the analysis's
+    (vertical id, sub-vertical id). Without a typed value the average price's value counts
+    (`value_from_price`); without a typed eFMV value, the average price's curve at the term
+    (`efmv_from_curve`). A service deducted from the asset leaves it worth the rest
+    (`net_unit_value`: what is positioned, totalled and what its eFMV % is of). Items whose
+    price was deleted, whose curve no longer reaches the term, that are outside the analysis's
+    vertical or whose deducted service is worth as much as the asset are flagged and left out
+    of the totals."""
     lines, rows, counted = [], [], []
-    for item_id, lineage, quantity, typed, typed_efmv, *percent in items:
-        row = prices.get(lineage)
+    for item in items:
+        quantity = item["quantity"]
+        row = prices.get(item["lineage"])
+        typed = item.get("unit_value")
         unit_value = typed if typed is not None or row is None else row.original_value
-        if typed_efmv is None and percent and percent[0] is not None and unit_value is not None:
+        service = resolve_service(item.get("service"), unit_value)
+        service_too_high = service is not None and service["asset_value"] is None
+        net = service["asset_value"] if service and not service_too_high else unit_value
+        typed_efmv = item.get("efmv_value")
+        if typed_efmv is None and item.get("efmv_percent") is not None and net is not None:
             # Typed as a percentage of the unit value: resolved here (the form shows the value)
-            typed_efmv = percent_of_value(unit_value, percent[0])
+            typed_efmv = percent_of_value(net, item["efmv_percent"])
         from_curve = None if row is None else curve_value(row, term_months)
         efmv_value = typed_efmv if typed_efmv is not None else from_curve
         entry = {
-            "id": item_id,
+            "id": item.get("id"),
             "quantity": quantity,
             "unit_value": None if unit_value is None else str(unit_value),
+            # The asset's own value: without the service when it was deducted from it
+            "net_unit_value": None if net is None else str(net),
             "value_from_price": typed is None and row is not None,
-            "line_total": None if unit_value is None else str(line_total(quantity, unit_value)),
+            "line_total": None if net is None else str(line_total(quantity, net)),
             # One unit at the end of the term: typed, or the curve's value at the term
             "efmv_value": None if efmv_value is None else str(efmv_value),
             "curve_value": None if from_curve is None else str(from_curve),
             "efmv_from_curve": typed_efmv is None and from_curve is not None,
-            # The eFMV as a percentage of the unit value (shown below it)
+            # The eFMV as a percentage of the asset's value (shown below it)
             "efmv_percent": (
                 None
-                if efmv_value is None or not unit_value
-                else str(efmv_percent_of_unit(efmv_value, unit_value))
+                if efmv_value is None or not net
+                else str(efmv_percent_of_unit(efmv_value, net))
             ),
             "available": row is not None,
             # Share of the scenario's LO; null when left out of the totals
             "weight_percent": None,
+            "service": None,
         }
+        if service:
+            entry["service"] = {
+                "name": service["name"],
+                "mode": service["mode"],
+                "value": str(service["value"]),
+                "line_total": str(line_total(quantity, service["value"])),
+                "weight_percent": None,
+                # Worth more than the asset or, deducted, leaving it with nothing (refused)
+                "too_high": service_too_high,
+            }
         if row is None:
             entry.update(
                 {
@@ -171,12 +219,16 @@ def scenario_payload(
             out = not covers_term(price_terms(row), term_months)
             outside = not in_scope(*scope, row.sub_vertical)
             entry.update(asset_detail(row))
-            entry.update(price_check(row, unit_value, ctx))
+            entry.update(price_check(row, net, ctx))
             entry["out_of_curve"] = out
             entry["out_of_scope"] = outside
-            if not out and not outside and unit_value is not None:
-                lines.append(Line("hw", quantity, unit_value, efmv_value))
+            if not out and not outside and net is not None and not service_too_high:
+                lines.append(Line("hw", quantity, net, efmv_value))
                 counted.append(entry)
+                if service:
+                    # Services are not resold: nothing left at the end of the term
+                    lines.append(Line("sv", quantity, service["value"], Decimal("0")))
+                    counted.append(entry["service"])
         rows.append(entry)
     totals = scenario_totals(lines)
     for entry, line in zip(counted, lines, strict=True):
@@ -189,7 +241,50 @@ def scenario_payload(
     }
 
 
+def stored_item(item: EfmvScenarioItem) -> dict:
+    """A saved item as `scenario_payload` reads it."""
+    return {
+        "id": item.id,
+        "lineage": item.price_lineage,
+        "quantity": item.quantity,
+        "unit_value": item.unit_value,
+        "efmv_value": item.efmv_value,
+        "service": (
+            {"name": item.service_name, "value": item.service_value, "mode": item.service_mode}
+            if item.service_name
+            else None
+        ),
+    }
+
+
 # --- Input ------------------------------------------------------------------------------------
+
+
+class ServiceInputSerializer(serializers.Serializer):
+    """An item's service (SV): a name (e.g. "Warranty"), a value per unit — typed, or as a
+    percentage of the asset's value — and whether it is added to the asset or deducted."""
+
+    name = serializers.CharField(max_length=100)
+    value = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
+    )
+    percent = serializers.DecimalField(
+        max_digits=6, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
+    )
+    mode = serializers.ChoiceField(choices=ServiceMode.choices, default=ServiceMode.ADD)
+
+    def validate_name(self, value):
+        value = " ".join(value.split())
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        return value
+
+    def validate(self, attrs):
+        if attrs.get("value") is not None and attrs.get("percent") is not None:
+            raise serializers.ValidationError(
+                {"percent": [_("Send the service as a value or as a percentage, not both.")]}
+            )
+        return attrs
 
 
 class ItemInputSerializer(serializers.Serializer):
@@ -210,6 +305,8 @@ class ItemInputSerializer(serializers.Serializer):
     efmv_percent = serializers.DecimalField(
         max_digits=6, decimal_places=2, required=False, allow_null=True
     )
+    # Its service (SV), at most one; null or absent: none
+    service = ServiceInputSerializer(required=False, allow_null=True)
 
     def validate(self, attrs):
         if attrs.get("efmv_value") is not None and attrs.get("efmv_percent") is not None:
@@ -268,9 +365,22 @@ class ScenarioInputSerializer(serializers.Serializer):
             elif item.get("unit_value") is None:
                 # Not typed: the value of the average price counts
                 item["unit_value"] = row.original_value
-            if str(index) not in errors and item.get("efmv_percent") is not None:
-                # Stored as the value it gives (a percentage of the unit value)
-                item["efmv_value"] = percent_of_value(item["unit_value"], item["efmv_percent"])
+            if str(index) in errors:
+                continue
+            asset_value = item["unit_value"]
+            if item.get("service"):
+                service = resolve_service(item["service"], item["unit_value"])
+                if service["asset_value"] is None:
+                    errors[str(index)] = {
+                        "service": [_("The service cannot be worth more than the asset.")]
+                    }
+                    continue
+                # Stored as the value it gives (also when typed as a percentage)
+                item["service"]["value"] = service["value"]
+                asset_value = service["asset_value"]
+            if item.get("efmv_percent") is not None:
+                # Stored as the value it gives (a percentage of the asset's value)
+                item["efmv_value"] = percent_of_value(asset_value, item["efmv_percent"])
         if errors:
             raise serializers.ValidationError({"items": errors})
         return attrs
@@ -435,10 +545,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                 "scope": s.scope,
                 **scenario_payload(
                     s.term_months,
-                    [
-                        (i.id, i.price_lineage, i.quantity, i.unit_value, i.efmv_value)
-                        for i in items[s.pk]
-                    ],
+                    [stored_item(i) for i in items[s.pk]],
                     prices,
                     ctx,
                     (instance.vertical_id, instance.sub_vertical_id),
@@ -467,6 +574,9 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
                     quantity=item["quantity"],
                     unit_value=item["unit_value"],
                     efmv_value=item.get("efmv_value"),
+                    service_name=(item.get("service") or {}).get("name", ""),
+                    service_value=(item.get("service") or {}).get("value"),
+                    service_mode=(item.get("service") or {}).get("mode", ServiceMode.ADD),
                     position=index,
                 )
                 for index, item in enumerate(scenario["items"])
@@ -548,17 +658,17 @@ class ScenarioPreviewSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         items = [
-            (
-                None,
-                i["average_price"].lineage,
-                i["quantity"],
-                i.get("unit_value"),
-                i.get("efmv_value"),
-                i.get("efmv_percent"),
-            )
+            {
+                "lineage": i["average_price"].lineage,
+                "quantity": i["quantity"],
+                "unit_value": i.get("unit_value"),
+                "efmv_value": i.get("efmv_value"),
+                "efmv_percent": i.get("efmv_percent"),
+                "service": i.get("service"),
+            }
             for i in instance["items"]
         ]
-        prices = current_prices(item[1] for item in items)
+        prices = current_prices(item["lineage"] for item in items)
         scope = (instance.get("vertical"), instance.get("sub_vertical"))
         return scenario_payload(instance["term_months"], items, prices, Context(), scope)
 
