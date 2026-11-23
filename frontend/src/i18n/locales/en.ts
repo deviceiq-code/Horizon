@@ -787,6 +787,10 @@ const en = {
       },
     },
     roles: {
+      users_count: '{n} user | {n} users',
+      noMembers: 'No users yet.',
+      moreMembers: '+{n} more',
+      membersTitle: 'Users',
       new: 'New Role',
       edit: 'Edit Role',
       system: 'System',

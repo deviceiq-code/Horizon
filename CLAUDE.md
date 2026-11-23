@@ -273,7 +273,9 @@ Multi-user web system for **operating lease residual value pricing**
     router and the side menu (`adminOnly: true` hides it from non-administrators and the router guard refuses its
     routes). `account-managers/` is the reference module. `users/` exports two modules,
     `users` (`/admin/users`) and `roles` (`/admin/roles`; the former `?tab=roles` redirects;
-    system roles show translated via `roleText.ts`).
+    system roles show translated via `roleText.ts`; Roles is a page of cards like Haze's —
+    `RolesView.vue`: name, users count, members as chips (the API's read-only `members`,
+    six then "+N more"), description, keywords; edit/delete on the card, system roles locked).
   - `src/modules/catalogs/` — one module per reference table (section Catalogs of
     Administration), each a page `CatalogPage.vue` (title, subtitle, the table's `<Name>Tab.vue`)
     at `/admin/catalogs/<table>` (`/admin/catalogs` opens the first). A new small table is a new

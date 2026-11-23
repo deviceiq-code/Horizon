@@ -48,6 +48,7 @@ const ADMIN_ROLE: usersApi.Role = {
   description: 'Full access to the system.',
   is_system: true,
   users_count: 1,
+  members: [{ id: 10, full_name: 'Fernando Almeida', photo_version: 'p1', is_active: true }],
   created_at: '',
 }
 const ANALYST: usersApi.Role = {
@@ -58,6 +59,7 @@ const ANALYST: usersApi.Role = {
   description: 'Prices',
   is_system: false,
   users_count: 0,
+  members: [],
 }
 
 const FERNANDO: usersApi.User = {
@@ -281,16 +283,50 @@ describe('UsersView', () => {
 
   // --- Roles ---------------------------------------------------------------------------------
 
-  it('lists roles; system roles cannot be edited or deleted', async () => {
+  it('roles as cards: users and who they are; system roles cannot be edited or deleted', async () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({
+      id: 20 + i,
+      full_name: `User ${i + 1}`,
+      photo_version: null,
+      is_active: true,
+    }))
+    api.allRoles.mockResolvedValue([{ ...ANALYST, users_count: 8, members: many }, ADMIN_ROLE])
     const { wrapper } = await mountView('/roles', RolesView)
     expect(inBody('h1')!.textContent).toBe('Roles')
-    const rows = document.body.querySelectorAll('tbody tr')
-    expect(rows[0]!.textContent).toContain('Administrator')
-    expect(rows[0]!.textContent).toContain('System')
-    expect(rows[0]!.textContent).toContain('Full access to the system.')
-    expect(rows[0]!.querySelector('[data-testid="edit"]')).toBeNull()
-    expect(rows[0]!.querySelector('[data-testid="delete"]')).toBeNull()
-    expect(rows[1]!.querySelector('[data-testid="edit"]')).not.toBeNull()
+    const cards = document.body.querySelectorAll('[data-testid="role-card"]')
+    // System roles first
+    expect(cards[0]!.textContent).toContain('Administrator')
+    expect(cards[0]!.textContent).toContain('System')
+    expect(cards[0]!.textContent).toContain('Full access to the system.')
+    expect(cards[0]!.querySelector('[data-testid="role-users-count"]')!.textContent).toContain(
+      '1 user',
+    )
+    expect(cards[0]!.querySelector('[data-testid="role-member"]')!.textContent).toContain(
+      'Fernando Almeida',
+    )
+    expect(cards[0]!.querySelector('[data-testid="edit"]')).toBeNull()
+    expect(cards[0]!.querySelector('[data-testid="delete"]')).toBeNull()
+    // Six members shown, then "+2 more"
+    expect(cards[1]!.querySelectorAll('[data-testid="role-member"]')).toHaveLength(6)
+    expect(cards[1]!.querySelector('[data-testid="role-more-members"]')!.textContent).toContain(
+      '+2 more',
+    )
+    expect(cards[1]!.querySelector('[data-testid="edit"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
+  it('deletes a role after confirmation; the reason when refused', async () => {
+    api.allRoles.mockResolvedValue([ADMIN_ROLE, ANALYST])
+    api.deleteRole.mockRejectedValue(
+      new ApiError(409, 'This role has users and cannot be deleted.', {
+        detail: 'This role has users and cannot be deleted.',
+      }),
+    )
+    const { wrapper } = await mountView('/roles', RolesView)
+    await click('delete')
+    await click('confirm-button')
+    expect(api.deleteRole).toHaveBeenCalledWith(2)
+    expect(useNotificationsStore().text).toBe('This role has users and cannot be deleted.')
     wrapper.unmount()
   })
 

@@ -532,3 +532,15 @@ def test_users_and_roles_have_keywords(admin_client, analyst_role):
     assert r.json()["keywords"] == ["pricing"]
     found = admin_client.get(ROLES, {"search": "pric"}).json()["results"]
     assert [role["name"] for role in found] == ["Analyst"]
+
+
+def test_roles_list_their_members(admin_client, analyst_role, admin):
+    carla = User.objects.create_user("carla", first_name="Carla", last_name="Mendes")
+    analyst_role.users.add(carla, admin)
+    role = next(r for r in admin_client.get(ROLES).json()["results"] if r["name"] == "Analyst")
+    assert role["users_count"] == 2
+    assert [(m["full_name"], m["is_active"]) for m in role["members"]] == [
+        ("Ana Souza", True),
+        ("Carla Mendes", True),
+    ]
+    assert set(role["members"][0]) == {"id", "full_name", "photo_version", "is_active"}

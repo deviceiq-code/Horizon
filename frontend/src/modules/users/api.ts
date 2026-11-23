@@ -12,7 +12,16 @@ export interface Role extends RoleRef {
   description: string
   keywords: string[]
   users_count: number
+  /** Who has the role, by name (read-only) */
+  members: RoleMember[]
   created_at: string
+}
+
+export interface RoleMember {
+  id: number
+  full_name: string
+  photo_version: string | null
+  is_active: boolean
 }
 
 export type RoleInput = Pick<Role, 'name' | 'description' | 'keywords'>

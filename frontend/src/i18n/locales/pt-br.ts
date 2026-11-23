@@ -786,6 +786,10 @@ const ptBR: Messages = {
       },
     },
     roles: {
+      users_count: '{n} usuário | {n} usuários',
+      noMembers: 'Nenhum usuário ainda.',
+      moreMembers: '+{n} outros',
+      membersTitle: 'Usuários',
       new: 'Novo Papel',
       edit: 'Editar Papel',
       system: 'Sistema',

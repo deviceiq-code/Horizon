@@ -789,6 +789,10 @@ const es: Messages = {
       },
     },
     roles: {
+      users_count: '{n} usuario | {n} usuarios',
+      noMembers: 'Ningún usuario todavía.',
+      moreMembers: '+{n} más',
+      membersTitle: 'Usuarios',
       new: 'Nuevo Rol',
       edit: 'Editar Rol',
       system: 'Sistema',

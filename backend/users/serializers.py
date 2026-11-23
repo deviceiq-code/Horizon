@@ -25,6 +25,8 @@ User = get_user_model()
 
 class RoleSerializer(serializers.ModelSerializer):
     users_count = serializers.SerializerMethodField()
+    # Who has the role, by name: {id, full_name, photo_version, is_active} (read-only)
+    members = serializers.SerializerMethodField()
     keywords = KeywordsField()
 
     class Meta:
@@ -37,12 +39,25 @@ class RoleSerializer(serializers.ModelSerializer):
             "keywords",
             "is_system",
             "users_count",
+            "members",
             "created_at",
         ]
-        read_only_fields = ["id", "key", "is_system", "users_count", "created_at"]
+        read_only_fields = ["id", "key", "is_system", "users_count", "members", "created_at"]
 
     def get_users_count(self, obj) -> int:
         return getattr(obj, "users_count", None) or obj.users.count()
+
+    def get_members(self, obj) -> list[dict]:
+        members = [
+            {
+                "id": user.id,
+                "full_name": full_name_in(self.context, user),
+                "photo_version": user_photo_version(user),
+                "is_active": user.is_active,
+            }
+            for user in obj.users.all()
+        ]
+        return sorted(members, key=lambda m: m["full_name"].lower())
 
     def validate(self, attrs):
         if self.instance is not None and self.instance.is_system:

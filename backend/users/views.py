@@ -193,7 +193,9 @@ class RoleViewSet(viewsets.ModelViewSet):
     System roles (Administrator, Account Manager) cannot be changed or deleted; roles with
     users cannot be deleted."""
 
-    queryset = Role.objects.annotate(users_count=Count("users", distinct=True))
+    queryset = Role.objects.annotate(users_count=Count("users", distinct=True)).prefetch_related(
+        "users__profile"
+    )
     serializer_class = RoleSerializer
     permission_classes = [IsAdministrator]
     filter_backends = [KeywordSearchFilter, filters.OrderingFilter]
