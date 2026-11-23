@@ -66,7 +66,14 @@ describe('suite apps and routes', () => {
       'average-prices',
       'efmv-analyses',
     ])
-    expect(appModules('remarketing', false).map((m) => m.name)).toEqual(['warehouses'])
+    expect(appModules('remarketing', false).map((m) => m.name)).toEqual([
+      'inventory-movement',
+      'inventory-assets',
+      'inventory-locations',
+      'inventory-containers',
+      'inventory-labels',
+      'warehouses',
+    ])
     expect(appModules('admin', true).map((m) => m.name)).toEqual([
       'users',
       'roles',
@@ -74,6 +81,7 @@ describe('suite apps and routes', () => {
       'service-providers',
       'catalogs-verticals',
       'catalogs-asset-classes',
+      'catalogs-asset-models',
       'catalogs-manufacturers',
     ])
     // Users, Roles and System Settings are for administrators
@@ -82,6 +90,7 @@ describe('suite apps and routes', () => {
       'service-providers',
       'catalogs-verticals',
       'catalogs-asset-classes',
+      'catalogs-asset-models',
       'catalogs-manufacturers',
     ])
     setLanguage('en')

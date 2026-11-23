@@ -15,13 +15,14 @@ from .models import (
     MAX_TERM_MONTHS,
     REMARKETING_RATINGS,
     AssetClass,
+    AssetModel,
     Manufacturer,
     SubVertical,
     Vertical,
     general_names,
 )
 from .names import english_plural
-from .specs import MAX_FIELDS, MAX_OPTIONS, SpecError, normalize_template
+from .specs import MAX_FIELDS, MAX_OPTIONS, SpecError, normalize_template, snapshot_values
 
 
 def _collapse_spaces(value: str) -> str:
@@ -419,3 +420,151 @@ class SpecTemplateSerializer(serializers.Serializer):
             return normalize_template(value, spec_messages())
         except SpecError as exc:
             raise serializers.ValidationError(exc.errors) from exc
+
+
+# --- Asset models -----------------------------------------------------------------------------
+
+MAX_LIST_ITEMS = 50
+MAX_LIST_ITEM_LENGTH = 200
+
+
+def _clean_list(values) -> list[str]:
+    """Kit checklist / test script: single spaces, no blanks or repeats, in order."""
+    items: list[str] = []
+    for value in values or []:
+        text = _collapse_spaces(str(value))
+        if text and text.casefold() not in {i.casefold() for i in items}:
+            items.append(text)
+    if len(items) > MAX_LIST_ITEMS:
+        raise serializers.ValidationError(_("Use at most %(max)d items.") % {"max": MAX_LIST_ITEMS})
+    if any(len(item) > MAX_LIST_ITEM_LENGTH for item in items):
+        raise serializers.ValidationError(_("Too long."))
+    return items
+
+
+class AssetModelSerializer(serializers.ModelSerializer):
+    """`specs` is written as {key: value} for the asset class's template and read back as the
+    stored snapshot (catalogs.specs.snapshot_values), as average prices'."""
+
+    manufacturer_name = serializers.CharField(source="manufacturer.name", read_only=True)
+    asset_class_detail = serializers.SerializerMethodField()
+    specs = serializers.DictField(required=False, default=dict, write_only=True)
+    spec_values = serializers.JSONField(source="specs", read_only=True)
+    kit_checklist = serializers.ListField(
+        child=serializers.CharField(allow_blank=True), required=False
+    )
+    test_script = serializers.ListField(
+        child=serializers.CharField(allow_blank=True), required=False
+    )
+    keywords = KeywordsField()
+    assets_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssetModel
+        fields = [
+            "id",
+            "manufacturer",
+            "manufacturer_name",
+            "name",
+            "asset_class",
+            "asset_class_detail",
+            "specs",
+            "spec_values",
+            "tracking",
+            "serial_regex",
+            "kit_checklist",
+            "test_script",
+            "has_storage",
+            "keywords",
+            "notes",
+            "is_enabled",
+            "assets_count",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        # The name's uniqueness per manufacturer is checked in validate() (friendlier)
+        validators = []
+
+    def get_asset_class_detail(self, obj) -> dict:
+        asset_class = obj.asset_class
+        return {
+            "id": asset_class.id,
+            "name": asset_class.name,
+            "icon": asset_class.icon,
+            "has_template": bool(asset_class.spec_template),
+        }
+
+    def get_assets_count(self, obj) -> int:
+        count = getattr(obj, "assets_total", None)
+        return count if count is not None else obj.assets.count()
+
+    def validate_name(self, value):
+        value = _collapse_spaces(value)
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        return value
+
+    def validate_serial_regex(self, value):
+        value = (value or "").strip()
+        if value:
+            try:
+                re.compile(value)
+            except re.error as exc:
+                raise serializers.ValidationError(_("Enter a valid pattern.")) from exc
+        return value
+
+    def validate_kit_checklist(self, value):
+        return _clean_list(value)
+
+    def validate_test_script(self, value):
+        return _clean_list(value)
+
+    def _check_choice(self, field, value):
+        # A disabled manufacturer or asset class is kept, never newly chosen
+        unchanged = self.instance is not None and getattr(self.instance, f"{field}_id") == value.id
+        if not value.is_enabled and not unchanged:
+            raise serializers.ValidationError(_("This item is disabled."))
+        return value
+
+    def validate_manufacturer(self, value):
+        return self._check_choice("manufacturer", value)
+
+    def validate_asset_class(self, value):
+        return self._check_choice("asset_class", value)
+
+    def validate(self, attrs):
+        def current(field):
+            return attrs.get(field, getattr(self.instance, field, None))
+
+        errors = {}
+        name, manufacturer = current("name"), current("manufacturer")
+        if name and manufacturer:
+            duplicates = AssetModel.objects.filter(manufacturer=manufacturer, name__iexact=name)
+            if self.instance is not None:
+                duplicates = duplicates.exclude(pk=self.instance.pk)
+            if duplicates.exists():
+                errors["name"] = [_("This manufacturer already has a model with this name.")]
+
+        # Specifications: the values given, or the stored ones (those the class still has)
+        # when only the asset class changes. The model's values are defaults for its units, so
+        # none is required here (each asset fills the required ones)
+        asset_class = current("asset_class")
+        if "specs" in attrs or "asset_class" in attrs or self.instance is None:
+            if "specs" in attrs:
+                values = attrs["specs"]
+            else:
+                known = {f["key"] for f in asset_class.spec_template}
+                stored = getattr(self.instance, "specs", None) or []
+                values = {f["key"]: f["value"] for f in stored if f["key"] in known}
+            optional = [{**field, "required": False} for field in asset_class.spec_template]
+            try:
+                snapshot = snapshot_values(optional, values, spec_messages())
+            except SpecError as exc:
+                errors["specs"] = exc.errors
+            else:
+                required = {f["key"]: f["required"] for f in asset_class.spec_template}
+                attrs["specs"] = [{**f, "required": required[f["key"]]} for f in snapshot]
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs

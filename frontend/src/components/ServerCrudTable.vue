@@ -44,6 +44,8 @@ const props = defineProps<{
   /** Show the filter row from the start (e.g. the page was opened with a filter) */
   showFiltersAtStart?: boolean
   /** Rows that can be edited / deleted (all when absent); e.g. not a system record */
+  /** Hides the "New" button (e.g. records created elsewhere) */
+  hideCreate?: boolean
   canEdit?: (item: T) => boolean
   canDelete?: (item: T) => boolean
 }>()
@@ -171,7 +173,13 @@ defineExpose({ reload: load })
       >
         {{ $t(filtersShown ? 'common.hideFilters' : 'common.showFilters') }}
       </v-btn>
-      <v-btn color="primary" prepend-icon="mdi-plus" data-testid="new" @click="emit('create')">
+      <v-btn
+        v-if="!hideCreate"
+        color="primary"
+        prepend-icon="mdi-plus"
+        data-testid="new"
+        @click="emit('create')"
+      >
         {{ $t('common.new') }}
       </v-btn>
     </div>

@@ -33,6 +33,7 @@ const IT = { id: 5, name: 'Information Technology', is_enabled: true }
 const BARUERI: warehousesApi.Warehouse = {
   id: 1,
   name: 'CD Barueri',
+  code: 'SP01',
   ownership: 'outsourced',
   service_provider: 3,
   service_provider_detail: { id: 3, name: 'ArmaGerais' },

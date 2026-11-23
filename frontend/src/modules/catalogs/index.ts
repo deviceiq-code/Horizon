@@ -64,4 +64,12 @@ export const manufacturers = catalog(
   () => import('./manufacturers/ManufacturersTab.vue'),
 )
 
-export default [verticals, assetClasses, manufacturers]
+export const assetModels = catalog(
+  'catalogs-asset-models',
+  'asset-models',
+  'mdi-shape-plus-outline',
+  'assetModels',
+  () => import('./asset-models/AssetModelsTab.vue'),
+)
+
+export default [verticals, assetClasses, assetModels, manufacturers]

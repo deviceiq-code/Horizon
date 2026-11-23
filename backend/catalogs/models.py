@@ -259,3 +259,63 @@ class AssetClass(models.Model):
     @property
     def remarketing_average(self):
         return average_stars(getattr(self, field) for field in REMARKETING_RATINGS)
+
+
+class Tracking(models.TextChoices):
+    """How the inventory controls a model: each unit with its Horizon ID, or a balance of
+    low-value accessories (cables, chargers) by quantity."""
+
+    UNIT = "unit", _("By Unit")
+    QUANTITY = "quantity", _("By Quantity")
+
+
+class AssetModel(models.Model):
+    """A manufacturer's model of an asset class (e.g. Dell Latitude 5440, a notebook), described
+    by the class's specification template. Inventory assets are units of a model; each keeps its
+    own specification values, starting with the model's.
+
+    Inspection uses its kit checklist (items expected with each unit) and test script (checks
+    to run); `has_storage` asks for a certified data erasure; `serial_regex` checks serials
+    read at triage.
+    """
+
+    manufacturer = models.ForeignKey(
+        Manufacturer,
+        on_delete=models.PROTECT,
+        related_name="asset_models",
+        verbose_name=_("manufacturer"),
+    )
+    name = models.CharField(_("model"), max_length=150)
+    asset_class = models.ForeignKey(
+        AssetClass,
+        on_delete=models.PROTECT,
+        related_name="asset_models",
+        verbose_name=_("asset class"),
+    )
+    # Values of the asset class's template (catalogs.specs.snapshot_values)
+    specs = models.JSONField(_("specifications"), default=list, blank=True)
+    tracking = models.CharField(
+        _("tracking"), max_length=10, choices=Tracking.choices, default=Tracking.UNIT
+    )
+    serial_regex = models.CharField(_("serial number pattern"), max_length=200, blank=True)
+    kit_checklist = models.JSONField(_("kit checklist"), default=list, blank=True)
+    test_script = models.JSONField(_("test script"), default=list, blank=True)
+    has_storage = models.BooleanField(_("has data storage"), default=False)
+    keywords = keywords_field()
+    notes = models.TextField(_("notes"), blank=True)
+    is_enabled = models.BooleanField(_("enabled"), default=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("asset model")
+        verbose_name_plural = _("asset models")
+        ordering = ["manufacturer__name", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                "manufacturer", Lower("name"), name="asset_model_unique_name_per_manufacturer"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.manufacturer.name} {self.name}"

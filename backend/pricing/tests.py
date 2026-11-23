@@ -392,7 +392,9 @@ def test_list_filters(logged_client, rows, catalog):
 def test_asset_class_and_manufacturer_in_use_cannot_be_deleted(logged_client, price, catalog):
     r = logged_client.delete(f"/api/catalogs/asset-classes/{catalog['excavators'].pk}/")
     assert r.status_code == 409
-    assert r.json()["detail"] == "This asset class is used in average prices and cannot be deleted."
+    assert r.json()["detail"] == (
+        "This asset class is used in average prices or asset models and cannot be deleted."
+    )
     r = logged_client.delete(f"/api/catalogs/manufacturers/{catalog['cat'].pk}/")
     assert r.status_code == 409
     # Even when the price was deleted from the list (hidden, kept in the database)

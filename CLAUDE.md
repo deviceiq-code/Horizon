@@ -43,7 +43,20 @@ Multi-user web system for **operating lease residual value pricing**
     transport, inspection, refurbishment, repair, data_erasure, packaging, sales, disposal; at
     least one, kept in the list's order). `/api/service-providers/` (`?service=`). One that runs
     warehouses cannot be deleted (409) nor lose warehousing (400).
-  - `inventory/` — **Inventory** of Remarketing. `Warehouse`: name (unique case-insensitive),
+  - `inventory/` — **Inventory** of Remarketing (phases, decisions and RN → tests in
+    `docs/inventory.md` — keep it updated). Phase 1 (foundation): `codes.py` (pure: Luhn,
+    Horizon ID `H`+8 digits+check digit, container `C`…, `parse_code`, warehouse codes),
+    `states.py` (pure: `AssetStatus`, `AreaType`, `TRANSITIONS` RN-01, `AREA_STATUSES` RN-02,
+    `DomainError`), `services.py` (**the only writer of an asset's status/location/container**,
+    RN-07: entry, move asset/container — child events per asset, RN-08 —, status change,
+    reversal, label reprint, label ranges; atomic + `select_for_update`), immutable
+    `MovementEvent`, `Location` tree (code = parent's + "-" + segment, never changes; global
+    `VIRTUAL-TRANSIT`), `Container`, `Asset` (own spec values; serial unique per model when
+    captured), `LabelRange`; Postgres sequences `inventory_horizon_id_seq` /
+    `inventory_container_code_seq`. Roles: `users.models` receiver, inspection_technician,
+    storekeeper, inventory_supervisor, commercial_finance (`inventory/permissions.py`). API
+    refusals: 400 `{detail, field}`. `Warehouse.code` is generated ("SP01": state or country +
+    number) and never changes. `Warehouse`: name (unique case-insensitive),
     `ownership` own | outsourced, `service_provider` (PROTECT; required only when outsourced —
     an active provider offering warehousing, checked when chosen; own = none), `verticals` it
     serves (M2M through `WarehouseVertical`, PROTECT: a served vertical cannot be deleted; at
@@ -83,6 +96,9 @@ Multi-user web system for **operating lease residual value pricing**
     ratings, keywords (ArrayField, lowercase, unique, max 30 × 50 chars; searchable), notes,
     enabled.
     `/api/catalogs/sub-verticals/` lists sub-verticals as picker options ("Vertical / Sub").
+    `AssetModel` (`/api/catalogs/asset-models/`): manufacturer + model (unique per
+    manufacturer) of an asset class, its template values as defaults (none required on the
+    model), tracking unit|quantity, serial regex, kit checklist, test script, has_storage.
     Grid column filters: verticals `?name=` (name or keyword) and `?account_manager=`;
     manufacturers and asset classes `?name=` and `?remarketing_min=`
     (`catalogs.views.name_and_rating_filters`).
@@ -289,7 +305,11 @@ Multi-user web system for **operating lease residual value pricing**
     "Administração" (`/admin/…`, two side menu sections: Management — Users and Roles,
     administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
     Classes, Manufacturers, shared by every app). Remarketing (`/remarketing/…`): section
-    Inventory — Warehouses (`/remarketing/inventory/warehouses`). App names have no "Horizon" and stay in English in
+    Inventory — Movement, Assets, Locations, Containers, Labels (`src/modules/inventory/`) and
+    Warehouses (`/remarketing/inventory/<page>`). Scan screens are for barcode guns (keyboard
+    wedge + Enter; focused field, color + sound — `inventory/beep.ts`); codes checked in the
+    browser by `src/utils/inventoryCodes.ts`; labels are Code 128 SVG (`src/utils/code128.ts`,
+    no library) printed one per 50 × 30 mm page from a hidden frame (`inventory/labels.ts`). App names have no "Horizon" and stay in English in
     every language; areas are translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
     prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
     the prefix. Navigation: the top bar shows the path (`AppBreadcrumbs.vue`: Horizon › app › module
@@ -320,7 +340,7 @@ Multi-user web system for **operating lease residual value pricing**
     confirmation, notifications; optional `expandable` + `expanded-row` slot; column filters:
     `filters` object + `filter.<key>` slots, a row under the titles turned on/off with the
     "Filters" button — remembered per grid with `filters-storage-key`, in the account's `ui_state`; turning off
-    clears them); pages pass columns, texts and `item.<key>` cell slots, open
+    clears them; `hide-create` hides "New"); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
   - `src/modules/average-prices/` — the photo and documents are managed in the form's third

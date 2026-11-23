@@ -525,12 +525,12 @@ msgid "This field is not part of the template."
 msgstr "Este campo no forma parte de la plantilla."
 
 #: catalogs/views.py
-msgid "This manufacturer is used in average prices and cannot be deleted."
-msgstr "Este fabricante se usa en precios promedio y no se puede eliminar."
+msgid "This manufacturer is used in average prices or asset models and cannot be deleted."
+msgstr "Este fabricante se usa en precios promedio o modelos de activo y no puede eliminarse."
 
 #: catalogs/views.py
-msgid "This asset class is used in average prices and cannot be deleted."
-msgstr "Esta clase de activo se usa en precios promedio y no se puede eliminar."
+msgid "This asset class is used in average prices or asset models and cannot be deleted."
+msgstr "Esta clase de activo se usa en precios promedio o modelos de activo y no puede eliminarse."
 
 #: pricing/serializers.py
 msgid "Each term may appear only once."
@@ -1250,3 +1250,381 @@ msgstr "Elija al menos una vertical de negocio."
 
 msgid "Disabled verticals cannot be added."
 msgstr "No se pueden agregar verticales deshabilitadas."
+
+msgid "In Triage"
+msgstr "En Clasificación"
+
+msgid "Awaiting Inspection"
+msgstr "Esperando Inspección"
+
+msgid "In Inspection"
+msgstr "En Inspección"
+
+msgid "Blocked"
+msgstr "Bloqueado"
+
+msgid "Available"
+msgstr "Disponible"
+
+msgid "Reserved"
+msgstr "Reservado"
+
+msgid "Scrap"
+msgstr "Chatarra"
+
+msgid "In Transit"
+msgstr "En Tránsito"
+
+msgid "Written Off"
+msgstr "Dado de Baja"
+
+msgid "Dock"
+msgstr "Muelle"
+
+msgid "Inspection Queue"
+msgstr "Cola de Inspección"
+
+msgid "Bench"
+msgstr "Banco de Trabajo"
+
+msgid "Quarantine"
+msgstr "Cuarentena"
+
+msgid "Stock"
+msgstr "Existencias"
+
+msgid "Shipping"
+msgstr "Expedición"
+
+msgid "In Transit (Virtual)"
+msgstr "En Tránsito (Virtual)"
+
+msgid "An asset cannot go from %(before)s to %(after)s."
+msgstr "Un bien no puede pasar de %(before)s a %(after)s."
+
+msgid "A %(area)s area does not take assets that are %(status)s."
+msgstr "Un área de tipo %(area)s no acepta bienes con estado %(status)s."
+
+msgid "code"
+msgstr "código"
+
+msgid "parent location"
+msgstr "ubicación superior"
+
+msgid "segment"
+msgstr "segmento"
+
+msgid "area type"
+msgstr "tipo de área"
+
+msgid "location"
+msgstr "ubicación"
+
+msgid "locations"
+msgstr "ubicaciones"
+
+msgid "Box"
+msgstr "Caja"
+
+msgid "Cage"
+msgstr "Jaula"
+
+msgid "Pallet"
+msgstr "Palé"
+
+msgid "kind"
+msgstr "tipo"
+
+msgid "current location"
+msgstr "ubicación actual"
+
+msgid "container"
+msgstr "contenedor"
+
+msgid "containers"
+msgstr "contenedores"
+
+msgid "Captured"
+msgstr "Capturado"
+
+msgid "Pending"
+msgstr "Pendiente"
+
+msgid "No Serial Number"
+msgstr "Sin Número de Serie"
+
+msgid "Unreadable or Missing"
+msgstr "Ilegible o Ausente"
+
+msgid "Needs to Be Turned On"
+msgstr "Requiere Encender el Equipo"
+
+msgid "Item Has No Serial Number"
+msgstr "Artículo Sin Número de Serie"
+
+msgid "Horizon ID"
+msgstr "ID Horizon"
+
+msgid "asset model"
+msgstr "modelo de activo"
+
+msgid "serial number"
+msgstr "número de serie"
+
+msgid "serial number status"
+msgstr "situación del número de serie"
+
+msgid "reason for no serial number"
+msgstr "motivo de no tener número de serie"
+
+msgid "other identifiers"
+msgstr "otros identificadores"
+
+msgid "status"
+msgstr "estado"
+
+msgid "current container"
+msgstr "contenedor actual"
+
+msgid "held for dispute"
+msgstr "retenido por impugnación"
+
+msgid "parent asset"
+msgstr "bien de origen"
+
+msgid "asset"
+msgstr "bien"
+
+msgid "assets"
+msgstr "bienes"
+
+msgid "first number"
+msgstr "primer número"
+
+msgid "last number"
+msgstr "último número"
+
+msgid "reserved by"
+msgstr "reservado por"
+
+msgid "reserved at"
+msgstr "reservado el"
+
+msgid "label range"
+msgstr "rango de etiquetas"
+
+msgid "label ranges"
+msgstr "rangos de etiquetas"
+
+msgid "Entry"
+msgstr "Entrada"
+
+msgid "Put-Away"
+msgstr "Ubicación"
+
+msgid "Relocation"
+msgstr "Reubicación"
+
+msgid "Status Change"
+msgstr "Cambio de Estado"
+
+msgid "Picking"
+msgstr "Preparación"
+
+msgid "Transfer Out"
+msgstr "Envío de Transferencia"
+
+msgid "Transfer In"
+msgstr "Recepción de Transferencia"
+
+msgid "Inventory Adjustment"
+msgstr "Ajuste de Inventario"
+
+msgid "Reversal"
+msgstr "Reversión"
+
+msgid "Label Reprint"
+msgstr "Reimpresión de Etiqueta"
+
+msgid "date and time"
+msgstr "fecha y hora"
+
+msgid "reason"
+msgstr "motivo"
+
+msgid "movement event"
+msgstr "evento de movimiento"
+
+msgid "movement events"
+msgstr "eventos de movimiento"
+
+msgid "Reserve from 1 to %(max)d labels at a time."
+msgstr "Reserve de 1 a %(max)d etiquetas a la vez."
+
+msgid "This is not a valid Horizon ID."
+msgstr "Este no es un ID Horizon válido."
+
+msgid "This Horizon ID was not reserved for printing."
+msgstr "Este ID Horizon no fue reservado para impresión."
+
+msgid "This Horizon ID is already in use."
+msgstr "Este ID Horizon ya está en uso."
+
+msgid "Wrong check digit: read the label again."
+msgstr "Dígito verificador incorrecto: lea la etiqueta de nuevo."
+
+msgid "Unknown code."
+msgstr "Código desconocido."
+
+msgid "Nothing is registered with code %(code)s."
+msgstr "Nada está registrado con el código %(code)s."
+
+msgid "This location is inactive."
+msgstr "Esta ubicación está inactiva."
+
+msgid "Assets go in transit only through a transfer."
+msgstr "Los bienes solo entran en tránsito mediante una transferencia."
+
+msgid "Models controlled by quantity have no units with their own ID."
+msgstr "Los modelos controlados por cantidad no tienen unidades con ID propio."
+
+msgid "This serial number does not match the model's pattern."
+msgstr "Este número de serie no sigue el patrón del modelo."
+
+msgid "An asset of this model with this serial number already exists."
+msgstr "Ya existe un bien de este modelo con este número de serie."
+
+msgid "Read the serial number or say why it cannot be read."
+msgstr "Lea el número de serie o indique por qué no se puede leer."
+
+msgid "This container is inactive."
+msgstr "Este contenedor está inactivo."
+
+msgid "Check the specification values."
+msgstr "Revise los valores de las especificaciones."
+
+msgid "This asset has left the stock."
+msgstr "Este bien ya salió de las existencias."
+
+msgid "This asset is in transit between warehouses."
+msgstr "Este bien está en tránsito entre almacenes."
+
+msgid "Read the destination."
+msgstr "Lea el destino."
+
+msgid "The asset is already there."
+msgstr "El bien ya está allí."
+
+msgid "The container is already there."
+msgstr "El contenedor ya está allí."
+
+msgid "%(asset)s cannot go there: %(reason)s"
+msgstr "%(asset)s no puede ir allí: %(reason)s"
+
+msgid "Say why the event is reversed."
+msgstr "Indique el motivo de la reversión."
+
+msgid "Only an asset's own events can be reversed."
+msgstr "Solo se pueden revertir los eventos del propio bien."
+
+msgid "This event cannot be reversed."
+msgstr "Este evento no se puede revertir."
+
+msgid "Only the asset's latest event can be reversed."
+msgstr "Solo se puede revertir el último evento del bien."
+
+msgid "Use 1 to 20 letters and digits, without spaces or symbols."
+msgstr "Use de 1 a 20 letras y números, sin espacios ni símbolos."
+
+msgid "Only the system has a virtual location."
+msgstr "Solo el sistema tiene una ubicación virtual."
+
+msgid "The virtual location has no sub-locations."
+msgstr "La ubicación virtual no tiene sububicaciones."
+
+msgid "The parent location is in another warehouse."
+msgstr "La ubicación superior está en otro almacén."
+
+msgid "There is already a location with this code."
+msgstr "Ya existe una ubicación con este código."
+
+msgid "This cannot be changed: the code is on the labels."
+msgstr "Esto no se puede cambiar: el código está en las etiquetas."
+
+msgid "The virtual location cannot be changed."
+msgstr "La ubicación virtual no se puede cambiar."
+
+msgid "Assets here would not fit the new area type: %(assets)s."
+msgstr "Los bienes de esta ubicación no encajarían en el nuevo tipo de área: %(assets)s."
+
+msgid "Move the assets and containers out first."
+msgstr "Retire primero los bienes y contenedores."
+
+msgid "Containers move by reading them at the destination."
+msgstr "Los contenedores se mueven leyéndolos en el destino."
+
+msgid "Empty the container first."
+msgstr "Vacíe el contenedor primero."
+
+msgid "Other identifiers: %(keys)s."
+msgstr "Otros identificadores: %(keys)s."
+
+msgid "This location has sub-locations, assets, containers or history and cannot be deleted. Deactivate it instead."
+msgstr "Esta ubicación tiene sububicaciones, bienes, contenedores o historial y no se puede eliminar. Desactívela."
+
+msgid "The virtual location cannot be deleted."
+msgstr "La ubicación virtual no se puede eliminar."
+
+msgid "Containers keep their history: deactivate it instead."
+msgstr "Los contenedores conservan su historial: desactívelo."
+
+msgid "Choose a valid model."
+msgstr "Elija un modelo válido."
+
+msgid "Read a location or a container."
+msgstr "Lea una ubicación o un contenedor."
+
+msgid "A container goes to a location."
+msgstr "Un contenedor va a una ubicación."
+
+msgid "Read an asset or a container."
+msgstr "Lea un bien o un contenedor."
+
+msgid "By Unit"
+msgstr "Por Unidad"
+
+msgid "By Quantity"
+msgstr "Por Cantidad"
+
+msgid "tracking"
+msgstr "control"
+
+msgid "serial number pattern"
+msgstr "patrón del número de serie"
+
+msgid "kit checklist"
+msgstr "lista de verificación del kit"
+
+msgid "test script"
+msgstr "guion de prueba"
+
+msgid "has data storage"
+msgstr "tiene almacenamiento de datos"
+
+msgid "asset models"
+msgstr "modelos de activo"
+
+msgid "Ensure this field has no more than %(max)s characters."
+msgstr "Este campo debe tener como máximo %(max)s caracteres."
+
+msgid "Enter a valid pattern."
+msgstr "Indique un patrón válido."
+
+msgid "This item is disabled."
+msgstr "Este elemento está deshabilitado."
+
+msgid "This manufacturer already has a model with this name."
+msgstr "Este fabricante ya tiene un modelo con este nombre."
+
+msgid "This asset model has assets in stock and cannot be deleted."
+msgstr "Este modelo de activo tiene bienes en existencias y no se puede eliminar."

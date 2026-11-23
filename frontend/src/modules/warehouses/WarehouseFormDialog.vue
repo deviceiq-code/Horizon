@@ -134,7 +134,7 @@ function clearError(field: string) {
     ref="formRef"
     v-model="open"
     :title="isEdit ? $t('warehouses.edit') : $t('warehouses.new')"
-    :subtitle="warehouse?.name ?? null"
+    :subtitle="warehouse ? `${warehouse.code} · ${warehouse.name}` : null"
     icon="mdi-warehouse"
     max-width="880"
     :persistent="saving"
@@ -144,6 +144,9 @@ function clearError(field: string) {
     <div class="text-subtitle-2 text-medium-emphasis mb-2">
       {{ $t('customers.sections.identification') }}
     </div>
+    <p v-if="!isEdit" class="text-caption text-medium-emphasis mb-2" data-testid="code-hint">
+      {{ $t('warehouses.codeHint') }}
+    </p>
     <v-row dense>
       <v-col cols="12" md="7">
         <v-text-field

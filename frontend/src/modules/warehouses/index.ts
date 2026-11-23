@@ -19,8 +19,6 @@ const warehouses: AppModule = {
         view: defineAsyncComponent(() => import('./WarehousesTab.vue')),
       },
     },
-    // Inventory opens its first page
-    { path: 'inventory', name: 'inventory', redirect: { name: 'warehouses' } },
   ],
 }
 

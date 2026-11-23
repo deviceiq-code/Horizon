@@ -11,6 +11,7 @@ import averagePrices from './average-prices'
 import catalogs from './catalogs'
 import customers from './customers'
 import efmvAnalyses from './efmv-analyses'
+import inventory from './inventory'
 import pricingSettings from './pricing-settings'
 import serviceProviders from './service-providers'
 import { roles, users } from './users'
@@ -46,6 +47,7 @@ export const MODULES: AppModule[] = [
   efmvAnalyses,
   pricingSettings,
   // Remarketing: Inventory
+  ...inventory,
   warehouses,
   // Administration: Management, then Catalogs (customers and service providers first)
   users,

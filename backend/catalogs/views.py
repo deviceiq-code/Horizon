@@ -4,6 +4,7 @@ from functools import reduce
 
 from django.db.models import (
     CharField,
+    Count,
     DecimalField,
     ExpressionWrapper,
     F,
@@ -29,12 +30,15 @@ from .models import (
     MAX_TERM_MONTHS,
     REMARKETING_RATINGS,
     AssetClass,
+    AssetModel,
     Manufacturer,
     SubVertical,
+    Tracking,
     Vertical,
 )
 from .serializers import (
     AssetClassSerializer,
+    AssetModelSerializer,
     ManufacturerSerializer,
     SpecTemplateSerializer,
     SubVerticalOptionSerializer,
@@ -175,7 +179,7 @@ class ManufacturerViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
 
     queryset = with_remarketing_score(Manufacturer.objects.all(), MANUFACTURER_RATINGS)
     in_use_message = gettext_noop(
-        "This manufacturer is used in average prices and cannot be deleted."
+        "This manufacturer is used in average prices or asset models and cannot be deleted."
     )
     serializer_class = ManufacturerSerializer
     filter_backends = [EnabledFilter, KeywordSearchFilter, filters.OrderingFilter]
@@ -229,7 +233,7 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
         AssetClass.objects.select_related("sub_vertical__vertical"), REMARKETING_RATINGS
     )
     in_use_message = gettext_noop(
-        "This asset class is used in average prices and cannot be deleted."
+        "This asset class is used in average prices or asset models and cannot be deleted."
     )
     serializer_class = AssetClassSerializer
     filter_backends = [EnabledFilter, KeywordSearchFilter, NullsLastOrderingFilter]
@@ -263,3 +267,54 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
         if params.get("sub_vertical", "").isdigit():
             queryset = queryset.filter(sub_vertical_id=int(params["sub_vertical"]))
         return name_and_rating_filters(queryset, params)
+
+
+class AssetModelViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
+    """CRUD for asset models (manufacturer + model of an asset class, used by inventory assets).
+
+    List supports ?search= (model, manufacturer, asset class, keyword), ?is_enabled=,
+    ?manufacturer=<id>, ?asset_class=<id>, ?tracking=unit|quantity, ?name= (model, manufacturer
+    or keyword contains), ?ordering= (id, name, manufacturer__name, asset_class__name,
+    tracking, is_enabled), ?page= and ?page_size=. One with assets cannot be deleted (409).
+    """
+
+    queryset = AssetModel.objects.select_related("manufacturer", "asset_class").annotate(
+        assets_total=Count("assets")
+    )
+    in_use_message = gettext_noop("This asset model has assets in stock and cannot be deleted.")
+    serializer_class = AssetModelSerializer
+    filter_backends = [EnabledFilter, KeywordSearchFilter, NullsLastOrderingFilter]
+    search_fields = ["name", "manufacturer__name", "asset_class__name"]
+    ordering_fields = [
+        "id",
+        "name",
+        "manufacturer__name",
+        "asset_class__name",
+        "tracking",
+        "is_enabled",
+    ]
+    ordering = ["manufacturer__name", "name"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        for param in ("manufacturer", "asset_class"):
+            if params.get(param, "").isdigit():
+                queryset = queryset.filter(**{f"{param}_id": int(params[param])})
+        if params.get("tracking") in Tracking.values:
+            queryset = queryset.filter(tracking=params["tracking"])
+        name = " ".join(params.get("name", "").split()).lower()
+        if name:
+            queryset = queryset.annotate(
+                keywords_text=Func(
+                    F("keywords"),
+                    Value(" | "),
+                    function="array_to_string",
+                    output_field=CharField(),
+                )
+            ).filter(
+                Q(name__icontains=name)
+                | Q(manufacturer__name__icontains=name)
+                | Q(keywords_text__contains=name)
+            )
+        return queryset

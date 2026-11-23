@@ -206,7 +206,12 @@ def test_roles_crud(admin_client, analyst_role, admin):
         ("Account Manager", 0),
         ("Administrator", 1),
         ("Analyst", 0),
+        ("Commercial and Finance", 0),
+        ("Inspection Technician", 0),
+        ("Inventory Supervisor", 0),
         ("Pricing team", 0),
+        ("Receiver", 0),
+        ("Storekeeper", 0),
     ]
     role_id = r.json()["id"]
     assert _patch(admin_client, f"{ROLES}{role_id}/", {"name": "Pricing"}).status_code == 200

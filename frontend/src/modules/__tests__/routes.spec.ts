@@ -26,6 +26,7 @@ describe('module routes', () => {
       ['service-providers', 'menu.sections.catalogs'],
       ['catalogs-verticals', 'menu.sections.catalogs'],
       ['catalogs-asset-classes', 'menu.sections.catalogs'],
+      ['catalogs-asset-models', 'menu.sections.catalogs'],
       ['catalogs-manufacturers', 'menu.sections.catalogs'],
     ])
   })
@@ -44,11 +45,21 @@ describe('module routes', () => {
     expect(router.currentRoute.value.path).toBe('/catalogs/customers')
   })
 
-  it('Inventory opens Warehouses, in the Remarketing app', async () => {
+  it('Inventory opens Movement; its pages are in the Remarketing app', async () => {
     const router = makeRouter()
     await router.push('/inventory')
-    expect(router.currentRoute.value.name).toBe('warehouses')
-    expect(MODULES.find((m) => m.name === 'warehouses')!.app).toBe('remarketing')
+    expect(router.currentRoute.value.name).toBe('inventory-movement')
+    const remarketing = MODULES.filter((m) => m.app === 'remarketing')
+    expect(remarketing.map((m) => [m.name, m.section])).toEqual(
+      [
+        'inventory-movement',
+        'inventory-assets',
+        'inventory-locations',
+        'inventory-containers',
+        'inventory-labels',
+        'warehouses',
+      ].map((name) => [name, 'menu.sections.inventory']),
+    )
   })
 
   it('the former Roles tab opens the Roles page', async () => {

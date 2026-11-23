@@ -43,7 +43,7 @@ const statusOptions = computed(() => [
 ])
 
 const headers = computed(() => [
-  { title: t('warehouses.fields.id'), key: 'id', width: 80 },
+  { title: t('warehouses.fields.code'), key: 'code', width: 110 },
   { title: t('warehouses.fields.name'), key: 'name', minWidth: '220px' },
   { title: t('warehouses.fields.ownership'), key: 'ownership', minWidth: '240px' },
   { title: t('warehouses.fields.verticals'), key: 'verticals_detail', sortable: false },
@@ -144,6 +144,9 @@ function onSaved(_warehouse: Warehouse, created: boolean) {
         clearable
         data-testid="filter-status"
       />
+    </template>
+    <template #[`item.code`]="{ item }">
+      <span class="font-weight-medium">{{ item.code }}</span>
     </template>
     <template #[`item.name`]="{ item }">
       <div class="py-2">

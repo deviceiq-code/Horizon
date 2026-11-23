@@ -18,10 +18,37 @@ from config.photos import PhotoMixin, photo_version, remove_file_later
 
 ADMINISTRATOR = "administrator"
 ACCOUNT_MANAGER = "account_manager"
+# Inventory (Remarketing)
+RECEIVER = "receiver"
+INSPECTION_TECHNICIAN = "inspection_technician"
+STOREKEEPER = "storekeeper"
+INVENTORY_SUPERVISOR = "inventory_supervisor"
+COMMERCIAL_FINANCE = "commercial_finance"
 
 SYSTEM_ROLES = {
     ADMINISTRATOR: ("Administrator", "Full access to the system."),
     ACCOUNT_MANAGER: ("Account Manager", "Can be the account manager of customers."),
+    RECEIVER: (
+        "Receiver",
+        "Opens receiving lots, triages assets, prints labels, records occurrences and moves "
+        "assets.",
+    ),
+    INSPECTION_TECHNICIAN: (
+        "Inspection Technician",
+        "Inspects assets: photos, findings, data erasure certificates, checks block releases.",
+    ),
+    STOREKEEPER: (
+        "Storekeeper",
+        "Moves, puts away, picks and ships assets, counts inventory and receives transfers.",
+    ),
+    INVENTORY_SUPERVISOR: (
+        "Inventory Supervisor",
+        "Approves inspection reports, findings, transfers and adjustments; accepts occurrences.",
+    ),
+    COMMERCIAL_FINANCE: (
+        "Commercial and Finance",
+        "Reads inspection reports, notifies customers, records disputes and creates disposals.",
+    ),
 }
 
 
