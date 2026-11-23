@@ -3,11 +3,12 @@ is still current. Pure functions (no database), fully tested; the limits come fr
 Pricing control panel (PricingSettings)."""
 
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from enum import StrEnum
 from typing import NamedTuple
 
-CENTS = Decimal("0.01")
+from config.decimals import percent
+
 HUNDRED = Decimal("100")
 
 
@@ -28,9 +29,9 @@ class PositionLimits(NamedTuple):
 
 
 def variation_percent(entered: Decimal, reference: Decimal) -> Decimal:
-    """How far the typed price is from the reference, in % of the reference (2 places,
+    """How far the typed price is from the reference, in % of the reference (5 places,
     negative = below)."""
-    return ((entered - reference) / reference * HUNDRED).quantize(CENTS, rounding=ROUND_HALF_UP)
+    return percent((entered - reference) / reference * HUNDRED)
 
 
 def price_position(entered: Decimal, reference: Decimal, limits: PositionLimits) -> Position:

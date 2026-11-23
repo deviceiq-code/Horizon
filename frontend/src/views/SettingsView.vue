@@ -499,25 +499,35 @@ async function save(changes: PreferencesUpdate) {
               @blur="saveThreshold"
               @keydown.enter="saveThreshold"
             />
-          </v-card-text>
-        </v-card>
-
-        <!-- Where "Search the Internet" beside some text fields opens (src/webSearch.ts) -->
-        <v-card class="mb-4" data-testid="web-search-card">
-          <v-card-item prepend-icon="mdi-web">
-            <v-card-title>{{ $t('settings.webSearch.title') }}</v-card-title>
-            <v-card-subtitle class="text-wrap">{{
-              $t('settings.webSearch.description')
-            }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
+            <v-divider class="my-4" />
+            <!-- A button inside some text fields searches the Internet (src/webSearch.ts) -->
+            <v-switch
+              :model-value="preferences.webSearch"
+              color="primary"
+              inset
+              hide-details
+              :disabled="saving"
+              data-testid="web-search-switch"
+              @update:model-value="save({ web_search: !!$event })"
+            >
+              <template #label>
+                <div>
+                  <div class="font-weight-medium">{{ $t('settings.webSearch.title') }}</div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('settings.webSearch.description') }}
+                  </div>
+                </div>
+              </template>
+            </v-switch>
             <v-select
+              v-if="preferences.webSearch"
               :model-value="preferences.webSearchEngine"
               :items="WEB_SEARCH_OPTIONS"
               :label="$t('settings.webSearch.engine')"
               :disabled="saving"
+              density="compact"
               hide-details
-              style="max-width: 360px"
+              class="threshold mt-3 ml-14"
               data-testid="web-search-engine"
               @update:model-value="save({ web_search_engine: $event })"
             />

@@ -872,7 +872,7 @@ const es: Messages = {
     webSearch: {
       title: 'Búsqueda en Internet',
       description:
-        'Campos como nombres, modelos y CPF/CNPJ tienen un botón para buscar en Internet lo escrito, en una nueva pestaña. Una página no puede usar el buscador predeterminado del navegador: elija el suyo.',
+        'Un botón dentro de campos como nombres, modelos y CPF/CNPJ busca en Internet lo escrito, en una nueva pestaña (un modelo junto con su fabricante). Una página no puede usar el buscador predeterminado del navegador: elija el suyo.',
       engine: 'Buscador',
     },
     uiScale: 'Tamaño de la Interfaz',

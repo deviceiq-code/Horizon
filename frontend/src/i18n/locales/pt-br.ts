@@ -868,7 +868,7 @@ const ptBR: Messages = {
     webSearch: {
       title: 'Pesquisa na Internet',
       description:
-        'Campos como nomes, modelos e CPF/CNPJ têm um botão para pesquisar na Internet o que foi digitado, em uma nova aba. Uma página não consegue usar o buscador padrão do navegador: escolha o seu.',
+        'Um botão dentro de campos como nomes, modelos e CPF/CNPJ pesquisa na Internet o que foi digitado, em uma nova aba (um modelo junto com o fabricante). Uma página não consegue usar o buscador padrão do navegador: escolha o seu.',
       engine: 'Buscador',
     },
     uiScale: 'Tamanho da Interface',

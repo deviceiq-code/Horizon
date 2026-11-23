@@ -15,6 +15,8 @@ from decimal import ROUND_HALF_UP, Decimal
 from itertools import pairwise
 from typing import NamedTuple
 
+from config.decimals import percent
+
 CENTS = Decimal("0.01")
 HUNDRED = Decimal("100")
 
@@ -22,7 +24,7 @@ HUNDRED = Decimal("100")
 class CurvePoint(NamedTuple):
     month: int
     value: Decimal  # money, 2 places
-    percent: Decimal  # of the original value, 2 places
+    percent: Decimal  # of the original value, 5 places (config/decimals.py)
     is_anchor: bool  # entered by the user (or month 0), not interpolated
 
 
@@ -31,8 +33,8 @@ def money(value: Decimal) -> Decimal:
 
 
 def percent_of(original: Decimal, value: Decimal) -> Decimal:
-    """`value` as a percentage of `original`, 2 places."""
-    return (value / original * HUNDRED).quantize(CENTS, rounding=ROUND_HALF_UP)
+    """`value` as a percentage of `original`, 5 places."""
+    return percent(value / original * HUNDRED)
 
 
 def anchor_value(original: Decimal, mode: str, amount: Decimal) -> Decimal:

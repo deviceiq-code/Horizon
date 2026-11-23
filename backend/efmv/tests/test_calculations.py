@@ -25,15 +25,15 @@ def test_totals_hardware_only():
     assert totals.sv_percent == D("0.00")
 
 
-def test_totals_shares_with_two_places():
+def test_totals_shares_with_five_places():
     totals = scenario_totals([Line("hw", 1, D("1")), Line("sw", 1, D("1")), Line("sv", 1, D("1"))])
     assert (totals.hw_percent, totals.sw_percent, totals.sv_percent) == (
-        D("33.33"),
-        D("33.33"),
-        D("33.33"),
+        D("33.33333"),
+        D("33.33333"),
+        D("33.33333"),
     )
     totals = scenario_totals([Line("hw", 2, D("1")), Line("sw", 1, D("1"))])
-    assert (totals.hw_percent, totals.sw_percent) == (D("66.67"), D("33.33"))
+    assert (totals.hw_percent, totals.sw_percent) == (D("66.66667"), D("33.33333"))
 
 
 def test_totals_without_lines():
@@ -51,7 +51,7 @@ def test_efmv_weighted_over_the_lo():
     assert totals.efmv_percent == D("56.00")
     # Zero at the end of the term counts as such; thirds round half up
     totals = scenario_totals([Line("hw", 1, D("3"), D("1")), Line("hw", 1, D("3"), D("0"))])
-    assert totals.efmv_percent == D("16.67")
+    assert totals.efmv_percent == D("16.66667")
 
 
 def test_covers_term():
@@ -63,7 +63,7 @@ def test_covers_term():
 
 def test_weight_of_an_item():
     assert weight_percent(2, D("100000"), D("250000")) == D("80.00")
-    assert weight_percent(1, D("1"), D("3")) == D("33.33")
+    assert weight_percent(1, D("1"), D("3")) == D("33.33333")
     assert weight_percent(1, D("1"), D("0")) is None
 
 
@@ -76,7 +76,7 @@ def test_percent_of_a_value():
 def test_efmv_as_a_percentage_of_the_unit_value():
     assert efmv_percent_of_unit(D("25.00"), D("100.00")) == D("25.00")
     assert efmv_percent_of_unit(D("55000"), D("100000")) == D("55.00")
-    assert efmv_percent_of_unit(D("1"), D("3")) == D("33.33")
+    assert efmv_percent_of_unit(D("1"), D("3")) == D("33.33333")
     assert efmv_percent_of_unit(D("1"), D("0")) is None
 
 
@@ -97,6 +97,6 @@ def test_services_count_in_the_lo_but_not_in_the_efmv():
         [Line("hw", 2, D("10000"), D("4000")), Line("sv", 2, D("1000"), D("0"))]
     )
     assert totals.lo == D("22000.00")
-    assert (totals.hw_percent, totals.sv_percent) == (D("90.91"), D("9.09"))
+    assert (totals.hw_percent, totals.sv_percent) == (D("90.90909"), D("9.09091"))
     # 8,000 of 22,000: lower than the 40% without the service
-    assert totals.efmv_percent == D("36.36")
+    assert totals.efmv_percent == D("36.36364")

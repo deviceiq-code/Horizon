@@ -26,7 +26,7 @@ def _collapse_spaces(value: str) -> str:
 
 
 class PricePointSerializer(serializers.ModelSerializer):
-    percent = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
+    percent = serializers.DecimalField(max_digits=10, decimal_places=5, read_only=True)
 
     class Meta:
         model = PricePoint
@@ -111,7 +111,7 @@ class AveragePriceSerializer(serializers.ModelSerializer):
 class CurvePointSerializer(serializers.Serializer):
     month = serializers.IntegerField()
     value = serializers.DecimalField(max_digits=14, decimal_places=2)
-    percent = serializers.DecimalField(max_digits=7, decimal_places=2)
+    percent = serializers.DecimalField(max_digits=10, decimal_places=5)
     is_anchor = serializers.BooleanField()
 
 
@@ -297,7 +297,7 @@ class PriceDocumentSerializer(serializers.ModelSerializer):
 class AverageTermSerializer(serializers.Serializer):
     term_months = serializers.IntegerField()
     value = serializers.DecimalField(max_digits=14, decimal_places=2)
-    percent = serializers.DecimalField(max_digits=8, decimal_places=2)
+    percent = serializers.DecimalField(max_digits=11, decimal_places=5)
     count = serializers.IntegerField()
 
 

@@ -9,13 +9,15 @@ from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from typing import NamedTuple
 
+from config.decimals import percent
+
 from .curves import money, percent_of
 
 
 class AverageTerm(NamedTuple):
     term_months: int
     value: Decimal  # money, 2 places
-    percent: Decimal  # average of the versions' percentages, 2 places
+    percent: Decimal  # average of the versions' percentages, 5 places
     count: int  # versions that have this term
 
 
@@ -40,7 +42,7 @@ def versions_average(
         AverageTerm(
             term_months=term,
             value=money(sum(v for v, _ in entries) / len(entries)),
-            percent=money(sum(p for _, p in entries) / len(entries)),
+            percent=percent(sum(p for _, p in entries) / len(entries)),
             count=len(entries),
         )
         for term, entries in sorted(by_term.items())

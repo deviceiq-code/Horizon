@@ -84,7 +84,7 @@ def test_anchor_value_unknown_mode():
 
 
 def test_percent_of():
-    assert percent_of(D("150000"), D("100000")) == D("66.67")
+    assert percent_of(D("150000"), D("100000")) == D("66.66667")
 
 
 def test_increasing_terms():

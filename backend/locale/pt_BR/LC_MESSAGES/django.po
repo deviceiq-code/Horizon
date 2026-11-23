@@ -1151,3 +1151,6 @@ msgstr "Estado da interface grande demais."
 
 msgid "web search engine"
 msgstr "mecanismo de pesquisa na internet"
+
+msgid "search the Internet"
+msgstr "pesquisar na Internet"

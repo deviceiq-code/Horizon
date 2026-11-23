@@ -16,16 +16,18 @@ LIMITS = PositionLimits(compatible=D("5"), below=D("10"), above=D("10"))
 
 def test_variation():
     assert variation_percent(D("90"), D("100")) == D("-10.00")
-    assert variation_percent(D("100"), D("120")) == D("-16.67")
-    assert variation_percent(D("105.005"), D("100")) == D("5.01")
+    assert variation_percent(D("100"), D("120")) == D("-16.66667")
+    assert variation_percent(D("105.005"), D("100")) == D("5.00500")
+    # 5 places, half up
+    assert variation_percent(D("100.000005"), D("100")) == D("0.00001")
 
 
 def test_positions_with_inclusive_limits():
     position = lambda value: price_position(D(value), D("100000"), LIMITS)  # noqa: E731
     assert position("90000") == Position.BELOW  # exactly 10% below
     assert position("85000") == Position.BELOW
-    # Compared as shown (2 places): 9.999% below reads -10.00%, so it is below
-    assert position("90001") == Position.BELOW
+    # Compared with the server's 5 places (whatever the user shows): 9.999% below is not 10%
+    assert position("90001") == Position.SLIGHTLY_BELOW
     assert position("90010") == Position.SLIGHTLY_BELOW
     assert position("95000") == Position.COMPATIBLE  # exactly 5%
     assert position("100000") == Position.COMPATIBLE

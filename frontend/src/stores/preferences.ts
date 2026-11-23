@@ -39,7 +39,8 @@ export interface Preferences {
   currency_display: CurrencyDisplay
   /** How the user left the interface (side menu, grids' filters…): follows them anywhere */
   ui_state: UiState
-  /** Where "Search the Internet" beside some text fields opens (src/webSearch.ts) */
+  /** Smart Tools: a button in some text fields searches the Internet, with this engine */
+  web_search: boolean
   web_search_engine: WebSearchEngine
   /** Smart Tools: entering a text field selects its content (src/smartTools.ts) */
   select_on_focus: boolean
@@ -61,6 +62,7 @@ export type PreferencesUpdate = Partial<{
   currency: Currency
   currency_display: CurrencyDisplay
   ui_state: UiState
+  web_search: boolean
   web_search_engine: WebSearchEngine
   select_on_focus: boolean
   auto_scope: boolean
@@ -97,6 +99,7 @@ const CURRENCY_DISPLAY_STORAGE_KEY = 'horizon.currencyDisplay'
 const CURRENCY_STORAGE_KEY = 'horizon.currency'
 const PERCENT_PLACES_STORAGE_KEY = 'horizon.percentPlaces'
 const WEB_SEARCH_STORAGE_KEY = 'horizon.webSearchEngine'
+const WEB_SEARCH_ON_STORAGE_KEY = 'horizon.webSearch'
 
 function readStored<T extends string>(key: string, valid: (v: unknown) => v is T, fallback: T): T {
   try {
@@ -172,6 +175,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
   numberSettings.percentPlaces = percentPlaces.value
   numberSettings.format = numberFormat.value
   numberSettings.currency = currencyDisplay.value
+  const webSearch = ref(
+    readStored(WEB_SEARCH_ON_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
+  )
   const webSearchEngine = ref<WebSearchEngine>(
     readStored(WEB_SEARCH_STORAGE_KEY, isWebSearchEngine, 'google'),
   )
@@ -205,6 +211,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     currency?: string
     currency_display?: string
     ui_state?: UiState
+    web_search?: boolean
     web_search_engine?: string
     select_on_focus?: boolean
     auto_scope?: boolean
@@ -254,6 +261,10 @@ export const usePreferencesStore = defineStore('preferences', () => {
       store(CURRENCY_DISPLAY_STORAGE_KEY, p.currency_display)
     }
     if (p.ui_state && typeof p.ui_state === 'object') uiState.value = p.ui_state
+    if (typeof p.web_search === 'boolean') {
+      webSearch.value = p.web_search
+      store(WEB_SEARCH_ON_STORAGE_KEY, String(p.web_search))
+    }
     if (isWebSearchEngine(p.web_search_engine)) {
       webSearchEngine.value = p.web_search_engine
       store(WEB_SEARCH_STORAGE_KEY, p.web_search_engine)
@@ -286,6 +297,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
       currency: currency.value,
       currency_display: currencyDisplay.value,
       ui_state: uiState.value,
+      web_search: webSearch.value,
       web_search_engine: webSearchEngine.value,
       select_on_focus: selectOnFocus.value,
       auto_scope: autoScope.value,
@@ -329,6 +341,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     currencyDisplay,
     uiState,
     saveUiState,
+    webSearch,
     webSearchEngine,
     selectOnFocus,
     autoScope,

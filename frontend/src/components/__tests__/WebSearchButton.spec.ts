@@ -51,4 +51,23 @@ describe('WebSearchButton', () => {
     )
     wrapper.unmount()
   })
+
+  it('a Smart Tool: turned off, the button is not shown', async () => {
+    const term = ref('Dell P2423H')
+    usePreferencesStore().apply({ web_search: false })
+    const wrapper = mountWithPlugins({
+      render: () =>
+        h(
+          VTextField,
+          { modelValue: term.value },
+          { 'append-inner': () => h(WebSearchButton, { term: term.value }) },
+        ),
+    })
+    await settle()
+    expect(inBody('[data-testid="web-search"]')).toBeNull()
+    usePreferencesStore().apply({ web_search: true })
+    await settle()
+    expect(inBody('[data-testid="web-search"]')).not.toBeNull()
+    wrapper.unmount()
+  })
 })

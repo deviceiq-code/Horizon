@@ -32,21 +32,21 @@ def test_create(logged_client, catalog):
             "mode": "percent",
             "amount": "70.0000",
             "value": "70000.00",
-            "percent": "70.00",
+            "percent": "70.00000",
         },
         {
             "term_months": 24,
             "mode": "value",
             "amount": "55000.0000",
             "value": "55000.00",
-            "percent": "55.00",
+            "percent": "55.00000",
         },
         {
             "term_months": 36,
             "mode": "percent",
             "amount": "42.5000",
             "value": "42500.00",
-            "percent": "42.50",
+            "percent": "42.50000",
         },
     ]
     # Specs are stored with the template as it was
@@ -57,9 +57,14 @@ def test_create(logged_client, catalog):
 def test_monthly_curve_in_detail(logged_client, price):
     curve = logged_client.get(f"{URL}{price.pk}/").json()["curve"]
     assert len(curve) == 37  # months 0..36
-    assert curve[0] == {"month": 0, "value": "100000.00", "percent": "100.00", "is_anchor": True}
+    assert curve[0] == {"month": 0, "value": "100000.00", "percent": "100.00000", "is_anchor": True}
     # month 13 = 70000 + (55000 - 70000) / 12 * 1
-    assert curve[13] == {"month": 13, "value": "68750.00", "percent": "68.75", "is_anchor": False}
+    assert curve[13] == {
+        "month": 13,
+        "value": "68750.00",
+        "percent": "68.75000",
+        "is_anchor": False,
+    }
     assert curve[36]["value"] == "42500.00"
 
 
@@ -428,8 +433,8 @@ def test_preview_resolves_values_curve_and_warnings(logged_client, db):
     assert r.status_code == 200, r.json()
     data = r.json()
     assert data["points"] == [
-        {"term_months": 12, "value": "70000.00", "percent": "70.00"},
-        {"term_months": 24, "value": "72000.00", "percent": "72.00"},
+        {"term_months": 12, "value": "70000.00", "percent": "70.00000"},
+        {"term_months": 24, "value": "72000.00", "percent": "72.00000"},
     ]
     assert data["increasing_terms"] == [24]
     assert len(data["curve"]) == 25

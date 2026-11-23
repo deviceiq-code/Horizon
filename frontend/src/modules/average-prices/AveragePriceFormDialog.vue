@@ -41,6 +41,11 @@ const rules = useValidationRules()
 const assetClassId = ref<number | null>(null)
 const assetClass = ref<AssetClass | null>(null)
 const manufacturerId = ref<number | null>(null)
+const manufacturerName = ref('')
+/** A model is searched with its manufacturer ("Dell P2423H"); nothing without the model */
+const modelSearchTerm = computed(() =>
+  model.value.trim() ? `${manufacturerName.value} ${model.value}`.trim() : '',
+)
 const model = ref('')
 const description = ref('')
 /** Two tabs: the asset (what it is) and its eFMV (original value and value per term) */
@@ -101,6 +106,7 @@ watch(open, async (isOpen) => {
   assetClassId.value = s?.asset_class.id ?? null
   assetClass.value = null
   manufacturerId.value = s?.manufacturer.id ?? null
+  manufacturerName.value = s?.manufacturer.name ?? ''
   model.value = s?.model ?? ''
   description.value = s?.description ?? ''
   // A new version starts with the previous one's keywords
@@ -337,6 +343,7 @@ async function submit() {
               :key="`manufacturer-${openCount}`"
               v-model="manufacturerId"
               :initial-option="source?.manufacturer ?? null"
+              @selected="manufacturerName = $event?.name ?? ''"
               :label="$t('averagePrices.fields.manufacturer')"
               :rules="required"
               :error-messages="fieldErrors.manufacturer"
@@ -352,7 +359,7 @@ async function submit() {
               maxlength="150"
               data-testid="model"
             >
-              <template #append-inner><WebSearchButton :term="model" /></template>
+              <template #append-inner><WebSearchButton :term="modelSearchTerm" /></template>
             </v-text-field>
           </v-col>
           <v-col cols="12">

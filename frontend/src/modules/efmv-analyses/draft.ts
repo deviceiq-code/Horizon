@@ -146,8 +146,8 @@ export function parseEfmvValue(text: string, language: string): string | null {
 export function parseEfmvPercent(text: string, language: string): string | null {
   const match = /^(.*?)\s*%\s*$/.exec(text.trim())
   if (!match) return null
-  // Negative allowed (a disposal cost)
-  return parseSignedMoney(match[1]!, language)
+  // Negative allowed (a disposal cost); up to the server's 5 places of percentages
+  return parseSignedMoney(match[1]!, language, 5)
 }
 
 /** Whether what was typed in an eFMV cell is acceptable: empty, a value or a percentage. */
@@ -169,7 +169,8 @@ export function parseServiceInput(
 ): { value: string } | { percent: string } | null {
   if (!text.trim()) return { value: '0' }
   const percent = /^(.*?)\s*%\s*$/.exec(text.trim())
-  const parsed = parseMoney(percent ? percent[1]! : text, language)
+  // A percentage: up to the server's 5 places
+  const parsed = parseMoney(percent ? percent[1]! : text, language, percent ? 5 : 2)
   if (parsed === null || Number(parsed) < 0) return null
   return percent ? { percent: parsed } : { value: parsed }
 }

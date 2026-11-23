@@ -3,6 +3,7 @@
  * Inside a text field, on the right (`#append-inner`): opens an Internet search for what was
  * typed in a new browser tab, with the user's search engine (Settings → Smart Tools).
  * Disabled while the field is empty; out of the Tab order (the form's fields come first).
+ * A Smart Tool: not shown when the user turned it off (Settings → Smart Tools).
  */
 import { computed } from 'vue'
 import { usePreferencesStore } from '@/stores/preferences'
@@ -21,6 +22,7 @@ function search() {
 
 <template>
   <v-btn
+    v-if="preferences.webSearch"
     icon="mdi-web"
     variant="text"
     size="small"

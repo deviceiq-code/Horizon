@@ -877,7 +877,7 @@ const en = {
     webSearch: {
       title: 'Internet Search',
       description:
-        "Fields such as names, models and tax IDs have a button to search the Internet for what was typed, in a new tab. A page cannot use the browser's default search engine: choose yours.",
+        "A button inside fields such as names, models and tax IDs searches the Internet for what was typed, in a new tab (a model with its manufacturer). A page cannot use the browser's default search engine: choose yours.",
       engine: 'Search Engine',
     },
     uiScale: 'Interface Size',

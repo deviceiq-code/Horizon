@@ -119,7 +119,7 @@ def test_create_with_totals(logged_client, managers, customers, prices):
     # Official name: term + name
     assert scenario["title"] == "24 Months - Base"
     assert [i["line_total"] for i in scenario["items"]] == ["200000.00", "50000.00"]
-    assert [i["weight_percent"] for i in scenario["items"]] == ["80.00", "20.00"]
+    assert [i["weight_percent"] for i in scenario["items"]] == ["80.00000", "20.00000"]
     assert scenario["items"][0]["terms"] == [12, 24, 36]
     assert [(spec["key"], spec["value"]) for spec in scenario["items"][0]["specs"]] == [
         ("hours", "2500"),
@@ -129,10 +129,10 @@ def test_create_with_totals(logged_client, managers, customers, prices):
         "lo": "250000.00",
         # 24 months: 2 × 55,000 + 30,000 = 140,000 of 250,000
         "efmv_total": "140000.00",
-        "efmv_percent": "56.00",
-        "hw_percent": "100.00",
-        "sw_percent": "0.00",
-        "sv_percent": "0.00",
+        "efmv_percent": "56.00000",
+        "hw_percent": "100.00000",
+        "sw_percent": "0.00000",
+        "sv_percent": "0.00000",
     }
     # The next one gets the next number
     r = post(logged_client, body(managers, customers, prices))
@@ -209,7 +209,7 @@ def test_uses_the_current_version(logged_client, managers, customers, prices, ca
     assert item["original_value"] == "120000.00"
     # The typed value is kept; the newer average price only changes how it is placed
     assert item["unit_value"] == "100000.00"
-    assert (item["variation_percent"], item["position"]) == ("-16.67", "below")
+    assert (item["variation_percent"], item["position"]) == ("-16.66667", "below")
     assert data["scenarios"][0]["totals"]["lo"] == "250000.00"
 
 
@@ -288,7 +288,7 @@ def test_scenario_preview(logged_client, prices):
     data = r.json()
     assert [i["out_of_curve"] for i in data["items"]] == [False, True, False]
     # Out of the curve: no weight (not in the LO)
-    assert [i["weight_percent"] for i in data["items"]] == ["51.69", None, "48.31"]
+    assert [i["weight_percent"] for i in data["items"]] == ["51.69082", None, "48.30918"]
     assert data["totals"]["lo"] == "207000.00"
     # Not typed: the average price's value counts (shown as such)
     assert [i["position"] for i in data["items"]] == ["slightly_above", "compatible", "compatible"]
@@ -336,7 +336,7 @@ def test_position_follows_the_control_panel(logged_client, managers, customers, 
     data["scenarios"][0]["items"][0]["unit_value"] = "92000"  # 8% below
     analysis = post(logged_client, data).json()
     item = analysis["scenarios"][0]["items"][0]
-    assert (item["variation_percent"], item["position"]) == ("-8.00", "slightly_below")
+    assert (item["variation_percent"], item["position"]) == ("-8.00000", "slightly_below")
     settings = PricingSettings.current()
     settings.below_percent = Decimal("7.5")
     settings.save()
@@ -509,7 +509,7 @@ def test_efmv_value_comes_from_the_curve_at_the_term(logged_client, managers, cu
     items = r.json()["scenarios"][0]["items"]
     assert [i["efmv_value"] for i in items] == ["62500.00", "31500.00"]
     # Weighted over the LO: (2 × 62,500 + 31,500) / 250,000
-    assert r.json()["scenarios"][0]["totals"]["efmv_percent"] == "62.60"
+    assert r.json()["scenarios"][0]["totals"]["efmv_percent"] == "62.60000"
 
 
 def test_scenario_preview_with_efmv_values(logged_client, prices):
@@ -593,7 +593,7 @@ def test_efmv_typed_as_a_percentage_of_the_unit_value(logged_client, managers, c
         ("6250.00", False),
     ]
     # Shown below the field: the eFMV as a % of the unit value
-    assert [i["efmv_percent"] for i in r.json()["items"]] == ["25.00", "12.50"]
+    assert [i["efmv_percent"] for i in r.json()["items"]] == ["25.00000", "12.50000"]
     # Saved as the value it gives
     data = body(managers, customers, prices)
     data["scenarios"][0]["items"] = items
@@ -622,11 +622,11 @@ def test_efmv_typed_as_a_percentage_of_the_unit_value(logged_client, managers, c
     )
     assert r.status_code == 200, r.json()
     assert [(i["efmv_value"], i["efmv_percent"]) for i in r.json()["items"]] == [
-        ("-10.00", "-10.00"),
-        ("-5.00", "-5.00"),
+        ("-10.00", "-10.00000"),
+        ("-5.00", "-5.00000"),
     ]
     # (2 × -10 + -5) / 300
-    assert r.json()["totals"]["efmv_percent"] == "-8.33"
+    assert r.json()["totals"]["efmv_percent"] == "-8.33333"
     data["scenarios"][0]["items"] = negative
     r = post(logged_client, data)
     assert r.status_code == 201, r.json()
@@ -679,14 +679,14 @@ def test_a_service_added_to_an_asset(logged_client, prices):
         "mode": "add",
         "value": "5000.00",
         "line_total": "10000.00",
-        "weight_percent": "4.76",
+        "weight_percent": "4.76190",
         "too_high": False,
     }
     totals = data["totals"]
     assert totals["lo"] == "210000.00"
-    assert (totals["hw_percent"], totals["sv_percent"]) == ("95.24", "4.76")
+    assert (totals["hw_percent"], totals["sv_percent"]) == ("95.23810", "4.76190")
     # 110,000 left at the end of 210,000: lower than 55% without the service
-    assert totals["efmv_percent"] == "52.38"
+    assert totals["efmv_percent"] == "52.38095"
 
 
 def test_a_service_deducted_from_the_asset(logged_client, prices):
@@ -699,11 +699,11 @@ def test_a_service_deducted_from_the_asset(logged_client, prices):
     assert (item["unit_value"], item["net_unit_value"]) == ("107000.00", "99510.00")
     assert item["service"]["value"] == "7490.00"
     # Positioned (and its eFMV %) by what the asset is worth without the service
-    assert (item["variation_percent"], item["position"]) == ("-0.49", "compatible")
-    assert item["efmv_percent"] == "55.27"
+    assert (item["variation_percent"], item["position"]) == ("-0.49000", "compatible")
+    assert item["efmv_percent"] == "55.27083"
     # The LO is what was typed: the service only moves from HW to SV
     assert data["totals"]["lo"] == "107000.00"
-    assert data["totals"]["sv_percent"] == "7.00"
+    assert data["totals"]["sv_percent"] == "7.00000"
 
 
 def test_a_service_cannot_be_worth_more_than_the_asset(logged_client, prices):

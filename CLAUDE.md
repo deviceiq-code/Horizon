@@ -125,14 +125,14 @@ Multi-user web system for **operating lease residual value pricing**
     `efmv_percent` in the input — a % of the unit value, `calculations.percent_of_value`,
     resolved by the API, stored as the value; items return `efmv_percent` = eFMV / unit value). Items carry the price's `specs` for display. Each item is placed against the current average price's value
     (`pricing/positioning.py`, pure: `variation_percent` and `price_position` → below /
-    slightly_below / compatible / slightly_above / above, compared at 2 places, inclusive
+    slightly_below / compatible / slightly_above / above, compared at 5 places, inclusive
     limits) and flagged `expired` when that version is older than the validity; the analysis
     returns `is_outdated` (scenarios `has_expired`). Writes are nested (`scenarios` replaces them all); a
     term beyond an asset's curve (its last term) is refused per item. Figures come only from
     `efmv/calculations.py` (pure, tested): LO = Σ quantity × typed unit value; HW/SW/SV shares of
-    the LO with 2 places (Average Prices are hardware; SW and SV to come); eFMV at EOL = the items' eFMV
+    the LO with 5 places (Average Prices are hardware; SW and SV to come); eFMV at EOL = the items' eFMV
     weighted over the LO (`efmv_total` = Σ quantity × eFMV value; `efmv_percent` = that / LO,
-    %, 2 places; null without LO); each counted item's `weight_percent` = its total / LO
+    %, 5 places; null without LO); each counted item's `weight_percent` = its total / LO
     (`calculations.weight_percent`; null when left out of the totals). `POST /scenario-preview/` gives the figures of a scenario
     being edited; deleted prices and items out of the curve are flagged and left out of them.
     `?search=` also finds a code. Customers: `?account_manager=<user id>` (primary or
@@ -225,7 +225,9 @@ Multi-user web system for **operating lease residual value pricing**
   - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools (`?tab=`).
   - **Search the Internet** beside some text fields (`src/components/WebSearchButton.vue` in
     the field's `#append-inner`: disabled while empty, out of the Tab order, opens a new tab):
-    Average Prices' Model; Customers' legal name, trade name and tax ID; Manufacturers' name.
+    Average Prices' Model (searched with its manufacturer: "Dell P2423H"); Customers' legal
+    name, trade name and tax ID; Manufacturers' name. A Smart Tool (`web_search`, on by
+    default; off: the button is not shown).
     A page cannot use the browser's default search engine, so it is the preference
     `web_search_engine` (`accounts.models.WebSearchEngine`, Google by default; Settings →
     Smart Tools; addresses in `src/webSearch.ts`).
@@ -398,6 +400,8 @@ Multi-user web system for **operating lease residual value pricing**
 
 ## Conventions
 - **Money and percentages: always `Decimal` / `models.DecimalField`** (NUMERIC in Postgres). Never `float`.
+  Precision (`config/decimals.py`): money 2 places, **percentages always calculated with 5**
+  (`decimals.percent`); how many are shown is each user's `percent_places`.
   In the frontend, monetary values travel as strings and are only formatted for display.
 - All residual calculation rules live in pure backend functions (e.g. `assets/calculations.py`),
   with unit tests. The frontend never recalculates prices on its own.

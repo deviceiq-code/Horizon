@@ -299,7 +299,7 @@ class ServiceInputSerializer(serializers.Serializer):
         max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
     )
     percent = serializers.DecimalField(
-        max_digits=6, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
+        max_digits=9, decimal_places=5, min_value=Decimal("0"), required=False, allow_null=True
     )
     mode = serializers.ChoiceField(choices=ServiceMode.choices, default=ServiceMode.ADD)
 
@@ -333,7 +333,7 @@ class ItemInputSerializer(serializers.Serializer):
     # Or typed as a percentage of the unit value ("25" = 25%, "-5" = a cost): turned into
     # `efmv_value`
     efmv_percent = serializers.DecimalField(
-        max_digits=6, decimal_places=2, required=False, allow_null=True
+        max_digits=9, decimal_places=5, required=False, allow_null=True
     )
     # Its service (SV), at most one; null or absent: none
     service = ServiceInputSerializer(required=False, allow_null=True)

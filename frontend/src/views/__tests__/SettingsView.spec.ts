@@ -33,6 +33,7 @@ const user = (is_admin: boolean): User => ({
     currency: 'BRL',
     currency_display: 'symbol',
     ui_state: {},
+    web_search: true,
     web_search_engine: 'google',
     updated_at: '',
   },

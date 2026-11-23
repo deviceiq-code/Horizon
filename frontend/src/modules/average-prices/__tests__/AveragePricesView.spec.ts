@@ -437,6 +437,15 @@ describe('AveragePricesView', () => {
     const value = (id: string) => (inBody(`[data-testid="${id}"] input`) as HTMLInputElement).value
     expect(value('model')).toBe('320 GC')
     expect(value('original-value')).toBe('100,000.00')
+    // The model is searched on the Internet with its manufacturer
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    ;(inBody('[data-testid="model"] [data-testid="web-search"]') as HTMLButtonElement).click()
+    expect(open).toHaveBeenCalledWith(
+      'https://www.google.com/search?q=Caterpillar%20320%20GC',
+      '_blank',
+      'noopener,noreferrer',
+    )
+    open.mockRestore()
     expect(value('spec-hours')).toBe('2,500')
     await typeInto('original-value', '110,000')
     await click('save')

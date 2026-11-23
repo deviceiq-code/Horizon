@@ -1151,3 +1151,6 @@ msgstr "Estado de la interfaz demasiado grande."
 
 msgid "web search engine"
 msgstr "buscador de internet"
+
+msgid "search the Internet"
+msgstr "buscar en Internet"
