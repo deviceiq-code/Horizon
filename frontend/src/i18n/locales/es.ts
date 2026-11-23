@@ -850,6 +850,9 @@ const es: Messages = {
   },
   settings: {
     rows: {
+      photoSearchHint:
+        'Average Prices: fotos de los bienes encontradas en internet, mediante una instancia de SearXNG.',
+      searxngHint: 'Su dirección; el formato JSON debe estar habilitado en su settings.yml.',
       dateFormatHint: 'Cómo se escriben las fechas.',
       timeFormatHint: 'Cómo se escriben las horas.',
       numberFormatHint: 'Separadores de miles y de decimales.',

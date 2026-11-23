@@ -204,10 +204,16 @@ JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
 
 
 @pytest.fixture
-def searxng(db):
-    from system.models import SystemSettings
+def searxng(logged_client):
+    """The signed-in user's Smart Tool: photo search through their SearXNG."""
+    from django.contrib.auth import get_user_model
 
-    SystemSettings.objects.update_or_create(pk=1, defaults={"searxng_url": "http://searx.lan"})
+    from accounts.models import UserPreferences
+
+    for user in get_user_model().objects.all():
+        preferences = UserPreferences.for_user(user)
+        preferences.searxng_url = "http://searx.lan"
+        preferences.save()
 
 
 def test_photo_suggestions(logged_client, price, searxng, monkeypatch):
@@ -248,10 +254,14 @@ def test_photo_suggestions_before_saving(logged_client, searxng, monkeypatch):
     assert logged_client.get(f"{URL}photo-suggestions/").status_code == 400
 
 
-def test_photo_suggestions_need_searxng(logged_client, price):
+def test_photo_suggestions_need_searxng(logged_client, price, searxng):
+    from accounts.models import UserPreferences
+
+    # Internet Search turned off (photo search is part of it): no search, even with an address
+    UserPreferences.objects.update(web_search=False)
     r = logged_client.get(f"{URL}{price.pk}/photo-suggestions/")
     assert r.status_code == 409
-    assert "Settings" in r.json()["detail"]
+    assert "Smart Tools" in r.json()["detail"]
 
 
 def test_photo_suggestions_report_searxng_errors(logged_client, price, searxng, monkeypatch):

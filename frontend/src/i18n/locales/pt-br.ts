@@ -847,6 +847,9 @@ const ptBR: Messages = {
   },
   settings: {
     rows: {
+      photoSearchHint:
+        'Average Prices: fotos dos bens encontradas na internet, por uma instância do SearXNG.',
+      searxngHint: 'O endereço dele; o formato JSON precisa estar habilitado no settings.yml.',
       dateFormatHint: 'Como as datas são escritas.',
       timeFormatHint: 'Como as horas são escritas.',
       numberFormatHint: 'Separadores de milhar e de decimais.',

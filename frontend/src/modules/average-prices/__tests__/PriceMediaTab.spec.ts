@@ -4,7 +4,7 @@ import { h, ref } from 'vue'
 
 import { ApiError } from '@/api'
 import { setLanguage } from '@/i18n'
-import { useSystemSettingsStore } from '@/stores/systemSettings'
+import { usePreferencesStore } from '@/stores/preferences'
 import { inBody, mountWithPlugins, settle } from '@/test-utils'
 import * as pricesApi from '../api'
 import { applyMediaChanges, hasMediaChanges, noMediaChanges, type MediaChanges } from '../media'
@@ -58,9 +58,8 @@ describe('PriceMediaTab', () => {
   beforeEach(() => {
     setLanguage('en')
     setActivePinia(createPinia())
-    useSystemSettingsStore().settings = {
-      photo_search_enabled: false,
-    }
+    // Photo search off (Internet Search without a SearXNG address)
+    usePreferencesStore().apply({ web_search: true, searxng_url: '' })
     api.listPriceDocuments.mockResolvedValue([CATALOG])
     URL.createObjectURL = vi.fn<(object: Blob) => string>(() => 'blob:front')
     URL.revokeObjectURL = vi.fn<(url: string) => void>()

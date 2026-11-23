@@ -156,6 +156,10 @@ class UserPreferences(models.Model):
     # How the user left the interface, kept with the account so it follows them to any
     # computer: e.g. {"sideMenu": {"wide": "open"}, "filters": {"customers": true}}
     ui_state = models.JSONField(_("interface state"), default=dict, blank=True)
+    # Smart Tools, part of Internet Search (`web_search`): photos of the assets searched on the
+    # internet through this SearXNG instance (JSON output must be enabled there); with Internet
+    # Search off, or without an address, there is no photo search
+    searxng_url = models.URLField(_("SearXNG URL"), max_length=300, blank=True)
     # How users are shown to this user (users.display)
     user_name_display = models.CharField(
         _("show users by"),

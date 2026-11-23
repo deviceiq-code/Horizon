@@ -9,6 +9,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from system.messages import web_error_message
+from system.web import WebError, search_images
 from users.display import display_name
 from users.models import user_photo_version
 from users.permissions import is_administrator
@@ -88,3 +90,23 @@ def preferences(request):
     translation.activate(obj.language)
     request.LANGUAGE_CODE = obj.language
     return Response(serializer.data)
+
+
+@api_view(["POST"])
+def test_searxng(request):
+    """Try a search on the SearXNG address given (not saved): how many images came."""
+    serializer = UserPreferencesSerializer(
+        data={"searxng_url": request.data.get("searxng_url")}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    url = serializer.validated_data.get("searxng_url", "")
+    if not url:
+        return Response(
+            {"searxng_url": [_("This field may not be blank.")]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        results = search_images(url, "excavator", limit=50)
+    except WebError as exc:
+        return Response({"detail": web_error_message(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+    return Response({"results": len(results)})

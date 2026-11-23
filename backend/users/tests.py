@@ -182,14 +182,14 @@ def test_deleting_administrators(client, admin, db):
 
 
 def test_users_with_records_cannot_be_deleted(admin_client, db):
-    from system.models import SystemSettings
-
     bruno = User.objects.create_user("bruno", password=STRONG)
-    SystemSettings.objects.update_or_create(pk=1, defaults={"updated_by": bruno})
+    # A record pointing to him: the manager of someone
+    carla = User.objects.create_user("carla", password=STRONG)
+    UserProfile.objects.filter(user=carla).update(manager=bruno)
     r = admin_client.delete(f"{USERS}{bruno.pk}/")
     assert r.status_code == 409
     assert "Deactivate" in r.json()["detail"]
-    other = User.objects.create_user("carla", password=STRONG)
+    other = User.objects.create_user("diego", password=STRONG)
     assert admin_client.delete(f"{USERS}{other.pk}/").status_code == 204
 
 

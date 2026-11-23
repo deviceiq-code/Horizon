@@ -13,10 +13,10 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
+from accounts.models import UserPreferences
 from catalogs.specs import suggest_values
 from config.keywords import KeywordSearchFilter
-from system.models import SystemSettings
-from system.views import web_error_message
+from system.messages import web_error_message
 from system.web import WebError, fetch_image, http_url, search_images
 
 from .averages import versions_average
@@ -381,10 +381,12 @@ class AveragePriceViewSet(
 
 def _photo_suggestions(request, default_query: str):
     """SearXNG images for ?q= (or `default_query`); 409 when photo search is not set up."""
-    searxng = SystemSettings.current().searxng_url
+    preferences = UserPreferences.for_user(request.user)
+    # Part of the user's Internet Search (Smart Tools): on, with a SearXNG address
+    searxng = preferences.searxng_url if preferences.web_search else ""
     if not searxng:
         return Response(
-            {"detail": _("Photo search is not set up (Settings → System).")},
+            {"detail": _("Photo search is not set up (Settings → Smart Tools).")},
             status=status.HTTP_409_CONFLICT,
         )
     query = " ".join(str(request.query_params.get("q") or "").split())[:200] or default_query

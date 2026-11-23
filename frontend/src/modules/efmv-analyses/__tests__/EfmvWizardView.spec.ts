@@ -77,6 +77,7 @@ async function mountWizard(roles = ['Account Manager']) {
       ui_state: {},
       user_name_display: 'full_name',
       full_name_order: 'first_last',
+      searxng_url: '',
       web_search: true,
       web_search_engine: 'google',
       updated_at: '',

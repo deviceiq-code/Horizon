@@ -8,4 +8,5 @@ urlpatterns = [
     path("logout/", views.logout_view, name="auth-logout"),
     path("me/", views.me, name="auth-me"),
     path("preferences/", views.preferences, name="auth-preferences"),
+    path("preferences/test-searxng/", views.test_searxng, name="auth-test-searxng"),
 ]

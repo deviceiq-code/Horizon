@@ -23,7 +23,6 @@ describe('module routes', () => {
       ['customers', 'menu.sections.management'],
       ['users', 'menu.sections.management'],
       ['roles', 'menu.sections.management'],
-      ['system-settings', 'menu.sections.management'],
       ['catalogs-verticals', 'menu.sections.catalogs'],
       ['catalogs-asset-classes', 'menu.sections.catalogs'],
       ['catalogs-manufacturers', 'menu.sections.catalogs'],

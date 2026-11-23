@@ -1157,3 +1157,6 @@ msgstr "buscar en Internet"
 
 msgid "Type what to search for."
 msgstr "Escriba qué buscar."
+
+msgid "Photo search is not set up (Settings → Smart Tools)."
+msgstr "La búsqueda de fotos no está configurada (Configuración → Smart Tools)."

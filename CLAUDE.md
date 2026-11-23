@@ -166,10 +166,11 @@ Multi-user web system for **operating lease residual value pricing**
     `user_name_display` (username | first_name | full_name) and `full_name_order`
     (first_last "First Last" | last_first "Last, First"), read once per serializer tree from
     the request's user.
-  - `system/` — system-wide settings edited by administrators in the app (`SystemSettings`
-    singleton, `SystemSettings.current()`), at `/api/system/settings/` (GET: everyone sees what
-    is enabled, e.g. `photo_search_enabled`; PATCH and `test-searxng/`: administrators only).
-    `searxng_url` turns on photo search. `system/web.py`: SearXNG image search
+  - **There are no system settings**: every setting is the user's own (`UserPreferences`,
+    Settings). `system/` only keeps the internet helpers and their messages
+    (`system/messages.py::web_error_message`). Photo search (Average Prices) is part of the
+    user's Internet Search Smart Tool: on (`web_search`) with a SearXNG address
+    (`searxng_url`; `POST /api/auth/preferences/test-searxng/` tries one). `system/web.py`: SearXNG image search
     (`search_images`; the instance must have `formats: [html, json]`) and `fetch_image` — safe
     download (public addresses only, DNS pinned, redirects re-checked, size limit, real image
     type by magic bytes). Never fetch user-given URLs any other way.
@@ -265,8 +266,8 @@ Multi-user web system for **operating lease residual value pricing**
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
     (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Alliances"
     (partnerships, incentive programs, discounts, fees) — both coming soon — and
-    "Administração" (`/admin/…`, two side menu sections: Management — Customers, plus Users,
-    Roles and System Settings, administrators only — and Catalogs — Verticals, Asset Classes,
+    "Administração" (`/admin/…`, two side menu sections: Management — Customers, plus Users and
+    Roles, administrators only — and Catalogs — Verticals, Asset Classes,
     Manufacturers, shared by every app). App names have no "Horizon" and stay in English in
     every language; areas are translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
     prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
@@ -383,10 +384,9 @@ Multi-user web system for **operating lease residual value pricing**
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;
     when changing them, check in a real browser too. A combobox renders an
     `<input type="hidden">` before the visible one (`typeInto` skips it).
-  - Settings: `src/views/SettingsView.vue` is the user's own (language, mode, color theme);
-    global settings are the `system-settings` module (Administration, administrators only),
-    one card each (e.g. `src/components/SystemSettingsCard.vue`).
-  - `src/stores/systemSettings.ts` — system settings (loaded once).
+  - Settings: `src/views/SettingsView.vue` — the user's own; there are no global settings
+    (the former `/admin/system-settings` opens Settings → Smart Tools). A child setting
+    (`SettingRow child`) stays shown when its parent is off, only disabled (`disabled`).
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).
   - **Every form dialog has three parts** — `src/components/FormDialog.vue`: header (basic
     information about the form: icon, title, a subtitle such as the record being edited;

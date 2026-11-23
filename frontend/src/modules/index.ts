@@ -12,7 +12,6 @@ import catalogs from './catalogs'
 import customers from './customers'
 import efmvAnalyses from './efmv-analyses'
 import pricingSettings from './pricing-settings'
-import systemSettings from './system-settings'
 import { roles, users } from './users'
 
 export interface AppModule {
@@ -48,7 +47,6 @@ export const MODULES: AppModule[] = [
   customers,
   users,
   roles,
-  systemSettings,
   ...catalogs,
 ]
 

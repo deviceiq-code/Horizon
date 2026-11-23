@@ -1,14 +1,14 @@
 <script setup lang="ts">
 /**
  * The form's "Photo and Documents" tab: the asset's photo (a file, a search on the internet —
- * when set up in Settings → System — or the address of an image) and its documents (button or
+ * a Smart Tool of the user — or the address of an image) and its documents (button or
  * drag and drop, several at once). Every change is pending (v-model `changes`) until the form
  * is saved; they belong to the row, shared by every version. The API decides what is accepted.
  */
 import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useSystemSettingsStore } from '@/stores/systemSettings'
+import { usePreferencesStore } from '@/stores/preferences'
 import { formatBytes } from '@/utils/bytes'
 import { listPriceDocuments, priceDocumentUrl, pricePhotoUrl, type PriceDocument } from './api'
 import type { MediaChanges } from './media'
@@ -35,16 +35,9 @@ const photoInput = ref<HTMLInputElement | null>(null)
 const searchOpen = ref(false)
 const urlOpen = ref(false)
 
-// "Search the internet" only when an administrator set up SearXNG
-const systemSettings = useSystemSettingsStore()
-const searchEnabled = ref(false)
-onMounted(async () => {
-  try {
-    searchEnabled.value = (await systemSettings.load()).photo_search_enabled
-  } catch {
-    searchEnabled.value = false
-  }
-})
+// "Search the internet": part of the user's Internet Search (Smart Tools), with a SearXNG address
+const preferences = usePreferencesStore()
+const searchEnabled = computed(() => preferences.webSearch && !!preferences.searxngUrl)
 
 /** What the photo will be once saved */
 const photoShown = computed<string | null>(() => {

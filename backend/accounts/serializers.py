@@ -23,6 +23,7 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "ui_state",
             "user_name_display",
             "full_name_order",
+            "searxng_url",
             "web_search",
             "web_search_engine",
             "select_on_focus",
@@ -31,6 +32,9 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["updated_at"]
+
+    def validate_searxng_url(self, value):
+        return (value or "").strip().rstrip("/")
 
     def validate_ui_state(self, value):
         """An object of the interface's own state (not interpreted here), kept small."""

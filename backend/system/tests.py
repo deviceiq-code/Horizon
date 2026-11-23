@@ -5,7 +5,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 from django.contrib.auth import get_user_model
 
-from .models import SystemSettings
 from .web import (
     WebError,
     fetch_image,
@@ -193,17 +192,7 @@ def test_fetch_image_refuses_the_local_network(server):
 
 # --- Settings API -----------------------------------------------------------------------------
 
-URL = "/api/system/settings/"
-
-
-@pytest.fixture
-def admin_client(client, db):
-    from users.models import Role
-
-    user = get_user_model().objects.create_user("admin", password="x-strong-1")
-    Role.administrator().users.add(user)
-    client.force_login(user)
-    return client
+URL = "/api/auth/preferences/"
 
 
 @pytest.fixture
@@ -213,43 +202,31 @@ def user_client(client, db):
     return client
 
 
-def test_administrators_edit_the_settings(admin_client):
-    assert admin_client.get(URL).json()["searxng_url"] == ""
-    r = admin_client.patch(
+def test_photo_search_is_each_users_smart_tool(user_client):
+    """Photo search (SearXNG): part of each user's Internet Search; no system settings."""
+    data = user_client.get(URL).json()
+    assert data["searxng_url"] == ""
+    r = user_client.patch(
         URL, {"searxng_url": " http://192.168.0.22:30053/ "}, content_type="application/json"
     )
     assert r.status_code == 200, r.json()
     assert r.json()["searxng_url"] == "http://192.168.0.22:30053"
-    assert r.json()["photo_search_enabled"] is True
-    assert SystemSettings.current().searxng_url == "http://192.168.0.22:30053"
-    r = admin_client.patch(URL, {"searxng_url": "not a url"}, content_type="application/json")
+    r = user_client.patch(URL, {"searxng_url": "not a url"}, content_type="application/json")
     assert r.status_code == 400
+    assert user_client.get("/api/system/settings/").status_code == 404
 
 
-def test_other_users_only_see_what_is_enabled(user_client):
-    SystemSettings.objects.update_or_create(pk=1, defaults={"searxng_url": "http://searx"})
-    assert user_client.get(URL).json() == {
-        "photo_search_enabled": True,
-    }
-    r = user_client.patch(URL, {"searxng_url": ""}, content_type="application/json")
-    assert r.status_code == 403
-    r = user_client.post(f"{URL}test-searxng/", {"searxng_url": "http://searx"})
-    assert r.status_code == 403
-
-
-def test_test_searxng(admin_client, server):
-    r = admin_client.post(
+def test_test_searxng(user_client, server):
+    r = user_client.post(
         f"{URL}test-searxng/", {"searxng_url": server}, content_type="application/json"
     )
     assert r.json() == {"results": 2}
-    r = admin_client.post(
+    r = user_client.post(
         f"{URL}test-searxng/", {"searxng_url": f"{server}/no-json"}, content_type="application/json"
     )
     assert r.status_code == 502
     assert "settings.yml" in r.json()["detail"]
-
-
-def test_how_users_are_shown_is_no_longer_a_system_setting(admin_client):
-    # Each user's own preference now (accounts.UserPreferences)
-    data = admin_client.get(URL).json()
-    assert "user_name_display" not in data and "full_name_order" not in data
+    r = user_client.post(
+        f"{URL}test-searxng/", {"searxng_url": ""}, content_type="application/json"
+    )
+    assert r.status_code == 400

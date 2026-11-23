@@ -156,6 +156,7 @@ async function mountView(props: { id: number } = { id: 3 }, roles = ['Account Ma
       ui_state: {},
       user_name_display: 'full_name',
       full_name_order: 'first_last',
+      searxng_url: '',
       web_search: true,
       web_search_engine: 'google',
       updated_at: '',

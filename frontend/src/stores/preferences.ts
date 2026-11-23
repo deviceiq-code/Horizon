@@ -47,6 +47,8 @@ export interface Preferences {
   /** How users are shown everywhere (top bar, "created by", history…) */
   user_name_display: UserNameDisplay
   full_name_order: FullNameOrder
+  /** Smart Tools, part of Internet Search: photos of the assets found through this SearXNG */
+  searxng_url: string
   /** Smart Tools: a button in some text fields searches the Internet, with this engine */
   web_search: boolean
   web_search_engine: WebSearchEngine
@@ -72,6 +74,7 @@ export type PreferencesUpdate = Partial<{
   ui_state: UiState
   user_name_display: UserNameDisplay
   full_name_order: FullNameOrder
+  searxng_url: string
   web_search: boolean
   web_search_engine: WebSearchEngine
   select_on_focus: boolean
@@ -188,6 +191,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
   // Only with the account: the server formats the names
   const userNameDisplay = ref<UserNameDisplay>('full_name')
   const fullNameOrder = ref<FullNameOrder>('first_last')
+  // Only with the account
+  const searxngUrl = ref('')
   const webSearch = ref(
     readStored(WEB_SEARCH_ON_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
   )
@@ -226,6 +231,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     ui_state?: UiState
     user_name_display?: string
     full_name_order?: string
+    searxng_url?: string
     web_search?: boolean
     web_search_engine?: string
     select_on_focus?: boolean
@@ -282,6 +288,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     if ((FULL_NAME_ORDERS as readonly unknown[]).includes(p.full_name_order)) {
       fullNameOrder.value = p.full_name_order as FullNameOrder
     }
+    if (typeof p.searxng_url === 'string') searxngUrl.value = p.searxng_url
     if (typeof p.web_search === 'boolean') {
       webSearch.value = p.web_search
       store(WEB_SEARCH_ON_STORAGE_KEY, String(p.web_search))
@@ -304,6 +311,14 @@ export const usePreferencesStore = defineStore('preferences', () => {
     }
   }
 
+  /** Try a search on a SearXNG address (not saved); resolves with how many images came. */
+  function testSearxng(url: string) {
+    return api<{ results: number }>('/auth/preferences/test-searxng/', {
+      method: 'POST',
+      body: JSON.stringify({ searxng_url: url }),
+    })
+  }
+
   /** Apply immediately and save to the account; if the API fails, roll back and rethrow. */
   async function save(changes: PreferencesUpdate) {
     const previous = {
@@ -320,6 +335,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
       ui_state: uiState.value,
       user_name_display: userNameDisplay.value,
       full_name_order: fullNameOrder.value,
+      searxng_url: searxngUrl.value,
       web_search: webSearch.value,
       web_search_engine: webSearchEngine.value,
       select_on_focus: selectOnFocus.value,
@@ -366,6 +382,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     saveUiState,
     userNameDisplay,
     fullNameOrder,
+    searxngUrl,
     webSearch,
     webSearchEngine,
     selectOnFocus,
@@ -373,5 +390,6 @@ export const usePreferencesStore = defineStore('preferences', () => {
     scopeThreshold,
     apply,
     save,
+    testSearxng,
   }
 })

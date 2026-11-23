@@ -847,6 +847,9 @@ const en = {
   },
   settings: {
     rows: {
+      photoSearchHint:
+        'Average Prices: photos of the assets found on the internet, through a SearXNG instance.',
+      searxngHint: 'Its address; the JSON format must be enabled in its settings.yml.',
       dateFormatHint: 'How dates are written.',
       timeFormatHint: 'How times are written.',
       numberFormatHint: 'Thousands and decimal separators.',

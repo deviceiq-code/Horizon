@@ -33,9 +33,15 @@ const router = createRouter({
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
           meta: { titleKey: 'menu.settings' },
-          // The system tab became Administration → System Settings
+          // The former system settings: photo search is each user's Smart Tool now
           beforeEnter: (to) =>
-            to.query.tab === 'system' ? { name: 'system-settings' } : undefined,
+            to.query.tab === 'system'
+              ? { name: 'settings', query: { tab: 'smartTools' } }
+              : undefined,
+        },
+        {
+          path: 'admin/system-settings',
+          redirect: { name: 'settings', query: { tab: 'smartTools' } },
         },
       ],
     },

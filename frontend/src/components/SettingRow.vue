@@ -3,13 +3,18 @@
  * One setting as a row (the Haze settings layout): its title and a line about it on the left,
  * the control on the right (default slot). Wide controls go below the text (`below` slot).
  * On phones the control drops under the text. `child`: a setting that depends on the one
- * above (e.g. the threshold of Automatic Scope) — indented, with no separator between them.
+ * above (e.g. the threshold of Automatic Scope) — indented, with no separator between them;
+ * `disabled` while its parent is off: still shown, dimmed (its control is disabled too).
  */
-defineProps<{ title: string; description?: string; child?: boolean }>()
+defineProps<{ title: string; description?: string; child?: boolean; disabled?: boolean }>()
 </script>
 
 <template>
-  <div class="setting-row" :class="{ 'setting-row--child': child }">
+  <div
+    class="setting-row"
+    :class="{ 'setting-row--child': child, 'setting-row--disabled': disabled }"
+    :aria-disabled="disabled || undefined"
+  >
     <div class="setting-row__main">
       <div class="setting-row__text">
         <div class="setting-row__title">{{ title }}</div>
@@ -62,6 +67,9 @@ defineProps<{ title: string; description?: string; child?: boolean }>()
   justify-content: flex-end;
   flex: 0 1 auto;
   max-width: 100%;
+}
+.setting-row--disabled .setting-row__text {
+  opacity: var(--v-disabled-opacity);
 }
 .setting-row__below {
   margin-top: 16px;

@@ -7,8 +7,7 @@ import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore, type User } from '@/stores/auth'
 import { usePreferencesStore } from '@/stores/preferences'
-import { useSystemSettingsStore } from '@/stores/systemSettings'
-import { click, inBody, pickOption, settle } from '@/test-utils'
+import { click, inBody, pickOption, settle, typeInto } from '@/test-utils'
 import SettingsView from '../SettingsView.vue'
 
 const user = (is_admin: boolean): User => ({
@@ -35,6 +34,7 @@ const user = (is_admin: boolean): User => ({
     ui_state: {},
     user_name_display: 'full_name',
     full_name_order: 'first_last',
+    searxng_url: '',
     web_search: true,
     web_search_engine: 'google',
     updated_at: '',
@@ -45,10 +45,6 @@ async function mountAt(path: string, isStaff: boolean) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useAuthStore().user = user(isStaff)
-  useSystemSettingsStore().settings = {
-    photo_search_enabled: true,
-    searxng_url: 'http://192.168.0.22:30053',
-  }
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/settings', name: 'settings', component: SettingsView }],
@@ -134,6 +130,31 @@ describe('SettingsView', () => {
     // The order belongs under "Show Users by", with no separator
     const order = inBody('[data-testid="name-order"]')!.closest('.setting-row')!
     expect(order.className).toContain('setting-row--child')
+    wrapper.unmount()
+  })
+
+  it('photo search is part of Internet Search: its SearXNG address, saved when left, and a test', async () => {
+    const { wrapper } = await mountAt('/settings?tab=smartTools', false)
+    const preferences = usePreferencesStore()
+    const save = vi.spyOn(preferences, 'save').mockResolvedValue()
+    const test = vi.spyOn(preferences, 'testSearxng').mockResolvedValue({ results: 12 })
+    // No switch of its own: it follows Internet Search
+    expect(inBody('[data-testid="photo-search-switch"]')).toBeNull()
+    await typeInto('searxng-url', 'http://192.168.0.22:30053')
+    await click('searxng-test')
+    expect(test).toHaveBeenCalledWith('http://192.168.0.22:30053')
+    expect(inBody('[data-testid="searxng-test-result"]')!.textContent).toContain('12 images')
+    inBody('[data-testid="searxng-url"] input')!.dispatchEvent(new Event('blur'))
+    await settle()
+    expect(save).toHaveBeenCalledWith({ searxng_url: 'http://192.168.0.22:30053' })
+    // Internet Search off: photo search too — still shown, disabled
+    preferences.apply({ web_search: false })
+    await settle()
+    const address = inBody('[data-testid="searxng-url"]')!
+    expect(address.closest('.setting-row')!.className).toContain('setting-row--disabled')
+    expect(address.className).toContain('v-input--disabled')
+    expect(inBody('[data-testid="web-search-engine"]')!.className).toContain('v-input--disabled')
+    preferences.apply({ web_search: true })
     wrapper.unmount()
   })
 

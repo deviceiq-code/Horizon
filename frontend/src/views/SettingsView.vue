@@ -12,6 +12,7 @@ import { normalizeDecimal } from '@/utils/decimal'
 import { formatMoney, toInputNumber } from '@/utils/money'
 import { useI18n } from 'vue-i18n'
 import { LANGUAGES } from '@/i18n'
+import { ApiError } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/stores/preferences'
@@ -106,6 +107,52 @@ const now = new Date()
 
 /** The scale "Automatic" gives in this window now ("88%") */
 const autoPercent = () => Math.round(uiScaleFactor('auto', window.innerWidth) * 100)
+
+// Photo search: the SearXNG address, saved when left; "Test" tries it without saving
+const searxngUrl = ref(preferences.searxngUrl)
+watch(
+  () => preferences.searxngUrl,
+  (value) => (searxngUrl.value = value),
+)
+const searxngErrors = ref<string[]>([])
+const searxngTesting = ref(false)
+const searxngTest = ref<{ ok: boolean; text: string } | null>(null)
+
+function apiMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    const messages = error.fieldErrors().searxng_url
+    if (messages?.length) return messages.join(' ')
+    if (error.message) return error.message
+  }
+  return fallback
+}
+
+async function saveSearxng() {
+  const url = searxngUrl.value.trim()
+  if (url === preferences.searxngUrl) return
+  saving.value = true
+  try {
+    await preferences.save({ searxng_url: url })
+    notifications.notify(t('settings.saved'))
+  } catch (error) {
+    searxngErrors.value = [apiMessage(error, t('settings.saveError'))]
+  } finally {
+    saving.value = false
+  }
+}
+
+async function testSearxng() {
+  searxngTesting.value = true
+  searxngTest.value = null
+  try {
+    const { results } = await preferences.testSearxng(searxngUrl.value.trim())
+    searxngTest.value = { ok: true, text: t('system.searxng.testOk', results) }
+  } catch (error) {
+    searxngTest.value = { ok: false, text: apiMessage(error, t('system.searxng.testError')) }
+  } finally {
+    searxngTesting.value = false
+  }
+}
 
 // How users are shown: an example with a made-up person
 const nameExample = computed(() => {
@@ -491,7 +538,11 @@ async function save(changes: PreferencesUpdate) {
               </v-btn>
             </v-btn-toggle>
           </SettingRow>
-          <SettingRow :title="$t('system.userName.order')" child>
+          <SettingRow
+            :title="$t('system.userName.order')"
+            :disabled="preferences.userNameDisplay === 'username'"
+            child
+          >
             <template #description>
               {{ $t('system.userName.orderHint') }}
               <span data-testid="name-example">
@@ -557,7 +608,7 @@ async function save(changes: PreferencesUpdate) {
             />
           </SettingRow>
           <SettingRow
-            v-if="preferences.autoScope"
+            :disabled="!preferences.autoScope"
             :title="$t('settings.smartTools.scopeThreshold')"
             :description="$t('settings.smartTools.scopeThresholdHint')"
             child
@@ -567,7 +618,7 @@ async function save(changes: PreferencesUpdate) {
               suffix="%"
               inputmode="decimal"
               :rules="[thresholdRule]"
-              :disabled="saving"
+              :disabled="saving || !preferences.autoScope"
               density="compact"
               hide-details="auto"
               class="control-narrow"
@@ -595,7 +646,7 @@ async function save(changes: PreferencesUpdate) {
             />
           </SettingRow>
           <SettingRow
-            v-if="preferences.webSearch"
+            :disabled="!preferences.webSearch"
             :title="$t('settings.webSearch.engine')"
             :description="$t('settings.rows.engineHint')"
             child
@@ -603,7 +654,7 @@ async function save(changes: PreferencesUpdate) {
             <v-select
               :model-value="preferences.webSearchEngine"
               :items="WEB_SEARCH_OPTIONS"
-              :disabled="saving"
+              :disabled="saving || !preferences.webSearch"
               density="compact"
               hide-details
               class="control-wide"
@@ -611,6 +662,45 @@ async function save(changes: PreferencesUpdate) {
               data-testid="web-search-engine"
               @update:model-value="save({ web_search_engine: $event })"
             />
+          </SettingRow>
+          <!-- Part of Internet Search: photos of the assets through SearXNG (Average Prices) -->
+          <SettingRow :disabled="!preferences.webSearch" :title="$t('system.searxng.url')" child>
+            <template #description>
+              {{ $t('settings.rows.photoSearchHint') }} {{ $t('settings.rows.searxngHint') }}
+              <span
+                v-if="searxngTest"
+                :class="searxngTest.ok ? 'text-success' : 'text-error'"
+                data-testid="searxng-test-result"
+              >
+                {{ searxngTest.text }}
+              </span>
+            </template>
+            <div class="d-flex align-center ga-2">
+              <v-text-field
+                v-model="searxngUrl"
+                :placeholder="$t('system.searxng.urlHint')"
+                :error-messages="searxngErrors"
+                :disabled="saving || !preferences.webSearch"
+                density="compact"
+                hide-details="auto"
+                class="control-wide"
+                :aria-label="$t('system.searxng.url')"
+                data-testid="searxng-url"
+                @update:model-value="searxngErrors = []"
+                @blur="saveSearxng"
+                @keydown.enter="saveSearxng"
+              />
+              <v-btn
+                variant="tonal"
+                color="primary"
+                :loading="searxngTesting"
+                :disabled="!searxngUrl.trim() || !preferences.webSearch"
+                data-testid="searxng-test"
+                @click="testSearxng"
+              >
+                {{ $t('system.searxng.test') }}
+              </v-btn>
+            </div>
           </SettingRow>
         </v-card>
       </v-window-item>
