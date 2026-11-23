@@ -587,7 +587,19 @@ const es: Messages = {
     descriptionHint: 'Configuración, estado, accesorios… todo lo que identifica el bien.',
     noSpecTemplate: 'Esta clase de activo todavía no tiene plantilla de especificaciones.',
     chooseAssetClassFirst: 'Elija la clase de activo para completar los valores por plazo.',
-    formTabs: { asset: 'Bien', efmv: 'eFMV' },
+    media: {
+      sharedHint:
+        'La foto y los documentos son del precio, no de una versión: son los mismos en todas las versiones. Cambiar solo ellos no crea versión.',
+      photo: 'Foto',
+      documents: 'Documentos',
+      pending: 'Se guarda con el formulario',
+      undo: 'Deshacer',
+      removedCount: '{n} documento a eliminar al guardar | {n} documentos a eliminar al guardar',
+      saved: 'Foto y documentos guardados.',
+      nothingChanged: 'No se cambió nada.',
+      applyError: 'Guardado, pero no todos los archivos: {problems}',
+    },
+    formTabs: { asset: 'Bien', efmv: 'eFMV', media: 'Foto y Documentos' },
     termsHint:
       'Plazos de la subvertical. Escriba cada uno como valor o como % del valor original (ej.: 70%) — el % se convierte en valor al salir del campo; los meses intermedios se calculan.',
     curveHint: 'El mes 0 es el valor original; los meses entre plazos se calculan en línea recta.',
@@ -619,6 +631,7 @@ const es: Messages = {
       to: 'Hasta',
     },
     photo: {
+      invalidUrl: 'Introduzca la dirección de una imagen (http o https).',
       add: 'Agregar Foto',
       change: 'Cambiar Foto',
       remove: 'Quitar Foto',

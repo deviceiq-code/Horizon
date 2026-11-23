@@ -236,6 +236,18 @@ def test_photo_suggestions(logged_client, price, searxng, monkeypatch):
     assert calls[-1] == ("http://searx.lan", "cat 320")
 
 
+def test_photo_suggestions_before_saving(logged_client, searxng, monkeypatch):
+    """The form searches before the price exists: what to search for is required."""
+    monkeypatch.setattr(
+        "pricing.views.search_images", lambda base_url, query, **kwargs: [{"image": query}]
+    )
+    r = logged_client.get(f"{URL}photo-suggestions/", {"q": " Dell  P2423H Monitor "})
+    assert r.status_code == 200, r.json()
+    assert r.json()["query"] == "Dell P2423H Monitor"
+    assert r.json()["results"] == [{"image": "Dell P2423H Monitor"}]
+    assert logged_client.get(f"{URL}photo-suggestions/").status_code == 400
+
+
 def test_photo_suggestions_need_searxng(logged_client, price):
     r = logged_client.get(f"{URL}{price.pk}/photo-suggestions/")
     assert r.status_code == 409

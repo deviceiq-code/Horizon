@@ -209,10 +209,10 @@ export interface PhotoSuggestion {
 }
 
 /** Images found for the asset; `query` defaults to manufacturer + model + asset class. */
-export function getPhotoSuggestions(rowId: number, query?: string) {
-  const qs = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : ''
+/** Images for `query` (the form builds it: manufacturer, model and asset class). */
+export function getPhotoSuggestions(query: string) {
   return api<{ query: string; results: PhotoSuggestion[] }>(
-    `${BASE}${rowId}/photo-suggestions/${qs}`,
+    `${BASE}photo-suggestions/?q=${encodeURIComponent(query.trim())}`,
   )
 }
 

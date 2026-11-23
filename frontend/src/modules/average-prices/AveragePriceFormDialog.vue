@@ -21,6 +21,15 @@ import SpecValuesInput from './SpecValuesInput.vue'
 import { parseTermInput } from './termInput'
 import TermPointsInput, { type TermEntry } from './TermPointsInput.vue'
 import {
+  applyMediaChanges,
+  hasMediaChanges,
+  noMediaChanges,
+  type MediaChanges,
+  type SaveOutcome,
+} from './media'
+import PriceMediaTab from './PriceMediaTab.vue'
+import { useNotificationsStore } from '@/stores/notifications'
+import {
   createAveragePrice,
   previewAveragePrice,
   type AveragePrice,
@@ -33,7 +42,9 @@ const CURRENCY = 'BRL' // only currency for now; the API already stores it per r
 
 const props = defineProps<{ source: AveragePrice | null }>()
 const open = defineModel<boolean>({ required: true })
-const emit = defineEmits<{ saved: [row: AveragePriceDetail, newVersion: boolean] }>()
+// `saved`: a new price, a new version, or only its photo and documents (no version; row null)
+const emit = defineEmits<{ saved: [row: AveragePriceDetail | null, outcome: SaveOutcome] }>()
+const notifications = useNotificationsStore()
 
 const { t, locale } = useI18n()
 const rules = useValidationRules()
@@ -48,8 +59,16 @@ const modelSearchTerm = computed(() =>
 )
 const model = ref('')
 const description = ref('')
-/** Two tabs: the asset (what it is) and its eFMV (original value and value per term) */
-type Tab = 'asset' | 'efmv'
+/** Three tabs: the asset (what it is), its eFMV (value per term) and its photo and documents
+ * (the row's, pending until saved) */
+type Tab = 'asset' | 'efmv' | 'media'
+const media = ref<MediaChanges>(noMediaChanges())
+/** The photo search's words: manufacturer, model and asset class */
+const photoSearchTerm = computed(() =>
+  [manufacturerName.value, model.value.trim(), assetClass.value?.name ?? '']
+    .filter(Boolean)
+    .join(' '),
+)
 const tab = ref<Tab>('asset')
 const keywords = ref<string[]>([])
 const specs = ref<Record<string, string>>({})
@@ -101,6 +120,7 @@ watch(open, async (isOpen) => {
   resolved.value = null
   openCount.value += 1
   tab.value = 'asset'
+  media.value = noMediaChanges()
 
   const s = props.source
   assetClassId.value = s?.asset_class.id ?? null
@@ -224,6 +244,63 @@ function applyErrors(body: Record<string, unknown>, sentTerms: number[]) {
   if (!Object.keys(body).length) generalError.value = t('common.saveError')
 }
 
+/** Whether the price itself (not its photo and documents) is as in the version it came from */
+function sameAsSource(points: PricePointInput[], original: string): boolean {
+  const s = props.source
+  if (!s) return false
+  const sameList = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((x, i) => x === b[i])
+  const specsNow = canonicalSpecs()
+  const specsBefore = Object.fromEntries(s.specs.map((spec) => [spec.key, spec]))
+  // A field empty now and absent before (or the other way round) is the same
+  const keys = new Set([...Object.keys(specsNow), ...Object.keys(specsBefore)])
+  const sameSpecs = [...keys].every((key) => {
+    const now = (specsNow[key] ?? '').trim()
+    const before = specsBefore[key]
+    const was = before?.value ?? ''
+    return before?.kind === 'number' && now && was ? Number(now) === Number(was) : now === was
+  })
+  const pointsBefore = Object.fromEntries(s.points.map((p) => [p.term_months, p]))
+  const samePoints =
+    points.length === s.points.length &&
+    points.every((p) => {
+      const before = pointsBefore[p.term_months]
+      if (!before) return false
+      return p.mode === 'value'
+        ? Number(p.amount) === Number(before.value)
+        : Number(p.amount) === Number(before.percent)
+    })
+  return (
+    assetClassId.value === s.asset_class.id &&
+    manufacturerId.value === s.manufacturer.id &&
+    model.value.trim() === s.model &&
+    description.value.trim() === s.description &&
+    sameList(keywords.value, s.keywords) &&
+    Number(original) === Number(s.original_value) &&
+    sameSpecs &&
+    samePoints
+  )
+}
+
+/** A new version only when the price itself changed (not just its photo or documents) */
+const createsVersion = computed(() => {
+  if (!isNewVersion.value) return false
+  const points = typedPoints()
+  const original = parseMoney(originalText.value, locale.value)
+  return !points || !original || !sameAsSource(points, original)
+})
+
+/** Apply the photo and documents changed to the row; returns how to report what the server
+ * refused (after the "saved" notice, so it is the one left on screen). */
+async function saveMedia(rowId: number): Promise<() => void> {
+  if (!hasMediaChanges(media.value)) return () => {}
+  const problems = await applyMediaChanges(rowId, media.value)
+  if (!problems.length) return () => {}
+  const list = problems.map((p) => (p.name ? `${p.name}: ${p.reason}` : p.reason)).join(' · ')
+  return () =>
+    notifications.notify(t('averagePrices.media.applyError', { problems: list }), 'error')
+}
+
 async function submit() {
   const result = await formRef.value?.validate()
   const points = typedPoints()
@@ -244,6 +321,22 @@ async function submit() {
   specErrors.value = {}
   termErrors.value = {}
   generalError.value = ''
+  // Only the photo or documents changed: applied to the row, no new version
+  if (props.source && sameAsSource(points, original)) {
+    try {
+      if (!hasMediaChanges(media.value)) {
+        notifications.notify(t('averagePrices.media.nothingChanged'))
+      } else {
+        const report = await saveMedia(props.source.id)
+        emit('saved', null, 'media')
+        report()
+      }
+      open.value = false
+    } finally {
+      saving.value = false
+    }
+    return
+  }
   try {
     const saved = await createAveragePrice({
       asset_class: assetClassId.value,
@@ -257,7 +350,10 @@ async function submit() {
       points,
       supersedes: props.source?.id ?? null,
     })
-    emit('saved', saved, isNewVersion.value)
+    // The photo and documents go to the row (the new version shares them)
+    const report = await saveMedia(saved.id)
+    emit('saved', saved, isNewVersion.value ? 'version' : 'created')
+    report()
     open.value = false
   } catch (error) {
     const body = error instanceof ApiError && error.status === 400 ? error.data : null
@@ -308,6 +404,17 @@ async function submit() {
         </v-tab>
         <v-tab value="efmv" prepend-icon="mdi-chart-line" data-testid="tab-efmv">
           {{ $t('averagePrices.formTabs.efmv') }}
+        </v-tab>
+        <v-tab value="media" prepend-icon="mdi-paperclip" data-testid="tab-media">
+          {{ $t('averagePrices.formTabs.media') }}
+          <v-badge
+            v-if="hasMediaChanges(media)"
+            dot
+            inline
+            color="warning"
+            class="ml-1"
+            :title="$t('averagePrices.media.pending')"
+          />
         </v-tab>
       </v-tabs>
     </template>
@@ -435,6 +542,17 @@ async function submit() {
           </v-alert>
         </template>
       </v-window-item>
+
+      <!-- Photo and documents: the row's, applied when saved (never a new version) -->
+      <v-window-item value="media" eager :transition="false" :reverse-transition="false">
+        <PriceMediaTab
+          v-model="media"
+          :row-id="source?.id ?? null"
+          :photo-id="source?.photo_id ?? null"
+          :icon="assetClass?.icon ?? 'mdi-image-outline'"
+          :title="photoSearchTerm"
+        />
+      </v-window-item>
     </v-window>
 
     <v-alert v-if="generalError" type="error" variant="tonal" density="compact" class="mt-3">
@@ -453,7 +571,7 @@ async function submit() {
         :disabled="loadingSource"
         data-testid="save"
       >
-        {{ isNewVersion ? $t('averagePrices.saveNewVersion') : $t('common.save') }}
+        {{ createsVersion ? $t('averagePrices.saveNewVersion') : $t('common.save') }}
       </v-btn>
     </template>
   </FormDialog>

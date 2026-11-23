@@ -285,7 +285,15 @@ Multi-user web system for **operating lease residual value pricing**
     clears them); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
-  - `src/modules/average-prices/` — form in two tabs, Asset (class, manufacturer, model,
+  - `src/modules/average-prices/` — the photo and documents are managed in the form's third
+    tab, **Photo and Documents** (`PriceMediaTab.vue`): every change pending (`media.ts`:
+    `MediaChanges`, `applyMediaChanges` after saving; Cancel discards them); they belong to
+    the row, so **they never create a version**: saving with the price itself unchanged
+    (`sameAsSource`) only applies them (button "Save", notice "Photo and documents saved.").
+    The photo search runs before the price exists (`GET /photo-suggestions/?q=`, the form gives
+    manufacturer + model + asset class); search and URL dialogs only give the image back, the
+    server downloads it on save. The detail view is read-only (`PricePhoto`, `PriceDocuments`).
+    Form tabs: Asset (class, manufacturer, model,
     description, keywords, specifications) and eFMV (a field per term, as the eFMV cells:
     money or "70%" of the original value — `termInput.ts::parseTermInput` —, a % becomes its
     value when the field is left, chip "% Value (x%)" below; `TermPointsInput.vue`), the

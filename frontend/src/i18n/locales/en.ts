@@ -586,7 +586,19 @@ const en = {
     descriptionHint: 'Configuration, condition, accessories… anything that identifies the asset.',
     noSpecTemplate: 'This asset class has no specification template yet.',
     chooseAssetClassFirst: 'Choose the asset class to fill in the values per term.',
-    formTabs: { asset: 'Asset', efmv: 'eFMV' },
+    media: {
+      sharedHint:
+        'The photo and the documents belong to the price, not to a version: they are the same in every version. Changing only them does not create a version.',
+      photo: 'Photo',
+      documents: 'Documents',
+      pending: 'Saved with the form',
+      undo: 'Undo',
+      removedCount: '{n} document to delete when saving | {n} documents to delete when saving',
+      saved: 'Photo and documents saved.',
+      nothingChanged: 'Nothing changed.',
+      applyError: 'Saved, but not all files: {problems}',
+    },
+    formTabs: { asset: 'Asset', efmv: 'eFMV', media: 'Photo and Documents' },
     termsHint:
       'Terms of the sub-vertical. Type each one as a value or as a % of the original value (e.g. 70%) — a % becomes its value when you leave the field; the months in between are calculated.',
     curveHint:
@@ -619,6 +631,7 @@ const en = {
       to: 'To',
     },
     photo: {
+      invalidUrl: 'Enter the address of an image (http or https).',
       add: 'Add Photo',
       change: 'Change Photo',
       remove: 'Remove Photo',

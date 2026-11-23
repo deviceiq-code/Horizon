@@ -2,9 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h } from 'vue'
 
-import { ApiError } from '@/api'
 import { setLanguage } from '@/i18n'
-import { useNotificationsStore } from '@/stores/notifications'
 import { inBody, mountWithPlugins, settle } from '@/test-utils'
 import * as pricesApi from '../api'
 import PriceDocuments from '../PriceDocuments.vue'
@@ -12,8 +10,6 @@ import PriceDocuments from '../PriceDocuments.vue'
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
   listPriceDocuments: vi.fn<typeof pricesApi.listPriceDocuments>(),
-  uploadPriceDocument: vi.fn<typeof pricesApi.uploadPriceDocument>(),
-  deletePriceDocument: vi.fn<typeof pricesApi.deletePriceDocument>(),
 }))
 const api = vi.mocked(pricesApi)
 
@@ -35,19 +31,8 @@ const SHEET: pricesApi.PriceDocument = {
   opens_inline: false,
 }
 
-function mountDocs(canEdit = true) {
-  const onChanged = vi.fn<(count: number) => void>()
-  const wrapper = mountWithPlugins({
-    render: () => h(PriceDocuments, { rowId: 100, canEdit, onChanged }),
-  })
-  return { wrapper, onChanged }
-}
-
-async function chooseFiles(files: File[]) {
-  const input = inBody('[data-testid="documents-input"]') as HTMLInputElement
-  Object.defineProperty(input, 'files', { value: files, configurable: true })
-  input.dispatchEvent(new Event('change'))
-  await settle()
+function mountDocs() {
+  return mountWithPlugins({ render: () => h(PriceDocuments, { rowId: 100 }) })
 }
 
 describe('PriceDocuments', () => {
@@ -63,7 +48,7 @@ describe('PriceDocuments', () => {
   })
 
   it('lists documents: PDFs open in a tab, other files download', async () => {
-    const { wrapper } = mountDocs()
+    const wrapper = mountDocs()
     await settle()
 
     expect(api.listPriceDocuments).toHaveBeenCalledWith(100)
@@ -82,60 +67,8 @@ describe('PriceDocuments', () => {
     wrapper.unmount()
   })
 
-  it('uploads several files, reporting the ones refused', async () => {
-    api.uploadPriceDocument
-      .mockResolvedValueOnce(CATALOG)
-      .mockRejectedValueOnce(
-        new ApiError(400, 'Bad Request', { file: ['This type of file is not accepted.'] }),
-      )
-    const { wrapper, onChanged } = mountDocs()
-    await settle()
-
-    const good = new File(['%PDF'], 'Brochure.pdf')
-    const bad = new File(['MZ'], 'tool.exe')
-    await chooseFiles([good, bad])
-
-    expect(api.uploadPriceDocument).toHaveBeenNthCalledWith(1, 100, good)
-    expect(api.uploadPriceDocument).toHaveBeenNthCalledWith(2, 100, bad)
-    expect(useNotificationsStore().text).toBe('Document added.')
-    expect(api.listPriceDocuments).toHaveBeenCalledTimes(2) // reloaded
-    expect(onChanged).toHaveBeenCalledWith(2)
-    wrapper.unmount()
-  })
-
-  it('reports a refused file by name', async () => {
-    api.uploadPriceDocument.mockRejectedValue(
-      new ApiError(400, 'Bad Request', { file: ['The file is too large (maximum 25 MB).'] }),
-    )
-    const { wrapper, onChanged } = mountDocs()
-    await settle()
-    await chooseFiles([new File(['x'], 'huge.pdf')])
-
-    expect(useNotificationsStore().text).toBe('huge.pdf: The file is too large (maximum 25 MB).')
-    expect(onChanged).not.toHaveBeenCalled()
-    wrapper.unmount()
-  })
-
-  it('deletes a document after confirmation', async () => {
-    api.deletePriceDocument.mockResolvedValue(undefined)
-    const { wrapper, onChanged } = mountDocs()
-    await settle()
-
-    api.listPriceDocuments.mockResolvedValue([SHEET])
-    inBody('[data-testid="document-delete"]')!.click()
-    await settle()
-    expect(document.body.textContent).toContain('Delete "Catalog 2026.pdf"?')
-    inBody('.v-overlay--active [data-testid="confirm-button"]')!.click()
-    await settle()
-
-    expect(api.deletePriceDocument).toHaveBeenCalledWith(100, 7)
-    expect(onChanged).toHaveBeenCalledWith(1)
-    expect(document.body.querySelectorAll('[data-testid="document-item"]')).toHaveLength(1)
-    wrapper.unmount()
-  })
-
-  it('a deleted price only lets documents be opened', async () => {
-    const { wrapper } = mountDocs(false)
+  it('only opens and downloads: documents are changed in the form', async () => {
+    const wrapper = mountDocs()
     await settle()
     expect(inBody('[data-testid="documents-add"]')).toBeNull()
     expect(inBody('[data-testid="document-delete"]')).toBeNull()

@@ -1,20 +1,19 @@
 <script setup lang="ts">
-/** Set the photo from the address of an image on the internet (the server downloads it). */
+/**
+ * The address of an image on the internet as the photo: given back to the form, which has the
+ * server download it when saved (the server checks the address and the image then).
+ */
 import FormDialog from '@/components/FormDialog.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ApiError } from '@/api'
-import { setPhotoFromUrl } from './api'
 
-const props = defineProps<{ rowId: number }>()
 const open = defineModel<boolean>({ required: true })
-const emit = defineEmits<{ chosen: [photoId: number] }>()
+const emit = defineEmits<{ chosen: [url: string] }>()
 
 const { t } = useI18n()
 
 const url = ref('')
 const errors = ref<string[]>([])
-const saving = ref(false)
 
 watch(open, (isOpen) => {
   if (!isOpen) return
@@ -22,23 +21,22 @@ watch(open, (isOpen) => {
   errors.value = []
 })
 
-async function save() {
-  saving.value = true
-  errors.value = []
+function isWebAddress(text: string) {
   try {
-    const { photo_id } = await setPhotoFromUrl(props.rowId, url.value.trim())
-    emit('chosen', photo_id)
-    open.value = false
-  } catch (error) {
-    const messages = error instanceof ApiError ? error.fieldErrors().url : undefined
-    errors.value = [
-      messages?.join(' ') ||
-        (error instanceof ApiError && error.message) ||
-        t('averagePrices.photo.downloadError'),
-    ]
-  } finally {
-    saving.value = false
+    return ['http:', 'https:'].includes(new URL(text).protocol)
+  } catch {
+    return false
   }
+}
+
+function save() {
+  const address = url.value.trim()
+  if (!isWebAddress(address)) {
+    errors.value = [t('averagePrices.photo.invalidUrl')]
+    return
+  }
+  emit('chosen', address)
+  open.value = false
 }
 </script>
 
@@ -71,7 +69,6 @@ async function save() {
         color="primary"
         variant="flat"
         :disabled="!url.trim()"
-        :loading="saving"
         data-testid="photo-url-save"
       >
         {{ $t('averagePrices.photo.useThis') }}

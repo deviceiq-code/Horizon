@@ -12,7 +12,6 @@ import PhotoUrlDialog from '../PhotoUrlDialog.vue'
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
   getPhotoSuggestions: vi.fn<typeof pricesApi.getPhotoSuggestions>(),
-  setPhotoFromUrl: vi.fn<typeof pricesApi.setPhotoFromUrl>(),
 }))
 const api = vi.mocked(pricesApi)
 
@@ -31,17 +30,23 @@ const SIDE: pricesApi.PhotoSuggestion = {
   resolution: '',
 }
 
-function mountDialog(component: typeof PhotoSearchDialog | typeof PhotoUrlDialog) {
+function mountDialog(component: 'search' | 'url') {
   const open = ref(true)
-  const onChosen = vi.fn<(photoId: number) => void>()
+  const onChosen = vi.fn<(...args: string[]) => void>()
+  const props = {
+    modelValue: open.value,
+    'onUpdate:modelValue': (v: boolean) => (open.value = v),
+    onChosen,
+  }
   const wrapper = mountWithPlugins({
     render: () =>
-      h(component, {
-        modelValue: open.value,
-        'onUpdate:modelValue': (v: boolean) => (open.value = v),
-        rowId: 6,
-        onChosen,
-      }),
+      component === 'search'
+        ? h(PhotoSearchDialog, {
+            ...props,
+            modelValue: open.value,
+            initialQuery: 'John Deere 5060E Utility Tractor',
+          })
+        : h(PhotoUrlDialog, { ...props, modelValue: open.value }),
   })
   return { wrapper, open, onChosen }
 }
@@ -61,13 +66,12 @@ describe('PhotoSearchDialog', () => {
     document.body.innerHTML = ''
   })
 
-  it('searches for the asset, then uses the image picked', async () => {
-    api.setPhotoFromUrl.mockResolvedValue({ photo_id: 40 })
-    const { wrapper, open, onChosen } = mountDialog(PhotoSearchDialog)
+  it('searches for the asset, then gives the image picked back to the form', async () => {
+    const { wrapper, open, onChosen } = mountDialog('search')
     await settle()
 
-    // The default search comes from the API (manufacturer + model + asset class)
-    expect(api.getPhotoSuggestions).toHaveBeenCalledWith(6, undefined)
+    // The search the form gives (manufacturer + model + asset class)
+    expect(api.getPhotoSuggestions).toHaveBeenCalledWith('John Deere 5060E Utility Tractor')
     const query = inBody('[data-testid="photo-search-query"] input') as HTMLInputElement
     expect(query.value).toBe('John Deere 5060E Utility Tractor')
     const results = document.body.querySelectorAll<HTMLElement>('[data-testid="photo-result"]')
@@ -81,39 +85,21 @@ describe('PhotoSearchDialog', () => {
     await settle()
     await click('photo-use')
 
-    expect(api.setPhotoFromUrl).toHaveBeenCalledWith(6, FRONT.image, FRONT.source)
-    expect(onChosen).toHaveBeenCalledWith(40)
+    // Downloaded by the server only when the form is saved
+    expect(onChosen).toHaveBeenCalledWith(FRONT.image, FRONT.source)
     expect(open.value).toBe(false)
     wrapper.unmount()
   })
 
   it('searches again with other words', async () => {
-    const { wrapper } = mountDialog(PhotoSearchDialog)
+    const { wrapper } = mountDialog('search')
     await settle()
     await typeInto('photo-search-query', 'deere 5060e cab')
     inBody('[data-testid="photo-search-query"]')!
       .closest('form')!
       .dispatchEvent(new Event('submit', { cancelable: true }))
     await settle()
-    expect(api.getPhotoSuggestions).toHaveBeenLastCalledWith(6, 'deere 5060e cab')
-    wrapper.unmount()
-  })
-
-  it('keeps the dialog open when the site refuses the download', async () => {
-    api.setPhotoFromUrl.mockRejectedValue(
-      new ApiError(400, 'Bad Request', { url: ['The site answered with an error.'] }),
-    )
-    const { wrapper, open, onChosen } = mountDialog(PhotoSearchDialog)
-    await settle()
-    document.body.querySelector<HTMLElement>('[data-testid="photo-result"]')!.click()
-    await settle()
-    await click('photo-use')
-
-    expect(inBody('[data-testid="photo-save-error"]')!.textContent).toContain(
-      'The site answered with an error.',
-    )
-    expect(open.value).toBe(true)
-    expect(onChosen).not.toHaveBeenCalled()
+    expect(api.getPhotoSuggestions).toHaveBeenLastCalledWith('deere 5060e cab')
     wrapper.unmount()
   })
 
@@ -121,7 +107,7 @@ describe('PhotoSearchDialog', () => {
     api.getPhotoSuggestions.mockRejectedValue(
       new ApiError(502, 'SearXNG refused the JSON format.', { detail: '…' }),
     )
-    const { wrapper } = mountDialog(PhotoSearchDialog)
+    const { wrapper } = mountDialog('search')
     await settle()
     expect(inBody('[data-testid="photo-search-error"]')!.textContent).toContain(
       'SearXNG refused the JSON format.',
@@ -141,33 +127,27 @@ describe('PhotoUrlDialog', () => {
     document.body.innerHTML = ''
   })
 
-  it('downloads the image at the address pasted', async () => {
-    api.setPhotoFromUrl.mockResolvedValue({ photo_id: 41 })
-    const { wrapper, open, onChosen } = mountDialog(PhotoUrlDialog)
+  it('gives the address pasted back to the form', async () => {
+    const { wrapper, open, onChosen } = mountDialog('url')
     await settle()
     await typeInto('photo-url', ' https://example.com/5060e.jpg ')
     await click('photo-url-save')
 
-    expect(api.setPhotoFromUrl).toHaveBeenCalledWith(6, 'https://example.com/5060e.jpg')
-    expect(onChosen).toHaveBeenCalledWith(41)
+    expect(onChosen).toHaveBeenCalledWith('https://example.com/5060e.jpg')
     expect(open.value).toBe(false)
     wrapper.unmount()
   })
 
-  it('shows the reason an address is refused', async () => {
-    api.setPhotoFromUrl.mockRejectedValue(
-      new ApiError(400, 'Bad Request', {
-        url: ['Addresses on the local network are not allowed.'],
-      }),
-    )
-    const { wrapper, open } = mountDialog(PhotoUrlDialog)
+  it('refuses what is not a web address', async () => {
+    const { wrapper, open, onChosen } = mountDialog('url')
     await settle()
-    await typeInto('photo-url', 'http://192.168.0.10/a.jpg')
+    await typeInto('photo-url', 'ftp://example.com/a.jpg')
     await click('photo-url-save')
 
     expect(inBody('[data-testid="photo-url"]')!.textContent).toContain(
-      'Addresses on the local network are not allowed.',
+      'Enter the address of an image (http or https).',
     )
+    expect(onChosen).not.toHaveBeenCalled()
     expect(open.value).toBe(true)
     wrapper.unmount()
   })

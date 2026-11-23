@@ -585,7 +585,19 @@ const ptBR: Messages = {
     descriptionHint: 'Configuração, estado, acessórios… tudo o que identifica o bem.',
     noSpecTemplate: 'Esta classe de ativo ainda não tem template de especificações.',
     chooseAssetClassFirst: 'Escolha a classe de ativo para preencher os valores por prazo.',
-    formTabs: { asset: 'Bem', efmv: 'eFMV' },
+    media: {
+      sharedHint:
+        'A foto e os documentos são do preço, não de uma versão: são os mesmos em todas as versões. Alterar só eles não cria versão.',
+      photo: 'Foto',
+      documents: 'Documentos',
+      pending: 'Salvo com o formulário',
+      undo: 'Desfazer',
+      removedCount: '{n} documento a excluir ao salvar | {n} documentos a excluir ao salvar',
+      saved: 'Foto e documentos salvos.',
+      nothingChanged: 'Nada foi alterado.',
+      applyError: 'Salvo, mas nem todos os arquivos: {problems}',
+    },
+    formTabs: { asset: 'Bem', efmv: 'eFMV', media: 'Foto e Documentos' },
     termsHint:
       'Prazos da sub-vertical. Digite cada um como valor ou como % do valor original (ex.: 70%) — o % vira valor ao sair do campo; os meses intermediários são calculados.',
     curveHint: 'O mês 0 é o valor original; os meses entre os prazos são calculados em linha reta.',
@@ -617,6 +629,7 @@ const ptBR: Messages = {
       to: 'Até',
     },
     photo: {
+      invalidUrl: 'Informe o endereço de uma imagem (http ou https).',
       add: 'Adicionar Foto',
       change: 'Trocar Foto',
       remove: 'Remover Foto',

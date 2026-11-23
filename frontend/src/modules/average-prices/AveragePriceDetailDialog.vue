@@ -79,18 +79,6 @@ const status = computed(() => {
 // Documents belong to the row (every version); the grid shows how many
 const documentsCount = computed(() => row.value?.documents_count ?? 0)
 
-function onPhotoChanged(photoId: number | null) {
-  // Reload the row: the photo's source may have changed too
-  if (row.value) row.value.photo_id = photoId
-  if (shownId.value !== null) load(shownId.value)
-  emit('changed')
-}
-
-function onDocumentsChanged(count: number) {
-  if (row.value) row.value.documents_count = count
-  emit('changed')
-}
-
 // Erasing a version may change which one is current: refresh this view and the grid. If the
 // version shown was erased, show the newest one left (or close when none is left).
 async function onVersionDeleted(erased: AveragePrice) {
@@ -121,10 +109,8 @@ async function onVersionDeleted(erased: AveragePrice) {
             :photo-id="row.photo_id"
             :icon="row.asset_class.icon"
             :title="`${row.manufacturer.name} ${row.model}`"
-            :can-edit="!row.deleted_at"
             :source-url="row.photo_source_url"
             class="mr-2"
-            @changed="onPhotoChanged"
           />
         </template>
         <v-card-title>
@@ -273,12 +259,7 @@ async function onVersionDeleted(erased: AveragePrice) {
           />
         </v-window-item>
         <v-window-item value="documents">
-          <PriceDocuments
-            :key="row.id"
-            :row-id="row.id"
-            :can-edit="!row.deleted_at"
-            @changed="onDocumentsChanged"
-          />
+          <PriceDocuments :key="row.id" :row-id="row.id" />
         </v-window-item>
       </v-window>
     </template>

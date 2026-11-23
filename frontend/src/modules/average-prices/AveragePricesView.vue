@@ -16,6 +16,7 @@ import { formatMoney } from '@/utils/money'
 import AveragePriceDetailDialog from './AveragePriceDetailDialog.vue'
 import AssetClassPicker from '@/modules/catalogs/asset-classes/AssetClassPicker.vue'
 import AveragePriceFormDialog from './AveragePriceFormDialog.vue'
+import type { SaveOutcome } from './media'
 import { usePriceFilters } from './AveragePriceFilters'
 import PriceVersionsPanel from './PriceVersionsPanel.vue'
 import {
@@ -70,9 +71,17 @@ function openDetail(row: AveragePrice) {
   detailOpen.value = true
 }
 
-function onSaved(row: AveragePriceDetail, newVersion: boolean) {
-  notifications.notify(t(newVersion ? 'averagePrices.versionCreated' : 'averagePrices.created'))
-  if (row.increasing_terms.length) {
+function onSaved(row: AveragePriceDetail | null, outcome: SaveOutcome) {
+  notifications.notify(
+    t(
+      {
+        created: 'averagePrices.created',
+        version: 'averagePrices.versionCreated',
+        media: 'averagePrices.media.saved',
+      }[outcome],
+    ),
+  )
+  if (row?.increasing_terms.length) {
     notifications.notify(
       t('averagePrices.increasingWarning', { terms: row.increasing_terms.join(', ') }),
       'warning',

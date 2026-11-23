@@ -10,7 +10,11 @@ import { click, inBody, mountWithPlugins, pickOption, settle, typeInto } from '@
 import * as pricesApi from '../api'
 import AveragePricesView from '../AveragePricesView.vue'
 
-vi.mock('../api', () => ({
+vi.mock('../api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api')>()),
+  listPriceDocuments: vi.fn<typeof pricesApi.listPriceDocuments>(),
+  uploadPriceDocument: vi.fn<typeof pricesApi.uploadPriceDocument>(),
+  uploadPricePhoto: vi.fn<typeof pricesApi.uploadPricePhoto>(),
   listAveragePrices: vi.fn<typeof pricesApi.listAveragePrices>(),
   getAveragePrice: vi.fn<typeof pricesApi.getAveragePrice>(),
   getAveragePriceHistory: vi.fn<typeof pricesApi.getAveragePriceHistory>(),
@@ -425,6 +429,65 @@ describe('AveragePricesView', () => {
   })
 
   // --- New version ---------------------------------------------------------------------------
+
+  it('only the photo or documents changed: applied to the row, no new version', async () => {
+    prices.listPriceDocuments.mockResolvedValue([])
+    prices.uploadPriceDocument.mockResolvedValue({} as pricesApi.PriceDocument)
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('[data-testid="edit"]').trigger('click')
+    await settle()
+    await click('tab-media')
+    const file = new File(['pdf'], 'Catalog.pdf', { type: 'application/pdf' })
+    const input = inBody('[data-testid="documents-input"]') as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [file], configurable: true })
+    input.dispatchEvent(new Event('change'))
+    await settle()
+    await waitPreview()
+    await click('save')
+    await settle()
+
+    expect(prices.createAveragePrice).not.toHaveBeenCalled()
+    expect(prices.uploadPriceDocument).toHaveBeenCalledWith(100, file)
+    expect(useNotificationsStore().text).toBe('Photo and documents saved.')
+    wrapper.unmount()
+  })
+
+  it('nothing changed: nothing is saved', async () => {
+    prices.listPriceDocuments.mockResolvedValue([])
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('[data-testid="edit"]').trigger('click')
+    await settle()
+    await waitPreview()
+    await click('save')
+    await settle()
+    expect(prices.createAveragePrice).not.toHaveBeenCalled()
+    expect(useNotificationsStore().text).toBe('Nothing changed.')
+    wrapper.unmount()
+  })
+
+  it('a new price gets its photo once created', async () => {
+    prices.createAveragePrice.mockResolvedValue({ ...ROW, id: 101 })
+    prices.uploadPricePhoto.mockResolvedValue({ photo_id: 5 })
+    URL.createObjectURL = vi.fn<(object: Blob) => string>(() => 'blob:photo')
+    const wrapper = mountView()
+    await settle()
+    await fillNew(wrapper)
+    await click('tab-media')
+    const photo = new File(['jpeg'], 'front.jpg', { type: 'image/jpeg' })
+    const input = inBody('[data-testid="photo-input"]') as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [photo], configurable: true })
+    input.dispatchEvent(new Event('change'))
+    await settle()
+    await waitPreview()
+    await click('save')
+    await settle()
+    expect(prices.createAveragePrice).toHaveBeenCalled()
+    expect(prices.uploadPricePhoto).toHaveBeenCalledWith(101, photo)
+    expect(useNotificationsStore().text).toBe('Average price created.')
+    wrapper.unmount()
+  })
 
   it('creates a new version prefilled from the row, superseding it', async () => {
     prices.createAveragePrice.mockResolvedValue({ ...ROW, id: 101, supersedes: 100 })

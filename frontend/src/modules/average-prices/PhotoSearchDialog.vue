@@ -1,18 +1,19 @@
 <script setup lang="ts">
 /**
  * Photos found on the internet for the asset (SearXNG, set in Settings → System). The search
- * starts with manufacturer + model + asset class and can be edited; picking an image makes the
- * server download it as the photo (with the page it was found on as its source).
+ * starts with what the form gives (manufacturer + model + asset class) and can be edited;
+ * picking an image gives it back to the form, which has the server download it when saved
+ * (with the page it was found on as its source).
  */
 import FormDialog from '@/components/FormDialog.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
-import { getPhotoSuggestions, setPhotoFromUrl, type PhotoSuggestion } from './api'
+import { getPhotoSuggestions, type PhotoSuggestion } from './api'
 
-const props = defineProps<{ rowId: number }>()
+const props = defineProps<{ initialQuery: string }>()
 const open = defineModel<boolean>({ required: true })
-const emit = defineEmits<{ chosen: [photoId: number] }>()
+const emit = defineEmits<{ chosen: [image: string, source: string] }>()
 
 const { t } = useI18n()
 
@@ -21,27 +22,24 @@ const results = ref<PhotoSuggestion[]>([])
 const searching = ref(false)
 const searchError = ref('')
 const selected = ref<PhotoSuggestion | null>(null)
-const saving = ref(false)
-const saveError = ref('')
 // Thumbnails that did not load are hidden
 const broken = ref(new Set<string>())
 
 function messageOf(error: unknown, fallback: string) {
-  if (error instanceof ApiError) {
-    const messages = error.fieldErrors().url
-    if (messages?.length) return messages.join(' ')
-    if (error.message) return error.message
-  }
+  if (error instanceof ApiError && error.message) return error.message
   return fallback
 }
 
-async function search(text?: string) {
+async function search(text: string) {
+  selected.value = null
+  if (!text.trim()) {
+    results.value = []
+    return
+  }
   searching.value = true
   searchError.value = ''
-  selected.value = null
-  saveError.value = ''
   try {
-    const found = await getPhotoSuggestions(props.rowId, text)
+    const found = await getPhotoSuggestions(text)
     query.value = found.query
     results.value = found.results
     broken.value = new Set()
@@ -57,31 +55,18 @@ watch(
   open,
   (isOpen) => {
     if (!isOpen) return
-    query.value = ''
+    query.value = props.initialQuery
     results.value = []
-    search()
+    searchError.value = ''
+    search(props.initialQuery)
   },
   { immediate: true },
 )
 
-async function useSelected() {
+function useSelected() {
   if (!selected.value) return
-  saving.value = true
-  saveError.value = ''
-  try {
-    const { photo_id } = await setPhotoFromUrl(
-      props.rowId,
-      selected.value.image,
-      selected.value.source,
-    )
-    emit('chosen', photo_id)
-    open.value = false
-  } catch (error) {
-    // Some sites refuse downloads: another image can be chosen
-    saveError.value = messageOf(error, t('averagePrices.photo.downloadError'))
-  } finally {
-    saving.value = false
-  }
+  emit('chosen', selected.value.image, selected.value.source)
+  open.value = false
 }
 
 const hostOf = (url: string) => {
@@ -158,16 +143,6 @@ const hostOf = (url: string) => {
       </template>
     </div>
 
-    <v-alert
-      v-if="saveError"
-      type="error"
-      variant="tonal"
-      density="compact"
-      class="mt-3"
-      data-testid="photo-save-error"
-    >
-      {{ saveError }}
-    </v-alert>
     <p class="text-caption text-medium-emphasis mt-3 mb-0">
       {{ $t('averagePrices.photo.copyrightHint') }}
     </p>
@@ -177,7 +152,6 @@ const hostOf = (url: string) => {
         color="primary"
         variant="flat"
         :disabled="!selected"
-        :loading="saving"
         data-testid="photo-use"
         @click="useSelected"
       >

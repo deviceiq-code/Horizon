@@ -370,20 +370,33 @@ class AveragePriceViewSet(
         """Images found on the internet (SearXNG, set in the system settings) for the asset.
         ?q= overrides the search ("<manufacturer> <model> <asset class>" by default)."""
         row = self.get_object()
-        searxng = SystemSettings.current().searxng_url
-        if not searxng:
-            return Response(
-                {"detail": _("Photo search is not set up (Settings → System).")},
-                status=status.HTTP_409_CONFLICT,
-            )
-        query = " ".join(str(request.query_params.get("q") or "").split())[:200] or (
-            f"{row.manufacturer.name} {row.model} {row.asset_class.name}"
+        default = f"{row.manufacturer.name} {row.model} {row.asset_class.name}"
+        return _photo_suggestions(request, default)
+
+    @action(detail=False, methods=["get"], url_path="photo-suggestions")
+    def photo_suggestions_for(self, request):
+        """Images found on the internet for an asset not saved yet (the form): ?q= required."""
+        return _photo_suggestions(request, "")
+
+
+def _photo_suggestions(request, default_query: str):
+    """SearXNG images for ?q= (or `default_query`); 409 when photo search is not set up."""
+    searxng = SystemSettings.current().searxng_url
+    if not searxng:
+        return Response(
+            {"detail": _("Photo search is not set up (Settings → System).")},
+            status=status.HTTP_409_CONFLICT,
         )
-        try:
-            results = search_images(searxng, query)
-        except WebError as exc:
-            return Response({"detail": web_error_message(exc)}, status=status.HTTP_502_BAD_GATEWAY)
-        return Response({"query": query, "results": results})
+    query = " ".join(str(request.query_params.get("q") or "").split())[:200] or default_query
+    if not query:
+        return Response(
+            {"detail": _("Type what to search for.")}, status=status.HTTP_400_BAD_REQUEST
+        )
+    try:
+        results = search_images(searxng, query)
+    except WebError as exc:
+        return Response({"detail": web_error_message(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+    return Response({"query": query, "results": results})
 
 
 def _replace_photo(row, current, content, name, size, source_url, user):

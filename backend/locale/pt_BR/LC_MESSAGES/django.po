@@ -1154,3 +1154,6 @@ msgstr "mecanismo de pesquisa na internet"
 
 msgid "search the Internet"
 msgstr "pesquisar na Internet"
+
+msgid "Type what to search for."
+msgstr "Digite o que pesquisar."
