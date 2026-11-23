@@ -20,9 +20,10 @@ describe('module routes', () => {
   it('Administration modules are in the Management and Catalogs sections', () => {
     const admin = MODULES.filter((m) => m.app === 'admin').map((m) => [m.name, m.section])
     expect(admin).toEqual([
-      ['customers', 'menu.sections.management'],
       ['users', 'menu.sections.management'],
       ['roles', 'menu.sections.management'],
+      ['customers', 'menu.sections.catalogs'],
+      ['service-providers', 'menu.sections.catalogs'],
       ['catalogs-verticals', 'menu.sections.catalogs'],
       ['catalogs-asset-classes', 'menu.sections.catalogs'],
       ['catalogs-manufacturers', 'menu.sections.catalogs'],
@@ -34,6 +35,20 @@ describe('module routes', () => {
     await router.push({ name: 'catalogs' })
     expect(router.currentRoute.value.name).toBe('catalogs-verticals')
     expect(router.currentRoute.value.path).toBe('/catalogs/verticals')
+  })
+
+  it('the former Customers page opens the Customers catalog', async () => {
+    const router = makeRouter()
+    await router.push('/customers')
+    expect(router.currentRoute.value.name).toBe('customers')
+    expect(router.currentRoute.value.path).toBe('/catalogs/customers')
+  })
+
+  it('Inventory opens Warehouses, in the Remarketing app', async () => {
+    const router = makeRouter()
+    await router.push('/inventory')
+    expect(router.currentRoute.value.name).toBe('warehouses')
+    expect(MODULES.find((m) => m.name === 'warehouses')!.app).toBe('remarketing')
   })
 
   it('the former Roles tab opens the Roles page', async () => {

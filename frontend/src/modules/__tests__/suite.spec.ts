@@ -53,7 +53,7 @@ describe('suite apps and routes', () => {
     expect(router.currentRoute.value.path).toBe('/admin/catalogs/verticals')
   })
 
-  it('Pricing, Remarketing (coming soon) and Administration; menus per app', () => {
+  it('Pricing, Remarketing, Partners and Alliances (coming soon) and Administration; menus per app', () => {
     const t = (key: string) => i18n.global.t(key)
     setLanguage('pt-br')
     expect(SUITE_APPS.map((app) => appName(app, t))).toEqual([
@@ -66,10 +66,12 @@ describe('suite apps and routes', () => {
       'average-prices',
       'efmv-analyses',
     ])
+    expect(appModules('remarketing', false).map((m) => m.name)).toEqual(['warehouses'])
     expect(appModules('admin', true).map((m) => m.name)).toEqual([
-      'customers',
       'users',
       'roles',
+      'customers',
+      'service-providers',
       'catalogs-verticals',
       'catalogs-asset-classes',
       'catalogs-manufacturers',
@@ -77,6 +79,7 @@ describe('suite apps and routes', () => {
     // Users, Roles and System Settings are for administrators
     expect(appModules('admin', false).map((m) => m.name)).toEqual([
       'customers',
+      'service-providers',
       'catalogs-verticals',
       'catalogs-asset-classes',
       'catalogs-manufacturers',
@@ -152,7 +155,8 @@ describe('AppBreadcrumbs', () => {
   it('a catalog: Horizon › Administration › Asset Classes', async () => {
     const { wrapper, titles, links } = await crumbsAt('/admin/catalogs/asset-classes')
     expect(titles).toEqual(['Horizon', 'Administration', 'Asset Classes'])
-    expect(links).toEqual(['/', '/admin/customers', null])
+    // The app links to its first page (administrators: Users)
+    expect(links).toEqual(['/', '/admin/users', null])
     wrapper.unmount()
   })
 })

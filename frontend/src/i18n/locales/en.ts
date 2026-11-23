@@ -27,6 +27,7 @@ const en = {
     saved: 'Keywords saved.',
   },
   common: {
+    filters: { nameOrKeyword: 'Name or Keyword', all: 'All' },
     yes: 'Yes',
     no: 'No',
     showFilters: 'Filters',
@@ -71,7 +72,7 @@ const en = {
       description: 'Residual value pricing: average prices of assets and their value curves.',
     },
     remarketing: {
-      description: 'Stock and sale of used assets.',
+      description: 'Asset and inventory management, inspection reports and sale of used assets.',
     },
     partners: {
       description: 'Partnerships, incentive programs, discounts and fees.',
@@ -79,7 +80,7 @@ const en = {
     admin: {
       title: 'Administration',
       description:
-        'What every app shares: catalogs, customers and account managers; users and system settings.',
+        'What every app shares: users and roles; catalogs such as customers, service providers and verticals.',
     },
   },
   menu: {
@@ -91,7 +92,7 @@ const en = {
     profile: 'Profile',
     help: 'Help & Support',
     comingSoon: '{feature}: coming soon.',
-    sections: { management: 'Management', catalogs: 'Catalogs' },
+    sections: { management: 'Management', catalogs: 'Catalogs', inventory: 'Inventory' },
     collapse: 'Collapse Menu',
     apps: 'Apps',
     path: 'Path',
@@ -335,6 +336,8 @@ const en = {
   },
   customers: {
     title: 'Customers',
+    subtitle:
+      'Lessees: companies and individuals who sign leasing contracts, and their account managers.',
     new: 'New Customer',
     edit: 'Edit Customer',
     sections: {
@@ -379,6 +382,75 @@ const en = {
     updated: 'Customer updated.',
     deleted: 'Customer deleted.',
     deleteTitle: 'Delete Customer',
+    deleteConfirm: 'Delete "{name}"? This cannot be undone.',
+  },
+  serviceProviders: {
+    title: 'Service Providers',
+    subtitle:
+      'Companies that provide services to Horizon: warehousing, transport, refurbishment and more.',
+    new: 'New Service Provider',
+    edit: 'Edit Service Provider',
+    fields: {
+      id: 'ID',
+      name: 'Legal Name',
+      taxId: 'Tax ID',
+      services: 'Services',
+      contactName: 'Contact Name',
+      location: 'City / State',
+      active: 'Active Provider',
+      status: 'Status',
+    },
+    services: {
+      warehousing: 'Warehousing',
+      transport: 'Transport and Logistics',
+      inspection: 'Inspection and Appraisal',
+      refurbishment: 'Refurbishment',
+      repair: 'Maintenance and Repair',
+      data_erasure: 'Data Erasure',
+      packaging: 'Packaging',
+      sales: 'Sales and Auctions',
+      disposal: 'Disposal and Recycling',
+    },
+    servicesRequired: 'Choose at least one service.',
+    searchPlaceholder: 'Search by name, tax ID, contact or city',
+    noneFound: 'No service providers found.',
+    empty: 'No service providers yet.',
+    noResults: 'No service providers match your search.',
+    created: 'Service provider created.',
+    updated: 'Service provider updated.',
+    deleted: 'Service provider deleted.',
+    deleteTitle: 'Delete Service Provider',
+    deleteConfirm: 'Delete "{name}"? This cannot be undone.',
+  },
+  warehouses: {
+    title: 'Warehouses',
+    subtitle:
+      'Where returned equipment is received and kept until it is made available to buyers of used assets.',
+    new: 'New Warehouse',
+    edit: 'Edit Warehouse',
+    fields: {
+      id: 'ID',
+      name: 'Name',
+      ownership: 'Operation',
+      verticals: 'Business Verticals',
+      serviceProvider: 'Service Provider',
+      contact: 'Contact',
+      contactName: 'Contact Name',
+      active: 'Active Warehouse',
+    },
+    ownership: {
+      own: 'Own',
+      outsourced: 'Outsourced',
+    },
+    verticalsRequired: 'Choose at least one business vertical.',
+    serviceProviderHint: 'Only active service providers that offer warehousing are listed.',
+    searchPlaceholder: 'Search by name, city, contact or service provider',
+    empty: 'No warehouses yet.',
+    noResults: 'No warehouses match your search.',
+    created: 'Warehouse created.',
+    updated: 'Warehouse updated.',
+    deleted: 'Warehouse deleted.',
+    deleteTitle: 'Delete Warehouse',
     deleteConfirm: 'Delete "{name}"? This cannot be undone.',
   },
   catalogs: {

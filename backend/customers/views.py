@@ -3,6 +3,7 @@ from rest_framework import viewsets
 
 from config.filters import NullsLastOrderingFilter
 from config.keywords import KeywordSearchFilter
+from config.parties import column_filters
 
 from .models import Customer
 from .serializers import CustomerSerializer
@@ -26,7 +27,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     """CRUD for customers.
 
     List supports ?search= (name, trade name, tax ID, email, city, primary or secondary
-    account manager), ?account_manager=<user id> (primary or secondary), ?is_active=true|false,
+    account manager), ?account_manager=<user id> (primary or secondary), column filters
+    (config.parties.column_filters: ?name=, ?tax_id=, ?location=, ?is_active=),
     ?ordering=, ?page= and ?page_size=.
     """
 
@@ -66,7 +68,4 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 Q(primary_account_manager_id=int(manager))
                 | Q(secondary_account_managers__id=int(manager))
             ).distinct()
-        active = params.get("is_active")
-        if active in ("true", "false"):
-            queryset = queryset.filter(is_active=active == "true")
-        return queryset
+        return column_filters(queryset, params)

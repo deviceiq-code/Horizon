@@ -138,8 +138,8 @@ describe('MainLayout', () => {
     expect(inBody('[data-testid="app-title"]')).toBeNull()
     expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-app-admin"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-app-remarketing"]')).toBeNull() // coming soon
-    expect(inBody('[data-testid="menu-app-partners"]')).toBeNull()
+    expect(inBody('[data-testid="menu-app-remarketing"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-app-partners"]')).toBeNull() // coming soon
     wrapper.unmount()
   })
 
@@ -153,6 +153,7 @@ describe('MainLayout', () => {
     expect(inBody('[data-testid="menu-roles"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-catalogs-asset-classes"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-customers"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-service-providers"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-users"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-average-prices"]')).toBeNull()
     // The other apps, to switch to; not the current one
@@ -184,14 +185,17 @@ describe('MainLayout', () => {
     again.wrapper.unmount()
   })
 
-  it('the app launcher lists the apps; Remarketing is coming soon', async () => {
+  it('the app launcher lists the apps; Partners and Alliances is coming soon', async () => {
     const { wrapper } = await mountLayout('/pricing/average-prices')
     expect(inBody('[data-testid="app-title"]')!.textContent!.trim()).toBe('Pricing')
     await click('app-launcher')
     const menu = inBody('[data-testid="app-launcher-menu"]')!
     expect(menu.textContent).toContain('Pricing')
     expect(menu.textContent).toContain('Coming Soon')
-    expect(inBody('[data-testid="launcher-remarketing"]')!.className).toContain(
+    expect(inBody('[data-testid="launcher-partners"]')!.className).toContain(
+      'v-list-item--disabled',
+    )
+    expect(inBody('[data-testid="launcher-remarketing"]')!.className).not.toContain(
       'v-list-item--disabled',
     )
     expect(inBody('[data-testid="launcher-pricing"]')!.className).toContain('v-list-item--active')

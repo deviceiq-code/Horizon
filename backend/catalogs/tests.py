@@ -408,3 +408,15 @@ def test_vertical_keywords(logged_client):
     assert r.json()["keywords"] == ["farm", "rural"]
     found = logged_client.get(URL, {"search": "rur"}).json()["results"]
     assert [v["name"] for v in found] == ["Agribusiness"]
+
+
+def test_vertical_column_filters(logged_client):
+    Vertical.objects.create(name="Information Technology", keywords=["servers"])
+    health = Vertical.objects.create(name="Healthcare")
+    ana = make_account_manager("Ana", "Souza", "ana@example.com", verticals=[health])
+    names = lambda params: [  # noqa: E731
+        v["name"] for v in logged_client.get("/api/catalogs/verticals/", params).json()["results"]
+    ]
+    assert names({"name": "techn"}) == ["Information Technology"]
+    assert names({"name": "server"}) == ["Information Technology"]
+    assert names({"account_manager": ana.id}) == ["Healthcare"]

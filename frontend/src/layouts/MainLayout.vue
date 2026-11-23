@@ -134,7 +134,7 @@ async function logout() {
     v-model="drawerOpen"
     color="sidebar"
     class="side-menu"
-    :width="256"
+    :width="288"
     :rail-width="72"
     :rail="mdAndUp && collapsed"
     :expand-on-hover="mdAndUp && collapsed"

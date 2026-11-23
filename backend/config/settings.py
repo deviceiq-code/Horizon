@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     "system",
     "users",
     "efmv",
+    "service_providers",
+    "inventory",
 ]
 
 MIDDLEWARE = [

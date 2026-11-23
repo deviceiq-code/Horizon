@@ -1,7 +1,7 @@
 /**
  * The apps of the Horizon suite (like Microsoft 365's): each one groups modules (src/modules)
  * under its own address prefix and side menu. "Administration" holds what every app shares:
- * catalogs, customers, account managers, users and system settings.
+ * users and roles; catalogs (customers, service providers, verticals…).
  */
 export type AppId = 'pricing' | 'remarketing' | 'partners' | 'admin'
 
@@ -34,7 +34,6 @@ export const SUITE_APPS: readonly SuiteApp[] = [
     name: 'Remarketing',
     descriptionKey: 'apps.remarketing.description',
     icon: 'mdi-storefront-outline',
-    comingSoon: true,
   },
   {
     id: 'partners',

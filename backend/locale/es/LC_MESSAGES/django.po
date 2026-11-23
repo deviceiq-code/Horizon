@@ -1041,8 +1041,8 @@ msgid "This sub-vertical is not of the chosen vertical."
 msgstr "Esta sub-vertical no es de la vertical elegida."
 
 #: efmv/catalogs
-msgid "This vertical is in use (asset classes or eFMV analyses) and cannot be deleted."
-msgstr "Esta vertical está en uso (clases de activo o análisis de eFMV) y no se puede eliminar."
+msgid "This vertical is in use (asset classes, eFMV analyses or warehouses) and cannot be deleted."
+msgstr "Esta vertical está en uso (clases de activo, análisis de eFMV o almacenes) y no puede eliminarse."
 
 #: efmv/catalogs
 msgid "The sub-vertical \"%(name)s\" is in use (asset classes or eFMV analyses) and cannot be removed."
@@ -1160,3 +1160,93 @@ msgstr "Escriba qué buscar."
 
 msgid "Photo search is not set up (Settings → Smart Tools)."
 msgstr "La búsqueda de fotos no está configurada (Configuración → Smart Tools)."
+
+msgid "Warehousing"
+msgstr "Almacenamiento"
+
+msgid "Transport and Logistics"
+msgstr "Transporte y Logística"
+
+msgid "Inspection and Appraisal"
+msgstr "Inspección y Tasación"
+
+msgid "Refurbishment"
+msgstr "Reacondicionamiento"
+
+msgid "Maintenance and Repair"
+msgstr "Mantenimiento y Reparación"
+
+msgid "Data Erasure"
+msgstr "Borrado de Datos"
+
+msgid "Packaging"
+msgstr "Embalaje"
+
+msgid "Sales and Auctions"
+msgstr "Ventas y Subastas"
+
+msgid "Disposal and Recycling"
+msgstr "Desecho y Reciclaje"
+
+msgid "services"
+msgstr "servicios"
+
+msgid "contact name"
+msgstr "nombre del contacto"
+
+msgid "service provider"
+msgstr "proveedor de servicios"
+
+msgid "service providers"
+msgstr "proveedores de servicios"
+
+msgid "Service Providers"
+msgstr "Proveedores de Servicios"
+
+msgid "Own"
+msgstr "Propio"
+
+msgid "Outsourced"
+msgstr "Tercerizado"
+
+msgid "ownership"
+msgstr "tipo de operación"
+
+msgid "warehouse"
+msgstr "almacén"
+
+msgid "warehouses"
+msgstr "almacenes"
+
+msgid "Inventory"
+msgstr "Inventario"
+
+msgid "Choose at least one service."
+msgstr "Elija al menos un servicio."
+
+msgid "A service provider with this tax ID already exists."
+msgstr "Ya existe un proveedor de servicios con este documento."
+
+msgid "This provider runs warehouses: warehousing cannot be removed from its services."
+msgstr "Este proveedor opera almacenes: el almacenamiento no puede quitarse de sus servicios."
+
+msgid "This service provider runs warehouses and cannot be deleted."
+msgstr "Este proveedor de servicios opera almacenes y no puede eliminarse."
+
+msgid "A warehouse with this name already exists."
+msgstr "Ya existe un almacén con este nombre."
+
+msgid "Choose the service provider that runs this warehouse."
+msgstr "Elija el proveedor de servicios que opera este almacén."
+
+msgid "This provider does not offer warehousing."
+msgstr "Este proveedor no ofrece almacenamiento."
+
+msgid "This service provider is inactive."
+msgstr "Este proveedor de servicios está inactivo."
+
+msgid "Choose at least one business vertical."
+msgstr "Elija al menos una vertical de negocio."
+
+msgid "Disabled verticals cannot be added."
+msgstr "No se pueden agregar verticales deshabilitadas."

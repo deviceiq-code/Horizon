@@ -161,6 +161,10 @@ def test_manufacturers_list(logged_client, manufacturers):
         ({"is_enabled": "false"}, ["Acme"]),
         ({"ordering": "-remarketing_score"}, ["John Deere", "Caterpillar", "Acme"]),
         ({"ordering": "-product_quality"}, ["Caterpillar", "John Deere", "Acme"]),
+        # Column filters
+        ({"name": "pill"}, ["Caterpillar"]),
+        ({"remarketing_min": "4.4"}, ["John Deere"]),
+        ({"remarketing_min": "4"}, ["Caterpillar", "John Deere"]),
     ],
 )
 def test_manufacturers_filters(logged_client, manufacturers, params, expected):
@@ -469,7 +473,8 @@ def test_vertical_with_asset_classes_cannot_be_deleted(logged_client, asset_clas
     assert r.status_code == 409
     assert (
         r.json()["detail"]
-        == "This vertical is in use (asset classes or eFMV analyses) and cannot be deleted."
+        == "This vertical is in use (asset classes, eFMV analyses or warehouses) and cannot be "
+        "deleted."
     )
     assert Vertical.objects.filter(pk=industry.pk).exists()
 

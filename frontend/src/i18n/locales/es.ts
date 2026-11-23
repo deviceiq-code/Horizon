@@ -24,6 +24,7 @@ const es: Messages = {
     saved: 'Palabras clave guardadas.',
   },
   common: {
+    filters: { nameOrKeyword: 'Nombre o Palabra Clave', all: 'Todos' },
     yes: 'Sí',
     no: 'No',
     showFilters: 'Filtros',
@@ -69,7 +70,8 @@ const es: Messages = {
         'Precios de valor residual: precios promedio de los bienes y sus curvas de valor.',
     },
     remarketing: {
-      description: 'Inventario y venta de bienes usados.',
+      description:
+        'Gestión de activos e inventario, informes de inspección y venta de bienes usados.',
     },
     partners: {
       description: 'Alianzas, programas de incentivos, descuentos y fees.',
@@ -77,7 +79,7 @@ const es: Messages = {
     admin: {
       title: 'Administración',
       description:
-        'Lo que comparten todas las apps: catálogos, clientes y gestores de cuenta; usuarios y configuración del sistema.',
+        'Lo que comparten todas las apps: usuarios y roles; catálogos como clientes, proveedores de servicios y verticales.',
     },
   },
   menu: {
@@ -89,7 +91,7 @@ const es: Messages = {
     profile: 'Perfil',
     help: 'Ayuda y Soporte',
     comingSoon: '{feature}: próximamente.',
-    sections: { management: 'Gestión', catalogs: 'Catálogos' },
+    sections: { management: 'Gestión', catalogs: 'Catálogos', inventory: 'Inventario' },
     collapse: 'Contraer Menú',
     apps: 'Apps',
     path: 'Ruta',
@@ -336,6 +338,8 @@ const es: Messages = {
   },
   customers: {
     title: 'Clientes',
+    subtitle:
+      'Arrendatarios: empresas y personas que firman contratos de leasing, y sus gestores de cuenta.',
     new: 'Nuevo Cliente',
     edit: 'Editar Cliente',
     sections: {
@@ -380,6 +384,76 @@ const es: Messages = {
     updated: 'Cliente actualizado.',
     deleted: 'Cliente eliminado.',
     deleteTitle: 'Eliminar Cliente',
+    deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
+  },
+  serviceProviders: {
+    title: 'Proveedores de Servicios',
+    subtitle:
+      'Empresas que prestan servicios a Horizon: almacenamiento, transporte, reacondicionamiento y más.',
+    new: 'Nuevo Proveedor de Servicios',
+    edit: 'Editar Proveedor de Servicios',
+    fields: {
+      id: 'ID',
+      name: 'Razón Social',
+      taxId: 'Identificación Fiscal',
+      services: 'Servicios',
+      contactName: 'Nombre del Contacto',
+      location: 'Ciudad / Estado',
+      active: 'Proveedor Activo',
+      status: 'Estado',
+    },
+    services: {
+      warehousing: 'Almacenamiento',
+      transport: 'Transporte y Logística',
+      inspection: 'Inspección y Tasación',
+      refurbishment: 'Reacondicionamiento',
+      repair: 'Mantenimiento y Reparación',
+      data_erasure: 'Borrado de Datos',
+      packaging: 'Embalaje',
+      sales: 'Ventas y Subastas',
+      disposal: 'Desecho y Reciclaje',
+    },
+    servicesRequired: 'Elija al menos un servicio.',
+    searchPlaceholder: 'Buscar por nombre, identificación fiscal, contacto o ciudad',
+    noneFound: 'No se encontraron proveedores de servicios.',
+    empty: 'Aún no hay proveedores de servicios.',
+    noResults: 'Ningún proveedor de servicios coincide con la búsqueda.',
+    created: 'Proveedor de servicios creado.',
+    updated: 'Proveedor de servicios actualizado.',
+    deleted: 'Proveedor de servicios eliminado.',
+    deleteTitle: 'Eliminar Proveedor de Servicios',
+    deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
+  },
+  warehouses: {
+    title: 'Almacenes',
+    subtitle:
+      'Donde se reciben y guardan los equipos devueltos hasta ponerlos a disposición de los compradores de usados.',
+    new: 'Nuevo Almacén',
+    edit: 'Editar Almacén',
+    fields: {
+      id: 'ID',
+      name: 'Nombre',
+      ownership: 'Operación',
+      verticals: 'Verticales de Negocio',
+      serviceProvider: 'Proveedor de Servicios',
+      contact: 'Contacto',
+      contactName: 'Nombre del Contacto',
+      active: 'Almacén Activo',
+    },
+    ownership: {
+      own: 'Propio',
+      outsourced: 'Tercerizado',
+    },
+    verticalsRequired: 'Elija al menos una vertical de negocio.',
+    serviceProviderHint:
+      'Solo se listan proveedores de servicios activos que ofrecen almacenamiento.',
+    searchPlaceholder: 'Buscar por nombre, ciudad, contacto o proveedor',
+    empty: 'Aún no hay almacenes.',
+    noResults: 'Ningún almacén coincide con la búsqueda.',
+    created: 'Almacén creado.',
+    updated: 'Almacén actualizado.',
+    deleted: 'Almacén eliminado.',
+    deleteTitle: 'Eliminar Almacén',
     deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
   },
   catalogs: {

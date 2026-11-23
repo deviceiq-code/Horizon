@@ -4,7 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api'
 import { setLanguage } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
-import { click, inBody, mountWithPlugins, settle, typeInto, typeKeywords } from '@/test-utils'
+import {
+  click,
+  inBody,
+  mountWithPlugins,
+  pickOption,
+  settle,
+  typeInto,
+  typeKeywords,
+} from '@/test-utils'
 import * as manufacturersApi from '../manufacturers/api'
 import ManufacturersTab from '../manufacturers/ManufacturersTab.vue'
 
@@ -80,6 +88,23 @@ describe('ManufacturersTab', () => {
     expect(deere).toContain('Enabled')
     expect(acme).toContain('0.0/ 5')
     expect(acme).toContain('Disabled')
+    wrapper.unmount()
+  })
+
+  it('filters by name or keyword, minimum stars and status', async () => {
+    const wrapper = mountTab()
+    await settle()
+    const lastFilters = () => api.listManufacturers.mock.lastCall![0].filters
+
+    await click('toggle-filters')
+    await typeInto('filter-name', 'deer')
+    await new Promise((r) => setTimeout(r, 400))
+    await settle()
+    expect(lastFilters()).toEqual({ name: 'deer' })
+    await pickOption('filter-stars', '★ 4+')
+    expect(lastFilters()).toEqual({ name: 'deer', remarketing_min: 4 })
+    await pickOption('filter-status', 'Enabled')
+    expect(lastFilters()).toEqual({ name: 'deer', remarketing_min: 4, is_enabled: 'true' })
     wrapper.unmount()
   })
 

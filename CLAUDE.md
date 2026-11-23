@@ -37,6 +37,23 @@ Multi-user web system for **operating lease residual value pricing**
     `primary_account_manager` — required FK to a user with the Account Manager role, PROTECT —
     and `secondary_account_managers` — M2M of such users, never including the primary). `customers/tax_ids.py` validates CPF and CNPJ, including the
     alphanumeric CNPJ (in force since July 2026). CRUD at `/api/customers/`.
+  - `service_providers/` — **Service Providers** (a catalog, like customers): `ServiceProvider`
+    (legal/trade name, tax ID unique per country, contact name, email, phone, address, active,
+    notes, keywords) and `services` — ArrayField of `ServiceKind` (fixed list: warehousing,
+    transport, inspection, refurbishment, repair, data_erasure, packaging, sales, disposal; at
+    least one, kept in the list's order). `/api/service-providers/` (`?service=`). One that runs
+    warehouses cannot be deleted (409) nor lose warehousing (400).
+  - `inventory/` — **Inventory** of Remarketing. `Warehouse`: name (unique case-insensitive),
+    `ownership` own | outsourced, `service_provider` (PROTECT; required only when outsourced —
+    an active provider offering warehousing, checked when chosen; own = none), `verticals` it
+    serves (M2M through `WarehouseVertical`, PROTECT: a served vertical cannot be deleted; at
+    least one; only enabled ones can be added), contact on site, address, active, notes,
+    keywords. `/api/inventory/warehouses/` (`?ownership=&vertical=&service_provider=`).
+  - `config/parties.py` — shared input rules of customers, service providers and warehouses:
+    `CompanyFieldsMixin` (name, trade name, tax ID: CPF/CNPJ in Brazil, unique per country —
+    `tax_id_errors`), `AddressFieldsMixin` (country, email, phone, CEP/state in Brazil —
+    `address_errors`) and `column_filters` (`?name=` name or keyword, `?tax_id=`, `?location=`
+    city or state, `?is_active=`).
   - `catalogs/` — small reference tables ("Cadastros"), one model each, under `/api/catalogs/<table>/`.
     `Vertical` (business vertical): name (unique, case-insensitive), enabled flag, notes — these
     apply to all its sub-verticals. Its account managers are read-only here
@@ -66,6 +83,9 @@ Multi-user web system for **operating lease residual value pricing**
     ratings, keywords (ArrayField, lowercase, unique, max 30 × 50 chars; searchable), notes,
     enabled.
     `/api/catalogs/sub-verticals/` lists sub-verticals as picker options ("Vertical / Sub").
+    Grid column filters: verticals `?name=` (name or keyword) and `?account_manager=`;
+    manufacturers and asset classes `?name=` and `?remarketing_min=`
+    (`catalogs.views.name_and_rating_filters`).
   - `pricing/` — **Average Prices** (core module), `/api/average-prices/`. `AveragePrice` rows are
     **immutable**: no PUT/PATCH; a change is a new row with `supersedes=<id>` (the old one gets
     `is_current=False` and stays as history). `DELETE /<id>/` erases one version for good
@@ -246,7 +266,7 @@ Multi-user web system for **operating lease residual value pricing**
     or they shrink with the zoom.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — the frame of authenticated pages (a clean dashboard look):
-    dark side menu (theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`)
+    dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`)
     with the Horizon brand, Home, a section named after the current app with its modules, a
     section "Apps" with the other apps, Settings at the bottom; open from 1440 px, collapsed to
     icons below (they expand on hover); the top bar's button opens/collapses it and the choice
@@ -266,9 +286,10 @@ Multi-user web system for **operating lease residual value pricing**
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
     (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Alliances"
     (partnerships, incentive programs, discounts, fees) — both coming soon — and
-    "Administração" (`/admin/…`, two side menu sections: Management — Customers, plus Users and
-    Roles, administrators only — and Catalogs — Verticals, Asset Classes,
-    Manufacturers, shared by every app). App names have no "Horizon" and stay in English in
+    "Administração" (`/admin/…`, two side menu sections: Management — Users and Roles,
+    administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
+    Classes, Manufacturers, shared by every app). Remarketing (`/remarketing/…`): section
+    Inventory — Warehouses (`/remarketing/inventory/warehouses`). App names have no "Horizon" and stay in English in
     every language; areas are translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
     prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
     the prefix. Navigation: the top bar shows the path (`AppBreadcrumbs.vue`: Horizon › app › module
@@ -286,7 +307,15 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/modules/catalogs/` — one module per reference table (section Catalogs of
     Administration), each a page `CatalogPage.vue` (title, subtitle, the table's `<Name>Tab.vue`)
     at `/admin/catalogs/<table>` (`/admin/catalogs` opens the first). A new small table is a new
-    entry in `catalogs/index.ts` (+ MODULES).
+    entry in `catalogs/index.ts` (+ MODULES); customers and service providers use the exported
+    `catalog()` in their own folders (`/admin/customers` redirects).
+    **Every catalog page follows Asset Classes'** (also Warehouses): `CatalogPage` +
+    `ServerCrudTable` with a filter row (`src/composables/useColumnFilters.ts`: text filters
+    applied after a pause; "Name or Keyword" on the name column, selects with "All"), the
+    name cell with keywords/trade name below (an icon only when each record has its own, as
+    asset classes), status chips
+    (`EnabledChip` or `src/components/ActiveChip.vue`). Address blocks:
+    `src/components/AddressFields.vue`.
   - `src/components/ServerCrudTable.vue` — generic CRUD grid (search, New, edit/delete with
     confirmation, notifications; optional `expandable` + `expanded-row` slot; column filters:
     `filters` object + `filter.<key>` slots, a row under the titles turned on/off with the

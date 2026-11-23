@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AddressFields from '@/components/AddressFields.vue'
 import FormDialog from '@/components/FormDialog.vue'
 import WebSearchButton from '@/components/WebSearchButton.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
@@ -10,7 +11,7 @@ import AccountManagerPicker from '@/modules/account-managers/AccountManagerPicke
 import type { AccountManagerRef } from '@/modules/account-managers/api'
 import { countryOptions } from '@/utils/countries'
 import { createCustomer, updateCustomer, type Customer, type CustomerInput } from './api'
-import { BRAZILIAN_STATES, formatPostalCode, formatTaxId } from './format'
+import { formatPostalCode, formatTaxId } from './format'
 
 /** Create (customer = null) or edit a customer. */
 const props = defineProps<{ customer: Customer | null }>()
@@ -73,7 +74,6 @@ const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null
 const isEdit = computed(() => props.customer !== null)
 const isBrazil = computed(() => form.value.country === 'BR')
 const countries = computed(() => countryOptions(locale.value))
-const stateOptions: string[] = [...BRAZILIAN_STATES]
 
 // --- Open / reset ----------------------------------------------------------------------------
 
@@ -271,90 +271,12 @@ function clearError(field: string) {
     <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">
       {{ $t('customers.sections.address') }}
     </div>
-    <v-row dense>
-      <v-col cols="12" sm="4" md="3">
-        <v-text-field
-          v-model="form.postal_code"
-          :label="
-            isBrazil ? $t('customers.fields.postalCodeBrazil') : $t('customers.fields.postalCode')
-          "
-          :rules="[rules.maxLength(10)]"
-          :error-messages="fieldErrors.postal_code"
-          maxlength="10"
-          @update:model-value="clearError('postal_code')"
-        />
-      </v-col>
-      <v-col cols="12" sm="8" md="7">
-        <v-text-field
-          v-model="form.street"
-          :label="$t('customers.fields.street')"
-          :rules="[rules.maxLength(200)]"
-          :error-messages="fieldErrors.street"
-          maxlength="200"
-          @update:model-value="clearError('street')"
-        />
-      </v-col>
-      <v-col cols="4" md="2">
-        <v-text-field
-          v-model="form.number"
-          :label="$t('customers.fields.number')"
-          :rules="[rules.maxLength(20)]"
-          :error-messages="fieldErrors.number"
-          maxlength="20"
-          @update:model-value="clearError('number')"
-        />
-      </v-col>
-      <v-col cols="8" md="4">
-        <v-text-field
-          v-model="form.complement"
-          :label="$t('customers.fields.complement')"
-          :rules="[rules.maxLength(100)]"
-          :error-messages="fieldErrors.complement"
-          maxlength="100"
-          @update:model-value="clearError('complement')"
-        />
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-text-field
-          v-model="form.district"
-          :label="$t('customers.fields.district')"
-          :rules="[rules.maxLength(100)]"
-          :error-messages="fieldErrors.district"
-          maxlength="100"
-          @update:model-value="clearError('district')"
-        />
-      </v-col>
-      <v-col cols="8" md="3">
-        <v-text-field
-          v-model="form.city"
-          :label="$t('customers.fields.city')"
-          :rules="[rules.maxLength(100)]"
-          :error-messages="fieldErrors.city"
-          maxlength="100"
-          @update:model-value="clearError('city')"
-        />
-      </v-col>
-      <v-col cols="4" md="2">
-        <v-autocomplete
-          v-if="isBrazil"
-          v-model="form.state"
-          :items="stateOptions"
-          :label="$t('customers.fields.state')"
-          :error-messages="fieldErrors.state"
-          clearable
-          @update:model-value="clearError('state')"
-        />
-        <v-text-field
-          v-else
-          v-model="form.state"
-          :label="$t('customers.fields.state')"
-          :rules="[rules.maxLength(50)]"
-          :error-messages="fieldErrors.state"
-          maxlength="50"
-          @update:model-value="clearError('state')"
-        />
-      </v-col>
-    </v-row>
+    <AddressFields
+      v-model="form"
+      :country="form.country"
+      :errors="fieldErrors"
+      @clear="clearError"
+    />
 
     <!-- Relationship -->
     <div class="text-subtitle-2 text-medium-emphasis mb-2 mt-2">

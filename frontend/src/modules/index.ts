@@ -12,7 +12,9 @@ import catalogs from './catalogs'
 import customers from './customers'
 import efmvAnalyses from './efmv-analyses'
 import pricingSettings from './pricing-settings'
+import serviceProviders from './service-providers'
 import { roles, users } from './users'
+import warehouses from './warehouses'
 
 export interface AppModule {
   /** Route name of the module's main page (the menu links to it) */
@@ -43,10 +45,13 @@ export const MODULES: AppModule[] = [
   averagePrices,
   efmvAnalyses,
   pricingSettings,
-  // Administration: Management, then Catalogs
-  customers,
+  // Remarketing: Inventory
+  warehouses,
+  // Administration: Management, then Catalogs (customers and service providers first)
   users,
   roles,
+  customers,
+  serviceProviders,
   ...catalogs,
 ]
 

@@ -9,6 +9,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/customers/", include("customers.urls")),
+    path("api/service-providers/", include("service_providers.urls")),
+    path("api/inventory/", include("inventory.urls")),
     path("api/catalogs/", include("catalogs.urls")),
     path("api/average-prices/", include("pricing.urls")),
     path("api/efmv-analyses/", include("efmv.urls")),

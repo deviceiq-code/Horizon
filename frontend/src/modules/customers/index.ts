@@ -1,18 +1,13 @@
-import type { AppModule } from '@/modules'
+import { catalog } from '@/modules/catalogs'
 
-const customers: AppModule = {
-  name: 'customers',
-  icon: 'mdi-domain',
-  titleKey: 'customers.title',
-  app: 'admin',
-  section: 'menu.sections.management',
-  routes: [
-    {
-      path: 'customers',
-      name: 'customers',
-      component: () => import('./CustomersView.vue'),
-    },
-  ],
-}
+/** A catalog of Administration (/admin/catalogs/customers; the former /admin/customers opens it). */
+const customers = catalog(
+  'customers',
+  'customers',
+  'mdi-domain',
+  'customers',
+  () => import('./CustomersTab.vue'),
+)
+customers.routes.push({ path: 'customers', redirect: { name: 'customers' } })
 
 export default customers

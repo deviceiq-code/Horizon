@@ -17,7 +17,7 @@ import {
   typeKeywords,
 } from '@/test-utils'
 import * as customersApi from '../api'
-import CustomersView from '../CustomersView.vue'
+import CustomersTab from '../CustomersTab.vue'
 
 vi.mock('../api', () => ({
   listCustomers: vi.fn<typeof customersApi.listCustomers>(),
@@ -76,7 +76,7 @@ const ALPHA: customersApi.Customer = {
   is_active: false,
 }
 
-const mountView = () => mountWithPlugins(CustomersView)
+const mountView = () => mountWithPlugins(CustomersTab)
 
 async function openNew(wrapper: ReturnType<typeof mountView>) {
   await wrapper.find('[data-testid="new"]').trigger('click')
@@ -88,7 +88,7 @@ async function openEdit(wrapper: ReturnType<typeof mountView>, row: number) {
   await settle()
 }
 
-describe('CustomersView', () => {
+describe('CustomersTab', () => {
   beforeEach(() => {
     setLanguage('en')
     setActivePinia(createPinia())
@@ -127,12 +127,9 @@ describe('CustomersView', () => {
     const wrapper = mountView()
     await settle()
 
-    expect(api.listCustomers).toHaveBeenCalledWith({
-      page: 1,
-      pageSize: 25,
-      search: '',
-      ordering: 'name',
-    })
+    expect(api.listCustomers).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, pageSize: 25, ordering: 'name' }),
+    )
     const rows = wrapper.findAll('tbody tr')
     const [alpha, trans] = rows.map((r) => r.text())
     expect(alpha).toContain('12.ABC.345/01DE-35')

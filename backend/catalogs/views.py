@@ -46,7 +46,8 @@ class VerticalViewSet(viewsets.ModelViewSet):
     """CRUD for business verticals, with their sub-verticals nested.
 
     List supports ?search= (vertical, sub-vertical or account manager name), ?is_enabled=true
-    or false, ?ordering= (id, name, is_enabled), ?page= and ?page_size=.
+    or false, column filters ?name= (name or keyword) and ?account_manager=<user id>,
+    ?ordering= (id, name, is_enabled), ?page= and ?page_size=.
 
     Account managers are read-only here (`account_managers_detail`); they are assigned on the
     account manager (/api/account-managers/, field "verticals").
@@ -70,6 +71,24 @@ class VerticalViewSet(viewsets.ModelViewSet):
     ordering_fields = ["id", "name", "is_enabled"]
     ordering = ["name"]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        name = " ".join(params.get("name", "").split()).lower()
+        if name:
+            queryset = queryset.annotate(
+                keywords_text=Func(
+                    F("keywords"),
+                    Value(" | "),
+                    function="array_to_string",
+                    output_field=CharField(),
+                )
+            ).filter(Q(name__icontains=name) | Q(keywords_text__contains=name))
+        manager = params.get("account_manager", "")
+        if manager.isdigit():
+            queryset = queryset.filter(account_manager_profiles__user_id=int(manager)).distinct()
+        return queryset
+
     def destroy(self, request, *args, **kwargs):
         try:
             return super().destroy(request, *args, **kwargs)
@@ -77,8 +96,8 @@ class VerticalViewSet(viewsets.ModelViewSet):
             return Response(
                 {
                     "detail": _(
-                        "This vertical is in use (asset classes or eFMV analyses) and cannot "
-                        "be deleted."
+                        "This vertical is in use (asset classes, eFMV analyses or warehouses) "
+                        "and cannot be deleted."
                     )
                 },
                 status=status.HTTP_409_CONFLICT,
@@ -123,11 +142,35 @@ def with_remarketing_score(queryset, fields):
     )
 
 
+def name_and_rating_filters(queryset, params):
+    """Column filters of the catalog grids with remarketing ratings: ?name= (name or keyword)
+    and ?remarketing_min= (remarketing average at least, 0–5; needs `remarketing_score`)."""
+    name = " ".join(params.get("name", "").split()).lower()
+    if name:
+        with_keywords = queryset.annotate(
+            keywords_text=Func(
+                F("keywords"),
+                Value(" | "),
+                function="array_to_string",
+                output_field=CharField(),
+            )
+        )
+        queryset = with_keywords.filter(Q(name__icontains=name) | Q(keywords_text__contains=name))
+    try:
+        minimum = Decimal(params.get("remarketing_min", ""))
+    except (InvalidOperation, ValueError):
+        minimum = None
+    if minimum is not None and minimum.is_finite():
+        queryset = queryset.filter(remarketing_score__gte=minimum)
+    return queryset
+
+
 class ManufacturerViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for manufacturers.
 
-    List supports ?search= (name), ?is_enabled=true or false, ?ordering= (id, name, the three
-    remarketing ratings, remarketing_score = their average, is_enabled), ?page= and ?page_size=.
+    List supports ?search= (name), ?is_enabled=true or false, column filters ?name= (name or
+    keyword) and ?remarketing_min=, ?ordering= (id, name, the three remarketing ratings,
+    remarketing_score = their average, is_enabled), ?page= and ?page_size=.
     """
 
     queryset = with_remarketing_score(Manufacturer.objects.all(), MANUFACTURER_RATINGS)
@@ -145,6 +188,9 @@ class ManufacturerViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
         "is_enabled",
     ]
     ordering = ["name"]
+
+    def get_queryset(self):
+        return name_and_rating_filters(super().get_queryset(), self.request.query_params)
 
 
 class SubVerticalViewSet(viewsets.ReadOnlyModelViewSet):
@@ -216,24 +262,4 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
             queryset = queryset.filter(sub_vertical__vertical_id=int(params["vertical"]))
         if params.get("sub_vertical", "").isdigit():
             queryset = queryset.filter(sub_vertical_id=int(params["sub_vertical"]))
-        # Column filters of the grid
-        name = " ".join(params.get("name", "").split()).lower()
-        if name:
-            with_keywords = queryset.annotate(
-                keywords_text=Func(
-                    F("keywords"),
-                    Value(" | "),
-                    function="array_to_string",
-                    output_field=CharField(),
-                )
-            )
-            queryset = with_keywords.filter(
-                Q(name__icontains=name) | Q(keywords_text__contains=name)
-            )
-        try:
-            minimum = Decimal(params.get("remarketing_min", ""))
-        except (InvalidOperation, ValueError):
-            minimum = None
-        if minimum is not None and minimum.is_finite():
-            queryset = queryset.filter(remarketing_score__gte=minimum)
-        return queryset
+        return name_and_rating_filters(queryset, params)

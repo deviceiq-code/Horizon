@@ -24,6 +24,7 @@ const ptBR: Messages = {
     saved: 'Palavras-chave salvas.',
   },
   common: {
+    filters: { nameOrKeyword: 'Nome ou Palavra-Chave', all: 'Todos' },
     yes: 'Sim',
     no: 'Não',
     showFilters: 'Filtros',
@@ -68,7 +69,7 @@ const ptBR: Messages = {
       description: 'Precificação de valor residual: preços médios dos bens e suas curvas de valor.',
     },
     remarketing: {
-      description: 'Estoque e venda de bens usados.',
+      description: 'Gestão de ativos e estoque, relatórios de vistoria e venda de bens usados.',
     },
     partners: {
       description: 'Parcerias, programas de incentivo, descontos e fees.',
@@ -76,7 +77,7 @@ const ptBR: Messages = {
     admin: {
       title: 'Administração',
       description:
-        'O que todos os apps compartilham: catálogos, clientes e account managers; usuários e configurações do sistema.',
+        'O que todos os apps compartilham: usuários e perfis; cadastros como clientes, prestadores de serviços e verticais.',
     },
   },
   menu: {
@@ -88,7 +89,7 @@ const ptBR: Messages = {
     profile: 'Perfil',
     help: 'Ajuda e Suporte',
     comingSoon: '{feature}: em breve.',
-    sections: { management: 'Gestão', catalogs: 'Cadastros' },
+    sections: { management: 'Gestão', catalogs: 'Cadastros', inventory: 'Estoque' },
     collapse: 'Recolher Menu',
     apps: 'Apps',
     path: 'Caminho',
@@ -335,6 +336,8 @@ const ptBR: Messages = {
   },
   customers: {
     title: 'Clientes',
+    subtitle:
+      'Arrendatários: empresas e pessoas que assinam contratos de leasing, e seus account managers.',
     new: 'Novo Cliente',
     edit: 'Editar Cliente',
     sections: {
@@ -379,6 +382,75 @@ const ptBR: Messages = {
     updated: 'Cliente atualizado.',
     deleted: 'Cliente excluído.',
     deleteTitle: 'Excluir Cliente',
+    deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
+  },
+  serviceProviders: {
+    title: 'Prestadores de Serviços',
+    subtitle:
+      'Empresas que prestam serviços ao Horizon: armazenagem, transporte, recondicionamento e outros.',
+    new: 'Novo Prestador de Serviços',
+    edit: 'Editar Prestador de Serviços',
+    fields: {
+      id: 'ID',
+      name: 'Razão Social',
+      taxId: 'Documento',
+      services: 'Serviços',
+      contactName: 'Nome do Contato',
+      location: 'Cidade / UF',
+      active: 'Prestador Ativo',
+      status: 'Situação',
+    },
+    services: {
+      warehousing: 'Armazenagem',
+      transport: 'Transporte e Logística',
+      inspection: 'Inspeção e Avaliação',
+      refurbishment: 'Recondicionamento',
+      repair: 'Manutenção e Reparo',
+      data_erasure: 'Sanitização de Dados',
+      packaging: 'Embalagem',
+      sales: 'Vendas e Leilões',
+      disposal: 'Descarte e Reciclagem',
+    },
+    servicesRequired: 'Escolha ao menos um serviço.',
+    searchPlaceholder: 'Pesquisar por nome, documento, contato ou cidade',
+    noneFound: 'Nenhum prestador de serviços encontrado.',
+    empty: 'Nenhum prestador de serviços cadastrado.',
+    noResults: 'Nenhum prestador de serviços corresponde à pesquisa.',
+    created: 'Prestador de serviços criado.',
+    updated: 'Prestador de serviços atualizado.',
+    deleted: 'Prestador de serviços excluído.',
+    deleteTitle: 'Excluir Prestador de Serviços',
+    deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
+  },
+  warehouses: {
+    title: 'Armazéns',
+    subtitle:
+      'Onde os equipamentos devolvidos são recebidos e guardados até serem disponibilizados aos clientes de usados.',
+    new: 'Novo Armazém',
+    edit: 'Editar Armazém',
+    fields: {
+      id: 'ID',
+      name: 'Nome',
+      ownership: 'Operação',
+      verticals: 'Verticais de Negócio',
+      serviceProvider: 'Prestador de Serviços',
+      contact: 'Contato',
+      contactName: 'Nome do Contato',
+      active: 'Armazém Ativo',
+    },
+    ownership: {
+      own: 'Próprio',
+      outsourced: 'Terceirizado',
+    },
+    verticalsRequired: 'Escolha ao menos uma vertical de negócio.',
+    serviceProviderHint: 'Só aparecem prestadores de serviços ativos que oferecem armazenagem.',
+    searchPlaceholder: 'Pesquisar por nome, cidade, contato ou prestador',
+    empty: 'Nenhum armazém cadastrado.',
+    noResults: 'Nenhum armazém corresponde à pesquisa.',
+    created: 'Armazém criado.',
+    updated: 'Armazém atualizado.',
+    deleted: 'Armazém excluído.',
+    deleteTitle: 'Excluir Armazém',
     deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
   },
   catalogs: {

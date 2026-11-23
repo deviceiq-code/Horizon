@@ -390,3 +390,11 @@ def test_keywords_normalized_and_searchable(logged_client, ana):
     assert [c["name"] for c in found] == ["Acme Ltda"]
     # Optional: an empty list without them
     assert _patch(logged_client, r.json()["id"], {"keywords": []}).json()["keywords"] == []
+
+
+def test_column_filters(logged_client, customers):
+    names = lambda params: [c["name"] for c in logged_client.get(URL, params).json()["results"]]  # noqa: E731
+    assert names({"name": "transrápido"}) == ["Transportes Rápidos Ltda"]
+    assert names({"tax_id": "111.444"}) == ["Maria Oliveira"]
+    assert names({"location": "PR"}) == ["Alpha Equipamentos S.A."]
+    assert names({"location": "recif"}) == ["Maria Oliveira"]
