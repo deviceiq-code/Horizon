@@ -2,8 +2,9 @@
 /**
  * The user's own settings, in tabs — Language and Region (language, date and time, numbers and
  * currency), Appearance (mode, color theme, interface size) and Smart Tools —, saved to their
- * account (the database), so they follow the user to any computer. Global settings are in
- * Administration → System Settings.
+ * account (the database), so they follow the user to any computer. Laid out as Haze's settings:
+ * full width, cards of rows, each with its title and description on the left and the control
+ * on the right (SettingRow). Global settings are in Administration → System Settings.
  */
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -25,6 +26,9 @@ import {
   NUMBER_FORMATS,
   type NumberFormat,
 } from '@/numberFormat'
+import { useDateFormat } from '@/composables/useDateFormat'
+import SettingRow from '@/components/SettingRow.vue'
+import { WEB_SEARCH_ENGINES, type WebSearchEngine } from '@/webSearch'
 
 /** The search engines offered for "Search the Internet" */
 const WEB_SEARCH_OPTIONS = Object.entries(WEB_SEARCH_ENGINES).map(([value, engine]) => ({
@@ -37,8 +41,6 @@ const PERCENT_PLACES = Array.from(
   { length: MAX_PERCENT_PLACES - MIN_PERCENT_PLACES + 1 },
   (_, i) => MIN_PERCENT_PLACES + i,
 )
-import { useDateFormat } from '@/composables/useDateFormat'
-import { WEB_SEARCH_ENGINES, type WebSearchEngine } from '@/webSearch'
 
 const { t, locale } = useI18n()
 const preferences = usePreferencesStore()
@@ -118,13 +120,12 @@ async function save(changes: PreferencesUpdate) {
 </script>
 
 <template>
-  <v-container style="max-width: 900px">
-    <h1 class="text-h5 mb-1">{{ $t('settings.title') }}</h1>
-
+  <v-container fluid class="module-page settings-page">
+    <h1 class="mb-1">{{ $t('settings.title') }}</h1>
     <p class="text-medium-emphasis mb-4">{{ $t('settings.subtitle') }}</p>
 
     <!-- Grouped in tabs (the open one is in the address: ?tab=) -->
-    <v-tabs v-model="tab" color="primary" class="mb-4" data-testid="settings-sections">
+    <v-tabs v-model="tab" color="primary" class="mb-5" data-testid="settings-sections">
       <v-tab value="region" prepend-icon="mdi-earth" data-testid="tab-region">
         {{ $t('settings.sections.region') }}
       </v-tab>
@@ -135,43 +136,46 @@ async function save(changes: PreferencesUpdate) {
         {{ $t('settings.sections.smartTools') }}
       </v-tab>
     </v-tabs>
+
     <v-window v-model="tab">
+      <!-- Language and Region -->
       <v-window-item value="region" eager :transition="false" :reverse-transition="false">
-        <v-card class="mb-4">
-          <v-card-item prepend-icon="mdi-translate">
-            <v-card-title>{{ $t('settings.language') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.languageDescription') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
+        <div class="group-title">{{ $t('settings.language') }}</div>
+        <v-card class="mb-6">
+          <SettingRow
+            :title="$t('settings.language')"
+            :description="$t('settings.rows.languageHint')"
+          >
             <v-select
               :model-value="preferences.language"
               :items="LANGUAGES"
               item-title="name"
               item-value="code"
-              :label="$t('settings.language')"
               :disabled="saving"
+              density="compact"
               hide-details
-              style="max-width: 360px"
+              class="control-wide"
+              :aria-label="$t('settings.language')"
               data-testid="language-select"
               @update:model-value="save({ language: $event })"
             />
-          </v-card-text>
+          </SettingRow>
         </v-card>
 
         <!-- How dates and times are written: by the language, or fixed -->
-        <v-card class="mb-4">
-          <v-card-item prepend-icon="mdi-calendar-clock-outline">
-            <v-card-title>{{ $t('settings.dateTime') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.dateTimeDescription') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
-            <div class="text-body-2 mb-2">{{ $t('settings.dateFormat') }}</div>
+        <div class="group-title">{{ $t('settings.dateTime') }}</div>
+        <v-card class="mb-6">
+          <SettingRow
+            :title="$t('settings.dateFormat')"
+            :description="$t('settings.rows.dateFormatHint')"
+          >
             <v-btn-toggle
               :model-value="preferences.dateFormat"
               mandatory
               divided
               variant="outlined"
               color="primary"
+              density="comfortable"
               :disabled="saving"
               class="flex-wrap"
               data-testid="date-format"
@@ -187,14 +191,20 @@ async function save(changes: PreferencesUpdate) {
                 {{ $t(`settings.dateFormats.${format}`) }}
               </v-btn>
             </v-btn-toggle>
-
-            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.timeFormat') }}</div>
+          </SettingRow>
+          <SettingRow :title="$t('settings.timeFormat')">
+            <template #description>
+              <span data-testid="date-time-example">
+                {{ $t('settings.dateTimeExample', { example: d(now, 'dateTime') }) }}
+              </span>
+            </template>
             <v-btn-toggle
               :model-value="preferences.timeFormat"
               mandatory
               divided
               variant="outlined"
               color="primary"
+              density="comfortable"
               :disabled="saving"
               data-testid="time-format"
               @update:model-value="save({ time_format: $event })"
@@ -209,27 +219,23 @@ async function save(changes: PreferencesUpdate) {
                 {{ $t(`settings.timeFormats.${format}`) }}
               </v-btn>
             </v-btn-toggle>
-
-            <div class="text-body-2 text-medium-emphasis mt-4" data-testid="date-time-example">
-              {{ $t('settings.dateTimeExample', { example: d(now, 'dateTime') }) }}
-            </div>
-          </v-card-text>
+          </SettingRow>
         </v-card>
 
         <!-- How numbers are written and the currency shown (src/numberFormat.ts) -->
-        <v-card class="mb-4" data-testid="numbers">
-          <v-card-item prepend-icon="mdi-numeric">
-            <v-card-title>{{ $t('settings.numbers') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.numbersDescription') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
-            <div class="text-body-2 mb-2">{{ $t('settings.numberFormat') }}</div>
+        <div class="group-title">{{ $t('settings.numbers') }}</div>
+        <v-card class="mb-6" data-testid="numbers">
+          <SettingRow
+            :title="$t('settings.numberFormat')"
+            :description="$t('settings.rows.numberFormatHint')"
+          >
             <v-btn-toggle
               :model-value="preferences.numberFormat"
               mandatory
               divided
               variant="outlined"
               color="primary"
+              density="comfortable"
               :disabled="saving"
               class="flex-wrap"
               data-testid="number-format"
@@ -245,14 +251,20 @@ async function save(changes: PreferencesUpdate) {
                 {{ numberFormatLabel(format) }}
               </v-btn>
             </v-btn-toggle>
-
-            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.percentPlaces') }}</div>
+          </SettingRow>
+          <SettingRow :title="$t('settings.percentPlaces')">
+            <template #description>
+              <span data-testid="percent-example">
+                {{ $t('settings.percentPlacesHint') }} {{ $n(12.3456789, 'percentValue') }}%
+              </span>
+            </template>
             <v-btn-toggle
               :model-value="preferences.percentPlaces"
               mandatory
               divided
               variant="outlined"
               color="primary"
+              density="comfortable"
               :disabled="saving"
               data-testid="percent-places"
               @update:model-value="save({ percent_places: $event })"
@@ -267,43 +279,48 @@ async function save(changes: PreferencesUpdate) {
                 {{ places }}
               </v-btn>
             </v-btn-toggle>
-            <div class="text-caption text-medium-emphasis mt-1" data-testid="percent-example">
-              {{ $t('settings.percentPlacesHint') }} {{ $n(12.3456789, 'percentValue') }}%
-            </div>
-
-            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.currency') }}</div>
-            <div class="d-flex flex-wrap align-center ga-3">
+          </SettingRow>
+          <SettingRow :title="$t('settings.currency')" :description="$t('settings.currencyHint')">
+            <div class="d-flex flex-wrap align-center justify-end ga-2">
+              <v-chip label variant="tonal" size="small" data-testid="currency-symbol">
+                {{ $t('settings.currencySymbol') }}: {{ currency.symbol }}
+              </v-chip>
+              <v-chip label variant="tonal" size="small" data-testid="currency-code">
+                {{ $t('settings.currencyCode') }}: {{ currency.code }}
+              </v-chip>
               <v-autocomplete
                 :model-value="preferences.currency"
                 :items="currencies"
                 item-title="title"
                 item-value="code"
-                :label="$t('settings.currency')"
                 :disabled="saving"
                 density="compact"
                 hide-details
-                style="max-width: 360px; min-width: 260px"
+                class="control-wide"
+                :aria-label="$t('settings.currency')"
                 data-testid="currency"
                 @update:model-value="$event && save({ currency: $event })"
               />
-              <v-chip label variant="tonal" data-testid="currency-symbol">
-                {{ $t('settings.currencySymbol') }}: {{ currency.symbol }}
-              </v-chip>
-              <v-chip label variant="tonal" data-testid="currency-code">
-                {{ $t('settings.currencyCode') }}: {{ currency.code }}
-              </v-chip>
             </div>
-            <div class="text-caption text-medium-emphasis mt-1">
-              {{ $t('settings.currencyHint') }}
-            </div>
-
-            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.currencyDisplay') }}</div>
+          </SettingRow>
+          <SettingRow :title="$t('settings.currencyDisplay')">
+            <template #description>
+              {{ $t('settings.rows.currencyDisplayHint') }}
+              <span data-testid="numbers-example">
+                {{
+                  $t('settings.numbersExample', {
+                    example: formatMoney('1234567.89', preferences.currency, locale),
+                  })
+                }}
+              </span>
+            </template>
             <v-btn-toggle
               :model-value="preferences.currencyDisplay"
               mandatory
               divided
               variant="outlined"
               color="primary"
+              density="comfortable"
               :disabled="saving"
               data-testid="currency-display"
               @update:model-value="save({ currency_display: $event })"
@@ -318,31 +335,22 @@ async function save(changes: PreferencesUpdate) {
                 {{ $t(`settings.currencyDisplays.${shown}`, currency) }}
               </v-btn>
             </v-btn-toggle>
-
-            <div class="text-body-2 text-medium-emphasis mt-4" data-testid="numbers-example">
-              {{
-                $t('settings.numbersExample', {
-                  example: formatMoney('1234567.89', preferences.currency, locale),
-                })
-              }}
-            </div>
-          </v-card-text>
+          </SettingRow>
         </v-card>
       </v-window-item>
+
+      <!-- Appearance -->
       <v-window-item value="appearance" eager :transition="false" :reverse-transition="false">
-        <v-card class="mb-4">
-          <v-card-item prepend-icon="mdi-palette-outline">
-            <v-card-title>{{ $t('settings.appearance') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.themeDescription') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
-            <div class="text-body-2 mb-2">{{ $t('settings.theme') }}</div>
+        <div class="group-title">{{ $t('settings.appearance') }}</div>
+        <v-card class="mb-6">
+          <SettingRow :title="$t('settings.theme')" :description="$t('settings.rows.themeHint')">
             <v-btn-toggle
               :model-value="preferences.theme"
               mandatory
               divided
               variant="outlined"
               color="primary"
+              density="comfortable"
               :disabled="saving"
               data-testid="theme-toggle"
               @update:model-value="save({ theme: $event })"
@@ -356,67 +364,73 @@ async function save(changes: PreferencesUpdate) {
                 {{ $t(`settings.themes.${item.value}`) }}
               </v-btn>
             </v-btn-toggle>
-
-            <!-- Color theme: each one in a light and a dark version (the mode above) -->
-            <div class="text-body-2 mt-6 mb-2">{{ $t('settings.colorTheme') }}</div>
-            <div class="d-flex flex-wrap ga-3" data-testid="color-themes">
-              <v-card
-                v-for="colorTheme in COLOR_THEMES"
-                :key="colorTheme.id"
-                :variant="preferences.colorTheme === colorTheme.id ? 'outlined' : 'flat'"
-                :color="preferences.colorTheme === colorTheme.id ? 'primary' : undefined"
-                :class="{ 'color-theme--selected': preferences.colorTheme === colorTheme.id }"
-                class="color-theme pa-3"
-                width="260"
-                :disabled="saving"
-                :aria-pressed="preferences.colorTheme === colorTheme.id"
-                :data-testid="`color-theme-${colorTheme.id}`"
-                @click="save({ color_theme: colorTheme.id })"
-              >
-                <div class="swatches d-flex rounded overflow-hidden mb-2" style="height: 36px">
-                  <div
-                    v-for="swatch in colorTheme.swatches"
-                    :key="swatch"
-                    class="flex-grow-1"
-                    :style="{ background: swatch }"
-                  />
-                </div>
-                <div class="d-flex align-center justify-space-between">
-                  <div>
-                    <div class="text-body-2 font-weight-medium">{{ colorTheme.name }}</div>
+          </SettingRow>
+          <!-- Color theme: each one in a light and a dark version (the mode above) -->
+          <SettingRow
+            :title="$t('settings.colorTheme')"
+            :description="$t('settings.rows.colorThemeHint')"
+          >
+            <template #below>
+              <div class="d-flex flex-wrap ga-3" data-testid="color-themes">
+                <v-card
+                  v-for="colorTheme in COLOR_THEMES"
+                  :key="colorTheme.id"
+                  :variant="preferences.colorTheme === colorTheme.id ? 'outlined' : 'flat'"
+                  :color="preferences.colorTheme === colorTheme.id ? 'primary' : undefined"
+                  :class="{ 'color-theme--selected': preferences.colorTheme === colorTheme.id }"
+                  class="color-theme pa-3"
+                  width="240"
+                  :disabled="saving"
+                  :aria-pressed="preferences.colorTheme === colorTheme.id"
+                  :data-testid="`color-theme-${colorTheme.id}`"
+                  @click="save({ color_theme: colorTheme.id })"
+                >
+                  <div class="swatches d-flex rounded overflow-hidden mb-2" style="height: 32px">
                     <div
-                      class="text-caption text-medium-emphasis"
-                      :style="{ fontFamily: `${colorTheme.fontFamily} !important` }"
-                    >
-                      Aa · {{ colorTheme.fontName }}
-                    </div>
+                      v-for="swatch in colorTheme.swatches"
+                      :key="swatch"
+                      class="flex-grow-1"
+                      :style="{ background: swatch }"
+                    />
                   </div>
-                  <v-icon
-                    v-if="preferences.colorTheme === colorTheme.id"
-                    icon="mdi-check-circle"
-                    color="primary"
-                    size="small"
-                  />
-                </div>
-              </v-card>
-            </div>
-          </v-card-text>
-        </v-card>
-
-        <!-- Size of the interface (text, spacing, fields): automatic by the window's width -->
-        <v-card class="mb-4">
-          <v-card-item prepend-icon="mdi-magnify-plus-outline">
-            <v-card-title>{{ $t('settings.uiScale') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.uiScaleDescription') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
+                  <div class="d-flex align-center justify-space-between">
+                    <div>
+                      <div class="text-body-2 font-weight-medium">{{ colorTheme.name }}</div>
+                      <div
+                        class="text-caption text-medium-emphasis"
+                        :style="{ fontFamily: `${colorTheme.fontFamily} !important` }"
+                      >
+                        Aa · {{ colorTheme.fontName }}
+                      </div>
+                    </div>
+                    <v-icon
+                      v-if="preferences.colorTheme === colorTheme.id"
+                      icon="mdi-check-circle"
+                      color="primary"
+                      size="small"
+                    />
+                  </div>
+                </v-card>
+              </div>
+            </template>
+          </SettingRow>
+          <!-- Size of the interface (text, spacing, fields): automatic by the window's width -->
+          <SettingRow :title="$t('settings.uiScale')">
+            <template #description>
+              {{ $t('settings.uiScaleDescription') }}
+              <span data-testid="ui-scale-hint">
+                {{ $t('settings.uiScaleAutoHint', { percent: autoPercent() }) }}
+              </span>
+            </template>
             <v-btn-toggle
               :model-value="preferences.uiScale"
               mandatory
               divided
               variant="outlined"
               color="primary"
+              density="comfortable"
               :disabled="saving"
+              class="flex-wrap"
               data-testid="ui-scale-toggle"
               @update:model-value="save({ ui_scale: $event })"
             >
@@ -430,108 +444,102 @@ async function save(changes: PreferencesUpdate) {
                 {{ $t(`settings.uiScales.${scale}`) }}
               </v-btn>
             </v-btn-toggle>
-            <div class="text-caption text-medium-emphasis mt-2" data-testid="ui-scale-hint">
-              {{ $t('settings.uiScaleAutoHint', { percent: autoPercent() }) }}
-            </div>
-          </v-card-text>
+          </SettingRow>
         </v-card>
       </v-window-item>
+
+      <!-- Smart Tools: conveniences of the interface, each turned on or off (src/smartTools.ts) -->
       <v-window-item value="smartTools" eager :transition="false" :reverse-transition="false">
-        <!-- Smart Tools: conveniences of the interface, each turned on or off (src/smartTools.ts) -->
-        <v-card class="mb-4" data-testid="smart-tools">
-          <v-card-item prepend-icon="mdi-auto-fix">
-            <v-card-title>{{ $t('settings.smartTools.title') }}</v-card-title>
-            <v-card-subtitle>{{ $t('settings.smartTools.description') }}</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
+        <div class="group-title">{{ $t('settings.smartTools.title') }}</div>
+        <v-card class="mb-6" data-testid="smart-tools">
+          <SettingRow
+            :title="$t('settings.smartTools.selectOnFocus')"
+            :description="$t('settings.smartTools.selectOnFocusHint')"
+          >
             <v-switch
               :model-value="preferences.selectOnFocus"
               color="primary"
               inset
               hide-details
+              density="compact"
               :disabled="saving"
+              :aria-label="$t('settings.smartTools.selectOnFocus')"
               data-testid="select-on-focus"
               @update:model-value="save({ select_on_focus: !!$event })"
-            >
-              <template #label>
-                <div>
-                  <div class="font-weight-medium">
-                    {{ $t('settings.smartTools.selectOnFocus') }}
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('settings.smartTools.selectOnFocusHint') }}
-                  </div>
-                </div>
-              </template>
-            </v-switch>
-            <v-divider class="my-4" />
+            />
+          </SettingRow>
+          <SettingRow
+            :title="$t('settings.smartTools.autoScope')"
+            :description="$t('settings.smartTools.autoScopeHint')"
+          >
             <v-switch
               :model-value="preferences.autoScope"
               color="primary"
               inset
               hide-details
+              density="compact"
               :disabled="saving"
+              :aria-label="$t('settings.smartTools.autoScope')"
               data-testid="auto-scope"
               @update:model-value="save({ auto_scope: !!$event })"
-            >
-              <template #label>
-                <div>
-                  <div class="font-weight-medium">{{ $t('settings.smartTools.autoScope') }}</div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('settings.smartTools.autoScopeHint') }}
-                  </div>
-                </div>
-              </template>
-            </v-switch>
+            />
+          </SettingRow>
+          <SettingRow
+            v-if="preferences.autoScope"
+            :title="$t('settings.smartTools.scopeThreshold')"
+            :description="$t('settings.smartTools.scopeThresholdHint')"
+            class="sub-row"
+          >
             <v-text-field
-              v-if="preferences.autoScope"
               v-model="threshold"
-              :label="$t('settings.smartTools.scopeThreshold')"
-              :hint="$t('settings.smartTools.scopeThresholdHint')"
-              persistent-hint
               suffix="%"
               inputmode="decimal"
               :rules="[thresholdRule]"
               :disabled="saving"
               density="compact"
-              class="threshold mt-3 ml-14"
+              hide-details="auto"
+              class="control-narrow"
+              :aria-label="$t('settings.smartTools.scopeThreshold')"
               data-testid="scope-threshold"
               @blur="saveThreshold"
               @keydown.enter="saveThreshold"
             />
-            <v-divider class="my-4" />
-            <!-- A button inside some text fields searches the Internet (src/webSearch.ts) -->
+          </SettingRow>
+          <!-- A button inside some text fields searches the Internet (src/webSearch.ts) -->
+          <SettingRow
+            :title="$t('settings.webSearch.title')"
+            :description="$t('settings.webSearch.description')"
+          >
             <v-switch
               :model-value="preferences.webSearch"
               color="primary"
               inset
               hide-details
+              density="compact"
               :disabled="saving"
+              :aria-label="$t('settings.webSearch.title')"
               data-testid="web-search-switch"
               @update:model-value="save({ web_search: !!$event })"
-            >
-              <template #label>
-                <div>
-                  <div class="font-weight-medium">{{ $t('settings.webSearch.title') }}</div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('settings.webSearch.description') }}
-                  </div>
-                </div>
-              </template>
-            </v-switch>
+            />
+          </SettingRow>
+          <SettingRow
+            v-if="preferences.webSearch"
+            :title="$t('settings.webSearch.engine')"
+            :description="$t('settings.rows.engineHint')"
+            class="sub-row"
+          >
             <v-select
-              v-if="preferences.webSearch"
               :model-value="preferences.webSearchEngine"
               :items="WEB_SEARCH_OPTIONS"
-              :label="$t('settings.webSearch.engine')"
               :disabled="saving"
               density="compact"
               hide-details
-              class="threshold mt-3 ml-14"
+              class="control-wide"
+              :aria-label="$t('settings.webSearch.engine')"
               data-testid="web-search-engine"
               @update:model-value="save({ web_search_engine: $event })"
             />
-          </v-card-text>
+          </SettingRow>
         </v-card>
       </v-window-item>
     </v-window>
@@ -539,8 +547,25 @@ async function save(changes: PreferencesUpdate) {
 </template>
 
 <style scoped>
-.threshold {
-  max-width: 260px;
+/* A small caption over each card (the group of settings) */
+.group-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  margin: 0 0 8px 4px;
+}
+.control-wide {
+  width: 300px;
+  max-width: 100%;
+}
+.control-narrow {
+  width: 140px;
+}
+/* A setting that depends on the one above: indented */
+.sub-row {
+  padding-left: 48px !important;
 }
 .color-theme {
   cursor: pointer;

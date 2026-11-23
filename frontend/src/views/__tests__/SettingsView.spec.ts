@@ -82,7 +82,8 @@ describe('SettingsView', () => {
     const card = inBody('[data-testid="color-theme-metallic_foundations"]')!
     expect(card.textContent).toContain('Metallic Foundations')
     expect(card.getAttribute('aria-pressed')).toBe('true')
-    expect(inBody('[data-testid="color-themes"]')!.previousElementSibling!.textContent).toContain(
+    // A row of its own: title and description, the themes below
+    expect(inBody('[data-testid="color-themes"]')!.closest('.setting-row')!.textContent).toContain(
       'Color Theme',
     )
     wrapper.unmount()
@@ -168,7 +169,7 @@ describe('SettingsView', () => {
     const preferences = usePreferencesStore()
     const save = vi.spyOn(preferences, 'save').mockResolvedValue()
     const card = inBody('[data-testid="smart-tools"]')!
-    expect(card.textContent).toContain('Smart Tools')
+    expect(card.previousElementSibling!.textContent).toContain('Smart Tools')
     expect(card.textContent).toContain('Select on Focus')
     const toggle = inBody('[data-testid="select-on-focus"] input') as HTMLInputElement
     expect(toggle.checked).toBe(true)

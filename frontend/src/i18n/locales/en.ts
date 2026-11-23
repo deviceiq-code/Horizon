@@ -846,6 +846,16 @@ const en = {
     },
   },
   settings: {
+    rows: {
+      dateFormatHint: 'How dates are written.',
+      timeFormatHint: 'How times are written.',
+      numberFormatHint: 'Thousands and decimal separators.',
+      currencyDisplayHint: 'Shown on the left of every value field.',
+      themeHint: 'Light, dark or as your system.',
+      colorThemeHint: 'Colors and font; each in a light and a dark version.',
+      engineHint: 'Where the search opens.',
+      languageHint: 'Of the interface and of the system messages.',
+    },
     smartTools: {
       // A name: the same in every language
       title: 'Smart Tools',

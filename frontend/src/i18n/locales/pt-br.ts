@@ -846,6 +846,16 @@ const ptBR: Messages = {
     },
   },
   settings: {
+    rows: {
+      dateFormatHint: 'Como as datas são escritas.',
+      timeFormatHint: 'Como as horas são escritas.',
+      numberFormatHint: 'Separadores de milhar e de decimais.',
+      currencyDisplayHint: 'Mostrada à esquerda de todo campo de valor.',
+      themeHint: 'Claro, escuro ou como o seu sistema.',
+      colorThemeHint: 'Cores e fonte; cada um em versão clara e escura.',
+      engineHint: 'Onde a pesquisa abre.',
+      languageHint: 'Da interface e das mensagens do sistema.',
+    },
     smartTools: {
       // A name: the same in every language
       title: 'Smart Tools',

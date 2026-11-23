@@ -849,6 +849,16 @@ const es: Messages = {
     },
   },
   settings: {
+    rows: {
+      dateFormatHint: 'Cómo se escriben las fechas.',
+      timeFormatHint: 'Cómo se escriben las horas.',
+      numberFormatHint: 'Separadores de miles y de decimales.',
+      currencyDisplayHint: 'Se muestra a la izquierda de cada campo de valor.',
+      themeHint: 'Claro, oscuro o como su sistema.',
+      colorThemeHint: 'Colores y fuente; cada uno en versión clara y oscura.',
+      engineHint: 'Dónde se abre la búsqueda.',
+      languageHint: 'De la interfaz y de los mensajes del sistema.',
+    },
     smartTools: {
       // A name: the same in every language
       title: 'Smart Tools',

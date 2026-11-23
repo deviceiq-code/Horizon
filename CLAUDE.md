@@ -222,7 +222,10 @@ Multi-user web system for **operating lease residual value pricing**
     computer; the browser only keeps a copy for the login page. The interface's own state
     (side menu open/collapsed per window size, each grid's filter row) is `ui_state` (JSON,
     `preferences.saveUiState`), not localStorage.
-  - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools (`?tab=`).
+  - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools (`?tab=`),
+    laid out as Haze's settings: full width, a small caption per group, cards of rows —
+    `src/components/SettingRow.vue` (title and description on the left, the control on the
+    right; `below` slot for wide content; dependent settings indented with `sub-row`).
   - **Search the Internet** beside some text fields (`src/components/WebSearchButton.vue` in
     the field's `#append-inner`: disabled while empty, out of the Tab order, opens a new tab):
     Average Prices' Model (searched with its manufacturer: "Dell P2423H"); Customers' legal
