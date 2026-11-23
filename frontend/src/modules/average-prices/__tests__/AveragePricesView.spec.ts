@@ -148,11 +148,9 @@ async function fillNew(
   const amounts = document.body.querySelectorAll<HTMLInputElement>(
     '[data-testid="term-amount"] input',
   )
-  amounts[0]!.value = '70'
+  // 12 months as a % of the original value, 24 months as a value: the same field
+  amounts[0]!.value = '70%'
   amounts[0]!.dispatchEvent(new Event('input'))
-  await settle()
-  // 24 months as a fixed value
-  inBody('[data-testid="term-24"] [data-testid="mode-value"]')!.click()
   await settle()
   amounts[1]!.value = '55,000'
   amounts[1]!.dispatchEvent(new Event('input'))
@@ -318,10 +316,16 @@ describe('AveragePricesView', () => {
         { term_months: 24, mode: 'value', amount: '55000' },
       ],
     })
-    // Resolved by the API, not computed here
-    expect(inBody('[data-testid="term-12"] [data-testid="term-result"]')!.textContent).toMatch(
-      /R\$\s?70,000\.00/,
+    // Resolved by the API, not computed here: its share of the original value below it
+    expect(inBody('[data-testid="term-12"] [data-testid="term-percent"]')!.textContent).toContain(
+      '% Value (70.00%)',
     )
+    // Leaving the field, the % becomes its value (from the API)
+    const twelve = inBody('[data-testid="term-12"] input') as HTMLInputElement
+    twelve.dispatchEvent(new Event('blur'))
+    await settle()
+    expect(twelve.value).toBe('70,000.00')
+    await waitPreview()
     await click('save')
 
     expect(prices.createAveragePrice).toHaveBeenCalledWith({
@@ -334,7 +338,7 @@ describe('AveragePricesView', () => {
       currency: 'BRL',
       original_value: '100000.00',
       points: [
-        { term_months: 12, mode: 'percent', amount: '70' },
+        { term_months: 12, mode: 'value', amount: '70000.00' },
         { term_months: 24, mode: 'value', amount: '55000' },
       ],
       supersedes: null,
@@ -363,6 +367,30 @@ describe('AveragePricesView', () => {
     )
     await click('save')
     expect(prices.createAveragePrice).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('two tabs, the asset and its eFMV; saving opens the one with what is missing', async () => {
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('[data-testid="new"]').trigger('click')
+    await settle()
+    const active = () => inBody('.v-tab--selected')!.getAttribute('data-testid')
+    expect(active()).toBe('tab-asset')
+    await pickOption('asset-class', 'Excavators — Industry / Yellow line')
+    await pickOption('manufacturer', 'Caterpillar')
+    await typeInto('model', '320 GC')
+    await typeInto('spec-hours', '2,500')
+    // The asset is complete; its values are not
+    await click('save')
+    await settle()
+    expect(prices.createAveragePrice).not.toHaveBeenCalled()
+    expect(active()).toBe('tab-efmv')
+    // And back: the asset's tab with what is missing there
+    await typeInto('model', '')
+    await click('save')
+    await settle()
+    expect(active()).toBe('tab-asset')
     wrapper.unmount()
   })
 
@@ -416,8 +444,9 @@ describe('AveragePricesView', () => {
       expect.objectContaining({
         original_value: '110000',
         supersedes: 100,
+        // Shown and sent as values (as the eFMV cells)
         points: [
-          { term_months: 12, mode: 'percent', amount: '70' },
+          { term_months: 12, mode: 'value', amount: '70000.00' },
           { term_months: 24, mode: 'value', amount: '55000.00' },
         ],
       }),

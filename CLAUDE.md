@@ -261,7 +261,12 @@ Multi-user web system for **operating lease residual value pricing**
     "Filters" button — remembered per grid with `filters-storage-key`, turning off clears them); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
-  - `src/modules/average-prices/` — grid (ServerCrudTable; edit = "New version"; delete = all
+  - `src/modules/average-prices/` — form in two tabs, Asset (class, manufacturer, model,
+    description, keywords, specifications) and eFMV (a field per term, as the eFMV cells:
+    money or "70%" of the original value — `termInput.ts::parseTermInput` —, a % becomes its
+    value when the field is left, chip "% Value (x%)" below; `TermPointsInput.vue`), the
+    original value in the header on the right (FormDialog `heading-end`); saving opens the tab
+    with an error; grid (ServerCrudTable; edit = "New version"; delete = all
     versions; rows with previous versions expand to list all versions and their average; column
     filters in `AveragePriceFilters.ts` → `?asset_class=&model=&original_value_min/max=&
     created_from/to=`), form (asset
@@ -347,7 +352,8 @@ Multi-user web system for **operating lease residual value pricing**
     information about the form: icon, title, a subtitle such as the record being edited;
     `heading` slot to replace them, `header` slot for more fixed content such as tabs or a
     search field), body (default slot: the other controls — **the only part that scrolls**) and
-    footer (`actions` slot: only the form's buttons, on the right). The whole dialog is one
+    footer (`actions` slot: only the form's buttons, on the right). `heading-end`: what
+    matters most, on the header's right (e.g. a price's original value). The whole dialog is one
     form (`@submit`, exposed `validate()`); never nest another `v-form` inside it.
   - `src/components/ConfirmDialog.vue` — generic confirmation dialog (a FormDialog too).
   - `src/composables/useServerTable.ts` — grid state/loading for `v-data-table-server`.

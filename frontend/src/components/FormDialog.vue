@@ -2,8 +2,9 @@
 /**
  * Every form (dialog) in three parts:
  * - header: what the form is about — icon, title, a line of basic information (e.g. the record
- *   being edited; `heading` slot to show it otherwise) and, optionally, more in the `header`
- *   slot (fixed);
+ *   being edited; `heading` slot to show it otherwise), on the right what matters most at a
+ *   glance (`heading-end` slot, e.g. a key value) and, optionally, more in the `header` slot
+ *   (fixed);
  * - body (default slot): the other controls — the only part that scrolls;
  * - footer (`actions` slot): only the form's buttons (fixed), on the right.
  * The whole dialog is a form: Enter or a submit button emits `submit`; `validate()` checks its
@@ -40,7 +41,7 @@ defineExpose({
         <header class="form-dialog__header" data-testid="form-dialog-header">
           <!-- `heading` replaces the icon, title and subtitle (e.g. with a photo) -->
           <slot v-if="$slots.heading" name="heading" />
-          <div v-else class="d-flex align-center ga-3">
+          <div v-else class="d-flex align-center ga-3 flex-wrap">
             <v-avatar v-if="icon" color="primary" variant="tonal" rounded="lg" size="40">
               <v-icon :icon="icon" />
             </v-avatar>
@@ -49,6 +50,10 @@ defineExpose({
               <div v-if="subtitle" class="form-dialog__subtitle text-truncate">
                 {{ subtitle }}
               </div>
+            </div>
+            <!-- On the right: what matters most at a glance -->
+            <div v-if="$slots['heading-end']" class="form-dialog__heading-end">
+              <slot name="heading-end" />
             </div>
           </div>
           <slot name="header" />
@@ -101,6 +106,9 @@ defineExpose({
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 24px;
+}
+.form-dialog__heading-end {
+  margin-left: auto;
 }
 .min-w-0 {
   min-width: 0;

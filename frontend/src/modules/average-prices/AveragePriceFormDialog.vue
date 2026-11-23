@@ -7,15 +7,16 @@
  */
 import FormDialog from '@/components/FormDialog.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
 import { useValidationRules } from '@/composables/useValidationRules'
 import AssetClassPicker from '@/modules/catalogs/asset-classes/AssetClassPicker.vue'
 import { getAssetClass, type AssetClass } from '@/modules/catalogs/asset-classes/api'
 import ManufacturerPicker from '@/modules/catalogs/manufacturers/ManufacturerPicker.vue'
-import { parseMoney, toInputNumber } from '@/utils/money'
+import { currencySymbol, parseMoney, toInputMoney, toInputNumber } from '@/utils/money'
 import SpecValuesInput from './SpecValuesInput.vue'
+import { parseTermInput } from './termInput'
 import TermPointsInput, { type TermEntry } from './TermPointsInput.vue'
 import {
   createAveragePrice,
@@ -40,6 +41,9 @@ const assetClass = ref<AssetClass | null>(null)
 const manufacturerId = ref<number | null>(null)
 const model = ref('')
 const description = ref('')
+/** Two tabs: the asset (what it is) and its eFMV (original value and value per term) */
+type Tab = 'asset' | 'efmv'
+const tab = ref<Tab>('asset')
 const keywords = ref<string[]>([])
 const specs = ref<Record<string, string>>({})
 const originalText = ref('')
@@ -71,7 +75,7 @@ const originalRules = [
 /** Terms of the (new) sub-vertical, keeping what was typed for terms that remain. */
 function rebuildEntries(previous: Record<number, TermEntry>) {
   entries.value = Object.fromEntries(
-    terms.value.map((term) => [term, previous[term] ?? { mode: 'percent', text: '' }]),
+    terms.value.map((term) => [term, previous[term] ?? { text: '' }]),
   )
 }
 
@@ -89,6 +93,7 @@ watch(open, async (isOpen) => {
   generalError.value = ''
   resolved.value = null
   openCount.value += 1
+  tab.value = 'asset'
 
   const s = props.source
   assetClassId.value = s?.asset_class.id ?? null
@@ -110,13 +115,8 @@ watch(open, async (isOpen) => {
   const previous: Record<number, TermEntry> = Object.fromEntries(
     (s?.points ?? []).map((p) => [
       p.term_months,
-      {
-        mode: p.mode,
-        text:
-          p.mode === 'value'
-            ? toInputNumber(p.amount, locale.value, 2, 2)
-            : toInputNumber(p.amount, locale.value, 0, 4),
-      },
+      // As the eFMV cells: the value (a % typed back then is shown as its value)
+      { text: toInputMoney(p.value, locale.value) },
     ]),
   )
   entries.value = {}
@@ -142,9 +142,9 @@ function typedPoints(): PricePointInput[] | null {
   for (const term of terms.value) {
     const entry = entries.value[term]
     if (!entry) return null
-    const amount = parseMoney(entry.text, locale.value, entry.mode === 'percent' ? 4 : 2)
-    if (amount === null) return null
-    points.push({ term_months: term, mode: entry.mode, amount })
+    const parsed = parseTermInput(entry.text, locale.value)
+    if (parsed === null) return null
+    points.push({ term_months: term, ...parsed })
   }
   return points.length ? points : null
 }
@@ -188,6 +188,14 @@ function canonicalSpecs(): Record<string, string> {
   )
 }
 
+/** Open the first tab with a field in error (both tabs stay mounted, so both validate). */
+async function openTabWithErrors() {
+  await nextTick()
+  const field = document.querySelector('[data-form-tab] .v-input--error')
+  const name = field?.closest<HTMLElement>('[data-form-tab]')?.dataset.formTab
+  if (name === 'asset' || name === 'efmv') tab.value = name
+}
+
 function applyErrors(body: Record<string, unknown>, sentTerms: number[]) {
   const { specs: specErr, points: pointErr, ...rest } = body
   fieldErrors.value = Object.fromEntries(
@@ -210,10 +218,18 @@ function applyErrors(body: Record<string, unknown>, sentTerms: number[]) {
 
 async function submit() {
   const result = await formRef.value?.validate()
-  if (!result?.valid || assetClassId.value === null || manufacturerId.value === null) return
   const points = typedPoints()
   const original = parseMoney(originalText.value, locale.value)
-  if (!points || !original) return
+  if (
+    !result?.valid ||
+    assetClassId.value === null ||
+    manufacturerId.value === null ||
+    !points ||
+    !original
+  ) {
+    await openTabWithErrors()
+    return
+  }
 
   saving.value = true
   fieldErrors.value = {}
@@ -242,6 +258,7 @@ async function submit() {
         body as Record<string, unknown>,
         points.map((p) => p.term_months),
       )
+      await openTabWithErrors()
     } else {
       generalError.value = t('common.saveError')
     }
@@ -262,119 +279,159 @@ async function submit() {
     :persistent="saving"
     @submit="submit"
   >
+    <!-- The asset's value: what matters most, in the header on the right (both tabs) -->
+    <template #heading-end>
+      <v-text-field
+        v-model="originalText"
+        :label="$t('averagePrices.fields.originalValue')"
+        inputmode="decimal"
+        :rules="originalRules"
+        :error-messages="fieldErrors.original_value"
+        density="comfortable"
+        hide-details="auto"
+        class="original-value"
+        data-testid="original-value"
+      >
+        <!-- Always shown, as in the terms -->
+        <template #prepend-inner
+          ><span class="text-medium-emphasis mr-1">{{
+            currencySymbol(CURRENCY, locale)
+          }}</span></template
+        >
+      </v-text-field>
+    </template>
+    <template #header>
+      <v-tabs v-model="tab" color="primary" density="compact" class="mt-2">
+        <v-tab value="asset" prepend-icon="mdi-cube-outline" data-testid="tab-asset">
+          {{ $t('averagePrices.formTabs.asset') }}
+        </v-tab>
+        <v-tab value="efmv" prepend-icon="mdi-chart-line" data-testid="tab-efmv">
+          {{ $t('averagePrices.formTabs.efmv') }}
+        </v-tab>
+      </v-tabs>
+    </template>
+
     <v-progress-linear v-if="loadingSource" indeterminate class="mb-4" />
 
-    <!-- Asset -->
-    <div class="text-subtitle-1 mb-2">{{ $t('averagePrices.sections.asset') }}</div>
-    <v-row dense>
-      <v-col cols="12" md="7">
-        <AssetClassPicker
-          :key="`asset-${openCount}`"
-          v-model="assetClassId"
-          :initial-option="assetClass"
-          :label="$t('averagePrices.fields.assetClass')"
-          :rules="required"
-          :error-messages="fieldErrors.asset_class"
-          data-testid="asset-class"
-          @selected="onAssetClassSelected"
-        />
-      </v-col>
-      <v-col cols="12" md="5">
-        <ManufacturerPicker
-          :key="`manufacturer-${openCount}`"
-          v-model="manufacturerId"
-          :initial-option="source?.manufacturer ?? null"
-          :label="$t('averagePrices.fields.manufacturer')"
-          :rules="required"
-          :error-messages="fieldErrors.manufacturer"
-          data-testid="manufacturer"
-        />
-      </v-col>
-      <v-col cols="12">
-        <v-text-field
-          v-model="model"
-          :label="$t('averagePrices.fields.model')"
-          :rules="[rules.required, rules.maxLength(150)]"
-          :error-messages="fieldErrors.model"
-          maxlength="150"
-          data-testid="model"
-        />
-      </v-col>
-      <v-col cols="12">
-        <v-textarea
-          v-model="description"
-          :label="$t('averagePrices.fields.description')"
-          :hint="$t('averagePrices.descriptionHint')"
-          persistent-hint
-          :error-messages="fieldErrors.description"
-          rows="3"
-          auto-grow
-          data-testid="description"
-        />
-      </v-col>
-      <v-col cols="12">
-        <KeywordsField
-          v-model="keywords"
-          :error-messages="fieldErrors.keywords"
-          data-testid="keywords"
-          @update:model-value="fieldErrors.keywords = []"
-        />
-      </v-col>
-    </v-row>
-
-    <!-- Specifications (template of the sub-vertical) -->
-    <template v-if="subVertical">
-      <div class="text-subtitle-1 mt-4">{{ $t('averagePrices.sections.specs') }}</div>
-      <p class="text-body-2 text-medium-emphasis mb-2">{{ subVertical.label }}</p>
-      <SpecValuesInput
-        v-model="specs"
-        :template="template"
-        :asset-class-id="assetClass?.id ?? null"
-        :errors="specErrors"
-      />
-    </template>
-
-    <!-- Values -->
-    <div class="text-subtitle-1 mt-4 mb-2">{{ $t('averagePrices.sections.values') }}</div>
-    <v-text-field
-      v-model="originalText"
-      :label="$t('averagePrices.fields.originalValue')"
-      :prefix="CURRENCY"
-      inputmode="decimal"
-      :rules="originalRules"
-      :error-messages="fieldErrors.original_value"
-      style="max-width: 320px"
-      data-testid="original-value"
-    />
-    <p v-if="!subVertical" class="text-body-2 text-medium-emphasis">
-      {{ $t('averagePrices.chooseAssetClassFirst') }}
-    </p>
-    <template v-else>
-      <p class="text-body-2 text-medium-emphasis mb-2">
-        {{ $t('averagePrices.termsHint') }}
-      </p>
-      <TermPointsInput
-        v-model="entries"
-        :terms="terms"
-        :currency="CURRENCY"
-        :resolved="resolved"
-        :errors="termErrors"
-      />
-      <v-alert
-        v-if="resolved?.increasing_terms.length"
-        type="warning"
-        variant="tonal"
-        density="compact"
-        class="mt-3"
-        data-testid="increasing-warning"
+    <!-- Every tab stays mounted (eager) so the form validates both -->
+    <!-- Room for the first fields' floating labels (the window clips its content) -->
+    <v-window v-model="tab" class="pt-2">
+      <!-- The asset: what it is -->
+      <v-window-item
+        value="asset"
+        eager
+        :transition="false"
+        :reverse-transition="false"
+        data-form-tab="asset"
       >
-        {{
-          $t('averagePrices.increasingWarning', {
-            terms: resolved.increasing_terms.join(', '),
-          })
-        }}
-      </v-alert>
-    </template>
+        <v-row dense>
+          <v-col cols="12" md="7">
+            <AssetClassPicker
+              :key="`asset-${openCount}-${loadingSource}`"
+              v-model="assetClassId"
+              :initial-option="assetClass"
+              :label="$t('averagePrices.fields.assetClass')"
+              :rules="required"
+              :error-messages="fieldErrors.asset_class"
+              data-testid="asset-class"
+              @selected="onAssetClassSelected"
+            />
+          </v-col>
+          <v-col cols="12" md="5">
+            <ManufacturerPicker
+              :key="`manufacturer-${openCount}`"
+              v-model="manufacturerId"
+              :initial-option="source?.manufacturer ?? null"
+              :label="$t('averagePrices.fields.manufacturer')"
+              :rules="required"
+              :error-messages="fieldErrors.manufacturer"
+              data-testid="manufacturer"
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-text-field
+              v-model="model"
+              :label="$t('averagePrices.fields.model')"
+              :rules="[rules.required, rules.maxLength(150)]"
+              :error-messages="fieldErrors.model"
+              maxlength="150"
+              data-testid="model"
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-textarea
+              v-model="description"
+              :label="$t('averagePrices.fields.description')"
+              :hint="$t('averagePrices.descriptionHint')"
+              persistent-hint
+              :error-messages="fieldErrors.description"
+              rows="3"
+              auto-grow
+              data-testid="description"
+            />
+          </v-col>
+          <v-col cols="12">
+            <KeywordsField
+              v-model="keywords"
+              :error-messages="fieldErrors.keywords"
+              data-testid="keywords"
+              @update:model-value="fieldErrors.keywords = []"
+            />
+          </v-col>
+        </v-row>
+
+        <!-- Specifications (template of the sub-vertical) -->
+        <template v-if="subVertical">
+          <div class="text-subtitle-1 mt-2">{{ $t('averagePrices.sections.specs') }}</div>
+          <p class="text-body-2 text-medium-emphasis mb-2">{{ subVertical.label }}</p>
+          <SpecValuesInput
+            v-model="specs"
+            :template="template"
+            :asset-class-id="assetClass?.id ?? null"
+            :errors="specErrors"
+          />
+        </template>
+      </v-window-item>
+
+      <!-- Its eFMV: the original value and the value at each term -->
+      <v-window-item
+        value="efmv"
+        eager
+        :transition="false"
+        :reverse-transition="false"
+        data-form-tab="efmv"
+      >
+        <p v-if="!subVertical" class="text-body-2 text-medium-emphasis">
+          {{ $t('averagePrices.chooseAssetClassFirst') }}
+        </p>
+        <template v-else>
+          <p class="text-body-2 text-medium-emphasis mb-2">
+            {{ $t('averagePrices.termsHint') }}
+          </p>
+          <TermPointsInput
+            v-model="entries"
+            :terms="terms"
+            :currency="CURRENCY"
+            :resolved="resolved"
+            :errors="termErrors"
+          />
+          <v-alert
+            v-if="resolved?.increasing_terms.length"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+            data-testid="increasing-warning"
+          >
+            {{
+              $t('averagePrices.increasingWarning', {
+                terms: resolved.increasing_terms.join(', '),
+              })
+            }}
+          </v-alert>
+        </template>
+      </v-window-item>
+    </v-window>
 
     <v-alert v-if="generalError" type="error" variant="tonal" density="compact" class="mt-3">
       {{ generalError }}
@@ -397,3 +454,15 @@ async function submit() {
     </template>
   </FormDialog>
 </template>
+
+<style scoped>
+.original-value {
+  width: 260px;
+}
+.original-value :deep(input) {
+  text-align: end;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+</style>
