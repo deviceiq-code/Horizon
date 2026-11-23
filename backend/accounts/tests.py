@@ -164,3 +164,34 @@ def test_automatic_scope_on_by_default_with_a_5_percent_threshold(logged_client)
     assert (r.json()["auto_scope"], r.json()["scope_threshold"]) == (False, "12.50")
     r = _patch(logged_client, {"scope_threshold": "150"})
     assert r.status_code == 400 and "scope_threshold" in r.json()
+
+
+def test_number_format_currency_and_interface_state(logged_client, user):
+    r = logged_client.get("/api/auth/preferences/").json()
+    assert (r["number_format"], r["currency"], r["currency_display"], r["ui_state"]) == (
+        "auto",
+        "BRL",
+        "symbol",
+        {},
+    )
+    assert _patch(logged_client, {"currency": "USD"}).json()["currency"] == "USD"
+    assert _patch(logged_client, {"currency": "XYZ"}).status_code == 400
+    assert _patch(logged_client, {"currency_display": "none"}).status_code == 400
+    assert _patch(logged_client, {"percent_places": 4}).json()["percent_places"] == 4
+    for places in (0, 6):
+        assert _patch(logged_client, {"percent_places": places}).status_code == 400
+    state = {"sideMenu": {"wide": "closed"}, "filters": {"customers": True}}
+    r = _patch(
+        logged_client,
+        {"number_format": "space_comma", "currency_display": "code", "ui_state": state},
+    )
+    assert r.status_code == 200, r.json()
+    prefs = UserPreferences.objects.get(user=user)
+    assert (prefs.number_format, prefs.currency_display, prefs.ui_state) == (
+        "space_comma",
+        "code",
+        state,
+    )
+    assert _patch(logged_client, {"number_format": "x"}).status_code == 400
+    assert _patch(logged_client, {"ui_state": ["not", "an", "object"]}).status_code == 400
+    assert _patch(logged_client, {"ui_state": {"big": "x" * 30_000}}).status_code == 400

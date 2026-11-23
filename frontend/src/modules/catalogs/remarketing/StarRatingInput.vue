@@ -4,7 +4,7 @@
  * is 0 stars. Clicking the selected star again sets it back to 0.
  */
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { numberToStars, starsToNumber } from './stars'
 
 const model = defineModel<string>({ required: true })
@@ -20,7 +20,7 @@ withDefaults(
   { hint: undefined, errorMessages: undefined, disabled: false, rules: () => [] },
 )
 
-const { n } = useI18n()
+const { n } = useNumberFormat()
 
 const stars = computed<number>({
   get: () => starsToNumber(model.value),

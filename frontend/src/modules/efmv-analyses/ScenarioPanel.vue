@@ -10,6 +10,7 @@ import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { usePreferencesStore } from '@/stores/preferences'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { specSummary } from '@/modules/average-prices/specText'
 import { currencySymbol, toInputMoney } from '@/utils/money'
@@ -48,7 +49,8 @@ const props = defineProps<{
   scopeLabel: string | null
 }>()
 
-const { t, n, locale } = useI18n()
+const { t, locale } = useI18n()
+const { n } = useNumberFormat()
 // Dates in the formats the user chose (Settings)
 const { d } = useDateFormat()
 const rules = useValidationRules()

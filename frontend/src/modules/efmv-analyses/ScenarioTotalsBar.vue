@@ -5,11 +5,13 @@
  */
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { formatMoney } from '@/utils/money'
 import type { ScenarioTotals } from './api'
 
 const props = defineProps<{ totals: ScenarioTotals | null; currency: string; loading?: boolean }>()
-const { n, locale } = useI18n()
+const { locale } = useI18n()
+const { n } = useNumberFormat()
 
 const percent = (value: string | null | undefined) =>
   value === null || value === undefined ? '—' : `${n(Number(value), 'percentValue')}%`

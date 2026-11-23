@@ -6,6 +6,7 @@
  */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import RemoteAutocomplete, { type RemoteOption } from '@/components/RemoteAutocomplete.vue'
 import { listAveragePrices, type AveragePrice } from '@/modules/average-prices/api'
 import { specSummary } from '@/modules/average-prices/specText'
@@ -18,7 +19,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ pick: [id: number] }>()
 
-const { t, n } = useI18n()
+const { t } = useI18n()
+const { n } = useNumberFormat()
 
 /** "320 GC (2500 h, Steel, Cab: Yes)": the filled specifications, in template order. */
 function optionTitle(row: AveragePrice): string {

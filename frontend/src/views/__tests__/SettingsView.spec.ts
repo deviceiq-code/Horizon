@@ -8,7 +8,7 @@ import vuetify from '@/plugins/vuetify'
 import { useAuthStore, type User } from '@/stores/auth'
 import { usePreferencesStore } from '@/stores/preferences'
 import { useSystemSettingsStore } from '@/stores/systemSettings'
-import { click, inBody, settle } from '@/test-utils'
+import { click, inBody, pickOption, settle } from '@/test-utils'
 import SettingsView from '../SettingsView.vue'
 
 const user = (is_admin: boolean): User => ({
@@ -28,6 +28,11 @@ const user = (is_admin: boolean): User => ({
     select_on_focus: true,
     auto_scope: true,
     scope_threshold: '5.00',
+    number_format: 'auto',
+    percent_places: 2,
+    currency: 'BRL',
+    currency_display: 'symbol',
+    ui_state: {},
     updated_at: '',
   },
 })
@@ -107,6 +112,52 @@ describe('SettingsView', () => {
     expect(inBody('[data-testid="date-time-example"]')!.textContent).toMatch(
       /Now: \d{4}-\d{2}-\d{2}, \d{2}:\d{2}/,
     )
+    wrapper.unmount()
+  })
+
+  it('in tabs; the open one is in the address', async () => {
+    const { wrapper, router } = await mountAt('/settings', false)
+    const active = () => inBody('[data-testid="settings-sections"] .v-tab--selected')!.textContent
+    expect(active()).toContain('Language and Region')
+    await click('tab-appearance')
+    await settle()
+    expect(router.currentRoute.value.query.tab).toBe('appearance')
+    expect(active()).toContain('Appearance')
+    wrapper.unmount()
+    const again = await mountAt('/settings?tab=smartTools', false)
+    expect(active()).toContain('Smart Tools')
+    again.wrapper.unmount()
+  })
+
+  it('numbers and currency: the format, the currency (symbol and code) and how it shows', async () => {
+    const { wrapper } = await mountAt('/settings', false)
+    const preferences = usePreferencesStore()
+    const save = vi.spyOn(preferences, 'save').mockResolvedValue()
+    const example = () => inBody('[data-testid="numbers-example"]')!.textContent!
+    expect(example()).toMatch(/R\$\s?1,234,567\.89/)
+    expect(inBody('[data-testid="currency-symbol"]')!.textContent).toContain('R$')
+    expect(inBody('[data-testid="currency-code"]')!.textContent).toContain('BRL')
+    await click('number-format-dot_comma')
+    expect(save).toHaveBeenCalledWith({ number_format: 'dot_comma' })
+    await pickOption('currency', 'Euro (EUR)')
+    expect(save).toHaveBeenCalledWith({ currency: 'EUR' })
+    await click('currency-display-code')
+    expect(save).toHaveBeenCalledWith({ currency_display: 'code' })
+    await click('percent-places-4')
+    expect(save).toHaveBeenCalledWith({ percent_places: 4 })
+    expect(inBody('[data-testid="percent-example"]')!.textContent).toContain('12.35%')
+    // What is shown follows them at once
+    preferences.apply({ number_format: 'dot_comma', currency: 'EUR', currency_display: 'code' })
+    await settle()
+    expect(example()).toMatch(/EUR\s1\.234\.567,89/)
+    expect(inBody('[data-testid="currency-code"]')!.textContent).toContain('EUR')
+    expect(inBody('[data-testid="currency-display-symbol"]')!.textContent).toContain('Symbol (€)')
+    // Every percentage follows the decimal places chosen
+    preferences.apply({ percent_places: 4 })
+    await settle()
+    expect(inBody('[data-testid="percent-example"]')!.textContent).toContain('12,3457%')
+    preferences.apply({ percent_places: 2 })
+    preferences.apply({ number_format: 'auto', currency: 'BRL', currency_display: 'symbol' })
     wrapper.unmount()
   })
 

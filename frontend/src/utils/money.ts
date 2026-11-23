@@ -1,11 +1,14 @@
 /**
  * Money typed by the user and shown on screen. Values travel as decimal strings ("100000.50")
  * and are never turned into floats for calculations — the backend does all the math.
+ * Separators follow the user's number format and the currency is shown as they chose
+ * (src/numberFormat.ts); `language` is the interface's language.
  */
+import { numberLocale, numberSettings } from '@/numberFormat'
 
-/** Decimal separator of a UI language: "," for pt-br/es, "." for en. */
+/** Decimal separator in use: "," for pt-br/es, "." for en (or the user's number format). */
 export function decimalSeparator(language: string): ',' | '.' {
-  const parts = new Intl.NumberFormat(language).formatToParts(1.5)
+  const parts = new Intl.NumberFormat(numberLocale(language)).formatToParts(1.5)
   return parts.find((p) => p.type === 'decimal')?.value === ',' ? ',' : '.'
 }
 
@@ -45,21 +48,29 @@ function withPlaces(canonical: string, places: number): string | null {
   return canonical
 }
 
-/** "100000.5" + BRL → "R$ 100.000,50" (pt-br) / "R$100,000.50" (en). Display only. */
+/**
+ * "100000.5" + BRL → "R$ 100.000,50" (pt-br) / "R$100,000.50" (en); with the currency shown as
+ * a code "BRL 100.000,50". Display only.
+ */
 export function formatMoney(value: string, currency: string, language: string): string {
   // Number() only to format for display; values are never computed here
-  return new Intl.NumberFormat(language, { style: 'currency', currency }).format(Number(value))
+  return new Intl.NumberFormat(numberLocale(language), {
+    style: 'currency',
+    currency,
+    currencyDisplay: numberSettings.currency,
+  }).format(Number(value))
 }
 
-/** The currency's symbol in the UI language ("R$" for BRL; "$" for USD in en). */
+/** How the currency is shown beside a value: "R$" for BRL, or its code "BRL". */
 export function currencySymbol(currency: string, language: string): string {
+  if (numberSettings.currency === 'code') return currency
   const parts = new Intl.NumberFormat(language, { style: 'currency', currency }).formatToParts(0)
   return parts.find((part) => part.type === 'currency')?.value ?? currency
 }
 
 /** A decimal string as typed in the UI language ("100000.5" → "100.000,50" in pt-br). */
 export function toInputMoney(value: string, language: string, places = 2): string {
-  return new Intl.NumberFormat(language, {
+  return new Intl.NumberFormat(numberLocale(language), {
     minimumFractionDigits: places,
     maximumFractionDigits: places,
   }).format(Number(value))
@@ -75,7 +86,7 @@ export function toInputNumber(
   minPlaces = 0,
   maxPlaces = 4,
 ): string {
-  return new Intl.NumberFormat(language, {
+  return new Intl.NumberFormat(numberLocale(language), {
     minimumFractionDigits: minPlaces,
     maximumFractionDigits: maxPlaces,
   }).format(Number(value))

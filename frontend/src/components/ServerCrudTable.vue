@@ -7,7 +7,7 @@
  * show the `expanded-row` slot ({ item, columns }). Column filters: pass `filters` (sent to the
  * API as query parameters) and a `filter.<key>` slot per filtered column; they show in a row
  * under the titles, turned on and off with the "Filters" button (remembered per grid with
- * `filtersStorageKey`; turning them off clears them).
+ * `filtersStorageKey`, kept with the account; turning them off clears them).
  */
 import { computed, ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -16,6 +16,7 @@ import { deleteErrorMessage, type ListParams, type Paginated } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { activeFilters, useServerTable, type SortItem } from '@/composables/useServerTable'
 import { useNotificationsStore } from '@/stores/notifications'
+import { usePreferencesStore } from '@/stores/preferences'
 
 const props = defineProps<{
   fetchPage: (params: ListParams) => Promise<Paginated<T>>
@@ -121,25 +122,23 @@ const cellSlots = computed(() =>
 const hasFilterRow = computed(() => Object.keys(slots).some((name) => name.startsWith('filter.')))
 const filtering = computed(() => Object.keys(activeFilters(props.filters)).length > 0)
 
-// Filter row on/off (a per-browser convenience: storage may be unavailable)
-const storageKey = props.filtersStorageKey ? `horizon.filters.${props.filtersStorageKey}` : null
-function readShown(): boolean {
-  try {
-    return !!storageKey && localStorage.getItem(storageKey) === '1'
-  } catch {
-    return false
-  }
-}
-const filtersShown = ref(readShown() || !!props.showFiltersAtStart)
+// Filter row on/off, kept with the account (preferences' ui_state): the same on any computer
+const preferences = usePreferencesStore()
+const storageKey = props.filtersStorageKey
+const filtersShown = ref(
+  (!!storageKey && !!preferences.uiState.filters?.[storageKey]) || !!props.showFiltersAtStart,
+)
 
 function toggleFilters() {
   filtersShown.value = !filtersShown.value
   // Hidden filters must not keep filtering
   if (!filtersShown.value && filtering.value) emit('clearFilters')
-  try {
-    if (storageKey) localStorage.setItem(storageKey, filtersShown.value ? '1' : '0')
-  } catch {
-    /* not remembered */
+  if (storageKey) {
+    const shown = filtersShown.value
+    preferences.saveUiState((state) => ({
+      ...state,
+      filters: { ...state.filters, [storageKey]: shown },
+    }))
   }
 }
 

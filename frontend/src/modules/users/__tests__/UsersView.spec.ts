@@ -133,6 +133,11 @@ async function mountView(path = '/users', view: Component = UsersView) {
       select_on_focus: true,
       auto_scope: true,
       scope_threshold: '5.00',
+      number_format: 'auto',
+      percent_places: 2,
+      currency: 'BRL',
+      currency_display: 'symbol',
+      ui_state: {},
       updated_at: '',
     },
   }

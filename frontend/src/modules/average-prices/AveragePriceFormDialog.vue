@@ -7,6 +7,7 @@
  */
 import FormDialog from '@/components/FormDialog.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
+import MoneyField from '@/components/MoneyField.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -14,7 +15,7 @@ import { useValidationRules } from '@/composables/useValidationRules'
 import AssetClassPicker from '@/modules/catalogs/asset-classes/AssetClassPicker.vue'
 import { getAssetClass, type AssetClass } from '@/modules/catalogs/asset-classes/api'
 import ManufacturerPicker from '@/modules/catalogs/manufacturers/ManufacturerPicker.vue'
-import { currencySymbol, parseMoney, toInputMoney, toInputNumber } from '@/utils/money'
+import { parseMoney, toInputMoney, toInputNumber } from '@/utils/money'
 import SpecValuesInput from './SpecValuesInput.vue'
 import { parseTermInput } from './termInput'
 import TermPointsInput, { type TermEntry } from './TermPointsInput.vue'
@@ -281,24 +282,17 @@ async function submit() {
   >
     <!-- The asset's value: what matters most, in the header on the right (both tabs) -->
     <template #heading-end>
-      <v-text-field
+      <MoneyField
         v-model="originalText"
+        :currency="CURRENCY"
         :label="$t('averagePrices.fields.originalValue')"
-        inputmode="decimal"
         :rules="originalRules"
         :error-messages="fieldErrors.original_value"
         density="comfortable"
         hide-details="auto"
         class="original-value"
         data-testid="original-value"
-      >
-        <!-- Always shown, as in the terms -->
-        <template #prepend-inner
-          ><span class="text-medium-emphasis mr-1">{{
-            currencySymbol(CURRENCY, locale)
-          }}</span></template
-        >
-      </v-text-field>
+      />
     </template>
     <template #header>
       <v-tabs v-model="tab" color="primary" density="compact" class="mt-2">
@@ -460,9 +454,7 @@ async function submit() {
   width: 260px;
 }
 .original-value :deep(input) {
-  text-align: end;
   font-size: 1.125rem;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 </style>

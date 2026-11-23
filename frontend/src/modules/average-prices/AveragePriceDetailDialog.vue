@@ -8,6 +8,7 @@ import FormDialog from '@/components/FormDialog.vue'
 import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { formatMoney } from '@/utils/money'
 import {
   getAveragePrice,
@@ -26,7 +27,8 @@ const props = defineProps<{ rowId: number | null }>()
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ newVersion: [row: AveragePrice]; changed: [] }>()
 
-const { t, locale, n } = useI18n()
+const { t, locale } = useI18n()
+const { n } = useNumberFormat()
 // Dates in the formats the user chose (Settings)
 const { d } = useDateFormat()
 

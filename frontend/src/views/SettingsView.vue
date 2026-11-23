@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
- * The user's own settings (language, mode, color theme, interface size, date and time formats),
- * saved to their account. Global
- * settings are in Administration → System Settings.
+ * The user's own settings, in tabs — Language and Region (language, date and time, numbers and
+ * currency), Appearance (mode, color theme, interface size) and Smart Tools —, saved to their
+ * account (the database), so they follow the user to any computer. Global settings are in
+ * Administration → System Settings.
  */
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { normalizeDecimal } from '@/utils/decimal'
-import { toInputNumber } from '@/utils/money'
+import { formatMoney, toInputNumber } from '@/utils/money'
 import { useI18n } from 'vue-i18n'
 import { LANGUAGES } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -14,6 +16,21 @@ import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/st
 import { COLOR_THEMES } from '@/themes'
 import { UI_SCALE_ICONS, UI_SCALES, uiScaleFactor } from '@/uiScale'
 import { DATE_FORMATS, TIME_FORMATS } from '@/dateFormat'
+import {
+  CURRENCIES,
+  CURRENCY_DISPLAYS,
+  currencyInfo,
+  MAX_PERCENT_PLACES,
+  MIN_PERCENT_PLACES,
+  NUMBER_FORMATS,
+  type NumberFormat,
+} from '@/numberFormat'
+
+/** 1, 2… 5 decimal places of percentages */
+const PERCENT_PLACES = Array.from(
+  { length: MAX_PERCENT_PLACES - MIN_PERCENT_PLACES + 1 },
+  (_, i) => MIN_PERCENT_PLACES + i,
+)
 import { useDateFormat } from '@/composables/useDateFormat'
 
 const { t, locale } = useI18n()
@@ -23,6 +40,34 @@ const notifications = useNotificationsStore()
 const saving = ref(false)
 
 const THEMES = THEME_OPTIONS
+
+// Tabs: the open one is kept in the address (?tab=), so a link can open it
+type Tab = 'region' | 'appearance' | 'smartTools'
+const TABS: readonly Tab[] = ['region', 'appearance', 'smartTools']
+const route = useRoute()
+const router = useRouter()
+const tab = computed<Tab>({
+  get: () => {
+    const value = route.query.tab
+    return (TABS as readonly unknown[]).includes(value) ? (value as Tab) : 'region'
+  },
+  set: (value) => void router.replace({ query: { ...route.query, tab: value } }),
+})
+
+// The user's currency: chosen by name or code; its symbol and code come from it
+const currencies = computed(() =>
+  CURRENCIES.map((code) => {
+    const info = currencyInfo(code, locale.value)
+    return { ...info, title: `${info.name} (${info.code})` }
+  }),
+)
+const currency = computed(() => currencyInfo(preferences.currency, locale.value))
+
+/** "By the Language", or the format itself ("1.234,56") */
+const numberFormatLabel = (format: NumberFormat) =>
+  format === 'auto'
+    ? t('settings.numberFormats.auto')
+    : { dot_comma: '1.234,56', comma_dot: '1,234.56', space_comma: '1 234,56' }[format]
 
 // Smart Tools: the negligible threshold of the automatic scope (0–100 %), saved when left
 const threshold = ref(toInputNumber(preferences.scopeThreshold, locale.value))
@@ -71,253 +116,386 @@ async function save(changes: PreferencesUpdate) {
 
     <p class="text-medium-emphasis mb-4">{{ $t('settings.subtitle') }}</p>
 
-    <v-card class="mb-4">
-      <v-card-item prepend-icon="mdi-translate">
-        <v-card-title>{{ $t('settings.language') }}</v-card-title>
-        <v-card-subtitle>{{ $t('settings.languageDescription') }}</v-card-subtitle>
-      </v-card-item>
-      <v-card-text>
-        <v-select
-          :model-value="preferences.language"
-          :items="LANGUAGES"
-          item-title="name"
-          item-value="code"
-          :label="$t('settings.language')"
-          :disabled="saving"
-          hide-details
-          style="max-width: 360px"
-          data-testid="language-select"
-          @update:model-value="save({ language: $event })"
-        />
-      </v-card-text>
-    </v-card>
+    <!-- Grouped in tabs (the open one is in the address: ?tab=) -->
+    <v-tabs v-model="tab" color="primary" class="mb-4" data-testid="settings-sections">
+      <v-tab value="region" prepend-icon="mdi-earth" data-testid="tab-region">
+        {{ $t('settings.sections.region') }}
+      </v-tab>
+      <v-tab value="appearance" prepend-icon="mdi-palette-outline" data-testid="tab-appearance">
+        {{ $t('settings.sections.appearance') }}
+      </v-tab>
+      <v-tab value="smartTools" prepend-icon="mdi-auto-fix" data-testid="tab-smart-tools">
+        {{ $t('settings.sections.smartTools') }}
+      </v-tab>
+    </v-tabs>
+    <v-window v-model="tab">
+      <v-window-item value="region" eager :transition="false" :reverse-transition="false">
+        <v-card class="mb-4">
+          <v-card-item prepend-icon="mdi-translate">
+            <v-card-title>{{ $t('settings.language') }}</v-card-title>
+            <v-card-subtitle>{{ $t('settings.languageDescription') }}</v-card-subtitle>
+          </v-card-item>
+          <v-card-text>
+            <v-select
+              :model-value="preferences.language"
+              :items="LANGUAGES"
+              item-title="name"
+              item-value="code"
+              :label="$t('settings.language')"
+              :disabled="saving"
+              hide-details
+              style="max-width: 360px"
+              data-testid="language-select"
+              @update:model-value="save({ language: $event })"
+            />
+          </v-card-text>
+        </v-card>
 
-    <v-card>
-      <v-card-item prepend-icon="mdi-palette-outline">
-        <v-card-title>{{ $t('settings.appearance') }}</v-card-title>
-        <v-card-subtitle>{{ $t('settings.themeDescription') }}</v-card-subtitle>
-      </v-card-item>
-      <v-card-text>
-        <div class="text-body-2 mb-2">{{ $t('settings.theme') }}</div>
-        <v-btn-toggle
-          :model-value="preferences.theme"
-          mandatory
-          divided
-          variant="outlined"
-          color="primary"
-          :disabled="saving"
-          data-testid="theme-toggle"
-          @update:model-value="save({ theme: $event })"
-        >
-          <v-btn
-            v-for="item in THEMES"
-            :key="item.value"
-            :value="item.value"
-            :prepend-icon="item.icon"
-          >
-            {{ $t(`settings.themes.${item.value}`) }}
-          </v-btn>
-        </v-btn-toggle>
+        <!-- How dates and times are written: by the language, or fixed -->
+        <v-card class="mb-4">
+          <v-card-item prepend-icon="mdi-calendar-clock-outline">
+            <v-card-title>{{ $t('settings.dateTime') }}</v-card-title>
+            <v-card-subtitle>{{ $t('settings.dateTimeDescription') }}</v-card-subtitle>
+          </v-card-item>
+          <v-card-text>
+            <div class="text-body-2 mb-2">{{ $t('settings.dateFormat') }}</div>
+            <v-btn-toggle
+              :model-value="preferences.dateFormat"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              :disabled="saving"
+              class="flex-wrap"
+              data-testid="date-format"
+              @update:model-value="save({ date_format: $event })"
+            >
+              <v-btn
+                v-for="format in DATE_FORMATS"
+                :key="format"
+                :value="format"
+                class="text-none"
+                :data-testid="`date-format-${format}`"
+              >
+                {{ $t(`settings.dateFormats.${format}`) }}
+              </v-btn>
+            </v-btn-toggle>
 
-        <!-- Color theme: each one in a light and a dark version (the mode above) -->
-        <div class="text-body-2 mt-6 mb-2">{{ $t('settings.colorTheme') }}</div>
-        <div class="d-flex flex-wrap ga-3" data-testid="color-themes">
-          <v-card
-            v-for="colorTheme in COLOR_THEMES"
-            :key="colorTheme.id"
-            :variant="preferences.colorTheme === colorTheme.id ? 'outlined' : 'flat'"
-            :color="preferences.colorTheme === colorTheme.id ? 'primary' : undefined"
-            :class="{ 'color-theme--selected': preferences.colorTheme === colorTheme.id }"
-            class="color-theme pa-3"
-            width="260"
-            :disabled="saving"
-            :aria-pressed="preferences.colorTheme === colorTheme.id"
-            :data-testid="`color-theme-${colorTheme.id}`"
-            @click="save({ color_theme: colorTheme.id })"
-          >
-            <div class="swatches d-flex rounded overflow-hidden mb-2" style="height: 36px">
-              <div
-                v-for="swatch in colorTheme.swatches"
-                :key="swatch"
-                class="flex-grow-1"
-                :style="{ background: swatch }"
-              />
+            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.timeFormat') }}</div>
+            <v-btn-toggle
+              :model-value="preferences.timeFormat"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              :disabled="saving"
+              data-testid="time-format"
+              @update:model-value="save({ time_format: $event })"
+            >
+              <v-btn
+                v-for="format in TIME_FORMATS"
+                :key="format"
+                :value="format"
+                class="text-none"
+                :data-testid="`time-format-${format}`"
+              >
+                {{ $t(`settings.timeFormats.${format}`) }}
+              </v-btn>
+            </v-btn-toggle>
+
+            <div class="text-body-2 text-medium-emphasis mt-4" data-testid="date-time-example">
+              {{ $t('settings.dateTimeExample', { example: d(now, 'dateTime') }) }}
             </div>
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="text-body-2 font-weight-medium">{{ colorTheme.name }}</div>
-                <div
-                  class="text-caption text-medium-emphasis"
-                  :style="{ fontFamily: `${colorTheme.fontFamily} !important` }"
-                >
-                  Aa · {{ colorTheme.fontName }}
+          </v-card-text>
+        </v-card>
+
+        <!-- How numbers are written and the currency shown (src/numberFormat.ts) -->
+        <v-card class="mb-4" data-testid="numbers">
+          <v-card-item prepend-icon="mdi-numeric">
+            <v-card-title>{{ $t('settings.numbers') }}</v-card-title>
+            <v-card-subtitle>{{ $t('settings.numbersDescription') }}</v-card-subtitle>
+          </v-card-item>
+          <v-card-text>
+            <div class="text-body-2 mb-2">{{ $t('settings.numberFormat') }}</div>
+            <v-btn-toggle
+              :model-value="preferences.numberFormat"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              :disabled="saving"
+              class="flex-wrap"
+              data-testid="number-format"
+              @update:model-value="save({ number_format: $event })"
+            >
+              <v-btn
+                v-for="format in NUMBER_FORMATS"
+                :key="format"
+                :value="format"
+                class="text-none"
+                :data-testid="`number-format-${format}`"
+              >
+                {{ numberFormatLabel(format) }}
+              </v-btn>
+            </v-btn-toggle>
+
+            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.percentPlaces') }}</div>
+            <v-btn-toggle
+              :model-value="preferences.percentPlaces"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              :disabled="saving"
+              data-testid="percent-places"
+              @update:model-value="save({ percent_places: $event })"
+            >
+              <v-btn
+                v-for="places in PERCENT_PLACES"
+                :key="places"
+                :value="places"
+                class="text-none"
+                :data-testid="`percent-places-${places}`"
+              >
+                {{ places }}
+              </v-btn>
+            </v-btn-toggle>
+            <div class="text-caption text-medium-emphasis mt-1" data-testid="percent-example">
+              {{ $t('settings.percentPlacesHint') }} {{ $n(12.3456789, 'percentValue') }}%
+            </div>
+
+            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.currency') }}</div>
+            <div class="d-flex flex-wrap align-center ga-3">
+              <v-autocomplete
+                :model-value="preferences.currency"
+                :items="currencies"
+                item-title="title"
+                item-value="code"
+                :label="$t('settings.currency')"
+                :disabled="saving"
+                density="compact"
+                hide-details
+                style="max-width: 360px; min-width: 260px"
+                data-testid="currency"
+                @update:model-value="$event && save({ currency: $event })"
+              />
+              <v-chip label variant="tonal" data-testid="currency-symbol">
+                {{ $t('settings.currencySymbol') }}: {{ currency.symbol }}
+              </v-chip>
+              <v-chip label variant="tonal" data-testid="currency-code">
+                {{ $t('settings.currencyCode') }}: {{ currency.code }}
+              </v-chip>
+            </div>
+            <div class="text-caption text-medium-emphasis mt-1">
+              {{ $t('settings.currencyHint') }}
+            </div>
+
+            <div class="text-body-2 mt-5 mb-2">{{ $t('settings.currencyDisplay') }}</div>
+            <v-btn-toggle
+              :model-value="preferences.currencyDisplay"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              :disabled="saving"
+              data-testid="currency-display"
+              @update:model-value="save({ currency_display: $event })"
+            >
+              <v-btn
+                v-for="shown in CURRENCY_DISPLAYS"
+                :key="shown"
+                :value="shown"
+                class="text-none"
+                :data-testid="`currency-display-${shown}`"
+              >
+                {{ $t(`settings.currencyDisplays.${shown}`, currency) }}
+              </v-btn>
+            </v-btn-toggle>
+
+            <div class="text-body-2 text-medium-emphasis mt-4" data-testid="numbers-example">
+              {{
+                $t('settings.numbersExample', {
+                  example: formatMoney('1234567.89', preferences.currency, locale),
+                })
+              }}
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-window-item>
+      <v-window-item value="appearance" eager :transition="false" :reverse-transition="false">
+        <v-card class="mb-4">
+          <v-card-item prepend-icon="mdi-palette-outline">
+            <v-card-title>{{ $t('settings.appearance') }}</v-card-title>
+            <v-card-subtitle>{{ $t('settings.themeDescription') }}</v-card-subtitle>
+          </v-card-item>
+          <v-card-text>
+            <div class="text-body-2 mb-2">{{ $t('settings.theme') }}</div>
+            <v-btn-toggle
+              :model-value="preferences.theme"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              :disabled="saving"
+              data-testid="theme-toggle"
+              @update:model-value="save({ theme: $event })"
+            >
+              <v-btn
+                v-for="item in THEMES"
+                :key="item.value"
+                :value="item.value"
+                :prepend-icon="item.icon"
+              >
+                {{ $t(`settings.themes.${item.value}`) }}
+              </v-btn>
+            </v-btn-toggle>
+
+            <!-- Color theme: each one in a light and a dark version (the mode above) -->
+            <div class="text-body-2 mt-6 mb-2">{{ $t('settings.colorTheme') }}</div>
+            <div class="d-flex flex-wrap ga-3" data-testid="color-themes">
+              <v-card
+                v-for="colorTheme in COLOR_THEMES"
+                :key="colorTheme.id"
+                :variant="preferences.colorTheme === colorTheme.id ? 'outlined' : 'flat'"
+                :color="preferences.colorTheme === colorTheme.id ? 'primary' : undefined"
+                :class="{ 'color-theme--selected': preferences.colorTheme === colorTheme.id }"
+                class="color-theme pa-3"
+                width="260"
+                :disabled="saving"
+                :aria-pressed="preferences.colorTheme === colorTheme.id"
+                :data-testid="`color-theme-${colorTheme.id}`"
+                @click="save({ color_theme: colorTheme.id })"
+              >
+                <div class="swatches d-flex rounded overflow-hidden mb-2" style="height: 36px">
+                  <div
+                    v-for="swatch in colorTheme.swatches"
+                    :key="swatch"
+                    class="flex-grow-1"
+                    :style="{ background: swatch }"
+                  />
                 </div>
-              </div>
-              <v-icon
-                v-if="preferences.colorTheme === colorTheme.id"
-                icon="mdi-check-circle"
-                color="primary"
-                size="small"
-              />
+                <div class="d-flex align-center justify-space-between">
+                  <div>
+                    <div class="text-body-2 font-weight-medium">{{ colorTheme.name }}</div>
+                    <div
+                      class="text-caption text-medium-emphasis"
+                      :style="{ fontFamily: `${colorTheme.fontFamily} !important` }"
+                    >
+                      Aa · {{ colorTheme.fontName }}
+                    </div>
+                  </div>
+                  <v-icon
+                    v-if="preferences.colorTheme === colorTheme.id"
+                    icon="mdi-check-circle"
+                    color="primary"
+                    size="small"
+                  />
+                </div>
+              </v-card>
             </div>
-          </v-card>
-        </div>
-      </v-card-text>
-    </v-card>
+          </v-card-text>
+        </v-card>
 
-    <!-- Size of the interface (text, spacing, fields): automatic by the window's width -->
-    <v-card class="mt-4">
-      <v-card-item prepend-icon="mdi-magnify-plus-outline">
-        <v-card-title>{{ $t('settings.uiScale') }}</v-card-title>
-        <v-card-subtitle>{{ $t('settings.uiScaleDescription') }}</v-card-subtitle>
-      </v-card-item>
-      <v-card-text>
-        <v-btn-toggle
-          :model-value="preferences.uiScale"
-          mandatory
-          divided
-          variant="outlined"
-          color="primary"
-          :disabled="saving"
-          data-testid="ui-scale-toggle"
-          @update:model-value="save({ ui_scale: $event })"
-        >
-          <v-btn
-            v-for="scale in UI_SCALES"
-            :key="scale"
-            :value="scale"
-            :prepend-icon="UI_SCALE_ICONS[scale]"
-            :data-testid="`ui-scale-${scale}`"
-          >
-            {{ $t(`settings.uiScales.${scale}`) }}
-          </v-btn>
-        </v-btn-toggle>
-        <div class="text-caption text-medium-emphasis mt-2" data-testid="ui-scale-hint">
-          {{ $t('settings.uiScaleAutoHint', { percent: autoPercent() }) }}
-        </div>
-      </v-card-text>
-    </v-card>
-
-    <!-- How dates and times are written: by the language, or fixed -->
-    <v-card class="mt-4">
-      <v-card-item prepend-icon="mdi-calendar-clock-outline">
-        <v-card-title>{{ $t('settings.dateTime') }}</v-card-title>
-        <v-card-subtitle>{{ $t('settings.dateTimeDescription') }}</v-card-subtitle>
-      </v-card-item>
-      <v-card-text>
-        <div class="text-body-2 mb-2">{{ $t('settings.dateFormat') }}</div>
-        <v-btn-toggle
-          :model-value="preferences.dateFormat"
-          mandatory
-          divided
-          variant="outlined"
-          color="primary"
-          :disabled="saving"
-          class="flex-wrap"
-          data-testid="date-format"
-          @update:model-value="save({ date_format: $event })"
-        >
-          <v-btn
-            v-for="format in DATE_FORMATS"
-            :key="format"
-            :value="format"
-            class="text-none"
-            :data-testid="`date-format-${format}`"
-          >
-            {{ $t(`settings.dateFormats.${format}`) }}
-          </v-btn>
-        </v-btn-toggle>
-
-        <div class="text-body-2 mt-5 mb-2">{{ $t('settings.timeFormat') }}</div>
-        <v-btn-toggle
-          :model-value="preferences.timeFormat"
-          mandatory
-          divided
-          variant="outlined"
-          color="primary"
-          :disabled="saving"
-          data-testid="time-format"
-          @update:model-value="save({ time_format: $event })"
-        >
-          <v-btn
-            v-for="format in TIME_FORMATS"
-            :key="format"
-            :value="format"
-            class="text-none"
-            :data-testid="`time-format-${format}`"
-          >
-            {{ $t(`settings.timeFormats.${format}`) }}
-          </v-btn>
-        </v-btn-toggle>
-
-        <div class="text-body-2 text-medium-emphasis mt-4" data-testid="date-time-example">
-          {{ $t('settings.dateTimeExample', { example: d(now, 'dateTime') }) }}
-        </div>
-      </v-card-text>
-    </v-card>
-
-    <!-- Smart Tools: conveniences of the interface, each turned on or off (src/smartTools.ts) -->
-    <v-card class="mt-4" data-testid="smart-tools">
-      <v-card-item prepend-icon="mdi-auto-fix">
-        <v-card-title>{{ $t('settings.smartTools.title') }}</v-card-title>
-        <v-card-subtitle>{{ $t('settings.smartTools.description') }}</v-card-subtitle>
-      </v-card-item>
-      <v-card-text>
-        <v-switch
-          :model-value="preferences.selectOnFocus"
-          color="primary"
-          inset
-          hide-details
-          :disabled="saving"
-          data-testid="select-on-focus"
-          @update:model-value="save({ select_on_focus: !!$event })"
-        >
-          <template #label>
-            <div>
-              <div class="font-weight-medium">{{ $t('settings.smartTools.selectOnFocus') }}</div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('settings.smartTools.selectOnFocusHint') }}
-              </div>
+        <!-- Size of the interface (text, spacing, fields): automatic by the window's width -->
+        <v-card class="mb-4">
+          <v-card-item prepend-icon="mdi-magnify-plus-outline">
+            <v-card-title>{{ $t('settings.uiScale') }}</v-card-title>
+            <v-card-subtitle>{{ $t('settings.uiScaleDescription') }}</v-card-subtitle>
+          </v-card-item>
+          <v-card-text>
+            <v-btn-toggle
+              :model-value="preferences.uiScale"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              :disabled="saving"
+              data-testid="ui-scale-toggle"
+              @update:model-value="save({ ui_scale: $event })"
+            >
+              <v-btn
+                v-for="scale in UI_SCALES"
+                :key="scale"
+                :value="scale"
+                :prepend-icon="UI_SCALE_ICONS[scale]"
+                :data-testid="`ui-scale-${scale}`"
+              >
+                {{ $t(`settings.uiScales.${scale}`) }}
+              </v-btn>
+            </v-btn-toggle>
+            <div class="text-caption text-medium-emphasis mt-2" data-testid="ui-scale-hint">
+              {{ $t('settings.uiScaleAutoHint', { percent: autoPercent() }) }}
             </div>
-          </template>
-        </v-switch>
-        <v-divider class="my-4" />
-        <v-switch
-          :model-value="preferences.autoScope"
-          color="primary"
-          inset
-          hide-details
-          :disabled="saving"
-          data-testid="auto-scope"
-          @update:model-value="save({ auto_scope: !!$event })"
-        >
-          <template #label>
-            <div>
-              <div class="font-weight-medium">{{ $t('settings.smartTools.autoScope') }}</div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('settings.smartTools.autoScopeHint') }}
-              </div>
-            </div>
-          </template>
-        </v-switch>
-        <v-text-field
-          v-if="preferences.autoScope"
-          v-model="threshold"
-          :label="$t('settings.smartTools.scopeThreshold')"
-          :hint="$t('settings.smartTools.scopeThresholdHint')"
-          persistent-hint
-          suffix="%"
-          inputmode="decimal"
-          :rules="[thresholdRule]"
-          :disabled="saving"
-          density="compact"
-          class="threshold mt-3 ml-14"
-          data-testid="scope-threshold"
-          @blur="saveThreshold"
-          @keydown.enter="saveThreshold"
-        />
-      </v-card-text>
-    </v-card>
+          </v-card-text>
+        </v-card>
+      </v-window-item>
+      <v-window-item value="smartTools" eager :transition="false" :reverse-transition="false">
+        <!-- Smart Tools: conveniences of the interface, each turned on or off (src/smartTools.ts) -->
+        <v-card class="mb-4" data-testid="smart-tools">
+          <v-card-item prepend-icon="mdi-auto-fix">
+            <v-card-title>{{ $t('settings.smartTools.title') }}</v-card-title>
+            <v-card-subtitle>{{ $t('settings.smartTools.description') }}</v-card-subtitle>
+          </v-card-item>
+          <v-card-text>
+            <v-switch
+              :model-value="preferences.selectOnFocus"
+              color="primary"
+              inset
+              hide-details
+              :disabled="saving"
+              data-testid="select-on-focus"
+              @update:model-value="save({ select_on_focus: !!$event })"
+            >
+              <template #label>
+                <div>
+                  <div class="font-weight-medium">
+                    {{ $t('settings.smartTools.selectOnFocus') }}
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('settings.smartTools.selectOnFocusHint') }}
+                  </div>
+                </div>
+              </template>
+            </v-switch>
+            <v-divider class="my-4" />
+            <v-switch
+              :model-value="preferences.autoScope"
+              color="primary"
+              inset
+              hide-details
+              :disabled="saving"
+              data-testid="auto-scope"
+              @update:model-value="save({ auto_scope: !!$event })"
+            >
+              <template #label>
+                <div>
+                  <div class="font-weight-medium">{{ $t('settings.smartTools.autoScope') }}</div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('settings.smartTools.autoScopeHint') }}
+                  </div>
+                </div>
+              </template>
+            </v-switch>
+            <v-text-field
+              v-if="preferences.autoScope"
+              v-model="threshold"
+              :label="$t('settings.smartTools.scopeThreshold')"
+              :hint="$t('settings.smartTools.scopeThresholdHint')"
+              persistent-hint
+              suffix="%"
+              inputmode="decimal"
+              :rules="[thresholdRule]"
+              :disabled="saving"
+              density="compact"
+              class="threshold mt-3 ml-14"
+              data-testid="scope-threshold"
+              @blur="saveThreshold"
+              @keydown.enter="saveThreshold"
+            />
+          </v-card-text>
+        </v-card>
+      </v-window-item>
+    </v-window>
   </v-container>
 </template>
 

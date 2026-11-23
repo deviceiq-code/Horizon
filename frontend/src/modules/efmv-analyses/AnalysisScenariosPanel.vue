@@ -6,6 +6,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { formatMoney } from '@/utils/money'
 import AssetCounts from './AssetCounts.vue'
 import { getEfmvAnalysis, type EfmvAnalysis, type Scenario } from './api'
@@ -13,7 +14,8 @@ import { assetCounts } from './draft'
 
 const props = defineProps<{ analysisId: number }>()
 const emit = defineEmits<{ open: [] }>()
-const { n, locale } = useI18n()
+const { locale } = useI18n()
+const { n } = useNumberFormat()
 
 const analysis = ref<EfmvAnalysis | null>(null)
 const loading = ref(true)

@@ -1,10 +1,20 @@
-import { ref } from 'vue'
+import { ref, toRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/api'
 import { currentLanguage, isSupportedLanguage, setLanguage, type Language } from '@/i18n'
 import { DEFAULT_COLOR_THEME, isColorTheme } from '@/themes'
 import { isUiScale, type UiScale } from '@/uiScale'
 import { isDateFormat, isTimeFormat, type DateFormat, type TimeFormat } from '@/dateFormat'
+import {
+  isCurrency,
+  isCurrencyDisplay,
+  isNumberFormat,
+  isPercentPlaces,
+  numberSettings,
+  type Currency,
+  type CurrencyDisplay,
+  type NumberFormat,
+} from '@/numberFormat'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -19,6 +29,15 @@ export interface Preferences {
   /** How dates and times are written (src/dateFormat.ts); "auto" follows the language */
   date_format: DateFormat
   time_format: TimeFormat
+  /** How numbers are written and the currency shown (src/numberFormat.ts) */
+  number_format: NumberFormat
+  /** Decimal places of every percentage shown (1–5) */
+  percent_places: number
+  /** The user's currency (ISO 4217): its symbol and code; values keep their own currency */
+  currency: Currency
+  currency_display: CurrencyDisplay
+  /** How the user left the interface (side menu, grids' filters…): follows them anywhere */
+  ui_state: UiState
   /** Smart Tools: entering a text field selects its content (src/smartTools.ts) */
   select_on_focus: boolean
   /** Smart Tools: eFMV scenarios' scope written from their assets; negligible below (%) */
@@ -34,10 +53,23 @@ export type PreferencesUpdate = Partial<{
   ui_scale: UiScale
   date_format: DateFormat
   time_format: TimeFormat
+  number_format: NumberFormat
+  percent_places: number
+  currency: Currency
+  currency_display: CurrencyDisplay
+  ui_state: UiState
   select_on_focus: boolean
   auto_scope: boolean
   scope_threshold: string
 }>
+
+/** The interface's own state kept with the account (not interpreted by the API). */
+export interface UiState {
+  /** Side menu open or closed, on wide and on narrow screens */
+  sideMenu?: { wide?: 'open' | 'collapsed'; narrow?: 'open' | 'collapsed' }
+  /** Grids whose filter row is shown, by the grid's key */
+  filters?: Record<string, boolean>
+}
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']
 
@@ -56,6 +88,10 @@ const AUTO_SCOPE_STORAGE_KEY = 'horizon.autoScope'
 const SCOPE_THRESHOLD_STORAGE_KEY = 'horizon.scopeThreshold'
 const DATE_FORMAT_STORAGE_KEY = 'horizon.dateFormat'
 const TIME_FORMAT_STORAGE_KEY = 'horizon.timeFormat'
+const NUMBER_FORMAT_STORAGE_KEY = 'horizon.numberFormat'
+const CURRENCY_DISPLAY_STORAGE_KEY = 'horizon.currencyDisplay'
+const CURRENCY_STORAGE_KEY = 'horizon.currency'
+const PERCENT_PLACES_STORAGE_KEY = 'horizon.percentPlaces'
 
 function readStored<T extends string>(key: string, valid: (v: unknown) => v is T, fallback: T): T {
   try {
@@ -116,6 +152,23 @@ export const usePreferencesStore = defineStore('preferences', () => {
   const uiScale = ref<UiScale>(readStoredUiScale())
   const dateFormat = ref<DateFormat>(readStored(DATE_FORMAT_STORAGE_KEY, isDateFormat, 'auto'))
   const timeFormat = ref<TimeFormat>(readStored(TIME_FORMAT_STORAGE_KEY, isTimeFormat, 'auto'))
+  const numberFormat = ref<NumberFormat>(
+    readStored(NUMBER_FORMAT_STORAGE_KEY, isNumberFormat, 'auto'),
+  )
+  const currency = ref<Currency>(readStored(CURRENCY_STORAGE_KEY, isCurrency, 'BRL'))
+  const currencyDisplay = ref<CurrencyDisplay>(
+    readStored(CURRENCY_DISPLAY_STORAGE_KEY, isCurrencyDisplay, 'symbol'),
+  )
+  const percentPlaces = ref(
+    Number(
+      readStored(PERCENT_PLACES_STORAGE_KEY, (v): v is string => isPercentPlaces(Number(v)), '2'),
+    ),
+  )
+  numberSettings.percentPlaces = percentPlaces.value
+  numberSettings.format = numberFormat.value
+  numberSettings.currency = currencyDisplay.value
+  // Only with the account (nothing kept in the browser): empty until signed in
+  const uiState = ref<UiState>({})
   // On unless turned off (also before signing in)
   const selectOnFocus = ref(
     readStored(SELECT_ON_FOCUS_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
@@ -139,6 +192,11 @@ export const usePreferencesStore = defineStore('preferences', () => {
     ui_scale?: string
     date_format?: string
     time_format?: string
+    number_format?: string
+    percent_places?: number
+    currency?: string
+    currency_display?: string
+    ui_state?: UiState
     select_on_focus?: boolean
     auto_scope?: boolean
     scope_threshold?: string
@@ -167,6 +225,26 @@ export const usePreferencesStore = defineStore('preferences', () => {
       timeFormat.value = p.time_format
       store(TIME_FORMAT_STORAGE_KEY, p.time_format)
     }
+    if (isNumberFormat(p.number_format)) {
+      numberFormat.value = p.number_format
+      numberSettings.format = p.number_format
+      store(NUMBER_FORMAT_STORAGE_KEY, p.number_format)
+    }
+    if (isPercentPlaces(p.percent_places)) {
+      percentPlaces.value = p.percent_places
+      numberSettings.percentPlaces = p.percent_places
+      store(PERCENT_PLACES_STORAGE_KEY, String(p.percent_places))
+    }
+    if (isCurrency(p.currency)) {
+      currency.value = p.currency
+      store(CURRENCY_STORAGE_KEY, p.currency)
+    }
+    if (isCurrencyDisplay(p.currency_display)) {
+      currencyDisplay.value = p.currency_display
+      numberSettings.currency = p.currency_display
+      store(CURRENCY_DISPLAY_STORAGE_KEY, p.currency_display)
+    }
+    if (p.ui_state && typeof p.ui_state === 'object') uiState.value = p.ui_state
     if (typeof p.select_on_focus === 'boolean') {
       selectOnFocus.value = p.select_on_focus
       store(SELECT_ON_FOCUS_STORAGE_KEY, String(p.select_on_focus))
@@ -190,6 +268,11 @@ export const usePreferencesStore = defineStore('preferences', () => {
       ui_scale: uiScale.value,
       date_format: dateFormat.value,
       time_format: timeFormat.value,
+      number_format: numberFormat.value,
+      percent_places: percentPlaces.value,
+      currency: currency.value,
+      currency_display: currencyDisplay.value,
+      ui_state: uiState.value,
       select_on_focus: selectOnFocus.value,
       auto_scope: autoScope.value,
       scope_threshold: scopeThreshold.value,
@@ -207,6 +290,18 @@ export const usePreferencesStore = defineStore('preferences', () => {
     }
   }
 
+  /**
+   * Change part of the interface's state and save it to the account (quietly: a failure only
+   * loses it on other computers; this one keeps it).
+   */
+  function saveUiState(change: (state: UiState) => UiState) {
+    const next = change(structuredClone(toRaw(uiState.value)))
+    uiState.value = next
+    api('/auth/preferences/', { method: 'PATCH', body: JSON.stringify({ ui_state: next }) }).catch(
+      () => {},
+    )
+  }
+
   return {
     language,
     theme,
@@ -214,6 +309,12 @@ export const usePreferencesStore = defineStore('preferences', () => {
     uiScale,
     dateFormat,
     timeFormat,
+    numberFormat,
+    percentPlaces,
+    currency,
+    currencyDisplay,
+    uiState,
+    saveUiState,
     selectOnFocus,
     autoScope,
     scopeThreshold,

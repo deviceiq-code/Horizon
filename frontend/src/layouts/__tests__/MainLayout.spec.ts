@@ -10,7 +10,7 @@ import vuetify from '@/plugins/vuetify'
 import { moduleRoutes } from '@/modules'
 import { useAuthStore, type User } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { usePreferencesStore } from '@/stores/preferences'
+import { usePreferencesStore, type UiState } from '@/stores/preferences'
 import { click, inBody, settle } from '@/test-utils'
 import MainLayout from '../MainLayout.vue'
 
@@ -35,13 +35,19 @@ const ME: User = {
     select_on_focus: true,
     auto_scope: true,
     scope_threshold: '5.00',
+    number_format: 'auto',
+    percent_places: 2,
+    currency: 'BRL',
+    currency_display: 'symbol',
+    ui_state: {},
     updated_at: '',
   },
 }
 
-async function mountLayout(path = '/') {
+async function mountLayout(path = '/', uiState: UiState = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
+  usePreferencesStore().apply({ ui_state: uiState })
   const auth = useAuthStore()
   auth.user = ME
   const router = createRouter({
@@ -154,21 +160,23 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('the side menu collapses or opens and remembers the choice', async () => {
-    localStorage.clear()
+  it('the side menu collapses or opens and remembers the choice with the account', async () => {
     // jsdom's window is 1024 px wide: narrower than 1440, so the menu starts collapsed
     const { wrapper } = await mountLayout('/pricing/average-prices')
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'))
     const menu = () => inBody('[data-testid="side-menu"]')!
     expect(menu().className).toContain('v-navigation-drawer--rail')
     await click('toggle-menu')
     expect(menu().className).not.toContain('v-navigation-drawer--rail')
-    expect(localStorage.getItem('horizon.sideMenu.narrow')).toBe('open')
+    // Saved to the account: the same on any computer
+    const [url, init] = fetch.mock.calls[0]!
+    expect(String(url)).toContain('/api/auth/preferences/')
+    expect(JSON.parse(String(init!.body))).toEqual({ ui_state: { sideMenu: { narrow: 'open' } } })
     wrapper.unmount()
-    // Opened again: as the user left it
-    const again = await mountLayout('/pricing/average-prices')
+    // Signed in again (e.g. elsewhere): as the user left it
+    const again = await mountLayout('/pricing/average-prices', { sideMenu: { narrow: 'open' } })
     expect(menu().className).not.toContain('v-navigation-drawer--rail')
     again.wrapper.unmount()
-    localStorage.clear()
   })
 
   it('the app launcher lists the apps; Remarketing is coming soon', async () => {

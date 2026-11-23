@@ -8,6 +8,7 @@
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { currencySymbol, toInputMoney } from '@/utils/money'
 import type { PreviewResult } from './api'
 import { parseTermInput } from './termInput'
@@ -26,7 +27,8 @@ const props = defineProps<{
   errors?: Record<number, string[]>
 }>()
 
-const { t, locale, n } = useI18n()
+const { t, locale } = useI18n()
+const { n } = useNumberFormat()
 const symbol = computed(() => currencySymbol(props.currency, locale.value))
 
 const rules = [
@@ -42,8 +44,11 @@ function resolvedFor(term: number) {
 const pending = ref<Record<number, string>>({})
 
 function onBlur(term: number) {
-  const text = entries.value[term]?.text ?? ''
-  if (parseTermInput(text, locale.value)?.mode === 'percent') pending.value[term] = text
+  const entry = entries.value[term]
+  const parsed = entry ? parseTermInput(entry.text, locale.value) : null
+  // A value: formatted at once ("1234,5" → "1.234,50"); a %: once the preview has its value
+  if (parsed?.mode === 'value') entry!.text = toInputMoney(parsed.amount, locale.value)
+  else if (parsed?.mode === 'percent') pending.value[term] = entry!.text
   convertPending()
 }
 

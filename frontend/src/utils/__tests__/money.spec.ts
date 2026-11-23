@@ -9,6 +9,7 @@ import {
   currencySymbol,
   parseSignedMoney,
 } from '../money'
+import { numberSettings } from '@/numberFormat'
 
 describe('decimalSeparator', () => {
   it('follows the UI language', () => {
@@ -87,5 +88,26 @@ describe('toInputNumber', () => {
     expect(parseSignedMoney('25', 'en')).toBe('25')
     expect(parseSignedMoney('--1', 'en')).toBeNull()
     expect(parseMoney('-1', 'en')).toBeNull()
+  })
+})
+
+describe("the user's number format and currency display", () => {
+  it('separators and the currency follow the preferences', () => {
+    try {
+      numberSettings.format = 'dot_comma'
+      expect(toInputMoney('1234.5', 'en')).toBe('1.234,50')
+      expect(parseMoney('1.234,50', 'en')).toBe('1234.50')
+      numberSettings.format = 'space_comma'
+      expect(toInputMoney('1234567.5', 'en').replace(/\s/g, ' ')).toBe('1 234 567,50')
+      expect(parseMoney('1 234,5', 'en')).toBe('1234.5')
+      numberSettings.format = 'comma_dot'
+      expect(parseMoney('1,234.50', 'pt-br')).toBe('1234.50')
+      numberSettings.currency = 'code'
+      expect(formatMoney('10', 'BRL', 'pt-br').replace(/\s/g, ' ')).toBe('BRL 10.00')
+      expect(currencySymbol('BRL', 'pt-br')).toBe('BRL')
+    } finally {
+      numberSettings.format = 'auto'
+      numberSettings.currency = 'symbol'
+    }
   })
 })

@@ -7,7 +7,9 @@
  *   3. add the same code to LANGUAGES in the backend (config/settings.py).
  * Codes follow Django's format (lowercase, e.g. 'pt-br').
  */
+import type { App } from 'vue'
 import { createI18n } from 'vue-i18n'
+import { formatNumber, NAMED_NUMBER_FORMATS, type NumberKey } from '@/numberFormat'
 import { en as vuetifyEn, es as vuetifyEs, pt as vuetifyPt } from 'vuetify/locale'
 
 import en, { type Messages } from './locales/en'
@@ -45,14 +47,8 @@ const datetimeFormats = {
   },
 } as const
 
-const numberFormats = {
-  decimal: { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 },
-  percent: { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 },
-  /** 0–10 ratings, always with one decimal: 7.5 / 7,5 */
-  rating: { style: 'decimal', minimumFractionDigits: 1, maximumFractionDigits: 1 },
-  /** A percentage already in 0–100 scale ("68.75" → 68,75), shown next to a % sign */
-  percentValue: { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 },
-} as const
+// Numbers follow the user's number format (src/numberFormat.ts)
+const numberFormats = NAMED_NUMBER_FORMATS
 
 export function isSupportedLanguage(code: string): code is Language {
   return LANGUAGES.some((l) => l.code === code)
@@ -81,13 +77,26 @@ export function detectLanguage(): Language {
   return DEFAULT_LANGUAGE
 }
 
-export const i18n = createI18n({
+const base = createI18n({
   legacy: false,
   locale: detectLanguage(),
   fallbackLocale: DEFAULT_LANGUAGE,
   messages,
   datetimeFormats: Object.fromEntries(LANGUAGES.map((l) => [l.code, datetimeFormats])),
   numberFormats: Object.fromEntries(LANGUAGES.map((l) => [l.code, numberFormats])),
+})
+
+/**
+ * vue-i18n, with `$n` writing numbers in the user's number format (Settings): the same named
+ * formats, separators from `numberLocale` (src/numberFormat.ts).
+ */
+const baseInstall = base.install.bind(base) as (app: App, ...options: unknown[]) => void
+export const i18n = Object.assign(base, {
+  install(app: App, ...options: unknown[]) {
+    baseInstall(app, ...options)
+    app.config.globalProperties.$n = ((value: number, key?: NumberKey) =>
+      formatNumber(value, key, base.global.locale.value)) as typeof app.config.globalProperties.$n
+  },
 })
 
 export function currentLanguage(): Language {

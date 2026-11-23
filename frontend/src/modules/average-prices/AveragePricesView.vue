@@ -8,6 +8,8 @@
 import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
+import MoneyField from '@/components/MoneyField.vue'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import { formatMoney } from '@/utils/money'
@@ -23,7 +25,8 @@ import {
   type AveragePriceDetail,
 } from './api'
 
-const { t, locale, n } = useI18n()
+const { t, locale } = useI18n()
+const { n } = useNumberFormat()
 // Dates in the formats the user chose (Settings)
 const { d } = useDateFormat()
 const notifications = useNotificationsStore()
@@ -193,19 +196,17 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       </template>
       <template #[`filter.original_value`]>
         <div class="d-flex ga-1">
-          <v-text-field
+          <MoneyField
             v-model="typed.min"
             :placeholder="$t('averagePrices.filters.from')"
-            inputmode="decimal"
             density="compact"
             hide-details
             :error="invalid.min"
             data-testid="filter-value-min"
           />
-          <v-text-field
+          <MoneyField
             v-model="typed.max"
             :placeholder="$t('averagePrices.filters.to')"
-            inputmode="decimal"
             density="compact"
             hide-details
             :error="invalid.max"

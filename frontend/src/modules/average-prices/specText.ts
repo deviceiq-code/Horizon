@@ -1,8 +1,9 @@
+import type { NumberKey } from '@/numberFormat'
 /** A stored specification value as shown: yes/no translated, stars, the number's unit. */
 import type { SpecValue } from './api'
 
 type Translate = (key: string) => string
-type FormatNumber = (value: number, format: string) => string
+type FormatNumber = (value: number, format: NumberKey) => string
 
 /**
  * The filled specifications in one line, in template order: "2500 h, Steel, Cab: Yes" (a

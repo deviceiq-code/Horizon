@@ -5,6 +5,7 @@ import { setLanguage } from '@/i18n'
 import * as assetClassesApi from '@/modules/catalogs/asset-classes/api'
 import * as manufacturersApi from '@/modules/catalogs/manufacturers/api'
 import { useNotificationsStore } from '@/stores/notifications'
+import { usePreferencesStore } from '@/stores/preferences'
 import { click, inBody, mountWithPlugins, pickOption, settle, typeInto } from '@/test-utils'
 import * as pricesApi from '../api'
 import AveragePricesView from '../AveragePricesView.vue'
@@ -270,7 +271,7 @@ describe('AveragePricesView', () => {
     expect((inBody('[data-testid="filter-model"] input') as HTMLInputElement).value).toBe('')
     expect(inBody('[data-testid="clear-filters"]')).toBeNull()
 
-    // Turning the filters off clears them; the choice is remembered in this browser
+    // Turning the filters off clears them; the choice is remembered with the account
     await typeInto('filter-model', '320')
     await pause()
     await settle()
@@ -278,16 +279,16 @@ describe('AveragePricesView', () => {
     await click('toggle-filters')
     expect(inBody('[data-testid="filter-row"]')).toBeNull()
     expect(lastFilters()).toEqual({})
-    expect(localStorage.getItem('horizon.filters.average-prices')).toBe('0')
+    expect(usePreferencesStore().uiState.filters).toEqual({ 'average-prices': false })
     wrapper.unmount()
   })
 
   it('remembers that the filters were on', async () => {
-    localStorage.setItem('horizon.filters.average-prices', '1')
+    // As saved with the account (on another computer, too)
+    usePreferencesStore().apply({ ui_state: { filters: { 'average-prices': true } } })
     const wrapper = mountView()
     await settle()
     expect(inBody('[data-testid="filter-row"]')).not.toBeNull()
-    localStorage.removeItem('horizon.filters.average-prices')
     wrapper.unmount()
   })
 

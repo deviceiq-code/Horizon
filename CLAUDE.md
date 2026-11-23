@@ -208,6 +208,21 @@ Multi-user web system for **operating lease residual value pricing**
     | ymd) and `time_format` (auto | 24h | 12h), chosen in Settings (`accounts.models.DateFormat`
     / `TimeFormat`). Format dates with `useDateFormat().d(value, 'short' | 'dateTime')`
     (`src/dateFormat.ts`), never vue-i18n's `d`/`$d`.
+  - **Numbers and currency** (Settings → Language and Region; `src/numberFormat.ts`):
+    preferences `number_format` (auto — by the language — | dot_comma 1.234,56 | comma_dot
+    1,234.56 | space_comma 1 234,56), `percent_places` (1–5, default 2: every percentage shown,
+    `$n(v, 'percent' | 'percentValue')`), `currency` (the user's, ISO 4217 from
+    `accounts.models.CURRENCIES`; its symbol and code shown) and `currency_display` (symbol |
+    code). Every number goes through `numberLocale()`: `$n` (overridden in `i18n/index.ts`),
+    `useNumberFormat().n` (never vue-i18n's `n`) and `utils/money.ts`. **Value fields** always
+    show the currency (symbol or code) on the left and the value on the right, formatted when
+    left: `src/components/MoneyField.vue` (the eFMV grid's cells and the terms follow the same
+    look).
+  - **Preferences live in the database** (`UserPreferences`), so they follow the user to any
+    computer; the browser only keeps a copy for the login page. The interface's own state
+    (side menu open/collapsed per window size, each grid's filter row) is `ui_state` (JSON,
+    `preferences.saveUiState`), not localStorage.
+  - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools (`?tab=`).
   - **Interface size** (`src/uiScale.ts`, applied in App.vue): CSS `zoom` on the page (Vuetify
     sizes spacing/fields in px, so only scaling fonts would not do). Preference `ui_scale`
     (`accounts.models.UiScale`): auto (default; by the window's width: ≤1366 px 0.88 → 1920 px
@@ -220,7 +235,7 @@ Multi-user web system for **operating lease residual value pricing**
     with the Horizon brand, Home, a section named after the current app with its modules, a
     section "Apps" with the other apps, Settings at the bottom; open from 1440 px, collapsed to
     icons below (they expand on hover); the top bar's button opens/collapses it and the choice
-    is remembered in the browser (`horizon.sideMenu.wide|narrow`). Phones: a drawer.
+    is remembered with the account (preferences' `ui_state.sideMenu.wide|narrow`). Phones: a drawer.
     Light top bar: that button, the path (`AppBreadcrumbs.vue`); then Search, Documentation and
     Notifications (coming soon: a notice), the light/dark switch, the language
     (`LanguageSelector.vue`: globe + code, also on the login page), the app launcher and the
@@ -258,7 +273,8 @@ Multi-user web system for **operating lease residual value pricing**
   - `src/components/ServerCrudTable.vue` — generic CRUD grid (search, New, edit/delete with
     confirmation, notifications; optional `expandable` + `expanded-row` slot; column filters:
     `filters` object + `filter.<key>` slots, a row under the titles turned on/off with the
-    "Filters" button — remembered per grid with `filters-storage-key`, turning off clears them); pages pass columns, texts and `item.<key>` cell slots, open
+    "Filters" button — remembered per grid with `filters-storage-key`, in the account's `ui_state`; turning off
+    clears them); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
   - `src/modules/average-prices/` — form in two tabs, Asset (class, manufacturer, model,

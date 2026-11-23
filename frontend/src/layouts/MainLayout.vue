@@ -72,23 +72,12 @@ function firstPageOf(appId: AppId) {
 
 // --- Side menu: open or collapsed ----------------------------------------------------------------
 
+const preferences = usePreferencesStore()
 type MenuState = 'open' | 'collapsed'
-const storageKey = (wide: boolean) => `horizon.sideMenu.${wide ? 'wide' : 'narrow'}`
 
-function readChoice(wide: boolean): MenuState | null {
-  try {
-    const value = localStorage.getItem(storageKey(wide))
-    return value === 'open' || value === 'collapsed' ? value : null
-  } catch {
-    return null
-  }
-}
-
-/** The user's choice for wide and for narrow windows (null: by the window's width) */
-const choice = ref<Record<'wide' | 'narrow', MenuState | null>>({
-  wide: readChoice(true),
-  narrow: readChoice(false),
-})
+/** The user's choice for wide and for narrow windows (none: by the window's width), kept with
+ * the account (preferences' ui_state) so it follows them to any computer */
+const choice = computed(() => preferences.uiState.sideMenu ?? {})
 const sizeClass = computed(() => (wide.value ? 'wide' : 'narrow'))
 const collapsed = computed(
   () => (choice.value[sizeClass.value] ?? (wide.value ? 'open' : 'collapsed')) === 'collapsed',
@@ -104,17 +93,12 @@ function toggleMenu() {
     return
   }
   const next: MenuState = collapsed.value ? 'open' : 'collapsed'
-  choice.value = { ...choice.value, [sizeClass.value]: next }
-  try {
-    localStorage.setItem(storageKey(wide.value), next)
-  } catch {
-    /* storage unavailable: the choice lasts until the page is reloaded */
-  }
+  const size = sizeClass.value
+  preferences.saveUiState((state) => ({ ...state, sideMenu: { ...state.sideMenu, [size]: next } }))
 }
 
 // --- Top bar -----------------------------------------------------------------------------------
 
-const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
 const vuetifyTheme = useTheme()
 /** The interface is dark now (the user's mode, or the system's when following it) */

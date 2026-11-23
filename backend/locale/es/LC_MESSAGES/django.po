@@ -1124,3 +1124,27 @@ msgstr "Las traducciones se dan por idioma: %(languages)s."
 
 msgid "Each translation has a name and a plural."
 msgstr "Cada traducción tiene un nombre y un plural."
+
+msgid "Symbol (R$)"
+msgstr "Símbolo (R$)"
+
+msgid "Code (BRL)"
+msgstr "Código (BRL)"
+
+msgid "number format"
+msgstr "formato de números"
+
+msgid "currency display"
+msgstr "visualización de la moneda"
+
+msgid "interface state"
+msgstr "estado de la interfaz"
+
+msgid "percentage decimal places"
+msgstr "decimales de porcentajes"
+
+msgid "Expected an object."
+msgstr "Se esperaba un objeto."
+
+msgid "Too much interface state."
+msgstr "Estado de la interfaz demasiado grande."

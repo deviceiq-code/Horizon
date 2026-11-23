@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /** Average of the versions of an average price (computed by the API): original value and each term. */
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { formatMoney } from '@/utils/money'
 import type { VersionsAverage } from './api'
 
 const props = defineProps<{ average: VersionsAverage; currency: string }>()
 
-const { locale, n } = useI18n()
+const { locale } = useI18n()
+const { n } = useNumberFormat()
 
 const money = (value: string) => formatMoney(value, props.currency, locale.value)
 const percent = (value: string) => `${n(Number(value), 'percentValue')}%`

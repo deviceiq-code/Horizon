@@ -49,6 +49,33 @@ class TimeFormat(models.TextChoices):
     H12 = "12h", _("12 hours (AM/PM)")
 
 
+class NumberFormat(models.TextChoices):
+    """How numbers are written (thousands and decimal separators). "auto": as usual in the
+    interface's language."""
+
+    AUTO = "auto", _("Automatic")
+    DOT_COMMA = "dot_comma", "1.234,56"
+    COMMA_DOT = "comma_dot", "1,234.56"
+    SPACE_COMMA = "space_comma", "1 234,56"
+
+
+class CurrencyDisplay(models.TextChoices):
+    """How the currency of money values is shown — always, on the left of value fields (values
+    keep their own currency)."""
+
+    SYMBOL = "symbol", _("Symbol (R$)")
+    CODE = "code", _("Code (BRL)")
+
+
+# The currencies a user can choose as theirs (ISO 4217); names, symbols in the interface
+CURRENCIES = [
+    "BRL", "USD", "EUR", "GBP", "JPY", "CNY", "CHF", "CAD", "AUD", "MXN",
+    "ARS", "CLP", "COP", "PEN", "UYU", "PYG", "BOB", "INR", "ZAR",
+]  # fmt: skip
+
+MAX_UI_STATE_BYTES = 20_000
+
+
 class UserPreferences(models.Model):
     """Settings each user picks on the settings page."""
 
@@ -80,6 +107,28 @@ class UserPreferences(models.Model):
     time_format = models.CharField(
         _("time format"), max_length=10, choices=TimeFormat, default=TimeFormat.AUTO
     )
+    number_format = models.CharField(
+        _("number format"), max_length=12, choices=NumberFormat, default=NumberFormat.AUTO
+    )
+    # Decimal places of percentages everywhere (1–5)
+    percent_places = models.PositiveSmallIntegerField(
+        _("percentage decimal places"),
+        default=2,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    # The user's currency (its symbol and code come from it); values keep their own currency
+    currency = models.CharField(
+        _("currency"), max_length=3, choices=[(c, c) for c in CURRENCIES], default="BRL"
+    )
+    currency_display = models.CharField(
+        _("currency display"),
+        max_length=10,
+        choices=CurrencyDisplay,
+        default=CurrencyDisplay.SYMBOL,
+    )
+    # How the user left the interface, kept with the account so it follows them to any
+    # computer: e.g. {"sideMenu": {"wide": "open"}, "filters": {"customers": true}}
+    ui_state = models.JSONField(_("interface state"), default=dict, blank=True)
     # Smart Tools (conveniences of the interface)
     # Entering a text field selects its content (typing replaces it)
     select_on_focus = models.BooleanField(_("select on focus"), default=True)

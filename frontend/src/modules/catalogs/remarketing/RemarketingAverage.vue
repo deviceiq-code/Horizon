@@ -4,7 +4,7 @@
  * decimal string ("3.13") or a live preview number. With `breakdown`, hovering shows each rating.
  */
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 
 const props = withDefaults(
   defineProps<{
@@ -16,7 +16,7 @@ const props = withDefaults(
   { breakdown: () => [], size: 'small' },
 )
 
-const { n } = useI18n()
+const { n } = useNumberFormat()
 
 // Number() only to draw stars / format for display; the value itself comes from the API
 const value = computed(() => Number(props.average))

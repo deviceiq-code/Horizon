@@ -6,13 +6,15 @@
 import { useDateFormat } from '@/composables/useDateFormat'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { ApiError } from '@/api'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { useNotificationsStore } from '@/stores/notifications'
 import { isDecimalInRange, normalizeDecimal } from '@/utils/decimal'
 import { getPricingSettings, updatePricingSettings, type PricingSettings } from './api'
 
-const { t, n } = useI18n()
+const { t } = useI18n()
+const { n } = useNumberFormat()
 // Dates in the formats the user chose (Settings)
 const { d } = useDateFormat()
 const rules = useValidationRules()
@@ -75,7 +77,7 @@ const scale = computed(() => {
     isDecimalInRange(v ?? '', 0, 100, 2),
   )
   if (!valid) return null
-  const pct = (v: string) => `${n(Number(normalizeDecimal(v)), 'decimal')}%`
+  const pct = (v: string) => `${n(Number(normalizeDecimal(v)), 'percentValue')}%`
   return [
     { key: 'below', color: 'error', range: `≤ −${pct(below.value)}` },
     { key: 'slightly_below', color: 'warning', range: `−${pct(below.value)} … −${pct(compatible.value)}` },

@@ -7,6 +7,7 @@
 import { useDateFormat } from '@/composables/useDateFormat'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNumberFormat } from '@/composables/useNumberFormat'
 import { deleteErrorMessage } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -21,7 +22,8 @@ defineProps<{
 }>()
 const emit = defineEmits<{ open: [version: AveragePrice]; deleted: [version: AveragePrice] }>()
 
-const { t, locale, n } = useI18n()
+const { t, locale } = useI18n()
+const { n } = useNumberFormat()
 // Dates in the formats the user chose (Settings)
 const { d } = useDateFormat()
 const notifications = useNotificationsStore()
