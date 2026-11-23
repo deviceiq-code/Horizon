@@ -5,7 +5,13 @@ segregation of duties, in later phases)."""
 from django.utils.translation import gettext_lazy as _
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from users.models import INVENTORY_SUPERVISOR, RECEIVER, STOREKEEPER
+from users.models import (
+    COMMERCIAL_FINANCE,
+    INVENTORY_SUPERVISOR,
+    RECEIVER,
+    REMARKETING_ANALYST,
+    STOREKEEPER,
+)
 from users.permissions import is_administrator
 
 # Moving assets and containers (scan the object, scan the destination)
@@ -14,6 +20,12 @@ MOVERS = (RECEIVER, STOREKEEPER, INVENTORY_SUPERVISOR)
 LABELERS = (RECEIVER, STOREKEEPER, INVENTORY_SUPERVISOR)
 # Keeping the warehouses' locations
 LOCATION_KEEPERS = (INVENTORY_SUPERVISOR,)
+# Scheduling receivings and shipments, preparing expected lists
+SCHEDULERS = (REMARKETING_ANALYST, INVENTORY_SUPERVISOR)
+# Who may see expected lists — never the receivers who count (blind count, RN-17)
+EXPECTED_READERS = (REMARKETING_ANALYST, INVENTORY_SUPERVISOR, COMMERCIAL_FINANCE)
+# Opening lots, triage, occurrences, closing
+RECEIVERS = (RECEIVER, INVENTORY_SUPERVISOR)
 
 
 def has_role(user, *keys: str) -> bool:
@@ -39,10 +51,3 @@ def role_permission(*keys: str, read_for_all: bool = True):
             return has_role(request.user, *keys)
 
     return RolePermission
-
-
-class IsAdministratorToWrite(BasePermission):
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        return request.method in SAFE_METHODS or is_administrator(request.user)

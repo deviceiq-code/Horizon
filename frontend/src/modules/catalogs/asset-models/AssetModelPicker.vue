@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /** Pick one enabled asset model (v-model: id | null): "Dell Latitude 5440", the asset class as
  * subtitle. Emits `selected` with the whole model. Remount (:key) to start fresh. */
-import RemoteAutocomplete from '@/components/RemoteAutocomplete.vue'
+import { computed } from 'vue'
+import RemoteAutocomplete, { type RemoteOption } from '@/components/RemoteAutocomplete.vue'
 import { listAssetModels, type AssetModel } from './api'
 
 const model = defineModel<number | null>({ required: true })
@@ -12,12 +13,17 @@ const props = withDefaults(
     errorMessages?: string[]
     /** Only models of this tracking (e.g. units for an asset entry) */
     tracking?: 'unit' | 'quantity'
+    /** The chosen one, shown before any search ("Dell Latitude 5440") */
+    initialOption?: { id: number; label: string } | null
   }>(),
-  { rules: () => [], errorMessages: undefined, tracking: undefined },
+  { rules: () => [], errorMessages: undefined, tracking: undefined, initialOption: null },
 )
 const emit = defineEmits<{ selected: [assetModel: AssetModel | null] }>()
 
 const known = new Map<number, AssetModel>()
+const initial = computed<RemoteOption[]>(() =>
+  props.initialOption ? [{ value: props.initialOption.id, title: props.initialOption.label }] : [],
+)
 
 async function search(term: string) {
   const data = await listAssetModels({
@@ -46,6 +52,7 @@ function choose(value: unknown) {
     :model-value="model"
     :label="label"
     :search="search"
+    :initial-options="initial"
     :rules="rules"
     :error-messages="errorMessages"
     :no-data-text="$t('assetModels.noneFound')"

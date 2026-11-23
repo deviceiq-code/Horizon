@@ -67,8 +67,11 @@ describe('suite apps and routes', () => {
       'efmv-analyses',
     ])
     expect(appModules('remarketing', false).map((m) => m.name)).toEqual([
+      'inventory-appointments',
+      'inventory-receiving',
       'inventory-movement',
       'inventory-assets',
+      'inventory-accessories',
       'inventory-locations',
       'inventory-containers',
       'inventory-labels',

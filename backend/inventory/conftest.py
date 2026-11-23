@@ -5,7 +5,16 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from catalogs.models import AssetClass, AssetModel, Manufacturer, SubVertical, Tracking, Vertical
-from users.models import INVENTORY_SUPERVISOR, RECEIVER, STOREKEEPER, Role
+from customers.models import Customer
+from users.models import (
+    COMMERCIAL_FINANCE,
+    INVENTORY_SUPERVISOR,
+    RECEIVER,
+    REMARKETING_ANALYST,
+    STOREKEEPER,
+    Role,
+)
+from users.testing import make_account_manager
 
 from . import services
 from .models import Location, Warehouse
@@ -137,3 +146,21 @@ def make_asset(notebook, places, admin):
         )
 
     return make
+
+
+@pytest.fixture
+def analyst(db):
+    return user_with_roles("analyst", REMARKETING_ANALYST)
+
+
+@pytest.fixture
+def commercial(db):
+    return user_with_roles("commercial", COMMERCIAL_FINANCE)
+
+
+@pytest.fixture
+def customer(db):
+    manager = make_account_manager("Ana", "Souza", "ana@example.com")
+    return Customer.objects.create(
+        name="Transportes Rápidos Ltda", tax_id="11222333000181", primary_account_manager=manager
+    )

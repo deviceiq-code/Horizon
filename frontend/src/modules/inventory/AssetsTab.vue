@@ -1,23 +1,17 @@
 <script setup lang="ts">
-/** Assets in stock (Remarketing › Inventory): grid with column filters, the detail with the
- * whole history, and — for administrators, until triage exists — a manual entry. Assets are
- * never deleted: their history stays. */
+/** Assets in stock (Remarketing › Inventory): grid with column filters and the detail with the
+ * whole history. Assets enter through the triage of receiving lots and are never deleted. */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useColumnFilters } from '@/composables/useColumnFilters'
 import { listWarehouses, type Warehouse } from '@/modules/warehouses/api'
-import { useAuthStore } from '@/stores/auth'
-import { useNotificationsStore } from '@/stores/notifications'
 import AreaChip from './AreaChip.vue'
 import AssetDetailDialog from './AssetDetailDialog.vue'
-import AssetEntryDialog from './AssetEntryDialog.vue'
 import StatusChip from './StatusChip.vue'
 import { ASSET_STATUSES, listAssets, type Asset } from './api'
 
 const { t } = useI18n()
-const auth = useAuthStore()
-const notifications = useNotificationsStore()
 
 const table = ref<{ reload: () => Promise<void> } | null>(null)
 
@@ -51,20 +45,14 @@ const headers = computed(() => [
   { title: t('inventory.fields.location'), key: 'current_location__code' },
 ])
 
-// --- Detail and entry --------------------------------------------------------------------------
+// --- Detail ---------------------------------------------------------------------------------------
 
 const detailOpen = ref(false)
 const shown = ref<Asset | null>(null)
-const entryOpen = ref(false)
 
 function openDetail(asset: Asset) {
   shown.value = asset
   detailOpen.value = true
-}
-
-function onEntered(asset: Asset) {
-  notifications.notify(t('inventory.assets.entered', { code: asset.horizon_id }))
-  table.value?.reload()
 }
 </script>
 
@@ -83,12 +71,11 @@ function onEntered(asset: Asset) {
     delete-title=""
     :delete-message="() => ''"
     deleted-text=""
-    :hide-create="!auth.user?.is_admin"
+    hide-create
     :can-delete="() => false"
     edit-icon="mdi-eye-outline"
     :edit-title="$t('inventory.assets.details')"
     @clear-filters="clearFilters"
-    @create="entryOpen = true"
     @edit="openDetail"
   >
     <template #[`filter.asset_model__name`]>
@@ -164,5 +151,4 @@ function onEntered(asset: Asset) {
     :asset-id="shown?.id ?? null"
     @changed="table?.reload()"
   />
-  <AssetEntryDialog v-model="entryOpen" @saved="onEntered" />
 </template>

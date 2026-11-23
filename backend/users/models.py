@@ -24,6 +24,7 @@ INSPECTION_TECHNICIAN = "inspection_technician"
 STOREKEEPER = "storekeeper"
 INVENTORY_SUPERVISOR = "inventory_supervisor"
 COMMERCIAL_FINANCE = "commercial_finance"
+REMARKETING_ANALYST = "remarketing_analyst"
 
 SYSTEM_ROLES = {
     ADMINISTRATOR: ("Administrator", "Full access to the system."),
@@ -44,6 +45,10 @@ SYSTEM_ROLES = {
     INVENTORY_SUPERVISOR: (
         "Inventory Supervisor",
         "Approves inspection reports, findings, transfers and adjustments; accepts occurrences.",
+    ),
+    REMARKETING_ANALYST: (
+        "Remarketing Analyst",
+        "Schedules receivings and shipments and prepares the expected lists agreed with customers.",
     ),
     COMMERCIAL_FINANCE: (
         "Commercial and Finance",

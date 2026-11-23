@@ -15,6 +15,8 @@ from catalogs.specs import SpecError, snapshot_values
 
 from .codes import ASSET_PREFIX, CONTAINER_PREFIX, format_code, parse_code
 from .models import (
+    AccessoryBalance,
+    AccessoryCondition,
     Asset,
     Container,
     EventKind,
@@ -141,9 +143,11 @@ def register_entry(
     horizon_id: str = "",
     reason: str = "",
     document_ref: str = "",
+    lot=None,
+    customer=None,
 ) -> Asset:
-    """An asset arrives (manual entry until the triage of Phase 2): IN_TRIAGE at a dock, with
-    its Horizon ID — a pre-printed one read from its label, or a new one."""
+    """An asset arrives (triage of a receiving lot): IN_TRIAGE at a dock, with its Horizon ID —
+    a pre-printed one read from its label, or a new one."""
     if asset_model.tracking != Tracking.UNIT:
         raise DomainError(
             _("Models controlled by quantity have no units with their own ID."),
@@ -206,6 +210,8 @@ def register_entry(
         status=AssetStatus.IN_TRIAGE,
         current_location=location,
         current_container=container,
+        lot=lot,
+        customer=customer,
         created_by=user,
     )
     _record(
@@ -442,3 +448,109 @@ def create_container(*, kind: str, location: Location, user, description: str = 
     )
     _record(EventKind.ENTRY, user=user, container=container, to_location=location)
     return container
+
+
+# --- Accessory balances (models tracked by quantity) ----------------------------------------
+
+
+def _balance(asset_model, *, container=None, location=None, condition) -> AccessoryBalance:
+    """The balance row, locked (created at zero when missing)."""
+    place = {"container": container} if container is not None else {"location": location}
+    balance, _created = AccessoryBalance.objects.select_for_update().get_or_create(
+        asset_model=asset_model, condition=condition, **place
+    )
+    return balance
+
+
+@transaction.atomic
+def add_accessories(
+    asset_model,
+    quantity: int,
+    *,
+    user,
+    container: Container | None = None,
+    location: Location | None = None,
+    condition: str = AccessoryCondition.GOOD,
+    kind: str = EventKind.ENTRY,
+    reason: str = "",
+    document_ref: str = "",
+) -> MovementEvent:
+    """Units of an accessory model enter a container or a location (an event records it)."""
+    if asset_model.tracking != Tracking.QUANTITY:
+        raise DomainError(
+            _("Only models controlled by quantity have balances."), field="asset_model"
+        )
+    if quantity < 1:
+        raise DomainError(_("Enter a quantity of at least 1."), field="quantity")
+    if container is not None:
+        container = Container.objects.select_for_update().get(pk=container.pk)
+        if not container.is_active:
+            raise DomainError(_("This container is inactive."), field="container")
+        place = container.current_location
+    elif location is not None:
+        place = location
+    else:
+        raise DomainError(_("Read the destination."), field="destination")
+    _check_place(place)
+    balance = _balance(
+        asset_model,
+        container=container,
+        location=None if container else location,
+        condition=condition,
+    )
+    balance.quantity += quantity
+    balance.save(update_fields=["quantity", "updated_at"])
+    return _record(
+        kind,
+        user=user,
+        accessory_model=asset_model,
+        quantity=quantity,
+        accessory_condition=condition,
+        to_location=place,
+        to_container=container,
+        reason=reason,
+        document_ref=document_ref,
+    )
+
+
+@transaction.atomic
+def remove_accessories(
+    asset_model,
+    quantity: int,
+    *,
+    user,
+    container: Container | None = None,
+    location: Location | None = None,
+    condition: str = AccessoryCondition.GOOD,
+    kind: str = EventKind.PICKING,
+    reason: str = "",
+    document_ref: str = "",
+) -> MovementEvent:
+    """Units of an accessory model leave a container or a location; a balance never goes
+    below zero (RN-06)."""
+    if quantity < 1:
+        raise DomainError(_("Enter a quantity of at least 1."), field="quantity")
+    balance = _balance(
+        asset_model,
+        container=container,
+        location=None if container else location,
+        condition=condition,
+    )
+    if balance.quantity < quantity:
+        raise DomainError(
+            _("Only %(available)d available here.") % {"available": balance.quantity},
+            field="quantity",
+        )
+    balance.quantity -= quantity
+    balance.save(update_fields=["quantity", "updated_at"])
+    return _record(
+        kind,
+        user=user,
+        accessory_model=asset_model,
+        quantity=quantity,
+        accessory_condition=condition,
+        from_location=balance.place,
+        from_container=container,
+        reason=reason,
+        document_ref=document_ref,
+    )

@@ -7,8 +7,8 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | Phase | Content | Status |
 | --- | --- | --- |
 | 1. Foundation | Warehouse codes, locations, containers, asset models, assets and Horizon IDs, labels, movement trail, state machine, movement service, roles | **Done** |
-| 2. Triage | Receiving lots, expected items, triage of units and accessories, accessory balances, occurrences, reconciliation, closing | To do |
-| 3. Inspection | Versioned reports, photos, checklists, findings, penalty table, data erasure tools and certificates, approval, report PDF, part harvesting | To do |
+| 2. Appointments and triage | Appointments (receiving and shipping), expected lists, receiving lots, triage of units and accessories, accessory balances, occurrences, reconciliation, closing | **Done** |
+| 3. Inspection | Versioned reports, photos, checklists, findings, penalty table, data erasure tools and certificates (+ the lot's tools per asset class, moved from Phase 2), approval, report PDF, part harvesting | To do |
 | 4. Blocks and disputes | Block follow-ups, disputes, deadline parameters, holidays, daily routine, alerts | To do |
 | 5. Disposal | Stock query, disposals, reservation, picking, shipping, write-off | To do |
 | 6. Transfers | Transfers between warehouses, virtual transit location, receiving with discrepancies | To do |
@@ -57,16 +57,56 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 - **In transit**: any non-final status may go `in_transit` (to `VIRTUAL-TRANSIT`, keeping
   `status_before_transit`) and comes back only to that status. Nothing goes in transit by a
   plain movement (transfers, Phase 6).
-- **Manual entry** (administrators, Assets page "New"): registers an asset `in_triage` at a dock
-  until the triage of Phase 2 replaces it.
 - **Roles** (system roles, Users › Roles): Receiver, Inspection Technician, Storekeeper,
-  Inventory Supervisor, Commercial and Finance; administrators may do everything. Phase 1:
-  movements — receiver, storekeeper, supervisor; containers and label ranges — the same;
-  locations — supervisor; reversals — supervisor; manual entry — administrators; reading —
-  everyone signed in. Catalogs (asset models included) follow the other catalogs (everyone
+  Inventory Supervisor, Commercial and Finance, Remarketing Analyst; administrators may do
+  everything. Movements — receiver, storekeeper, supervisor; containers and label ranges — the
+  same; locations — supervisor; reversals — supervisor; appointments — analyst, supervisor;
+  lots, triage, occurrences — receiver, supervisor (accepting: supervisor); reading —
+  everyone signed in (expected lists: see RN-17). Catalogs (asset models included) follow the other catalogs (everyone
   signed in).
 
-## Business rules → tests (Phase 1)
+### Phase 2 (appointments and triage)
+
+- **Appointments** (`Appointment`, code `APT-<year>-<NNNN>`): receiving or shipping at a
+  warehouse, customer (required for receivings), day and time window, carrier (a service
+  provider offering transport, or a name), plate, driver, volumes. Status: scheduled →
+  confirmed → in progress → done, or cancelled / no-show (rescheduling brings them back). A
+  receiving starts when its lot is opened and is done when the lot closes; shippings are
+  started/finished by hand until disposals (Phase 5) take over. **Overlaps in the same
+  warehouse are only warned about** (`conflicts`), never refused (decision).
+- **Who schedules**: the new system role **Remarketing Analyst** (and supervisors). The
+  analyst prepares the **expected list** on the appointment, as agreed with the customer:
+  typed into the grid or **pasted from a spreadsheet** (columns Model — "Manufacturer Model",
+  or the model alone when only one manufacturer has it —, Serial, Quantity; parsed by
+  `inventory/expected.py`, resolved by `POST /appointments/parse-expected/`). No `.xlsx` upload
+  (no new dependency).
+- **Blind count (RN-17)**: expected lists are read only by analysts, supervisors and
+  commercial/finance (`EXPECTED_READERS`); the receivers' API never returns them (the
+  appointment omits `expected_items`, `/lots/<id>/expected/` answers 403) and the lot page has no
+  such tab for them.
+- **Lots** (`ReceivingLot`, code `LOT-<year>-<NNNN>`): opened from a receiving appointment (its
+  customer and warehouse) or unscheduled; the dock is read. **Not per contract**: a return mixes
+  contracts, identified later by serial number. Status open → reconciling → closed.
+- **Triage of units**: label (pre-printed from a range, or empty for a new ID — printed at once),
+  model (kept for the next ones), serial (model's pattern, unique per model — RN-05); without a
+  serial the reason **and a photo** are required (stored as a lot attachment); "needs to be
+  turned on" leaves the serial pending for inspection. Optionally into a container at a dock.
+- **Accessories** (models tracked by quantity): `AccessoryBalance` per model + container or
+  location + condition good|scrap, never negative (RN-06: check constraint + service);
+  damaged ones go to a scrap area. Movement events carry `accessory_model` + `quantity`.
+- **Reconciliation** (`inventory/reconciliation.py`, pure): exact serial matches; an expected
+  serial under another model → model mismatch; **units without a captured serial stand for
+  their model's expected lines** (completed at inspection — decision); unexpected serials fill
+  quantity lines, then pair with open serial lines → serial mismatch; the rest → shortage /
+  surplus; accessories compare quantities. Running again keeps the same occurrence records,
+  removes open ones no longer found and never recreates resolved/accepted ones.
+- **Closing (RN-18)**: reconciles again (kept even when closing is refused) and closes only
+  with every occurrence resolved or accepted (accepting: supervisors only). The lot's assets go
+  to awaiting inspection; putting them in the inspection queue is a movement (also by
+  container).
+- The Phase 1 manual entry is gone: assets enter through triage only.
+
+## Business rules → tests
 
 | Rule | Where | Tests |
 | --- | --- | --- |
@@ -77,20 +117,30 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | RN-08 container moves its contents | `services.move_container` | `test_asset_into_a_container_and_container_moves_everything_rn08` |
 | RN-15 check digit | `inventory/codes.py`, `utils/inventoryCodes.ts` | `test_rules.py::test_parse_code_checks_the_digit`, `test_lookup_checks_the_digit_rn15`, `MovementView.spec.ts` |
 | RN-16 reprint keeps the ID | `services.reprint_label` | `test_reprint_keeps_the_id_rn16` |
+| RN-05 at triage | `receiving.triage_unit` → `services.register_entry` | `test_receiving.py::test_triage_a_unit` |
+| RN-06 balance never negative | constraint `balance_never_negative`, `services.remove_accessories` | `test_triage_accessories_and_balances_never_negative_rn06` |
+| RN-17 blind count | `EXPECTED_READERS`, `AppointmentSerializer.to_representation`, `lots/<id>/expected/` | `test_receivers_never_see_the_expected_list`, `receiving.spec.ts` (lot page) |
+| RN-18 close with occurrences handled | `receiving.close_lot` | `test_reconcile_and_close_with_divergences_handled` |
+| Reconciliation | `inventory/reconciliation.py` | `test_reconciliation.py` |
 
 ## API (`/api/inventory/`)
 
 `warehouses/` (with `code`), `locations/` (+ `tree/?warehouse=`), `containers/` (+ `reprint/`),
 `assets/` (detail with `events`; POST = manual entry; + `reprint/`), `movements/` (POST
-`{object_code, destination_code, reason}`; + `<id>/reverse/`), `lookup/?code=`, `label-ranges/`.
+`{object_code, destination_code, reason}`; + `<id>/reverse/`), `lookup/?code=`, `label-ranges/`,
+`appointments/` (+ `<id>/status/`, `parse-expected/`), `lots/` (POST opens; `units/`,
+`accessories/`, `received/`, `expected/`, `reconcile/`, `close/`, `attachments/`),
+`occurrences/` (+ `resolve/`, `accept/`), `accessory-balances/`.
 Business rule refusals answer 400 `{"detail": "<translated reason>", "field": "<field>"}`.
 Asset models: `/api/catalogs/asset-models/`.
 
 ## Pages (Remarketing › Inventory)
 
-Movement (scan the object, then the destination), Assets (grid, detail with history, manual
-entry), Locations (tree per warehouse, labels), Containers (label printed on creation), Labels
-(reserve and print ranges, print again by code), Warehouses. Asset Models are in
+Appointments (calendar month/week/day + list; expected list editor), Receiving (lots; lot page:
+Triage, Received, Occurrences, Files, Expected List), Movement (scan the object, then the
+destination), Assets (grid, detail with history), Accessories (balances), Locations (tree per
+warehouse, labels), Containers (label printed on creation), Labels (reserve and print ranges,
+print again by code), Warehouses. Asset Models are in
 Administration › Catalogs.
 
 ## Open points (to become parameters, not constants)

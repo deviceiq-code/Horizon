@@ -211,6 +211,7 @@ def test_roles_crud(admin_client, analyst_role, admin):
         ("Inventory Supervisor", 0),
         ("Pricing team", 0),
         ("Receiver", 0),
+        ("Remarketing Analyst", 0),
         ("Storekeeper", 0),
     ]
     role_id = r.json()["id"]

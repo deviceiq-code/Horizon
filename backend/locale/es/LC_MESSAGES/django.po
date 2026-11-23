@@ -1628,3 +1628,294 @@ msgstr "Este fabricante ya tiene un modelo con este nombre."
 
 msgid "This asset model has assets in stock and cannot be deleted."
 msgstr "Este modelo de activo tiene bienes en existencias y no se puede eliminar."
+
+msgid "lot"
+msgstr "lote"
+
+msgid "accessory model"
+msgstr "modelo del accesorio"
+
+msgid "Receiving"
+msgstr "Recepción"
+
+msgid "Scheduled"
+msgstr "Programado"
+
+msgid "Confirmed"
+msgstr "Confirmado"
+
+msgid "In Progress"
+msgstr "En Curso"
+
+msgid "Done"
+msgstr "Concluido"
+
+msgid "Cancelled"
+msgstr "Cancelado"
+
+msgid "No-Show"
+msgstr "No Se Presentó"
+
+msgid "starts at"
+msgstr "inicio"
+
+msgid "ends at"
+msgstr "fin"
+
+msgid "carrier"
+msgstr "transportista"
+
+msgid "carrier name"
+msgstr "nombre del transportista"
+
+msgid "vehicle plate"
+msgstr "matrícula del vehículo"
+
+msgid "driver"
+msgstr "conductor"
+
+msgid "expected volumes"
+msgstr "bultos previstos"
+
+msgid "appointment"
+msgstr "cita"
+
+msgid "appointments"
+msgstr "citas"
+
+msgid "expected item"
+msgstr "artículo esperado"
+
+msgid "expected items"
+msgstr "artículos esperados"
+
+msgid "Open"
+msgstr "Abierto"
+
+msgid "Reconciling"
+msgstr "Conciliando"
+
+msgid "Closed"
+msgstr "Cerrado"
+
+msgid "dock"
+msgstr "muelle"
+
+msgid "fiscal document number"
+msgstr "número del documento fiscal"
+
+msgid "opened at"
+msgstr "abierto el"
+
+msgid "closed at"
+msgstr "cerrado el"
+
+msgid "receiving lot"
+msgstr "lote de recepción"
+
+msgid "receiving lots"
+msgstr "lotes de recepción"
+
+msgid "Fiscal Document"
+msgstr "Documento Fiscal"
+
+msgid "Package Photo"
+msgstr "Foto del Bulto"
+
+msgid "Damage Photo"
+msgstr "Foto de Daño"
+
+msgid "Photo Without Serial Number"
+msgstr "Foto sin Número de Serie"
+
+msgid "Occurrence Evidence"
+msgstr "Evidencia de Incidencia"
+
+msgid "lot attachment"
+msgstr "adjunto del lote"
+
+msgid "lot attachments"
+msgstr "adjuntos del lote"
+
+msgid "Good"
+msgstr "Bueno"
+
+msgid "condition"
+msgstr "condición"
+
+msgid "accessory balance"
+msgstr "saldo de accesorio"
+
+msgid "accessory balances"
+msgstr "saldos de accesorios"
+
+msgid "Shortage"
+msgstr "Faltante"
+
+msgid "Surplus"
+msgstr "Sobrante"
+
+msgid "Serial Number Mismatch"
+msgstr "Serie Divergente"
+
+msgid "Model Mismatch"
+msgstr "Modelo Divergente"
+
+msgid "Transport Damage"
+msgstr "Daño de Transporte"
+
+msgid "Location Mismatch"
+msgstr "Ubicación Divergente"
+
+msgid "Lost"
+msgstr "Extravío"
+
+msgid "Resolved"
+msgstr "Resuelta"
+
+msgid "Accepted"
+msgstr "Aceptada"
+
+msgid "expected serial number"
+msgstr "número de serie esperado"
+
+msgid "received serial number"
+msgstr "número de serie recibido"
+
+msgid "due date"
+msgstr "plazo"
+
+msgid "resolution"
+msgstr "resolución"
+
+msgid "resolved at"
+msgstr "resuelta el"
+
+msgid "automatic"
+msgstr "automática"
+
+msgid "occurrence"
+msgstr "incidencia"
+
+msgid "occurrences"
+msgstr "incidencias"
+
+msgid "Please try again."
+msgstr "Inténtelo de nuevo."
+
+msgid "An appointment cannot go from %(before)s to %(after)s."
+msgstr "Una cita no puede pasar de %(before)s a %(after)s."
+
+msgid "A receiving starts when its lot is opened and ends when the lot is closed."
+msgstr "Una recepción empieza cuando se abre su lote y termina cuando el lote se cierra."
+
+msgid "Choose a receiving appointment."
+msgstr "Elija una cita de recepción."
+
+msgid "This appointment is not waiting for the vehicle."
+msgstr "Esta cita no está esperando el vehículo."
+
+msgid "This appointment already has a lot."
+msgstr "Esta cita ya tiene un lote."
+
+msgid "Choose the customer."
+msgstr "Elija el cliente."
+
+msgid "Read an active dock of this warehouse."
+msgstr "Lea un muelle activo de este almacén."
+
+msgid "This lot is closed."
+msgstr "Este lote está cerrado."
+
+msgid "This container is in another warehouse."
+msgstr "Este contenedor está en otro almacén."
+
+msgid "Without a serial number, take a photo of the asset."
+msgstr "Sin número de serie, tome una foto del bien."
+
+msgid "At triage, use a container that is at a dock."
+msgstr "En la clasificación, use un contenedor que esté en un muelle."
+
+msgid "Damaged accessories go to a scrap area."
+msgstr "Los accesorios dañados van a un área de chatarra."
+
+msgid "This model is controlled by unit: read each one."
+msgstr "Este modelo se controla por unidad: lea cada una."
+
+msgid "Enter a quantity of at least 1."
+msgstr "Indique una cantidad de al menos 1."
+
+msgid "This location is in another warehouse."
+msgstr "Esta ubicación está en otro almacén."
+
+msgid "This occurrence is no longer open."
+msgstr "Esta incidencia ya no está abierta."
+
+msgid "Describe how it was resolved."
+msgstr "Describa cómo se resolvió."
+
+msgid "Say why it is accepted."
+msgstr "Indique por qué se acepta."
+
+msgid "Resolve or accept the %(count)d open occurrences first."
+msgstr "Resuelva o acepte primero las %(count)d incidencias abiertas."
+
+msgid "Only models controlled by quantity have balances."
+msgstr "Solo los modelos controlados por cantidad tienen saldo."
+
+msgid "Only %(available)d available here."
+msgstr "Solo hay %(available)d disponibles aquí."
+
+msgid "A line with a serial number is one unit."
+msgstr "Una línea con número de serie es una unidad."
+
+msgid "This provider does not offer transport."
+msgstr "Este proveedor no ofrece transporte."
+
+msgid "This appointment is done."
+msgstr "Esta cita está concluida."
+
+msgid "A receiving needs the customer who returns the assets."
+msgstr "Una recepción necesita el cliente que devuelve los bienes."
+
+msgid "The end must be after the start."
+msgstr "El fin debe ser posterior al inicio."
+
+msgid "Only receivings have an expected list."
+msgstr "Solo las recepciones tienen lista esperada."
+
+msgid "A serial number is listed twice for the same model."
+msgstr "Un número de serie aparece dos veces para el mismo modelo."
+
+msgid "The lot is closed: its expected list cannot change."
+msgstr "El lote está cerrado: su lista esperada no puede cambiar."
+
+msgid "This cannot be changed."
+msgstr "Esto no se puede cambiar."
+
+msgid "This asset is not from this lot."
+msgstr "Este bien no es de este lote."
+
+msgid "This appointment has a lot: cancel it instead."
+msgstr "Esta cita tiene un lote: cancélela."
+
+msgid "Choose a valid status."
+msgstr "Elija un estado válido."
+
+msgid "Model not found: %(model)s."
+msgstr "Modelo no encontrado: %(model)s."
+
+msgid "Several manufacturers have %(model)s: write the manufacturer too."
+msgstr "Varios fabricantes tienen %(model)s: escriba también el fabricante."
+
+msgid "Quantity must be a whole number from 1."
+msgstr "La cantidad debe ser un número entero desde 1."
+
+msgid "Read the dock where the triage happens."
+msgstr "Lea el muelle donde se hace la clasificación."
+
+msgid "The expected list is not shown to whoever counts (blind count)."
+msgstr "La lista esperada no se muestra a quien cuenta (conteo ciego)."
+
+msgid "Only inventory supervisors accept occurrences."
+msgstr "Solo los supervisores de inventario aceptan incidencias."

@@ -222,14 +222,6 @@ def test_quantity_models_have_no_units(cables, places, admin):
         services.register_entry(asset_model=cables, location=places["dock"], user=admin)
 
 
-def test_entry_api_is_for_administrators(client, admin, receiver, notebook, places):
-    payload = {"asset_model": notebook.id, "location": places["dock"].code, "serial": "ABC1234"}
-    assert _post(client_for(client, receiver), f"{API}/assets/", payload).status_code == 403
-    response = _post(client_for(client, admin), f"{API}/assets/", payload)
-    assert response.status_code == 201, response.json()
-    assert response.json()["current_location_detail"]["code"] == "SP01-DOC"
-
-
 # --- Horizon IDs and labels (RN-15, RN-16) -------------------------------------------------
 
 

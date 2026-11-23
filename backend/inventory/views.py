@@ -1,4 +1,8 @@
+import re
+
 from django.db.models import Count, Q
+from django.http import FileResponse, Http404
+from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_noop
 from rest_framework import filters, mixins, status, viewsets
@@ -11,35 +15,57 @@ from catalogs.views import RefuseDeletingWhenInUse
 from config.filters import NullsLastOrderingFilter
 from config.keywords import KeywordSearchFilter
 from config.parties import column_filters
+from pricing.documents import opens_inline
 from users.models import INVENTORY_SUPERVISOR
 
-from . import services
+from . import receiving, services
+from .expected import model_key, parse_pasted
 from .models import (
+    AccessoryBalance,
+    AccessoryCondition,
+    Appointment,
+    AppointmentKind,
+    AppointmentStatus,
     Asset,
+    AttachmentKind,
     Container,
     ContainerKind,
+    ExpectedItem,
     LabelRange,
     Location,
+    LotStatus,
     MovementEvent,
+    Occurrence,
+    OccurrenceKind,
+    OccurrenceStatus,
     Ownership,
+    ReceivingLot,
     Warehouse,
 )
 from .permissions import (
+    EXPECTED_READERS,
     LABELERS,
     LOCATION_KEEPERS,
     MOVERS,
-    IsAdministratorToWrite,
+    RECEIVERS,
+    SCHEDULERS,
     has_role,
     role_permission,
 )
 from .serializers import (
-    AssetEntrySerializer,
+    AccessoryBalanceSerializer,
+    AppointmentSerializer,
     AssetSerializer,
     ContainerSerializer,
+    ExpectedItemSerializer,
     LabelRangeSerializer,
     LocationSerializer,
+    LotAttachmentSerializer,
+    LotOpenSerializer,
     MovementEventSerializer,
     MovementSerializer,
+    OccurrenceSerializer,
+    ReceivingLotSerializer,
     WarehouseSerializer,
 )
 from .states import AreaType, AssetStatus, DomainError
@@ -224,7 +250,6 @@ class AssetViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
-    mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
     """Assets in stock. Never deleted (their history stays).
@@ -232,7 +257,7 @@ class AssetViewSet(
     List supports ?search= (Horizon ID, serial, model, manufacturer), ?status=, ?warehouse=,
     ?location=, ?container=, ?asset_model=, ?asset_class=, ?name= (Horizon ID, serial or model
     contains), ?ordering=, pagination. GET <id>/ includes `events` (its whole history).
-    POST (administrators): manual entry at a dock until triage exists (Phase 2).
+    Assets enter through the triage of receiving lots (/lots/<id>/units/).
     PATCH: notes and other IDs only. POST <id>/reprint/: label printed again (RN-16).
     """
 
@@ -262,8 +287,6 @@ class AssetViewSet(
     ordering = ["-horizon_id"]
 
     def get_permissions(self):
-        if self.action == "create":
-            return [IsAdministratorToWrite()]
         if self.action == "reprint":
             return [role_permission(*LABELERS)()]
         return [role_permission(*MOVERS)()]
@@ -302,35 +325,6 @@ class AssetViewSet(
             events, many=True, context=self.get_serializer_context()
         ).data
         return Response(data)
-
-    def create(self, request, *args, **kwargs):
-        entry = AssetEntrySerializer(data=request.data)
-        entry.is_valid(raise_exception=True)
-        data = entry.validated_data
-        model = (
-            AssetModel.objects.filter(pk=data["asset_model"]).select_related("asset_class").first()
-        )
-        if model is None:
-            return Response({"asset_model": [_("Choose a valid model.")]}, status=400)
-        try:
-            place = services.resolve_code(data["location"], field="location")
-            container = place if isinstance(place, Container) else None
-            if not isinstance(place, (Location, Container)):
-                raise DomainError(_("Read a location or a container."), field="location")
-            asset = services.register_entry(
-                asset_model=model,
-                location=container.current_location if container else place,
-                container=container,
-                user=request.user,
-                serial=data["serial"],
-                no_serial_reason=data["no_serial_reason"],
-                other_ids=data["other_ids"],
-                horizon_id=data["horizon_id"],
-                reason=data["reason"],
-            )
-        except DomainError as exc:
-            return domain_error(exc)
-        return Response(self.get_serializer(asset).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
     def reprint(self, request, pk=None):
@@ -451,3 +445,477 @@ class LabelRangeViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
         except DomainError as exc:
             return domain_error(exc)
         return Response(self.get_serializer(label_range).data, status=status.HTTP_201_CREATED)
+
+
+# --- Phase 2: appointments, receiving lots, occurrences, accessory balances -------------------
+
+
+def _code_lookup(code: str, kinds: tuple, field: str):
+    """The container or location of a code read; '' → None."""
+    if not (code or "").strip():
+        return None
+    found = services.resolve_code(code, field=field)
+    if not isinstance(found, kinds):
+        raise DomainError(_("Read a location or a container."), field=field)
+    return found
+
+
+class AppointmentViewSet(viewsets.ModelViewSet):
+    """Receivings and shipments scheduled at the warehouses' docks.
+
+    List: ?kind=, ?warehouse=, ?status=, ?customer=, ?from=&to= (dates, for the calendar),
+    ?search= (code, customer, carrier, plate), pagination. Writing: analysts and supervisors.
+    `expected_items` only for analysts, supervisors and commercial (RN-17).
+    POST <id>/status/ {status}: confirm, cancel, no-show, reschedule (receivings start and end
+    with their lot). POST parse-expected/ {text}: rows pasted from a spreadsheet, resolved.
+    """
+
+    queryset = Appointment.objects.select_related(
+        "warehouse", "customer", "carrier", "created_by", "lot"
+    ).prefetch_related("expected_items__asset_model__manufacturer")
+    serializer_class = AppointmentSerializer
+    permission_classes = [role_permission(*SCHEDULERS)]
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = [
+        "customer__name",
+        "customer__trade_name",
+        "carrier__name",
+        "carrier_name",
+        "vehicle_plate",
+        "driver_name",
+    ]
+    ordering_fields = ["starts_at", "status", "kind"]
+    ordering = ["starts_at"]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["can_see_expected"] = has_role(self.request.user, *EXPECTED_READERS)
+        return context
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("kind") in AppointmentKind.values:
+            queryset = queryset.filter(kind=params["kind"])
+        if params.get("status") in AppointmentStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        for param in ("warehouse", "customer"):
+            if params.get(param, "").isdigit():
+                queryset = queryset.filter(**{f"{param}_id": int(params[param])})
+        start, end = parse_date(params.get("from") or ""), parse_date(params.get("to") or "")
+        if start:
+            queryset = queryset.filter(ends_at__date__gte=start)
+        if end:
+            queryset = queryset.filter(starts_at__date__lte=end)
+        search = params.get("search", "")
+        match = re.fullmatch(r"\s*APT-(\d{4})-(\d+)\s*", search, re.IGNORECASE)
+        if match:
+            return Appointment.objects.filter(year=int(match[1]), sequence=int(match[2]))
+        return queryset
+
+    def filter_queryset(self, queryset):
+        if re.fullmatch(r"\s*APT-\d{4}-\d+\s*", self.request.query_params.get("search", ""), re.I):
+            return queryset
+        return super().filter_queryset(queryset)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        appointment = self.get_object()
+        if hasattr(appointment, "lot"):
+            return Response(
+                {"detail": _("This appointment has a lot: cancel it instead.")},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=["post"], url_path="status")
+    def set_status(self, request, pk=None):
+        appointment = self.get_object()
+        try:
+            appointment = receiving.set_appointment_status(
+                appointment, request.data.get("status", "")
+            )
+        except (DomainError, KeyError) as exc:
+            if isinstance(exc, KeyError):
+                return Response({"status": [_("Choose a valid status.")]}, status=400)
+            return domain_error(exc)
+        return Response(self.get_serializer(appointment).data)
+
+    @action(detail=False, methods=["post"], url_path="parse-expected")
+    def parse_expected(self, request):
+        """Rows pasted from a spreadsheet → models resolved by "Manufacturer Model" (or the
+        model alone when only one manufacturer has it), with errors per row."""
+        rows = parse_pasted(str(request.data.get("text", "")))
+        models = list(AssetModel.objects.filter(is_enabled=True).select_related("manufacturer"))
+        by_full = {model_key(f"{m.manufacturer.name} {m.name}"): m for m in models}
+        by_name: dict = {}
+        for m in models:
+            by_name.setdefault(model_key(m.name), []).append(m)
+        result = []
+        for row in rows:
+            errors = []
+            key = model_key(row.model_text)
+            model = by_full.get(key) or (
+                by_name[key][0] if len(by_name.get(key, [])) == 1 else None
+            )
+            if model is None:
+                errors.append(
+                    _("Model not found: %(model)s.") % {"model": row.model_text or "—"}
+                    if len(by_name.get(key, [])) < 2
+                    else _("Several manufacturers have %(model)s: write the manufacturer too.")
+                    % {"model": row.model_text}
+                )
+            if row.quantity is None:
+                errors.append(_("Quantity must be a whole number from 1."))
+            elif row.serial and row.quantity != 1:
+                errors.append(_("A line with a serial number is one unit."))
+            result.append(
+                {
+                    "line": row.line,
+                    "asset_model": model.id if model else None,
+                    "asset_model_label": f"{model.manufacturer.name} {model.name}"
+                    if model
+                    else row.model_text,
+                    "tracking": model.tracking if model else None,
+                    "serial": row.serial,
+                    "quantity": row.quantity,
+                    "errors": errors,
+                }
+            )
+        return Response({"rows": result})
+
+
+class ReceivingLotViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Receiving lots. List: ?status=, ?warehouse=, ?customer=, ?search= (code, customer,
+    fiscal document), pagination. POST (receivers, supervisors): open a lot. Actions: units/
+    (triage of a unit; multipart with "photo" when there is no serial), accessories/,
+    received/, reconcile/, close/, attachments/, expected/ (not for receivers — RN-17)."""
+
+    queryset = ReceivingLot.objects.select_related(
+        "warehouse", "customer", "appointment", "dock", "opened_by", "closed_by"
+    ).annotate(
+        units_count=Count("assets", distinct=True),
+        open_occurrences=Count(
+            "occurrences", filter=Q(occurrences__status=OccurrenceStatus.OPEN), distinct=True
+        ),
+    )
+    serializer_class = ReceivingLotSerializer
+    permission_classes = [role_permission(*RECEIVERS)]
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = ["customer__name", "customer__trade_name", "fiscal_document_number"]
+    ordering_fields = ["opened_at", "status", "closed_at"]
+    ordering = ["-opened_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("status") in LotStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        for param in ("warehouse", "customer"):
+            if params.get(param, "").isdigit():
+                queryset = queryset.filter(**{f"{param}_id": int(params[param])})
+        return queryset
+
+    def filter_queryset(self, queryset):
+        match = re.fullmatch(
+            r"\s*LOT-(\d{4})-(\d+)\s*", self.request.query_params.get("search", ""), re.I
+        )
+        if match:
+            return queryset.filter(year=int(match[1]), sequence=int(match[2]))
+        return super().filter_queryset(queryset)
+
+    def _lot_data(self, lot):
+        return self.get_serializer(self.get_queryset().get(pk=lot.pk)).data
+
+    def create(self, request):
+        serializer = LotOpenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            dock = services.resolve_code(data["dock_code"], field="dock")
+            if not isinstance(dock, Location):
+                raise DomainError(_("Read the dock where the triage happens."), field="dock")
+            lot = receiving.open_lot(
+                warehouse=data.get("warehouse")
+                or getattr(data.get("appointment"), "warehouse", None),
+                customer=data.get("customer"),
+                appointment=data.get("appointment"),
+                dock=dock,
+                user=request.user,
+                fiscal_document_number=data["fiscal_document_number"],
+                notes=data["notes"],
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(self._lot_data(lot), status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def units(self, request, pk=None):
+        lot = self.get_object()
+        model = AssetModel.objects.filter(pk=request.data.get("asset_model") or 0).first()
+        if model is None:
+            return Response({"asset_model": [_("Choose a valid model.")]}, status=400)
+        try:
+            container = _code_lookup(
+                request.data.get("container_code", ""), (Container,), "container"
+            )
+            asset = receiving.triage_unit(
+                lot,
+                user=request.user,
+                asset_model=model,
+                horizon_id=request.data.get("horizon_id", ""),
+                serial=request.data.get("serial", ""),
+                no_serial_reason=request.data.get("no_serial_reason", ""),
+                container=container,
+                photo=request.FILES.get("photo"),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(
+            AssetSerializer(asset, context=self.get_serializer_context()).data, status=201
+        )
+
+    @action(detail=True, methods=["post"])
+    def accessories(self, request, pk=None):
+        lot = self.get_object()
+        model = AssetModel.objects.filter(pk=request.data.get("asset_model") or 0).first()
+        if model is None:
+            return Response({"asset_model": [_("Choose a valid model.")]}, status=400)
+
+        def number(field):
+            value = str(request.data.get(field, "") or "0").strip()
+            return int(value) if value.isdigit() else -1
+
+        try:
+            container = _code_lookup(
+                request.data.get("container_code", ""), (Container,), "container"
+            )
+            scrap = _code_lookup(
+                request.data.get("scrap_code", ""), (Container, Location), "scrap_destination"
+            )
+            receiving.triage_accessories(
+                lot,
+                user=request.user,
+                asset_model=model,
+                quantity=number("quantity"),
+                container=container,
+                damaged_quantity=number("damaged_quantity"),
+                scrap_container=scrap if isinstance(scrap, Container) else None,
+                scrap_location=scrap if isinstance(scrap, Location) else None,
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(self._received(lot), status=201)
+
+    def _received(self, lot) -> dict:
+        context = self.get_serializer_context()
+        units = lot.assets.select_related(
+            "asset_model__manufacturer",
+            "asset_model__asset_class",
+            "current_location__warehouse",
+            "current_container",
+        ).order_by("-id")
+        events = (
+            receiving.lot_accessory_events(lot)
+            .select_related("accessory_model__manufacturer", "to_location", "to_container", "user")
+            .order_by("-at", "-id")
+        )
+        return {
+            "units": AssetSerializer(units, many=True, context=context).data,
+            "accessories": MovementEventSerializer(events, many=True, context=context).data,
+        }
+
+    @action(detail=True, methods=["get"])
+    def received(self, request, pk=None):
+        return Response(self._received(self.get_object()))
+
+    @action(detail=True, methods=["get"])
+    def expected(self, request, pk=None):
+        """The expected list: never for the receivers who count (RN-17)."""
+        if not has_role(request.user, *EXPECTED_READERS):
+            return Response(
+                {"detail": _("The expected list is not shown to whoever counts (blind count).")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        lot = self.get_object()
+        items = (
+            ExpectedItem.objects.filter(appointment_id=lot.appointment_id).select_related(
+                "asset_model__manufacturer"
+            )
+            if lot.appointment_id
+            else ExpectedItem.objects.none()
+        )
+        return Response(ExpectedItemSerializer(items, many=True).data)
+
+    @action(detail=True, methods=["post"])
+    def reconcile(self, request, pk=None):
+        lot = self.get_object()
+        try:
+            receiving.reconcile_lot(lot, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(self._lot_data(lot))
+
+    @action(detail=True, methods=["post"])
+    def close(self, request, pk=None):
+        lot = self.get_object()
+        try:
+            receiving.close_lot(lot, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(self._lot_data(lot))
+
+    @action(detail=True, methods=["get", "post"])
+    def attachments(self, request, pk=None):
+        lot = self.get_object()
+        if request.method == "POST":
+            upload = request.FILES.get("file")
+            if upload is None:
+                return Response({"file": [_("Choose a file to upload.")]}, status=400)
+            kind = request.data.get("kind", AttachmentKind.OTHER)
+            if kind not in AttachmentKind.values:
+                return Response({"kind": [_("Choose a valid type.")]}, status=400)
+            occurrence = lot.occurrences.filter(pk=request.data.get("occurrence") or 0).first()
+            try:
+                receiving.add_attachment(
+                    lot, kind=kind, upload=upload, user=request.user, occurrence=occurrence
+                )
+            except DomainError as exc:
+                return domain_error(exc)
+        items = lot.attachments.select_related("uploaded_by", "asset")
+        return Response(
+            LotAttachmentSerializer(items, many=True, context=self.get_serializer_context()).data
+        )
+
+    @action(detail=True, methods=["delete"], url_path=r"attachments/(?P<attachment_id>\d+)")
+    def delete_attachment(self, request, pk=None, attachment_id=None):
+        lot = self.get_object()
+        attachment = lot.attachments.filter(pk=attachment_id).first()
+        if attachment is None:
+            raise Http404
+        if lot.status == LotStatus.CLOSED:
+            return Response({"detail": _("This lot is closed.")}, status=status.HTTP_409_CONFLICT)
+        attachment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["get"], url_path=r"attachments/(?P<attachment_id>\d+)/download")
+    def download_attachment(self, request, pk=None, attachment_id=None):
+        lot = self.get_object()
+        attachment = lot.attachments.filter(pk=attachment_id).first()
+        if attachment is None:
+            raise Http404
+        try:
+            handle = attachment.file.open("rb")
+        except FileNotFoundError as exc:
+            raise Http404 from exc
+        inline = request.query_params.get("inline") == "1" and opens_inline(attachment.name)
+        return FileResponse(
+            handle,
+            content_type=attachment.content_type,
+            as_attachment=not inline,
+            filename=attachment.name,
+        )
+
+
+class OccurrenceViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Occurrences of lots. ?lot=, ?status=, ?kind=. Receivers and supervisors register and
+    resolve them; only supervisors accept them (POST <id>/accept/ {resolution})."""
+
+    queryset = Occurrence.objects.select_related(
+        "lot", "asset", "asset_model__manufacturer", "responsible", "resolved_by"
+    ).annotate(attachments_count=Count("attachments"))
+    serializer_class = OccurrenceSerializer
+    permission_classes = [role_permission(*RECEIVERS)]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("lot", "").isdigit():
+            queryset = queryset.filter(lot_id=int(params["lot"]))
+        if params.get("status") in OccurrenceStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        if params.get("kind") in OccurrenceKind.values:
+            queryset = queryset.filter(kind=params["kind"])
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    def _respond(self, occurrence):
+        return Response(self.get_serializer(self.get_queryset().get(pk=occurrence.pk)).data)
+
+    @action(detail=True, methods=["post"])
+    def resolve(self, request, pk=None):
+        try:
+            occurrence = receiving.resolve_occurrence(
+                self.get_object(), user=request.user, resolution=request.data.get("resolution", "")
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._respond(occurrence)
+
+    @action(detail=True, methods=["post"])
+    def accept(self, request, pk=None):
+        if not has_role(request.user, INVENTORY_SUPERVISOR):
+            return Response(
+                {"detail": _("Only inventory supervisors accept occurrences.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            occurrence = receiving.accept_occurrence(
+                self.get_object(), user=request.user, resolution=request.data.get("resolution", "")
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._respond(occurrence)
+
+
+class AccessoryBalanceViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Accessory balances (models tracked by quantity) with something left.
+    ?asset_model=, ?warehouse=, ?condition=, ?search= (model, manufacturer, container,
+    location)."""
+
+    queryset = AccessoryBalance.objects.filter(quantity__gt=0).select_related(
+        "asset_model__manufacturer",
+        "asset_model__asset_class",
+        "container__current_location__warehouse",
+        "location__warehouse",
+    )
+    serializer_class = AccessoryBalanceSerializer
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = [
+        "asset_model__name",
+        "asset_model__manufacturer__name",
+        "container__code",
+        "location__code",
+    ]
+    ordering_fields = ["asset_model__name", "quantity", "condition"]
+    ordering = ["asset_model__name"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("asset_model", "").isdigit():
+            queryset = queryset.filter(asset_model_id=int(params["asset_model"]))
+        if params.get("condition") in AccessoryCondition.values:
+            queryset = queryset.filter(condition=params["condition"])
+        if params.get("warehouse", "").isdigit():
+            warehouse = int(params["warehouse"])
+            queryset = queryset.filter(
+                Q(location__warehouse_id=warehouse)
+                | Q(container__current_location__warehouse_id=warehouse)
+            )
+        return queryset

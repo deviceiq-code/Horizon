@@ -53,8 +53,14 @@ Multi-user web system for **operating lease residual value pricing**
     `MovementEvent`, `Location` tree (code = parent's + "-" + segment, never changes; global
     `VIRTUAL-TRANSIT`), `Container`, `Asset` (own spec values; serial unique per model when
     captured), `LabelRange`; Postgres sequences `inventory_horizon_id_seq` /
-    `inventory_container_code_seq`. Roles: `users.models` receiver, inspection_technician,
-    storekeeper, inventory_supervisor, commercial_finance (`inventory/permissions.py`). API
+    `inventory_container_code_seq`. Phase 2: `Appointment` (receiving/shipping, `APT-…`,
+    overlaps only warned), `ExpectedItem` (the appointment's list; pasted lists parsed by
+    `expected.py`), `ReceivingLot` (`LOT-…`, from an appointment or unscheduled; not per
+    contract), triage and reconciliation in `receiving.py` (pure `reconciliation.py`),
+    `AccessoryBalance` (never negative), `Occurrence`, `LotAttachment`. **Blind count**: expected
+    lists never reach receivers (`EXPECTED_READERS`). Roles: `users.models` receiver,
+    inspection_technician, storekeeper, inventory_supervisor, commercial_finance,
+    remarketing_analyst (`inventory/permissions.py`; frontend `inventory/roles.ts`). API
     refusals: 400 `{detail, field}`. `Warehouse.code` is generated ("SP01": state or country +
     number) and never changes. `Warehouse`: name (unique case-insensitive),
     `ownership` own | outsourced, `service_provider` (PROTECT; required only when outsourced —
@@ -305,7 +311,9 @@ Multi-user web system for **operating lease residual value pricing**
     "Administração" (`/admin/…`, two side menu sections: Management — Users and Roles,
     administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
     Classes, Manufacturers, shared by every app). Remarketing (`/remarketing/…`): section
-    Inventory — Movement, Assets, Locations, Containers, Labels (`src/modules/inventory/`) and
+    Inventory — Appointments (calendar `v-calendar` + list), Receiving (lots; lot page
+    `/remarketing/inventory/receiving/:id`), Movement, Assets, Accessories, Locations,
+    Containers, Labels (`src/modules/inventory/`) and
     Warehouses (`/remarketing/inventory/<page>`). Scan screens are for barcode guns (keyboard
     wedge + Enter; focused field, color + sound — `inventory/beep.ts`); codes checked in the
     browser by `src/utils/inventoryCodes.ts`; labels are Code 128 SVG (`src/utils/code128.ts`,
