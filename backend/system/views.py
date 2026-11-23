@@ -33,9 +33,6 @@ def web_error_message(error: WebError) -> str:
 def _data(request, obj):
     data = {
         "photo_search_enabled": bool(obj.searxng_url),
-        # Everyone: how user names are shown
-        "user_name_display": obj.user_name_display,
-        "full_name_order": obj.full_name_order,
     }
     if is_administrator(request.user):
         data.update(SystemSettingsSerializer(obj).data)

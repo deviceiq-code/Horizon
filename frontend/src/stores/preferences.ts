@@ -18,6 +18,11 @@ import {
 } from '@/numberFormat'
 
 export type Theme = 'light' | 'dark' | 'system'
+/** How users are shown to this user (the API already sends names formatted this way) */
+export type UserNameDisplay = 'username' | 'first_name' | 'full_name'
+export type FullNameOrder = 'first_last' | 'last_first'
+const USER_NAME_DISPLAYS: readonly UserNameDisplay[] = ['username', 'first_name', 'full_name']
+const FULL_NAME_ORDERS: readonly FullNameOrder[] = ['first_last', 'last_first']
 
 /** User preferences as returned by the API (/api/auth/preferences/). */
 export interface Preferences {
@@ -39,6 +44,9 @@ export interface Preferences {
   currency_display: CurrencyDisplay
   /** How the user left the interface (side menu, grids' filters…): follows them anywhere */
   ui_state: UiState
+  /** How users are shown everywhere (top bar, "created by", history…) */
+  user_name_display: UserNameDisplay
+  full_name_order: FullNameOrder
   /** Smart Tools: a button in some text fields searches the Internet, with this engine */
   web_search: boolean
   web_search_engine: WebSearchEngine
@@ -62,6 +70,8 @@ export type PreferencesUpdate = Partial<{
   currency: Currency
   currency_display: CurrencyDisplay
   ui_state: UiState
+  user_name_display: UserNameDisplay
+  full_name_order: FullNameOrder
   web_search: boolean
   web_search_engine: WebSearchEngine
   select_on_focus: boolean
@@ -175,6 +185,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
   numberSettings.percentPlaces = percentPlaces.value
   numberSettings.format = numberFormat.value
   numberSettings.currency = currencyDisplay.value
+  // Only with the account: the server formats the names
+  const userNameDisplay = ref<UserNameDisplay>('full_name')
+  const fullNameOrder = ref<FullNameOrder>('first_last')
   const webSearch = ref(
     readStored(WEB_SEARCH_ON_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
   )
@@ -211,6 +224,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
     currency?: string
     currency_display?: string
     ui_state?: UiState
+    user_name_display?: string
+    full_name_order?: string
     web_search?: boolean
     web_search_engine?: string
     select_on_focus?: boolean
@@ -261,6 +276,12 @@ export const usePreferencesStore = defineStore('preferences', () => {
       store(CURRENCY_DISPLAY_STORAGE_KEY, p.currency_display)
     }
     if (p.ui_state && typeof p.ui_state === 'object') uiState.value = p.ui_state
+    if ((USER_NAME_DISPLAYS as readonly unknown[]).includes(p.user_name_display)) {
+      userNameDisplay.value = p.user_name_display as UserNameDisplay
+    }
+    if ((FULL_NAME_ORDERS as readonly unknown[]).includes(p.full_name_order)) {
+      fullNameOrder.value = p.full_name_order as FullNameOrder
+    }
     if (typeof p.web_search === 'boolean') {
       webSearch.value = p.web_search
       store(WEB_SEARCH_ON_STORAGE_KEY, String(p.web_search))
@@ -297,6 +318,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
       currency: currency.value,
       currency_display: currencyDisplay.value,
       ui_state: uiState.value,
+      user_name_display: userNameDisplay.value,
+      full_name_order: fullNameOrder.value,
       web_search: webSearch.value,
       web_search_engine: webSearchEngine.value,
       select_on_focus: selectOnFocus.value,
@@ -341,6 +364,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
     currencyDisplay,
     uiState,
     saveUiState,
+    userNameDisplay,
+    fullNameOrder,
     webSearch,
     webSearchEngine,
     selectOnFocus,

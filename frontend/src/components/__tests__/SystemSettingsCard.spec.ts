@@ -17,8 +17,6 @@ describe('SystemSettingsCard', () => {
     store = useSystemSettingsStore()
     store.settings = {
       photo_search_enabled: false,
-      user_name_display: 'full_name',
-      full_name_order: 'first_last',
       searxng_url: '',
     }
   })
@@ -33,8 +31,6 @@ describe('SystemSettingsCard', () => {
     const save = vi.spyOn(store, 'save').mockImplementation(async (changes) => {
       store.settings = {
         photo_search_enabled: true,
-        user_name_display: 'full_name',
-        full_name_order: 'first_last',
         searxng_url: 'http://192.168.0.22:30053',
       }
       expect(changes).toEqual({ searxng_url: 'http://192.168.0.22:30053/' })

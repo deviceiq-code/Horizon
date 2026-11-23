@@ -33,6 +33,8 @@ const user = (is_admin: boolean): User => ({
     currency: 'BRL',
     currency_display: 'symbol',
     ui_state: {},
+    user_name_display: 'full_name',
+    full_name_order: 'first_last',
     web_search: true,
     web_search_engine: 'google',
     updated_at: '',
@@ -45,8 +47,6 @@ async function mountAt(path: string, isStaff: boolean) {
   useAuthStore().user = user(isStaff)
   useSystemSettingsStore().settings = {
     photo_search_enabled: true,
-    user_name_display: 'full_name',
-    full_name_order: 'first_last',
     searxng_url: 'http://192.168.0.22:30053',
   }
   const router = createRouter({
@@ -115,6 +115,25 @@ describe('SettingsView', () => {
     expect(inBody('[data-testid="date-time-example"]')!.textContent).toMatch(
       /Now: \d{4}-\d{2}-\d{2}, \d{2}:\d{2}/,
     )
+    wrapper.unmount()
+  })
+
+  it('how users are shown: each user chooses; the top bar follows', async () => {
+    const { wrapper } = await mountAt('/settings?tab=appearance', false)
+    const preferences = usePreferencesStore()
+    const save = vi.spyOn(preferences, 'save').mockResolvedValue()
+    const refresh = vi.spyOn(useAuthStore(), 'refresh').mockResolvedValue()
+    const example = () => inBody('[data-testid="name-example"]')!.textContent!
+    expect(example()).toContain('Maria Silva')
+    await click('name-display-first_name')
+    expect(save).toHaveBeenCalledWith({ user_name_display: 'first_name' })
+    expect(refresh).toHaveBeenCalled()
+    preferences.apply({ user_name_display: 'full_name', full_name_order: 'last_first' })
+    await settle()
+    expect(example()).toContain('Silva, Maria')
+    // The order belongs under "Show Users by", with no separator
+    const order = inBody('[data-testid="name-order"]')!.closest('.setting-row')!
+    expect(order.className).toContain('setting-row--child')
     wrapper.unmount()
   })
 

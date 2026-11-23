@@ -12,6 +12,7 @@ import { normalizeDecimal } from '@/utils/decimal'
 import { formatMoney, toInputNumber } from '@/utils/money'
 import { useI18n } from 'vue-i18n'
 import { LANGUAGES } from '@/i18n'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/stores/preferences'
 import { COLOR_THEMES } from '@/themes'
@@ -44,6 +45,7 @@ const PERCENT_PLACES = Array.from(
 
 const { t, locale } = useI18n()
 const preferences = usePreferencesStore()
+const auth = useAuthStore()
 const notifications = useNotificationsStore()
 
 const saving = ref(false)
@@ -104,6 +106,21 @@ const now = new Date()
 
 /** The scale "Automatic" gives in this window now ("88%") */
 const autoPercent = () => Math.round(uiScaleFactor('auto', window.innerWidth) * 100)
+
+// How users are shown: an example with a made-up person
+const nameExample = computed(() => {
+  const first = t('system.userName.exampleFirst')
+  const last = t('system.userName.exampleLast')
+  if (preferences.userNameDisplay === 'username') return t('system.userName.exampleUsername')
+  if (preferences.userNameDisplay === 'first_name') return first
+  return preferences.fullNameOrder === 'last_first' ? `${last}, ${first}` : `${first} ${last}`
+})
+
+/** Names come formatted from the server: after a change, the top bar's name too */
+async function saveNames(changes: PreferencesUpdate) {
+  await save(changes)
+  await auth.refresh().catch(() => {})
+}
 
 /** Every change is saved right away; the notice already shows in the newly chosen language. */
 async function save(changes: PreferencesUpdate) {
@@ -446,6 +463,61 @@ async function save(changes: PreferencesUpdate) {
             </v-btn-toggle>
           </SettingRow>
         </v-card>
+
+        <!-- How users are shown everywhere (each user's own; the server formats the names) -->
+        <div class="group-title">{{ $t('system.userName.title') }}</div>
+        <v-card class="mb-6" data-testid="user-name-display">
+          <SettingRow :title="$t('system.userName.show')" :description="$t('system.userName.hint')">
+            <v-btn-toggle
+              :model-value="preferences.userNameDisplay"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              density="comfortable"
+              :disabled="saving"
+              class="flex-wrap"
+              data-testid="name-display"
+              @update:model-value="saveNames({ user_name_display: $event })"
+            >
+              <v-btn value="username" class="text-none" data-testid="name-display-username">
+                {{ $t('system.userName.options.username') }}
+              </v-btn>
+              <v-btn value="first_name" class="text-none" data-testid="name-display-first_name">
+                {{ $t('system.userName.options.firstName') }}
+              </v-btn>
+              <v-btn value="full_name" class="text-none" data-testid="name-display-full_name">
+                {{ $t('system.userName.options.fullName') }}
+              </v-btn>
+            </v-btn-toggle>
+          </SettingRow>
+          <SettingRow :title="$t('system.userName.order')" child>
+            <template #description>
+              {{ $t('system.userName.orderHint') }}
+              <span data-testid="name-example">
+                {{ $t('system.userName.example') }} {{ nameExample }}
+              </span>
+            </template>
+            <v-btn-toggle
+              :model-value="preferences.fullNameOrder"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              density="comfortable"
+              :disabled="saving || preferences.userNameDisplay === 'username'"
+              data-testid="name-order"
+              @update:model-value="saveNames({ full_name_order: $event })"
+            >
+              <v-btn value="first_last" class="text-none" data-testid="name-order-first_last">
+                {{ $t('system.userName.orders.firstLast') }}
+              </v-btn>
+              <v-btn value="last_first" class="text-none" data-testid="name-order-last_first">
+                {{ $t('system.userName.orders.lastFirst') }}
+              </v-btn>
+            </v-btn-toggle>
+          </SettingRow>
+        </v-card>
       </v-window-item>
 
       <!-- Smart Tools: conveniences of the interface, each turned on or off (src/smartTools.ts) -->
@@ -488,7 +560,7 @@ async function save(changes: PreferencesUpdate) {
             v-if="preferences.autoScope"
             :title="$t('settings.smartTools.scopeThreshold')"
             :description="$t('settings.smartTools.scopeThresholdHint')"
-            class="sub-row"
+            child
           >
             <v-text-field
               v-model="threshold"
@@ -526,7 +598,7 @@ async function save(changes: PreferencesUpdate) {
             v-if="preferences.webSearch"
             :title="$t('settings.webSearch.engine')"
             :description="$t('settings.rows.engineHint')"
-            class="sub-row"
+            child
           >
             <v-select
               :model-value="preferences.webSearchEngine"
@@ -562,10 +634,6 @@ async function save(changes: PreferencesUpdate) {
 }
 .control-narrow {
   width: 140px;
-}
-/* A setting that depends on the one above: indented */
-.sub-row {
-  padding-left: 48px !important;
 }
 .color-theme {
   cursor: pointer;

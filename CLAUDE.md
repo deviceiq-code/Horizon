@@ -162,8 +162,10 @@ Multi-user web system for **operating lease residual value pricing**
     tabs (Account, Personal Data, Employment, Account Manager).
     **Showing a user:** always `users.display.display_name(user)` (in serializers
     `display_name_in(self.context, user)`), never `get_full_name()`/`username` directly — it
-    follows the System settings `user_name_display` (username | first_name | full_name) and
-    `full_name_order` (first_last "First Last" | last_first "Last, First").
+    follows the **viewer's own** preferences (Settings → Appearance; `UserPreferences`)
+    `user_name_display` (username | first_name | full_name) and `full_name_order`
+    (first_last "First Last" | last_first "Last, First"), read once per serializer tree from
+    the request's user.
   - `system/` — system-wide settings edited by administrators in the app (`SystemSettings`
     singleton, `SystemSettings.current()`), at `/api/system/settings/` (GET: everyone sees what
     is enabled, e.g. `photo_search_enabled`; PATCH and `test-searxng/`: administrators only).
@@ -225,7 +227,8 @@ Multi-user web system for **operating lease residual value pricing**
   - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools (`?tab=`),
     laid out as Haze's settings: full width, a small caption per group, cards of rows —
     `src/components/SettingRow.vue` (title and description on the left, the control on the
-    right; `below` slot for wide content; dependent settings indented with `sub-row`).
+    right; `below` slot for wide content; `child`: a setting that depends on the one above —
+    indented, no separator).
   - **Search the Internet** beside some text fields (`src/components/WebSearchButton.vue` in
     the field's `#append-inner`: disabled while empty, out of the Tab order, opens a new tab):
     Average Prices' Model (searched with its manufacturer: "Dell P2423H"); Customers' legal

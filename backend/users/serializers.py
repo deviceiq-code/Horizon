@@ -6,12 +6,12 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from accounts.models import UserNameDisplay
 from catalogs.models import Vertical
 from config.keywords import KeywordsField
 from customers.tax_ids import is_valid_cpf, normalize_tax_id
-from system.models import UserNameDisplay
 
-from .display import format_user_name, full_name_in, name_format
+from .display import context_format, format_user_name, full_name_in
 from .models import (
     IdDocumentType,
     Role,
@@ -190,8 +190,8 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
     def get_full_name(self, obj) -> str:
-        # Name and last name in the order set in the system settings (always the full name)
-        fmt = self.context.setdefault("name_format", name_format())
+        # Name and last name in the viewer's order (always the full name)
+        fmt = context_format(self.context)
         return format_user_name(
             "", obj.first_name, obj.last_name, UserNameDisplay.FULL_NAME, fmt[1]
         )

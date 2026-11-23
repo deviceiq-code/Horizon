@@ -60,8 +60,6 @@ describe('PriceMediaTab', () => {
     setActivePinia(createPinia())
     useSystemSettingsStore().settings = {
       photo_search_enabled: false,
-      user_name_display: 'full_name',
-      full_name_order: 'first_last',
     }
     api.listPriceDocuments.mockResolvedValue([CATALOG])
     URL.createObjectURL = vi.fn<(object: Blob) => string>(() => 'blob:front')

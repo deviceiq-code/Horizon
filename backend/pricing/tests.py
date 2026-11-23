@@ -491,11 +491,10 @@ def test_list_created_filter_includes_the_whole_day(logged_client, rows):
 
 
 def test_created_by_follows_the_user_name_setting(logged_client, price):
-    from system.models import SystemSettings
-
     assert logged_client.get(f"{URL}{price.pk}/").json()["created_by_name"] == "Ana Souza"
-    SystemSettings.objects.update_or_create(
-        pk=1, defaults={"user_name_display": "full_name", "full_name_order": "last_first"}
+    # The viewer's own preference
+    logged_client.patch(
+        "/api/auth/preferences/", {"full_name_order": "last_first"}, content_type="application/json"
     )
     assert logged_client.get(URL).json()["results"][0]["created_by_name"] == "Souza, Ana"
 

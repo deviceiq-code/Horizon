@@ -257,25 +257,32 @@ def test_format_user_name(names, display, order, expected):
     assert format_user_name(*names, display, order) == expected
 
 
-def _set_display(display, order="first_last"):
-    from system.models import SystemSettings
-
-    SystemSettings.objects.update_or_create(
-        pk=1, defaults={"user_name_display": display, "full_name_order": order}
+def _set_display(client, display, order="first_last"):
+    r = _patch(
+        client,
+        "/api/auth/preferences/",
+        {"user_name_display": display, "full_name_order": order},
     )
+    assert r.status_code == 200, r.json()
 
 
-def test_users_are_shown_as_set_in_the_system(admin_client):
+def test_users_are_shown_as_each_user_wants(admin_client, client):
     assert admin_client.get("/api/auth/me/").json()["name"] == "Ana Souza"
-    _set_display("full_name", "last_first")
+    _set_display(admin_client, "full_name", "last_first")
     assert admin_client.get("/api/auth/me/").json()["name"] == "Souza, Ana"
     # The users grid shows the full name in that order
     listed = admin_client.get(USERS).json()["results"][0]
     assert listed["full_name"] == "Souza, Ana"
-    _set_display("username")
+    _set_display(admin_client, "username")
     assert admin_client.get("/api/auth/me/").json()["name"] == "ana"
-    _set_display("first_name")
+    _set_display(admin_client, "first_name")
     assert admin_client.get("/api/auth/me/").json()["name"] == "Ana"
+    # Another user still sees full names, first name first (their own preference)
+    bruno = User.objects.create_user("bruno", first_name="Bruno", last_name="Lima")
+    Role.administrator().users.add(bruno)
+    client.force_login(bruno)
+    listed = {u["username"]: u["full_name"] for u in client.get(USERS).json()["results"]}
+    assert listed["ana"] == "Ana Souza"
 
 
 # --- Photos ---------------------------------------------------------------------------------

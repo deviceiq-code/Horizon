@@ -230,8 +230,6 @@ def test_other_users_only_see_what_is_enabled(user_client):
     SystemSettings.objects.update_or_create(pk=1, defaults={"searxng_url": "http://searx"})
     assert user_client.get(URL).json() == {
         "photo_search_enabled": True,
-        "user_name_display": "full_name",
-        "full_name_order": "first_last",
     }
     r = user_client.patch(URL, {"searxng_url": ""}, content_type="application/json")
     assert r.status_code == 403
@@ -251,16 +249,7 @@ def test_test_searxng(admin_client, server):
     assert "settings.yml" in r.json()["detail"]
 
 
-def test_user_name_display_settings(admin_client):
-    r = admin_client.patch(
-        URL,
-        {"user_name_display": "first_name", "full_name_order": "last_first"},
-        content_type="application/json",
-    )
-    assert r.status_code == 200, r.json()
-    assert (r.json()["user_name_display"], r.json()["full_name_order"]) == (
-        "first_name",
-        "last_first",
-    )
-    r = admin_client.patch(URL, {"user_name_display": "nickname"}, content_type="application/json")
-    assert r.status_code == 400
+def test_how_users_are_shown_is_no_longer_a_system_setting(admin_client):
+    # Each user's own preference now (accounts.UserPreferences)
+    data = admin_client.get(URL).json()
+    assert "user_name_display" not in data and "full_name_order" not in data

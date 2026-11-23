@@ -40,6 +40,8 @@ const ME: User = {
     currency: 'BRL',
     currency_display: 'symbol',
     ui_state: {},
+    user_name_display: 'full_name',
+    full_name_order: 'first_last',
     web_search: true,
     web_search_engine: 'google',
     updated_at: '',

@@ -74,6 +74,20 @@ CURRENCIES = [
 ]  # fmt: skip
 
 
+class UserNameDisplay(models.TextChoices):
+    """How users are shown everywhere (top bar, "created by", history…) — each user's own
+    preference."""
+
+    USERNAME = "username", _("Username")
+    FIRST_NAME = "first_name", _("First name")
+    FULL_NAME = "full_name", _("Full name")
+
+
+class FullNameOrder(models.TextChoices):
+    FIRST_LAST = "first_last", _("First Last")
+    LAST_FIRST = "last_first", _("Last, First")
+
+
 class WebSearchEngine(models.TextChoices):
     """Where "Search the Internet" (beside some text fields) opens: a page cannot use the
     browser's default search engine, so the user picks one."""
@@ -142,6 +156,19 @@ class UserPreferences(models.Model):
     # How the user left the interface, kept with the account so it follows them to any
     # computer: e.g. {"sideMenu": {"wide": "open"}, "filters": {"customers": true}}
     ui_state = models.JSONField(_("interface state"), default=dict, blank=True)
+    # How users are shown to this user (users.display)
+    user_name_display = models.CharField(
+        _("show users by"),
+        max_length=20,
+        choices=UserNameDisplay,
+        default=UserNameDisplay.FULL_NAME,
+    )
+    full_name_order = models.CharField(
+        _("full name order"),
+        max_length=20,
+        choices=FullNameOrder,
+        default=FullNameOrder.FIRST_LAST,
+    )
     web_search_engine = models.CharField(
         _("web search engine"),
         max_length=12,

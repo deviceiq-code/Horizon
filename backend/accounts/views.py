@@ -22,8 +22,8 @@ def _user_data(user):
     return {
         "id": user.id,
         "username": user.username,
-        # As set in the system settings (username, first name or full name)
-        "name": display_name(user),
+        # As the user wants users shown (username, first name or full name)
+        "name": display_name(user, viewer=user),
         # Administrators can do everything (users, roles, system settings…)
         "is_admin": is_administrator(user),
         "roles": sorted(role.name for role in user.roles.all()),

@@ -21,6 +21,8 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "currency",
             "currency_display",
             "ui_state",
+            "user_name_display",
+            "full_name_order",
             "web_search",
             "web_search_engine",
             "select_on_focus",

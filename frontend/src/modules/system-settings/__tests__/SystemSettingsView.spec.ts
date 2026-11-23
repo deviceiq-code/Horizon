@@ -12,8 +12,6 @@ describe('SystemSettingsView', () => {
     setActivePinia(createPinia())
     useSystemSettingsStore().settings = {
       photo_search_enabled: true,
-      user_name_display: 'full_name',
-      full_name_order: 'first_last',
       searxng_url: 'http://192.168.0.22:30053',
     }
   })
@@ -25,7 +23,8 @@ describe('SystemSettingsView', () => {
     const wrapper = mountWithPlugins(SystemSettingsView)
     await settle()
     expect(inBody('h1')!.textContent).toBe('System Settings')
-    expect(inBody('[data-testid="user-name-display"]')).not.toBeNull()
+    // How users are shown is each user's own setting now (Settings)
+    expect(inBody('[data-testid="user-name-display"]')).toBeNull()
     expect(inBody('[data-testid="system-settings"]')).not.toBeNull()
     wrapper.unmount()
   })

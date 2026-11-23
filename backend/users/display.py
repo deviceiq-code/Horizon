@@ -1,7 +1,8 @@
-"""How users are shown in the app (System settings: username, first name or full name, and
-the order of the full name). Use `display_name` wherever a user appears."""
+"""How users are shown in the app — each viewer's own preference (Settings: username, first
+name or full name, and the order of the full name). Use `display_name_in` (serializers) or
+`display_name` wherever a user appears."""
 
-from system.models import FullNameOrder, SystemSettings, UserNameDisplay
+from accounts.models import FullNameOrder, UserNameDisplay, UserPreferences
 
 
 def format_user_name(
@@ -19,31 +20,42 @@ def format_user_name(
     return first or last or username
 
 
-def name_format() -> tuple[str, str]:
-    settings = SystemSettings.current()
-    return settings.user_name_display, settings.full_name_order
+DEFAULT_FORMAT = (UserNameDisplay.FULL_NAME.value, FullNameOrder.FIRST_LAST.value)
 
 
-def display_name(user, fmt: tuple[str, str] | None = None) -> str | None:
-    """`fmt`: from name_format(), to read the settings once for many users."""
+def name_format(viewer=None) -> tuple[str, str]:
+    """How `viewer` (who is looking) wants users shown; the default without one."""
+    if viewer is None or not getattr(viewer, "is_authenticated", False):
+        return DEFAULT_FORMAT
+    preferences = UserPreferences.for_user(viewer)
+    return preferences.user_name_display, preferences.full_name_order
+
+
+def context_format(context: dict) -> tuple[str, str]:
+    """The viewer's format for a serializer tree (the request's user), read once."""
+    if "name_format" not in context:
+        request = context.get("request")
+        context["name_format"] = name_format(getattr(request, "user", None))
+    return context["name_format"]
+
+
+def display_name(user, fmt: tuple[str, str] | None = None, viewer=None) -> str | None:
+    """`fmt`: from name_format(), to read the preferences once for many users; else `viewer`'s."""
     if user is None:
         return None
-    display, order = fmt or name_format()
+    display, order = fmt or name_format(viewer)
     return format_user_name(user.username, user.first_name, user.last_name, display, order)
 
 
 def display_name_in(context: dict, user) -> str | None:
-    """display_name for serializers: the settings are read once per serializer tree."""
-    if "name_format" not in context:
-        context["name_format"] = name_format()
-    return display_name(user, context["name_format"])
+    """display_name for serializers: as the request's user wants it (read once per tree)."""
+    return display_name(user, context_format(context))
 
 
 def full_name_in(context: dict, user) -> str:
-    """The user's full name in the order set in the system settings (always the full name, e.g.
-    for account managers in lists); read once per serializer tree."""
-    if "name_format" not in context:
-        context["name_format"] = name_format()
+    """The user's full name in the viewer's order (always the full name, e.g. for account
+    managers in lists); read once per serializer tree."""
+    context_format(context)
     return format_user_name(
         user.username,
         user.first_name,
