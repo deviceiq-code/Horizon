@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ASSET_ICONS, DEFAULT_ASSET_ICON } from '../asset-classes/icons'
-import { addKeywords, normalizeKeyword } from '../asset-classes/keywords'
+import { addKeywords, normalizeKeyword } from '@/utils/keywords'
 import { numberToStars, previewAverage, starsToNumber } from '../remarketing/stars'
 
 describe('stars', () => {

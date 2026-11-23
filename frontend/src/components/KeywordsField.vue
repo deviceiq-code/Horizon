@@ -5,10 +5,11 @@
  */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { addKeywords, MAX_KEYWORD_LENGTH, MAX_KEYWORDS } from './keywords'
+import { addKeywords, MAX_KEYWORD_LENGTH, MAX_KEYWORDS } from '@/utils/keywords'
 
 const model = defineModel<string[]>({ required: true })
-withDefaults(defineProps<{ label: string; errorMessages?: string[]; disabled?: boolean }>(), {
+withDefaults(defineProps<{ label?: string; errorMessages?: string[]; disabled?: boolean }>(), {
+  label: undefined,
   errorMessages: undefined,
   disabled: false,
 })
@@ -22,7 +23,7 @@ function add() {
   if (!draft.value.trim()) return
   const result = addKeywords(model.value, draft.value)
   if (result.error === 'tooMany') {
-    draftError.value = t('assetClasses.keywords.tooMany', { max: MAX_KEYWORDS })
+    draftError.value = t('keywords.tooMany', { max: MAX_KEYWORDS })
     return
   }
   if (result.error === 'tooLong') {
@@ -49,14 +50,14 @@ function remove(keyword: string) {
 <template>
   <v-input :model-value="model" :error-messages="errorMessages" :disabled="disabled">
     <div class="w-100">
-      <div class="text-body-2 text-medium-emphasis mb-2">{{ label }}</div>
+      <div class="text-body-2 text-medium-emphasis mb-2">{{ label ?? t('keywords.label') }}</div>
       <div class="d-flex flex-wrap align-center ga-2">
         <v-chip
           v-for="keyword in model"
           :key="keyword"
           closable
           :disabled="disabled"
-          :close-label="t('assetClasses.keywords.remove', { keyword })"
+          :close-label="t('keywords.remove', { keyword })"
           data-testid="keyword-chip"
           @click:close="remove(keyword)"
         >
@@ -64,8 +65,8 @@ function remove(keyword: string) {
         </v-chip>
         <v-text-field
           v-model="draft"
-          :placeholder="t('assetClasses.keywords.placeholder')"
-          :aria-label="t('assetClasses.keywords.placeholder')"
+          :placeholder="t('keywords.placeholder')"
+          :aria-label="t('keywords.placeholder')"
           :error-messages="draftError"
           :disabled="disabled"
           prepend-inner-icon="mdi-tag-plus-outline"

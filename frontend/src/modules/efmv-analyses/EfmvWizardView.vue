@@ -11,6 +11,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ApiError } from '@/api'
+import KeywordsField from '@/components/KeywordsField.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import AccountManagerPicker from '@/modules/account-managers/AccountManagerPicker.vue'
 import type { AccountManagerRef } from '@/modules/account-managers/api'
@@ -48,6 +49,7 @@ const customer = ref<number | null>(null)
 // The customer list depends on the account manager: remounted when it changes
 const customerKey = ref(0)
 const scope = ref<VerticalScope>({ vertical: null, sub_vertical: null })
+const keywords = ref<string[]>([])
 const premisesForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const errors = ref<Record<string, string[]>>({})
 
@@ -139,6 +141,7 @@ async function create() {
       customer: customer.value!,
       vertical: scope.value.vertical!,
       sub_vertical: scope.value.sub_vertical,
+      keywords: keywords.value,
       // A first scenario, called by its term ("36 Months"), to fill in
       scenarios: [scenarioInput(blankScenario(), locale.value)],
     })
@@ -262,6 +265,13 @@ async function create() {
                 persistent-hint
                 :no-data-text="$t('efmv.wizard.noManagerVerticals')"
                 data-testid="vertical"
+              />
+              <!-- Not a premise: they can change on the analysis -->
+              <KeywordsField
+                v-model="keywords"
+                :error-messages="errors.keywords"
+                class="mt-2"
+                data-testid="keywords"
               />
             </v-form>
           </v-col>

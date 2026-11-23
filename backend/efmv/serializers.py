@@ -10,6 +10,7 @@ from accounts.models import UserPreferences
 from catalogs.models import MAX_TERM_MONTHS, SubVertical
 from catalogs.names import english_plural, localized
 from catalogs.serializers import sub_vertical_label
+from config.keywords import KeywordsField
 from pricing.curves import value_at
 from pricing.models import AveragePrice, PricingSettings
 from pricing.positioning import is_expired, price_position, valid_until, variation_percent
@@ -434,6 +435,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
         queryset=SubVertical.objects.all(), required=False, allow_null=True
     )
     scenarios = ScenarioInputSerializer(many=True, write_only=True)
+    keywords = KeywordsField()
 
     class Meta:
         model = EfmvAnalysis
@@ -447,6 +449,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             "vertical",
             "sub_vertical",
             "vertical_label",
+            "keywords",
             "scenarios",
             "created_at",
             "created_by_name",

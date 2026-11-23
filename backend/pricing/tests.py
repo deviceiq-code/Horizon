@@ -493,3 +493,13 @@ def test_created_by_follows_the_user_name_setting(logged_client, price):
         pk=1, defaults={"user_name_display": "full_name", "full_name_order": "last_first"}
     )
     assert logged_client.get(URL).json()["results"][0]["created_by_name"] == "Souza, Ana"
+
+
+def test_keywords(logged_client, catalog):
+    r = _post(logged_client, _payload(catalog, keywords=["Usada", " USADA", "Leilão"]))
+    assert r.status_code == 201, r.json()
+    assert r.json()["keywords"] == ["usada", "leilão"]
+    found = logged_client.get(URL, {"search": "leil"}).json()["results"]
+    assert [p["id"] for p in found] == [r.json()["id"]]
+    # Not given: none
+    assert _post(logged_client, _payload(catalog, model="336")).json()["keywords"] == []

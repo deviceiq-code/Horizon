@@ -129,6 +129,8 @@ export interface EfmvAnalysis {
   sub_vertical: number | null
   /** "Industry" or "Industry / Yellow line" */
   vertical_label: string | null
+  /** Not a premise: they can change after creation */
+  keywords: string[]
   scenarios: Scenario[]
   /** Some average price used is past its validity: the analysis may be out of date */
   is_outdated: boolean
@@ -178,6 +180,7 @@ export interface EfmvAnalysisInput {
   customer: number
   vertical: number
   sub_vertical: number | null
+  keywords?: string[]
   /** At least one */
   scenarios: ScenarioInput[]
 }
@@ -226,7 +229,10 @@ export function createEfmvAnalysis(data: EfmvAnalysisInput) {
 }
 
 /** The scenarios replace the analysis's (the premises do not change). */
-export function updateEfmvAnalysis(id: number, data: { scenarios: ScenarioInput[] }) {
+export function updateEfmvAnalysis(
+  id: number,
+  data: { scenarios?: ScenarioInput[]; keywords?: string[] },
+) {
   return api<EfmvAnalysis>(`${BASE}${id}/`, { method: 'PATCH', body: JSON.stringify(data) })
 }
 

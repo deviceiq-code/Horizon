@@ -14,6 +14,7 @@ import {
   pickOption,
   settle,
   typeInto,
+  typeKeywords,
 } from '@/test-utils'
 import * as customersApi from '../api'
 import CustomersView from '../CustomersView.vue'
@@ -37,6 +38,7 @@ const CARLA = { id: 9, full_name: 'Carla Mendes' }
 
 const BASE: customersApi.Customer = {
   id: 1,
+  keywords: [],
   name: 'Transportes Rápidos Ltda',
   trade_name: 'TransRápido',
   tax_id: '11222333000181',
@@ -216,11 +218,13 @@ describe('CustomersView', () => {
     await typeInto('tax-id', '11.222.333/0001-81')
     await pickOption('primary-account-manager', 'Ana Souza')
     await pickOption('secondary-account-managers', 'Carla Mendes')
+    await typeKeywords('Logística, Frota  Pesada')
     await click('save')
 
     expect(api.createCustomer).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Beta Locações Ltda',
+        keywords: ['logística', 'frota pesada'],
         tax_id: '11.222.333/0001-81',
         country: 'BR',
         is_active: true,

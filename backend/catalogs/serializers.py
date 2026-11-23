@@ -6,13 +6,12 @@ from django.db.models import ProtectedError
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from config.keywords import KeywordsField
 from users.display import person_ref
 from users.models import ACCOUNT_MANAGER
 
 from .models import (
     MANUFACTURER_RATINGS,
-    MAX_KEYWORD_LENGTH,
-    MAX_KEYWORDS,
     MAX_TERM_MONTHS,
     REMARKETING_RATINGS,
     AssetClass,
@@ -85,6 +84,7 @@ class VerticalSerializer(serializers.ModelSerializer):
     # the user (Users → the user's verticals), not here.
     account_managers_detail = serializers.SerializerMethodField()
     sub_verticals = SubVerticalSerializer(many=True, required=False)
+    keywords = KeywordsField()
 
     class Meta:
         model = Vertical
@@ -94,6 +94,7 @@ class VerticalSerializer(serializers.ModelSerializer):
             "account_managers_detail",
             "is_enabled",
             "notes",
+            "keywords",
             "sub_verticals",
             "created_at",
             "updated_at",
@@ -216,6 +217,7 @@ def remarketing_average_field():
 
 class ManufacturerSerializer(serializers.ModelSerializer):
     remarketing_average = remarketing_average_field()
+    keywords = KeywordsField()
 
     class Meta:
         model = Manufacturer
@@ -225,6 +227,7 @@ class ManufacturerSerializer(serializers.ModelSerializer):
             *MANUFACTURER_RATINGS,
             "remarketing_average",
             "is_enabled",
+            "keywords",
             "created_at",
             "updated_at",
         ]
@@ -283,11 +286,7 @@ class AssetClassSerializer(serializers.ModelSerializer):
     # Read-only: the sub-vertical with its label and vertical, for display
     sub_vertical_detail = SubVerticalOptionSerializer(source="sub_vertical", read_only=True)
     remarketing_average = remarketing_average_field()
-    # Blank entries are accepted here and dropped by validate_keywords
-    keywords = serializers.ListField(
-        child=serializers.CharField(max_length=MAX_KEYWORD_LENGTH, allow_blank=True),
-        required=False,
-    )
+    keywords = KeywordsField()
 
     class Meta:
         model = AssetClass
@@ -364,19 +363,6 @@ class AssetClassSerializer(serializers.ModelSerializer):
         if not _ICON.match(value):
             raise serializers.ValidationError(_("Choose an icon from the list."))
         return value
-
-    def validate_keywords(self, value):
-        """Lowercase, single spaces, no blanks or duplicates (case-insensitive), in order."""
-        keywords = []
-        for keyword in value:
-            keyword = _collapse_spaces(keyword).lower()
-            if keyword and keyword not in keywords:
-                keywords.append(keyword)
-        if len(keywords) > MAX_KEYWORDS:
-            raise serializers.ValidationError(
-                _("Use at most %(max)d keywords.") % {"max": MAX_KEYWORDS}
-            )
-        return keywords
 
     def validate_sub_vertical(self, value):
         # Only sub-verticals of enabled verticals can be assigned; keeping one whose vertical

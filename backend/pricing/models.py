@@ -19,6 +19,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from catalogs.models import AssetClass, Manufacturer, SubVertical
+from config.keywords import keywords_field
 
 from .curves import increasing_terms, monthly_curve, percent_of
 from .positioning import PositionLimits
@@ -62,6 +63,8 @@ class AveragePrice(models.Model):
     )
     model = models.CharField(_("model"), max_length=150)
     description = models.TextField(_("description"), blank=True)
+    # Kept by each version (a new version starts with the previous one's)
+    keywords = keywords_field()
     # Values for the asset class's specification template, with the template as it was
     # (see catalogs.specs.snapshot_values)
     specs = models.JSONField(_("specifications"), default=list, blank=True)

@@ -3,6 +3,7 @@ import re
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from config.keywords import KeywordsField
 from users.display import full_name_in, person_ref
 from users.models import is_account_manager
 
@@ -26,6 +27,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     # Read: also names, for display.
     primary_account_manager_name = serializers.SerializerMethodField()
     secondary_account_managers_detail = serializers.SerializerMethodField()
+    keywords = KeywordsField()
 
     class Meta:
         model = Customer
@@ -50,6 +52,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             "secondary_account_managers_detail",
             "is_active",
             "notes",
+            "keywords",
             "created_at",
             "updated_at",
         ]

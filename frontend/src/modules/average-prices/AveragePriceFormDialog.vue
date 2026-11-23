@@ -6,6 +6,7 @@
  * preview (value ↔ % and warnings), never computed here.
  */
 import FormDialog from '@/components/FormDialog.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -39,6 +40,7 @@ const assetClass = ref<AssetClass | null>(null)
 const manufacturerId = ref<number | null>(null)
 const model = ref('')
 const description = ref('')
+const keywords = ref<string[]>([])
 const specs = ref<Record<string, string>>({})
 const originalText = ref('')
 const entries = ref<Record<number, TermEntry>>({})
@@ -94,6 +96,8 @@ watch(open, async (isOpen) => {
   manufacturerId.value = s?.manufacturer.id ?? null
   model.value = s?.model ?? ''
   description.value = s?.description ?? ''
+  // A new version starts with the previous one's keywords
+  keywords.value = [...(s?.keywords ?? [])]
   originalText.value = s ? toInputNumber(s.original_value, locale.value, 2, 2) : ''
   specs.value = Object.fromEntries(
     (s?.specs ?? []).map((spec) => [
@@ -222,6 +226,7 @@ async function submit() {
       manufacturer: manufacturerId.value,
       model: model.value.trim(),
       description: description.value.trim(),
+      keywords: keywords.value,
       specs: canonicalSpecs(),
       currency: CURRENCY,
       original_value: original,
@@ -305,6 +310,14 @@ async function submit() {
           rows="3"
           auto-grow
           data-testid="description"
+        />
+      </v-col>
+      <v-col cols="12">
+        <KeywordsField
+          v-model="keywords"
+          :error-messages="fieldErrors.keywords"
+          data-testid="keywords"
+          @update:model-value="fieldErrors.keywords = []"
         />
       </v-col>
     </v-row>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /** Create (role = null) or edit a role created in the app (system roles are read-only). */
 import FormDialog from '@/components/FormDialog.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -14,7 +15,7 @@ const emit = defineEmits<{ saved: [role: Role, created: boolean] }>()
 const { t } = useI18n()
 const rules = useValidationRules()
 
-const form = ref({ name: '', description: '' })
+const form = ref({ name: '', description: '', keywords: [] as string[] })
 const fieldErrors = ref<Record<string, string[]>>({})
 const generalError = ref('')
 const saving = ref(false)
@@ -24,7 +25,11 @@ const isEdit = computed(() => props.role !== null)
 
 watch(open, (isOpen) => {
   if (!isOpen) return
-  form.value = { name: props.role?.name ?? '', description: props.role?.description ?? '' }
+  form.value = {
+    name: props.role?.name ?? '',
+    description: props.role?.description ?? '',
+    keywords: [...(props.role?.keywords ?? [])],
+  }
   fieldErrors.value = {}
   generalError.value = ''
 })
@@ -35,14 +40,18 @@ async function submit() {
   saving.value = true
   fieldErrors.value = {}
   generalError.value = ''
-  const data = { name: form.value.name.trim(), description: form.value.description.trim() }
+  const data = {
+    name: form.value.name.trim(),
+    description: form.value.description.trim(),
+    keywords: form.value.keywords,
+  }
   try {
     const saved = props.role ? await updateRole(props.role.id, data) : await createRole(data)
     emit('saved', saved, !props.role)
     open.value = false
   } catch (error) {
     const errors = error instanceof ApiError ? error.fieldErrors() : {}
-    if (errors.name || errors.description) {
+    if (errors.name || errors.description || errors.keywords) {
       fieldErrors.value = errors
     } else {
       generalError.value =
@@ -84,6 +93,12 @@ async function submit() {
       rows="3"
       auto-grow
       data-testid="role-description"
+    />
+    <KeywordsField
+      v-model="form.keywords"
+      :error-messages="fieldErrors.keywords"
+      data-testid="keywords"
+      @update:model-value="fieldErrors.keywords = []"
     />
     <v-alert v-if="generalError" type="error" variant="tonal" density="compact">
       {{ generalError }}

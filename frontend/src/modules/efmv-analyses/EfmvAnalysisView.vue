@@ -10,6 +10,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import FormDialog from '@/components/FormDialog.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import { userPhotoUrl } from '@/modules/users/api'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -215,6 +217,37 @@ function openFirstWithIssues() {
   if (index >= 0) tab.value = scenarios.value[index]!.key
 }
 
+// --- Keywords (not premises: they change on their own, saved at once) -------------------------
+
+const keywordsOpen = ref(false)
+const keywordsDraft = ref<string[]>([])
+const keywordsErrors = ref<string[]>([])
+const keywordsSaving = ref(false)
+
+function editKeywords() {
+  keywordsDraft.value = [...(analysis.value?.keywords ?? [])]
+  keywordsErrors.value = []
+  keywordsOpen.value = true
+}
+
+async function saveKeywords() {
+  keywordsSaving.value = true
+  keywordsErrors.value = []
+  try {
+    // Only the keywords: the scenarios being edited stay as they are
+    const saved = await updateEfmvAnalysis(props.id, { keywords: keywordsDraft.value })
+    if (analysis.value) analysis.value.keywords = saved.keywords
+    notifications.notify(t('keywords.saved'))
+    keywordsOpen.value = false
+  } catch (error) {
+    const data = error instanceof ApiError && error.status === 400 ? error.data : null
+    const errors = (data as Record<string, unknown> | null)?.keywords
+    keywordsErrors.value = Array.isArray(errors) ? errors : [t('common.saveError')]
+  } finally {
+    keywordsSaving.value = false
+  }
+}
+
 // --- Save -------------------------------------------------------------------------------------
 
 async function save() {
@@ -347,6 +380,31 @@ async function save() {
                   class="mr-2 text-medium-emphasis"
                 />
                 {{ d(new Date(analysis.created_at), 'short') }}
+              </div>
+            </div>
+            <div class="premise" data-testid="premise-keywords">
+              <div class="premise-label">{{ $t('keywords.label') }}</div>
+              <div class="premise-value">
+                <v-icon icon="mdi-tag-outline" size="small" class="mr-2 text-medium-emphasis" />
+                <span v-if="!analysis.keywords.length" class="text-medium-emphasis">—</span>
+                <span
+                  v-else
+                  class="keywords-text text-truncate"
+                  :title="analysis.keywords.join(', ')"
+                  data-testid="keywords-text"
+                >
+                  {{ analysis.keywords.join(', ') }}
+                </span>
+                <v-btn
+                  icon="mdi-pencil-outline"
+                  variant="text"
+                  size="x-small"
+                  class="ml-1"
+                  :title="$t('keywords.edit')"
+                  :aria-label="$t('keywords.edit')"
+                  data-testid="edit-keywords"
+                  @click="editKeywords"
+                />
               </div>
             </div>
           </div>
@@ -492,6 +550,38 @@ async function save() {
       @update:model-value="!$event && (removing = null)"
       @confirm="removeScenario"
     />
+
+    <!-- Keywords: their own small form (saved at once) -->
+    <FormDialog
+      v-model="keywordsOpen"
+      :title="$t('keywords.edit')"
+      :subtitle="analysis?.code ?? null"
+      icon="mdi-tag-outline"
+      max-width="560"
+      :persistent="keywordsSaving"
+      @submit="saveKeywords"
+    >
+      <KeywordsField
+        v-model="keywordsDraft"
+        :error-messages="keywordsErrors"
+        data-testid="keywords"
+        @update:model-value="keywordsErrors = []"
+      />
+      <template #actions>
+        <v-btn variant="text" :disabled="keywordsSaving" @click="keywordsOpen = false">
+          {{ $t('common.cancel') }}
+        </v-btn>
+        <v-btn
+          type="submit"
+          color="primary"
+          variant="flat"
+          :loading="keywordsSaving"
+          data-testid="save-keywords"
+        >
+          {{ $t('common.save') }}
+        </v-btn>
+      </template>
+    </FormDialog>
   </v-container>
 </template>
 
@@ -524,6 +614,10 @@ async function save() {
 .premise-label {
   font-size: 0.75rem;
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+.keywords-text {
+  max-width: 260px;
+  font-weight: 400;
 }
 .premise-value {
   display: flex;

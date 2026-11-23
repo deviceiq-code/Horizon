@@ -189,6 +189,7 @@ describe('AssetClassesTab', () => {
       results: [
         {
           id: 1,
+          keywords: [],
           name: 'Industry',
           account_managers_detail: [],
           is_enabled: true,

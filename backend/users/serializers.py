@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from catalogs.models import Vertical
+from config.keywords import KeywordsField
 from customers.tax_ids import is_valid_cpf, normalize_tax_id
 from system.models import UserNameDisplay
 
@@ -24,10 +25,20 @@ User = get_user_model()
 
 class RoleSerializer(serializers.ModelSerializer):
     users_count = serializers.SerializerMethodField()
+    keywords = KeywordsField()
 
     class Meta:
         model = Role
-        fields = ["id", "key", "name", "description", "is_system", "users_count", "created_at"]
+        fields = [
+            "id",
+            "key",
+            "name",
+            "description",
+            "keywords",
+            "is_system",
+            "users_count",
+            "created_at",
+        ]
         read_only_fields = ["id", "key", "is_system", "users_count", "created_at"]
 
     def get_users_count(self, obj) -> int:
@@ -64,6 +75,7 @@ PROFILE_FIELDS = [
     "phone",
     "mobile_phone",
     "verticals",
+    "keywords",
 ]
 
 
@@ -127,6 +139,7 @@ class UserSerializer(serializers.ModelSerializer):
         source="profile.verticals", queryset=Vertical.objects.all(), many=True, required=False
     )
     verticals_detail = serializers.SerializerMethodField()
+    keywords = KeywordsField(source="profile.keywords")
 
     class Meta:
         model = User

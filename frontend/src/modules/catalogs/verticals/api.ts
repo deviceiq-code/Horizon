@@ -28,6 +28,7 @@ export interface Vertical {
   account_managers_detail: AccountManagerRef[]
   is_enabled: boolean
   notes: string
+  keywords: string[]
   /** General first, then by name */
   sub_verticals: SubVertical[]
   created_at: string
@@ -35,7 +36,10 @@ export interface Vertical {
 }
 
 /** Sending sub_verticals replaces the whole list (it must include the general one). */
-export type VerticalInput = Pick<Vertical, 'name' | 'is_enabled' | 'notes' | 'sub_verticals'>
+export type VerticalInput = Pick<
+  Vertical,
+  'name' | 'is_enabled' | 'notes' | 'keywords' | 'sub_verticals'
+>
 
 /** Minimal reference to a vertical, as other modules display it. */
 export type VerticalRef = Pick<Vertical, 'id' | 'name' | 'is_enabled'>

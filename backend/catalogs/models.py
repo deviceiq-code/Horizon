@@ -11,6 +11,8 @@ from django.utils import translation
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
+from config.keywords import keywords_field
+
 from .ratings import STARS_MAX, STARS_MIN, average_stars, is_half_star
 
 
@@ -24,6 +26,7 @@ class Vertical(models.Model):
     name = models.CharField(_("name"), max_length=100)
     is_enabled = models.BooleanField(_("enabled"), default=True)
     notes = models.TextField(_("notes"), blank=True)
+    keywords = keywords_field()
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
@@ -131,8 +134,6 @@ class SubVertical(models.Model):
 MANUFACTURER_RATINGS = ["reputation", "product_quality", "after_sales"]
 REMARKETING_RATINGS = ["liquidity", "value_retention", "technology_renewal", "usage_breadth"]
 DEFAULT_ASSET_ICON = "mdi-cube-outline"
-MAX_KEYWORDS = 30
-MAX_KEYWORD_LENGTH = 50
 
 
 def validate_half_star(value):
@@ -181,6 +182,7 @@ class Manufacturer(models.Model):
     reputation = star_rating_field(_("reputation"))
     product_quality = star_rating_field(_("product quality"))
     after_sales = star_rating_field(_("after-sales service"))
+    keywords = keywords_field()
     is_enabled = models.BooleanField(_("enabled"), default=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
@@ -232,12 +234,7 @@ class AssetClass(models.Model):
     technology_renewal = star_rating_field(_("technology renewal"))
     usage_breadth = star_rating_field(_("usage breadth"))
     # Words used to relate assets to this class (lowercase, no duplicates)
-    keywords = ArrayField(
-        models.CharField(max_length=MAX_KEYWORD_LENGTH),
-        default=list,
-        blank=True,
-        verbose_name=_("keywords"),
-    )
+    keywords = keywords_field()
     notes = models.TextField(_("notes"), blank=True)
     # Specification fields every priced asset of this class describes (see catalogs/specs.py)
     spec_template = models.JSONField(_("specification template"), default=list, blank=True)

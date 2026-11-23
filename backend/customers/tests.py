@@ -372,3 +372,21 @@ def test_validation_messages_follow_user_language(logged_client, managers):
     assert r.json()["secondary_account_managers"] == [
         "O account manager principal não pode ser também secundário."
     ]
+
+
+def test_keywords_normalized_and_searchable(logged_client, ana):
+    r = _post(
+        logged_client,
+        {
+            "name": "Acme Ltda",
+            "tax_id": CNPJ,
+            "primary_account_manager": ana.pk,
+            "keywords": [" Agro ", "AGRO", "Linha   Amarela"],
+        },
+    )
+    assert r.status_code == 201, r.json()
+    assert r.json()["keywords"] == ["agro", "linha amarela"]
+    found = logged_client.get(URL, {"search": "Amarela"}).json()["results"]
+    assert [c["name"] for c in found] == ["Acme Ltda"]
+    # Optional: an empty list without them
+    assert _patch(logged_client, r.json()["id"], {"keywords": []}).json()["keywords"] == []

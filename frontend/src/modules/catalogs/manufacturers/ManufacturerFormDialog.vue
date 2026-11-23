@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FormDialog from '@/components/FormDialog.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -21,7 +22,7 @@ const emit = defineEmits<{ saved: [manufacturer: Manufacturer, created: boolean]
 const { t } = useI18n()
 const rules = useValidationRules()
 
-const FIELDS = ['name', ...MANUFACTURER_RATINGS, 'is_enabled']
+const FIELDS = ['name', ...MANUFACTURER_RATINGS, 'is_enabled', 'keywords']
 
 function emptyForm(): ManufacturerInput {
   return {
@@ -30,6 +31,7 @@ function emptyForm(): ManufacturerInput {
     product_quality: '0.0',
     after_sales: '0.0',
     is_enabled: true,
+    keywords: [],
   }
 }
 
@@ -51,6 +53,7 @@ watch(open, (isOpen) => {
         product_quality: m.product_quality,
         after_sales: m.after_sales,
         is_enabled: m.is_enabled,
+        keywords: [...m.keywords],
       }
     : emptyForm()
   fieldErrors.value = {}
@@ -118,6 +121,13 @@ function clearError(field: string) {
       :errors="fieldErrors"
       class="mb-4"
       @edited="clearError"
+    />
+
+    <KeywordsField
+      v-model="form.keywords"
+      :error-messages="fieldErrors.keywords"
+      data-testid="keywords"
+      @update:model-value="clearError('keywords')"
     />
 
     <v-switch

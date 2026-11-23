@@ -14,6 +14,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from catalogs.specs import suggest_values
+from config.keywords import KeywordSearchFilter
 from system.models import SystemSettings
 from system.views import web_error_message
 from system.web import WebError, fetch_image, http_url, search_images
@@ -107,7 +108,7 @@ class AveragePriceViewSet(
     ).prefetch_related(
         Prefetch("points", queryset=PricePoint.objects.select_related("average_price"))
     )
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [KeywordSearchFilter, filters.OrderingFilter]
     search_fields = [
         "model",
         "description",

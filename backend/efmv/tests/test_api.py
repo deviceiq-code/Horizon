@@ -805,3 +805,17 @@ def test_the_scope_is_written_from_the_assets(logged_client, user, managers, cus
     # Also with the analysis
     analysis = post(logged_client, body(managers, customers, prices)).json()
     assert analysis["scenarios"][0]["scope_suggestion"].startswith("Escavadeiras Caterpillar")
+
+
+def test_keywords_change_after_creation(logged_client, managers, customers, prices):
+    analysis = post(
+        logged_client, {**body(managers, customers, prices), "keywords": ["Renewal", "2027"]}
+    ).json()
+    assert analysis["keywords"] == ["renewal", "2027"]
+    r = logged_client.patch(
+        f"{URL}{analysis['id']}/", {"keywords": ["Renewal Q3"]}, content_type="application/json"
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json()["keywords"] == ["renewal q3"]
+    found = logged_client.get(URL, {"search": "q3"}).json()["results"]
+    assert [a["id"] for a in found] == [analysis["id"]]

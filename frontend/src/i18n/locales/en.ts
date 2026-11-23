@@ -15,6 +15,14 @@ const en = {
     notImage: 'Choose a JPEG, PNG, WebP or GIF image.',
     saveError: 'The record was saved, but the photo could not be.',
   },
+  keywords: {
+    label: 'Keywords',
+    placeholder: 'Add keyword (Enter or comma)',
+    remove: 'Remove keyword {keyword}',
+    tooMany: 'Use at most {max} keywords.',
+    edit: 'Edit Keywords',
+    saved: 'Keywords saved.',
+  },
   common: {
     yes: 'Yes',
     no: 'No',
@@ -467,11 +475,6 @@ const en = {
         label: 'Usage Breadth',
         hint: 'How broad its use and applications are: 0 very narrow · 5 very broad',
       },
-    },
-    keywords: {
-      placeholder: 'Add keyword (Enter or comma)',
-      remove: 'Remove keyword {keyword}',
-      tooMany: 'Use at most {max} keywords.',
     },
     noneFound: 'No enabled asset classes found.',
     searchPlaceholder: 'Search by name, keyword, vertical or sub-vertical',

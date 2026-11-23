@@ -514,3 +514,21 @@ def test_users_without_a_password_are_flagged(admin_client):
     bruno.save()
     r = admin_client.get(f"{USERS}{bruno.pk}/")
     assert r.json()["has_password"] is False
+
+
+def test_users_and_roles_have_keywords(admin_client, analyst_role):
+    r = _post(
+        admin_client,
+        USERS,
+        {"username": "carla", "password": STRONG, "keywords": ["Field  Team", "SP"]},
+    )
+    assert r.status_code == 201, r.json()
+    assert r.json()["keywords"] == ["field team", "sp"]
+    assert User.objects.get(username="carla").profile.keywords == ["field team", "sp"]
+    found = admin_client.get(USERS, {"search": "field"}).json()["results"]
+    assert [u["username"] for u in found] == ["carla"]
+
+    r = _patch(admin_client, f"{ROLES}{analyst_role.pk}/", {"keywords": ["Pricing"]})
+    assert r.json()["keywords"] == ["pricing"]
+    found = admin_client.get(ROLES, {"search": "pric"}).json()["results"]
+    assert [role["name"] for role in found] == ["Analyst"]

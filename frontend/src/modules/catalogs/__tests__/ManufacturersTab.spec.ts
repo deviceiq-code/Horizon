@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api'
 import { setLanguage } from '@/i18n'
 import { useNotificationsStore } from '@/stores/notifications'
-import { click, inBody, mountWithPlugins, settle, typeInto } from '@/test-utils'
+import { click, inBody, mountWithPlugins, settle, typeInto, typeKeywords } from '@/test-utils'
 import * as manufacturersApi from '../manufacturers/api'
 import ManufacturersTab from '../manufacturers/ManufacturersTab.vue'
 
@@ -20,6 +20,7 @@ const api = vi.mocked(manufacturersApi)
 
 const DEERE: manufacturersApi.Manufacturer = {
   id: 1,
+  keywords: [],
   name: 'John Deere',
   reputation: '5.0',
   product_quality: '4.5',
@@ -118,6 +119,7 @@ describe('ManufacturersTab', () => {
     await rate('reputation', 4.5)
     await rate('product_quality', 4)
     expect(averagePreview()).toContain('2.8') // (4.5 + 4 + 0) / 3 = 2.83
+    await typeKeywords('Agro, Tratores')
     await click('save')
 
     expect(api.createManufacturer).toHaveBeenCalledWith({
@@ -126,6 +128,7 @@ describe('ManufacturersTab', () => {
       product_quality: '4.0',
       after_sales: '0.0', // not filled in = 0 stars
       is_enabled: true,
+      keywords: ['agro', 'tratores'],
     })
     expect(useNotificationsStore().text).toBe('Manufacturer created.')
     wrapper.unmount()
@@ -177,6 +180,7 @@ describe('ManufacturersTab', () => {
       product_quality: '4.5',
       after_sales: '5.0',
       is_enabled: true,
+      keywords: [],
     })
     expect(useNotificationsStore().text).toBe('Manufacturer updated.')
     wrapper.unmount()

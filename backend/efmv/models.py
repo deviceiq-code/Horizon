@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
 
 from catalogs.models import MAX_TERM_MONTHS
+from config.keywords import keywords_field
 
 
 class EfmvAnalysis(models.Model):
@@ -54,6 +55,8 @@ class EfmvAnalysis(models.Model):
         related_name="efmv_analyses",
         verbose_name=_("sub-vertical"),
     )
+    # Not a premise: can change after creation
+    keywords = keywords_field()
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

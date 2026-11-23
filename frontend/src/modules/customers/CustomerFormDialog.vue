@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FormDialog from '@/components/FormDialog.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -36,6 +37,7 @@ const FIELDS = [
   'secondary_account_managers',
   'is_active',
   'notes',
+  'keywords',
 ] as const
 
 function emptyForm(): CustomerInput {
@@ -57,6 +59,7 @@ function emptyForm(): CustomerInput {
     secondary_account_managers: [],
     is_active: true,
     notes: '',
+    keywords: [],
   }
 }
 
@@ -93,6 +96,7 @@ function toInput(c: Customer): CustomerInput {
     secondary_account_managers: [...c.secondary_account_managers],
     is_active: c.is_active,
     notes: c.notes,
+    keywords: [...c.keywords],
   }
 }
 
@@ -384,6 +388,14 @@ function clearError(field: string) {
           :no-data-text="$t('accountManagers.noneFound')"
           data-testid="secondary-account-managers"
           @update:model-value="clearError('secondary_account_managers')"
+        />
+      </v-col>
+      <v-col cols="12">
+        <KeywordsField
+          v-model="form.keywords"
+          :error-messages="fieldErrors.keywords"
+          data-testid="keywords"
+          @update:model-value="clearError('keywords')"
         />
       </v-col>
       <v-col cols="12">

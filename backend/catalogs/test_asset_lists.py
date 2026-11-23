@@ -654,3 +654,11 @@ def test_asset_class_column_filters(logged_client, asset_classes, params, expect
         asset_class.save()
     results = logged_client.get(ASSET_CLASSES, {**params, "ordering": "name"}).json()["results"]
     assert [a["name"] for a in results] == expected
+
+
+def test_manufacturer_keywords(logged_client, db):
+    r = _post(logged_client, MANUFACTURERS, {"name": "Deere", "keywords": [" Agro ", "agro"]})
+    assert r.status_code == 201, r.json()
+    assert r.json()["keywords"] == ["agro"]
+    found = logged_client.get(MANUFACTURERS, {"search": "agr"}).json()["results"]
+    assert [m["name"] for m in found] == ["Deere"]

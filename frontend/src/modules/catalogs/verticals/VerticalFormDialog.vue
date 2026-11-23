@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FormDialog from '@/components/FormDialog.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -24,12 +25,13 @@ const emit = defineEmits<{ saved: [vertical: Vertical, created: boolean] }>()
 const { t } = useI18n()
 const rules = useValidationRules()
 
-const FIELDS = ['name', 'is_enabled', 'notes']
+const FIELDS = ['name', 'is_enabled', 'notes', 'keywords']
 
 const form = ref<VerticalInput>({
   name: '',
   is_enabled: true,
   notes: '',
+  keywords: [],
   sub_verticals: [],
 })
 const fieldErrors = ref<Record<string, string[]>>({})
@@ -66,6 +68,7 @@ watch(open, async (isOpen) => {
     name: v?.name ?? '',
     is_enabled: v?.is_enabled ?? true,
     notes: v?.notes ?? '',
+    keywords: v ? [...v.keywords] : [],
     sub_verticals: v ? v.sub_verticals.map(copySubVertical) : [],
   }
 
@@ -185,6 +188,14 @@ function clearError(field: string) {
           inset
           hide-details
           data-testid="enabled"
+        />
+      </v-col>
+      <v-col cols="12">
+        <KeywordsField
+          v-model="form.keywords"
+          :error-messages="fieldErrors.keywords"
+          data-testid="keywords"
+          @update:model-value="clearError('keywords')"
         />
       </v-col>
       <v-col cols="12">

@@ -27,6 +27,7 @@ export interface AveragePrice {
   manufacturer: { id: number; name: string }
   model: string
   description: string
+  keywords: string[]
   specs: SpecValue[]
   currency: string
   original_value: string
@@ -71,6 +72,7 @@ export interface AveragePriceInput {
   manufacturer: number
   model: string
   description: string
+  keywords: string[]
   /** Template field key → value */
   specs: Record<string, string>
   currency: string

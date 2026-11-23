@@ -10,11 +10,12 @@ export interface RoleRef {
 
 export interface Role extends RoleRef {
   description: string
+  keywords: string[]
   users_count: number
   created_at: string
 }
 
-export type RoleInput = Pick<Role, 'name' | 'description'>
+export type RoleInput = Pick<Role, 'name' | 'description' | 'keywords'>
 
 export interface User {
   id: number
@@ -53,6 +54,7 @@ export interface User {
   /** Business verticals an account manager works in (only with the Account Manager role) */
   verticals: number[]
   verticals_detail: { id: number; name: string; is_enabled: boolean }[]
+  keywords: string[]
   last_login: string | null
   date_joined: string
 }
@@ -77,6 +79,7 @@ export const EMPLOYEE_FIELDS = [
   'phone',
   'mobile_phone',
   'verticals',
+  'keywords',
 ] as const
 
 export type UserInput = Pick<

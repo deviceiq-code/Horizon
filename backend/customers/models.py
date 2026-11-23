@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from config.keywords import keywords_field
+
 
 class Customer(models.Model):
     """A lessee: company (CNPJ) or individual (CPF) that signs leasing contracts."""
@@ -43,6 +45,7 @@ class Customer(models.Model):
     )
     is_active = models.BooleanField(_("active"), default=True)
     notes = models.TextField(_("notes"), blank=True)
+    keywords = keywords_field()
 
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)

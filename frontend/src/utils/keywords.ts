@@ -1,5 +1,5 @@
 /**
- * Keywords relate assets to an asset class. They are kept as the backend stores them:
+ * Keywords relate and find records (every "New" form has them). They are kept as the backend stores them:
  * lowercase, single spaces, no duplicates. The backend normalizes them again on save.
  */
 export const MAX_KEYWORDS = 30

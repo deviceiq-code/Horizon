@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from config.keywords import KeywordSearchFilter
 from customers.models import Customer
 from users.display import full_name_in
 from users.models import UserProfile, is_account_manager, user_photo_version
@@ -22,8 +23,8 @@ from .serializers import (
 CODE = re.compile(r"^\s*EFMV-(\d{4})-(\d+)\s*$", re.IGNORECASE)
 
 
-class AnalysisSearchFilter(filters.SearchFilter):
-    """Regular search, and a code ("EFMV-2026-0001") finds that analysis."""
+class AnalysisSearchFilter(KeywordSearchFilter):
+    """Regular search (and keywords), and a code ("EFMV-2026-0001") finds that analysis."""
 
     def filter_queryset(self, request, queryset, view):
         term = request.query_params.get(self.search_param, "")

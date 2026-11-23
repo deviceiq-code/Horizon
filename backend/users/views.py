@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from config.filters import NullsLastOrderingFilter
+from config.keywords import KeywordSearchFilter
 from config.photos import photo_response
 
 from .models import ACCOUNT_MANAGER, ADMINISTRATOR, Role, UserProfile, is_account_manager
@@ -47,8 +48,9 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     serializer_class = UserSerializer
     permission_classes = [IsAdministrator]
-    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    filter_backends = [KeywordSearchFilter, NullsLastOrderingFilter]
     search_fields = ["username", "first_name", "last_name", "email", "roles__name"]
+    keywords_lookup = "profile__keywords"
     ordering_fields = [
         "id",
         "username",
@@ -194,7 +196,7 @@ class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.annotate(users_count=Count("users", distinct=True))
     serializer_class = RoleSerializer
     permission_classes = [IsAdministrator]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [KeywordSearchFilter, filters.OrderingFilter]
     search_fields = ["name", "description"]
     ordering_fields = ["name", "users_count", "created_at"]
     ordering = ["name"]

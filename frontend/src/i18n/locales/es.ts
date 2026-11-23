@@ -12,6 +12,14 @@ const es: Messages = {
     notImage: 'Elija una imagen JPEG, PNG, WebP o GIF.',
     saveError: 'El registro se guardó, pero la foto no.',
   },
+  keywords: {
+    label: 'Palabras Clave',
+    placeholder: 'Agregar palabra clave (Enter o coma)',
+    remove: 'Quitar palabra clave {keyword}',
+    tooMany: 'Use como máximo {max} palabras clave.',
+    edit: 'Editar Palabras Clave',
+    saved: 'Palabras clave guardadas.',
+  },
   common: {
     yes: 'Sí',
     no: 'No',
@@ -468,11 +476,6 @@ const es: Messages = {
         label: 'Amplitud de Uso',
         hint: 'Amplitud de uso y aplicación: 0 muy restringido · 5 muy amplio',
       },
-    },
-    keywords: {
-      placeholder: 'Agregar palabra clave (Enter o coma)',
-      remove: 'Quitar palabra clave {keyword}',
-      tooMany: 'Use como máximo {max} palabras clave.',
     },
     noneFound: 'No se encontraron clases de activo habilitadas.',
     searchPlaceholder: 'Buscar por nombre, palabra clave, vertical o subvertical',

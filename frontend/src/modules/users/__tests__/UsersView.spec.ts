@@ -8,7 +8,7 @@ import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { click, inBody, settle, typeInto } from '@/test-utils'
+import { click, inBody, settle, typeInto, typeKeywords } from '@/test-utils'
 import * as usersApi from '../api'
 import type { Component } from 'vue'
 import RolesView from '../RolesView.vue'
@@ -42,6 +42,7 @@ const page = <T>(results: T[]) => ({ count: results.length, next: null, previous
 
 const ADMIN_ROLE: usersApi.Role = {
   id: 1,
+  keywords: [],
   key: 'administrator',
   name: 'Administrator',
   description: 'Full access to the system.',
@@ -61,6 +62,7 @@ const ANALYST: usersApi.Role = {
 
 const FERNANDO: usersApi.User = {
   id: 10,
+  keywords: [],
   username: 'fernando',
   first_name: 'Fernando',
   last_name: 'Almeida',
@@ -291,8 +293,13 @@ describe('UsersView', () => {
     await click('new')
     await typeInto('role-name', 'Pricing')
     await typeInto('role-description', 'Edits prices')
+    await typeKeywords('Preços')
     await click('save')
-    expect(api.createRole).toHaveBeenCalledWith({ name: 'Pricing', description: 'Edits prices' })
+    expect(api.createRole).toHaveBeenCalledWith({
+      name: 'Pricing',
+      description: 'Edits prices',
+      keywords: ['preços'],
+    })
     expect(useNotificationsStore().text).toBe('Role created.')
     wrapper.unmount()
   })

@@ -35,6 +35,7 @@ const DEFAULTS: verticalsApi.SubVerticalDefaults = {
 
 const INDUSTRY: verticalsApi.Vertical = {
   id: 1,
+  keywords: [],
   name: 'Industry',
   account_managers_detail: [
     manager(1, 'Ana Souza'),
@@ -167,6 +168,7 @@ describe('VerticalsTab', () => {
       name: 'IT',
       is_enabled: true,
       notes: '',
+      keywords: [],
       sub_verticals: [
         {
           name: '',
@@ -273,6 +275,7 @@ describe('VerticalsTab', () => {
       name: 'Industry & Manufacturing',
       is_enabled: true,
       notes: 'Factories and plants.',
+      keywords: [],
       sub_verticals: INDUSTRY.sub_verticals,
     })
     expect(useNotificationsStore().text).toBe('Vertical updated.')

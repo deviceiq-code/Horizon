@@ -82,6 +82,7 @@ const EXCAVATORS: assetClassesApi.AssetClass = {
 
 const ROW: pricesApi.AveragePriceDetail = {
   id: 100,
+  keywords: [],
   vertical: { id: 1, name: 'Industry' },
   sub_vertical: { id: 11, label: 'Industry / Yellow line' },
   asset_class: { id: 5, name: 'Excavators', icon: 'mdi-excavator' },
@@ -190,6 +191,7 @@ describe('AveragePricesView', () => {
       page([
         {
           id: 7,
+          keywords: [],
           name: 'Caterpillar',
           reputation: '5.0',
           product_quality: '5.0',
@@ -327,6 +329,7 @@ describe('AveragePricesView', () => {
       manufacturer: 7,
       model: '320 GC',
       description: 'Hydraulic excavator.',
+      keywords: [],
       specs: { hours: '2500', tracks: 'Steel' },
       currency: 'BRL',
       original_value: '100000.00',

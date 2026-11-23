@@ -7,6 +7,7 @@ from rest_framework import serializers
 from catalogs.models import AssetClass, Manufacturer
 from catalogs.serializers import spec_messages, sub_vertical_label
 from catalogs.specs import SpecError, snapshot_values
+from config.keywords import KeywordsField
 from users.display import display_name_in
 
 from .curves import anchor_value, increasing_terms, monthly_curve, percent_of
@@ -59,6 +60,7 @@ class AveragePriceSerializer(serializers.ModelSerializer):
             "manufacturer",
             "model",
             "description",
+            "keywords",
             "specs",
             "currency",
             "original_value",
@@ -153,6 +155,7 @@ class AveragePriceCreateSerializer(serializers.Serializer):
     manufacturer = serializers.PrimaryKeyRelatedField(queryset=Manufacturer.objects.all())
     model = serializers.CharField(max_length=150)
     description = serializers.CharField(required=False, allow_blank=True, default="")
+    keywords = KeywordsField(default=list)
     specs = serializers.DictField(required=False, default=dict)
     currency = serializers.ChoiceField(choices=Currency.choices, default=Currency.BRL)
     original_value = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=CENTS)

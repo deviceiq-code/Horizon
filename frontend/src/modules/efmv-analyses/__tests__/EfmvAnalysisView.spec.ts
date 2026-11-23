@@ -8,7 +8,15 @@ import { i18n, setLanguage } from '@/i18n'
 import * as pricesApi from '@/modules/average-prices/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
-import { click, inBody, openDropdown, pickOption, settle, typeInto } from '@/test-utils'
+import {
+  click,
+  inBody,
+  openDropdown,
+  pickOption,
+  settle,
+  typeInto,
+  typeKeywords,
+} from '@/test-utils'
 import * as efmvApi from '../api'
 import EfmvAnalysisView from '../EfmvAnalysisView.vue'
 
@@ -93,6 +101,7 @@ const TOTALS: efmvApi.ScenarioTotals = {
 
 const ANALYSIS: efmvApi.EfmvAnalysis = {
   id: 3,
+  keywords: [],
   code: 'EFMV-2026-0003',
   account_manager: 10,
   account_manager_detail: { id: 10, full_name: 'Ana Lima' },
@@ -577,6 +586,24 @@ describe('EfmvAnalysisView', () => {
     await typeInto('efmv-value', 'abc')
     await click('save')
     expect(efmv.updateEfmvAnalysis).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('keywords change on their own (saved at once), keeping the scenarios being edited', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.updateEfmvAnalysis.mockResolvedValue({ ...ANALYSIS, keywords: ['renewal'] })
+    const { wrapper } = await mountView({ id: 3 })
+    expect(inBody('[data-testid="premise-keywords"]')!.textContent).toContain('—')
+    await typeInto('scenario-name', 'Changed')
+    await click('edit-keywords')
+    await typeKeywords('Renewal')
+    await click('save-keywords')
+    await settle()
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, { keywords: ['renewal'] })
+    expect(inBody('[data-testid="keywords-text"]')!.textContent).toContain('renewal')
+    // The unsaved scenario name stays
+    const name = inBody('[data-testid="scenario-name"] input') as HTMLInputElement
+    expect(name.value).toBe('Changed')
     wrapper.unmount()
   })
 

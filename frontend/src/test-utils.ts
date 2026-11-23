@@ -70,3 +70,12 @@ export async function click(testId: string) {
   inBody(`[data-testid="${testId}"]`)!.click()
   await settle()
 }
+
+/** Type keywords into a KeywordsField (comma-separated) and press Enter to add them. */
+export async function typeKeywords(text: string) {
+  await typeInto('keyword-input', text)
+  document.body
+    .querySelector('[data-testid="keyword-input"] input')!
+    .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  await settle()
+}

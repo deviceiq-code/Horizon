@@ -179,6 +179,11 @@ Multi-user web system for **operating lease residual value pricing**
     price. In the UI: `asset-classes/SpecTemplateDialog.vue`, opened from a row action of the
     Asset classes grid.
   - `config/filters.py` — `EnabledFilter` (`?is_enabled=true|false`) for any model with `is_enabled`.
+  - `config/keywords.py` — keywords of every record created with a "New" form: model field
+    `keywords_field()`, serializer `KeywordsField` (lowercase, single spaces, no blanks or
+    duplicates, max 30 × 50 chars) and `KeywordSearchFilter` (`?search=` also finds any keyword
+    containing the text; `keywords_lookup` on the view when they live elsewhere, e.g.
+    `profile__keywords`). A new "New" form gets them too.
   - `config/pagination.py` — default pagination for lists (`?page=`, `?page_size=`, max 200).
   - `config/filters.py` — `NullsLastOrderingFilter` (empty values last in both directions); use it
     when a sortable column can be empty.
@@ -321,8 +326,13 @@ Multi-user web system for **operating lease residual value pricing**
     `StarRatingInput.vue` (v-rating, half stars, clicking the selected star again sets 0),
     `RemarketingAverage.vue` (average stars + number; hover shows each rating). In jsdom, v-rating
     is clicked through its labels (order 0, 0.5, 1 … 5 → index = value × 2).
-  - Asset class form pieces (`src/modules/catalogs/asset-classes/`): `IconPicker.vue`,
-    `KeywordsField.vue` (Enter/comma adds).
+  - Asset class form pieces (`src/modules/catalogs/asset-classes/`): `IconPicker.vue`.
+  - **Every "New" form has Keywords**: `src/components/KeywordsField.vue` (chips; Enter/comma
+    adds; rules in `src/utils/keywords.ts`; tests type them with `typeKeywords`). Customers,
+    users (on the Account tab; stored in `UserProfile`), roles, verticals, asset classes,
+    manufacturers, average prices (a new version starts with the previous one's) and eFMV
+    analyses (wizard's Premises step; not a premise — changed on the analysis's header, saved
+    at once with `PATCH {keywords}`).
   - `src/modules/catalogs/verticals/TermsField.vue` — list of terms in months as chips with
     "Add term" (type months, Enter adds, Esc cancels).
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;

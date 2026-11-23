@@ -1,15 +1,17 @@
 from django.db.models import Q
-from rest_framework import filters, viewsets
+from rest_framework import viewsets
 
 from config.filters import NullsLastOrderingFilter
+from config.keywords import KeywordSearchFilter
 
 from .models import Customer
 from .serializers import CustomerSerializer
 from .tax_ids import normalize_tax_id
 
 
-class CustomerSearchFilter(filters.SearchFilter):
-    """Regular search, plus tax ID typed with or without punctuation ("11.222.333/0001-81")."""
+class CustomerSearchFilter(KeywordSearchFilter):
+    """Regular search (and keywords), plus tax ID typed with or without punctuation
+    ("11.222.333/0001-81")."""
 
     def filter_queryset(self, request, queryset, view):
         filtered = super().filter_queryset(request, queryset, view)

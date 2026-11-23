@@ -6,7 +6,7 @@ import { ApiError } from '@/api'
 import { useValidationRules } from '@/composables/useValidationRules'
 import SubVerticalPicker from '../verticals/SubVerticalPicker.vue'
 import IconPicker from './IconPicker.vue'
-import KeywordsField from './KeywordsField.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import RemarketingEditor from '../remarketing/RemarketingEditor.vue'
 import {
   createAssetClass,

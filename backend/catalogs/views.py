@@ -19,6 +19,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from config.filters import EnabledFilter, NullsLastOrderingFilter
+from config.keywords import KeywordSearchFilter
 
 from .models import (
     DEFAULT_RECOMMENDED_TERM,
@@ -59,7 +60,7 @@ class VerticalViewSet(viewsets.ModelViewSet):
         "account_manager_profiles__user__roles", "sub_verticals"
     )
     serializer_class = VerticalSerializer
-    filter_backends = [EnabledFilter, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [EnabledFilter, KeywordSearchFilter, filters.OrderingFilter]
     search_fields = [
         "name",
         "sub_verticals__name",
@@ -134,7 +135,7 @@ class ManufacturerViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
         "This manufacturer is used in average prices and cannot be deleted."
     )
     serializer_class = ManufacturerSerializer
-    filter_backends = [EnabledFilter, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [EnabledFilter, KeywordSearchFilter, filters.OrderingFilter]
     search_fields = ["name"]
     ordering_fields = [
         "id",
@@ -168,25 +169,6 @@ class SubVerticalViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class AssetClassSearchFilter(filters.SearchFilter):
-    """Regular search, plus any keyword containing the typed text."""
-
-    def filter_queryset(self, request, queryset, view):
-        filtered = super().filter_queryset(request, queryset, view)
-        term = request.query_params.get(self.search_param, "").strip().lower()
-        if not term:
-            return filtered
-        with_keywords = queryset.annotate(
-            keywords_text=Func(
-                F("keywords"), Value(" | "), function="array_to_string", output_field=CharField()
-            )
-        )
-        return queryset.filter(
-            Q(pk__in=filtered.values("pk"))
-            | Q(pk__in=with_keywords.filter(keywords_text__contains=term).values("pk"))
-        )
-
-
 class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for asset classes.
 
@@ -204,7 +186,7 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
         "This asset class is used in average prices and cannot be deleted."
     )
     serializer_class = AssetClassSerializer
-    filter_backends = [EnabledFilter, AssetClassSearchFilter, NullsLastOrderingFilter]
+    filter_backends = [EnabledFilter, KeywordSearchFilter, NullsLastOrderingFilter]
     search_fields = ["name", "sub_vertical__name", "sub_vertical__vertical__name"]
     ordering_fields = [
         "id",

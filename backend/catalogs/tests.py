@@ -400,3 +400,11 @@ def test_general_display_name_is_translated(verticals):
         assert str(general) == "Mining / Geral"
     with translation.override("es"):
         assert general.display_name == "General"
+
+
+def test_vertical_keywords(logged_client):
+    r = _post(logged_client, {"name": "Agribusiness", "keywords": ["Farm", "FARM", "Rural"]})
+    assert r.status_code == 201, r.json()
+    assert r.json()["keywords"] == ["farm", "rural"]
+    found = logged_client.get(URL, {"search": "rur"}).json()["results"]
+    assert [v["name"] for v in found] == ["Agribusiness"]

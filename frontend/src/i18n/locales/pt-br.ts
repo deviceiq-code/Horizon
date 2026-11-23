@@ -12,6 +12,14 @@ const ptBR: Messages = {
     notImage: 'Escolha uma imagem JPEG, PNG, WebP ou GIF.',
     saveError: 'O registro foi salvo, mas a foto não.',
   },
+  keywords: {
+    label: 'Palavras-Chave',
+    placeholder: 'Adicionar palavra-chave (Enter ou vírgula)',
+    remove: 'Remover palavra-chave {keyword}',
+    tooMany: 'Use no máximo {max} palavras-chave.',
+    edit: 'Editar Palavras-Chave',
+    saved: 'Palavras-chave salvas.',
+  },
   common: {
     yes: 'Sim',
     no: 'Não',
@@ -466,11 +474,6 @@ const ptBR: Messages = {
         label: 'Abrangência de Uso',
         hint: 'Abrangência de uso e aplicação: 0 muito restrito · 5 muito abrangente',
       },
-    },
-    keywords: {
-      placeholder: 'Adicionar palavra-chave (Enter ou vírgula)',
-      remove: 'Remover palavra-chave {keyword}',
-      tooMany: 'Use no máximo {max} palavras-chave.',
     },
     noneFound: 'Nenhuma classe de ativo habilitada encontrada.',
     searchPlaceholder: 'Pesquisar por nome, palavra-chave, vertical ou sub-vertical',

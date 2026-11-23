@@ -15,11 +15,15 @@ export interface Manufacturer {
   /** Average of the three ratings, computed by the API ("3.83"); read-only */
   remarketing_average: string
   is_enabled: boolean
+  keywords: string[]
   created_at: string
   updated_at: string
 }
 
-export type ManufacturerInput = Pick<Manufacturer, 'name' | ManufacturerRating | 'is_enabled'>
+export type ManufacturerInput = Pick<
+  Manufacturer,
+  'name' | ManufacturerRating | 'is_enabled' | 'keywords'
+>
 
 const BASE = '/catalogs/manufacturers/'
 

@@ -8,6 +8,7 @@
  * and refuses locking yourself out (409, shown here).
  */
 import FormDialog from '@/components/FormDialog.vue'
+import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
@@ -54,6 +55,7 @@ const TAB_OF: Record<string, Tab> = {
   roles: 'account',
   password: 'account',
   is_active: 'account',
+  keywords: 'account',
   id_document_type: 'personal',
   id_document_number: 'personal',
   nationality: 'personal',
@@ -92,6 +94,7 @@ const emptyForm = () => ({
   phone: '',
   mobile_phone: '',
   verticals: [] as number[],
+  keywords: [] as string[],
 })
 const form = ref(emptyForm())
 const tab = ref<Tab>('account')
@@ -172,6 +175,7 @@ watch(open, async (isOpen) => {
         phone: user.phone,
         mobile_phone: user.mobile_phone,
         verticals: [...user.verticals],
+        keywords: [...user.keywords],
       }
     : emptyForm()
   tab.value = 'account'
@@ -248,6 +252,7 @@ async function submit() {
     phone: f.phone.trim(),
     mobile_phone: f.mobile_phone.trim(),
     verticals: isAccountManager.value ? f.verticals : [],
+    keywords: f.keywords,
   }
   if (form.value.password) data.password = form.value.password
   try {
@@ -373,6 +378,12 @@ async function submit() {
           inset
           class="mb-2"
           data-testid="is-active"
+        />
+        <KeywordsField
+          v-model="form.keywords"
+          :error-messages="fieldErrors.keywords"
+          data-testid="keywords"
+          @update:model-value="fieldErrors.keywords = []"
         />
 
         <div class="text-subtitle-2 mt-2">{{ $t('users.fields.password') }}</div>

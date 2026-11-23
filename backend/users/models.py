@@ -13,6 +13,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
+from config.keywords import keywords_field
 from config.photos import PhotoMixin, photo_version, remove_file_later
 
 ADMINISTRATOR = "administrator"
@@ -29,6 +30,7 @@ class Role(models.Model):
     key = models.SlugField(_("key"), max_length=50, blank=True)
     name = models.CharField(_("name"), max_length=80)
     description = models.TextField(_("description"), blank=True)
+    keywords = keywords_field()
     # Created by the system: cannot be changed or deleted
     is_system = models.BooleanField(_("system role"), default=False)
     users = models.ManyToManyField(
@@ -120,6 +122,7 @@ class UserProfile(PhotoMixin, models.Model):
     hire_date = models.DateField(_("hire date"), null=True, blank=True)
     phone = models.CharField(_("phone"), max_length=30, blank=True)
     mobile_phone = models.CharField(_("mobile phone"), max_length=30, blank=True)
+    keywords = keywords_field()
 
     # Account managers: the business verticals they work in (all their sub-verticals)
     verticals = models.ManyToManyField(

@@ -27,6 +27,7 @@ export interface Customer {
   secondary_account_managers_detail: AccountManagerRef[]
   is_active: boolean
   notes: string
+  keywords: string[]
   created_at: string
   updated_at: string
 }
