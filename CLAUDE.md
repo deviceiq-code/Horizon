@@ -433,6 +433,10 @@ Multi-user web system for **operating lease residual value pricing**
     0.0.0.0) and `ALLOWED_HOSTS` (shared with Django; `*` = any). Django always listens on
     127.0.0.1 (`runserver --insecure`, so the admin keeps its CSS with DEBUG=False). Opened to
     other machines for tests → `DEBUG=False` (debug pages show the environment). See README.
+    Behind an HTTPS reverse proxy (Nginx Proxy Manager): `CSRF_TRUSTED_ORIGINS` must list the
+    browser's address exactly, with the proxy's public port (else every save is a 403 shown as
+    "Could not save"); machines sharing the database must share `MEDIA_ROOT` (else photos 404).
+    Diagnose with the status codes in `.run/backend.log`.
 - Database: PostgreSQL 17 on the homelab (`TrueNAS-1:5432`, database `horizon_dev`).
   The test database (`test_horizon_dev`) is created/dropped by pytest-django.
 

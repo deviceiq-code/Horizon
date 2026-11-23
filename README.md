@@ -55,6 +55,24 @@ and restart the servers. Django stays on 127.0.0.1 — only the Vite server (517
 it forwards `/api` to Django keeping the address the browser used, so the CSRF check works
 without listing origins. Firewall/NAT rules are configured outside Horizon.
 
+### Behind a reverse proxy with HTTPS (e.g. Nginx Proxy Manager)
+The proxy answers in HTTPS and forwards to the Vite server (`http://<this machine>:5173`), so
+Django sees plain HTTP while the browser sends `Origin: https://…`. Then **every origin the
+browser uses must be in `CSRF_TRUSTED_ORIGINS`, exactly as in the address bar — scheme, name
+and port** (the proxy's public port, not 5173):
+```bash
+CSRF_TRUSTED_ORIGINS=http://localhost:5173,https://horizon.example.com,https://horizon.example.com:8443
+```
+Without it, pages load (reading needs no CSRF check) but every save fails with "Could not save.
+Try again." — Django answers 403 "CSRF Failed: Origin checking failed" (see `.run/backend.log`
+or the browser's Network tab). Restart the servers after changing `.env`.
+
+### Uploaded files (photos and documents)
+They are stored in `MEDIA_ROOT` (default `backend/media`, git-ignored), while the database keeps
+only their names. When several machines use the same database (e.g. the homelab's PostgreSQL),
+point `MEDIA_ROOT` on all of them to the same shared folder (e.g. a TrueNAS share); otherwise a
+photo uploaded on one machine answers 404 on the others (initials instead of the photo).
+
 ## Tests and quality
 ```bash
 cd backend  && uv run pytest && uv run ruff check .
