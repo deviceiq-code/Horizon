@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FormDialog from '@/components/FormDialog.vue'
+import WebSearchButton from '@/components/WebSearchButton.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -192,7 +193,9 @@ function clearError(field: string) {
           autofocus
           data-testid="name"
           @update:model-value="clearError('name')"
-        />
+        >
+          <template #append-inner><WebSearchButton :term="form.name" /></template>
+        </v-text-field>
       </v-col>
       <v-col cols="12" md="4">
         <v-autocomplete
@@ -213,8 +216,11 @@ function clearError(field: string) {
           :rules="[rules.maxLength(200)]"
           :error-messages="fieldErrors.trade_name"
           maxlength="200"
+          data-testid="trade-name"
           @update:model-value="clearError('trade_name')"
-        />
+        >
+          <template #append-inner><WebSearchButton :term="form.trade_name" /></template>
+        </v-text-field>
       </v-col>
       <v-col cols="12" md="4">
         <v-text-field
@@ -225,7 +231,9 @@ function clearError(field: string) {
           maxlength="30"
           data-testid="tax-id"
           @update:model-value="clearError('tax_id')"
-        />
+        >
+          <template #append-inner><WebSearchButton :term="form.tax_id" /></template>
+        </v-text-field>
       </v-col>
     </v-row>
 

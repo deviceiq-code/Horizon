@@ -21,6 +21,7 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "currency",
             "currency_display",
             "ui_state",
+            "web_search_engine",
             "select_on_focus",
             "auto_scope",
             "scope_threshold",

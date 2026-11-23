@@ -4,6 +4,7 @@ import { api } from '@/api'
 import { currentLanguage, isSupportedLanguage, setLanguage, type Language } from '@/i18n'
 import { DEFAULT_COLOR_THEME, isColorTheme } from '@/themes'
 import { isUiScale, type UiScale } from '@/uiScale'
+import { isWebSearchEngine, type WebSearchEngine } from '@/webSearch'
 import { isDateFormat, isTimeFormat, type DateFormat, type TimeFormat } from '@/dateFormat'
 import {
   isCurrency,
@@ -38,6 +39,8 @@ export interface Preferences {
   currency_display: CurrencyDisplay
   /** How the user left the interface (side menu, grids' filters…): follows them anywhere */
   ui_state: UiState
+  /** Where "Search the Internet" beside some text fields opens (src/webSearch.ts) */
+  web_search_engine: WebSearchEngine
   /** Smart Tools: entering a text field selects its content (src/smartTools.ts) */
   select_on_focus: boolean
   /** Smart Tools: eFMV scenarios' scope written from their assets; negligible below (%) */
@@ -58,6 +61,7 @@ export type PreferencesUpdate = Partial<{
   currency: Currency
   currency_display: CurrencyDisplay
   ui_state: UiState
+  web_search_engine: WebSearchEngine
   select_on_focus: boolean
   auto_scope: boolean
   scope_threshold: string
@@ -92,6 +96,7 @@ const NUMBER_FORMAT_STORAGE_KEY = 'horizon.numberFormat'
 const CURRENCY_DISPLAY_STORAGE_KEY = 'horizon.currencyDisplay'
 const CURRENCY_STORAGE_KEY = 'horizon.currency'
 const PERCENT_PLACES_STORAGE_KEY = 'horizon.percentPlaces'
+const WEB_SEARCH_STORAGE_KEY = 'horizon.webSearchEngine'
 
 function readStored<T extends string>(key: string, valid: (v: unknown) => v is T, fallback: T): T {
   try {
@@ -167,6 +172,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
   numberSettings.percentPlaces = percentPlaces.value
   numberSettings.format = numberFormat.value
   numberSettings.currency = currencyDisplay.value
+  const webSearchEngine = ref<WebSearchEngine>(
+    readStored(WEB_SEARCH_STORAGE_KEY, isWebSearchEngine, 'google'),
+  )
   // Only with the account (nothing kept in the browser): empty until signed in
   const uiState = ref<UiState>({})
   // On unless turned off (also before signing in)
@@ -197,6 +205,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     currency?: string
     currency_display?: string
     ui_state?: UiState
+    web_search_engine?: string
     select_on_focus?: boolean
     auto_scope?: boolean
     scope_threshold?: string
@@ -245,6 +254,10 @@ export const usePreferencesStore = defineStore('preferences', () => {
       store(CURRENCY_DISPLAY_STORAGE_KEY, p.currency_display)
     }
     if (p.ui_state && typeof p.ui_state === 'object') uiState.value = p.ui_state
+    if (isWebSearchEngine(p.web_search_engine)) {
+      webSearchEngine.value = p.web_search_engine
+      store(WEB_SEARCH_STORAGE_KEY, p.web_search_engine)
+    }
     if (typeof p.select_on_focus === 'boolean') {
       selectOnFocus.value = p.select_on_focus
       store(SELECT_ON_FOCUS_STORAGE_KEY, String(p.select_on_focus))
@@ -273,6 +286,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
       currency: currency.value,
       currency_display: currencyDisplay.value,
       ui_state: uiState.value,
+      web_search_engine: webSearchEngine.value,
       select_on_focus: selectOnFocus.value,
       auto_scope: autoScope.value,
       scope_threshold: scopeThreshold.value,
@@ -315,6 +329,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     currencyDisplay,
     uiState,
     saveUiState,
+    webSearchEngine,
     selectOnFocus,
     autoScope,
     scopeThreshold,

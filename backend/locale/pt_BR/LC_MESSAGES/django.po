@@ -1148,3 +1148,6 @@ msgstr "Era esperado um objeto."
 
 msgid "Too much interface state."
 msgstr "Estado da interface grande demais."
+
+msgid "web search engine"
+msgstr "mecanismo de pesquisa na internet"

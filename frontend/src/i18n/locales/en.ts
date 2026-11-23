@@ -15,6 +15,9 @@ const en = {
     notImage: 'Choose a JPEG, PNG, WebP or GIF image.',
     saveError: 'The record was saved, but the photo could not be.',
   },
+  webSearch: {
+    button: 'Search the Internet ({engine})',
+  },
   keywords: {
     label: 'Keywords',
     placeholder: 'Add keyword (Enter or comma)',
@@ -871,6 +874,12 @@ const en = {
     currencyDisplay: 'Show the Currency As',
     currencyDisplays: { symbol: 'Symbol ({symbol})', code: 'Code ({code})' },
     numbersExample: 'Example: {example}',
+    webSearch: {
+      title: 'Internet Search',
+      description:
+        "Fields such as names, models and tax IDs have a button to search the Internet for what was typed, in a new tab. A page cannot use the browser's default search engine: choose yours.",
+      engine: 'Search Engine',
+    },
     uiScale: 'Interface Size',
     uiScaleDescription: 'Size of text, fields and spacing.',
     uiScaleAutoHint:

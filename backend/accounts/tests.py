@@ -177,6 +177,12 @@ def test_number_format_currency_and_interface_state(logged_client, user):
     assert _patch(logged_client, {"currency": "USD"}).json()["currency"] == "USD"
     assert _patch(logged_client, {"currency": "XYZ"}).status_code == 400
     assert _patch(logged_client, {"currency_display": "none"}).status_code == 400
+    assert r["web_search_engine"] == "google"
+    assert (
+        _patch(logged_client, {"web_search_engine": "duckduckgo"}).json()["web_search_engine"]
+        == "duckduckgo"
+    )
+    assert _patch(logged_client, {"web_search_engine": "altavista"}).status_code == 400
     assert _patch(logged_client, {"percent_places": 4}).json()["percent_places"] == 4
     for places in (0, 6):
         assert _patch(logged_client, {"percent_places": places}).status_code == 400

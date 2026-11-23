@@ -12,6 +12,9 @@ const ptBR: Messages = {
     notImage: 'Escolha uma imagem JPEG, PNG, WebP ou GIF.',
     saveError: 'O registro foi salvo, mas a foto não.',
   },
+  webSearch: {
+    button: 'Pesquisar na Internet ({engine})',
+  },
   keywords: {
     label: 'Palavras-Chave',
     placeholder: 'Adicionar palavra-chave (Enter ou vírgula)',
@@ -862,6 +865,12 @@ const ptBR: Messages = {
     currencyDisplay: 'Mostrar a Moeda Como',
     currencyDisplays: { symbol: 'Símbolo ({symbol})', code: 'Código ({code})' },
     numbersExample: 'Exemplo: {example}',
+    webSearch: {
+      title: 'Pesquisa na Internet',
+      description:
+        'Campos como nomes, modelos e CPF/CNPJ têm um botão para pesquisar na Internet o que foi digitado, em uma nova aba. Uma página não consegue usar o buscador padrão do navegador: escolha o seu.',
+      engine: 'Buscador',
+    },
     uiScale: 'Tamanho da Interface',
     uiScaleDescription: 'Tamanho de textos, campos e espaçamentos.',
     uiScaleAutoHint:

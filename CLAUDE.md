@@ -223,6 +223,12 @@ Multi-user web system for **operating lease residual value pricing**
     (side menu open/collapsed per window size, each grid's filter row) is `ui_state` (JSON,
     `preferences.saveUiState`), not localStorage.
   - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools (`?tab=`).
+  - **Search the Internet** beside some text fields (`src/components/WebSearchButton.vue` in
+    the field's `#append-inner`: disabled while empty, out of the Tab order, opens a new tab):
+    Average Prices' Model; Customers' legal name, trade name and tax ID; Manufacturers' name.
+    A page cannot use the browser's default search engine, so it is the preference
+    `web_search_engine` (`accounts.models.WebSearchEngine`, Google by default; Settings →
+    Smart Tools; addresses in `src/webSearch.ts`).
   - **Interface size** (`src/uiScale.ts`, applied in App.vue): CSS `zoom` on the page (Vuetify
     sizes spacing/fields in px, so only scaling fonts would not do). Preference `ui_scale`
     (`accounts.models.UiScale`): auto (default; by the window's width: ≤1366 px 0.88 → 1920 px

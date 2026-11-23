@@ -120,6 +120,7 @@ describe('AppBreadcrumbs', () => {
         currency: 'BRL',
         currency_display: 'symbol',
         ui_state: {},
+        web_search_engine: 'google',
         updated_at: '',
       },
     }

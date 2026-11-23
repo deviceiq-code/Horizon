@@ -138,6 +138,7 @@ async function mountView(path = '/users', view: Component = UsersView) {
       currency: 'BRL',
       currency_display: 'symbol',
       ui_state: {},
+      web_search_engine: 'google',
       updated_at: '',
     },
   }

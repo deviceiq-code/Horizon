@@ -154,6 +154,7 @@ async function mountView(props: { id: number } = { id: 3 }, roles = ['Account Ma
       currency: 'BRL',
       currency_display: 'symbol',
       ui_state: {},
+      web_search_engine: 'google',
       updated_at: '',
     },
   }

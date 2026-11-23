@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FormDialog from '@/components/FormDialog.vue'
+import WebSearchButton from '@/components/WebSearchButton.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -108,7 +109,9 @@ function clearError(field: string) {
       autofocus
       data-testid="name"
       @update:model-value="clearError('name')"
-    />
+    >
+      <template #append-inner><WebSearchButton :term="form.name" /></template>
+    </v-text-field>
 
     <div class="text-subtitle-1">{{ $t('manufacturers.remarketing.title') }}</div>
     <p class="text-body-2 text-medium-emphasis mb-3">

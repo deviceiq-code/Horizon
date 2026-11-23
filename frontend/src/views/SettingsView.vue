@@ -26,12 +26,19 @@ import {
   type NumberFormat,
 } from '@/numberFormat'
 
+/** The search engines offered for "Search the Internet" */
+const WEB_SEARCH_OPTIONS = Object.entries(WEB_SEARCH_ENGINES).map(([value, engine]) => ({
+  value: value as WebSearchEngine,
+  title: engine.name,
+}))
+
 /** 1, 2… 5 decimal places of percentages */
 const PERCENT_PLACES = Array.from(
   { length: MAX_PERCENT_PLACES - MIN_PERCENT_PLACES + 1 },
   (_, i) => MIN_PERCENT_PLACES + i,
 )
 import { useDateFormat } from '@/composables/useDateFormat'
+import { WEB_SEARCH_ENGINES, type WebSearchEngine } from '@/webSearch'
 
 const { t, locale } = useI18n()
 const preferences = usePreferencesStore()
@@ -491,6 +498,28 @@ async function save(changes: PreferencesUpdate) {
               data-testid="scope-threshold"
               @blur="saveThreshold"
               @keydown.enter="saveThreshold"
+            />
+          </v-card-text>
+        </v-card>
+
+        <!-- Where "Search the Internet" beside some text fields opens (src/webSearch.ts) -->
+        <v-card class="mb-4" data-testid="web-search-card">
+          <v-card-item prepend-icon="mdi-web">
+            <v-card-title>{{ $t('settings.webSearch.title') }}</v-card-title>
+            <v-card-subtitle class="text-wrap">{{
+              $t('settings.webSearch.description')
+            }}</v-card-subtitle>
+          </v-card-item>
+          <v-card-text>
+            <v-select
+              :model-value="preferences.webSearchEngine"
+              :items="WEB_SEARCH_OPTIONS"
+              :label="$t('settings.webSearch.engine')"
+              :disabled="saving"
+              hide-details
+              style="max-width: 360px"
+              data-testid="web-search-engine"
+              @update:model-value="save({ web_search_engine: $event })"
             />
           </v-card-text>
         </v-card>

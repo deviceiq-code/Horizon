@@ -6,6 +6,7 @@
  * preview (value ↔ % and warnings), never computed here.
  */
 import FormDialog from '@/components/FormDialog.vue'
+import WebSearchButton from '@/components/WebSearchButton.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
 import MoneyField from '@/components/MoneyField.vue'
 import { computed, nextTick, ref, watch } from 'vue'
@@ -350,7 +351,9 @@ async function submit() {
               :error-messages="fieldErrors.model"
               maxlength="150"
               data-testid="model"
-            />
+            >
+              <template #append-inner><WebSearchButton :term="model" /></template>
+            </v-text-field>
           </v-col>
           <v-col cols="12">
             <v-textarea

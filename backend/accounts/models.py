@@ -73,6 +73,19 @@ CURRENCIES = [
     "ARS", "CLP", "COP", "PEN", "UYU", "PYG", "BOB", "INR", "ZAR",
 ]  # fmt: skip
 
+
+class WebSearchEngine(models.TextChoices):
+    """Where "Search the Internet" (beside some text fields) opens: a page cannot use the
+    browser's default search engine, so the user picks one."""
+
+    GOOGLE = "google", "Google"
+    BING = "bing", "Bing"
+    DUCKDUCKGO = "duckduckgo", "DuckDuckGo"
+    ECOSIA = "ecosia", "Ecosia"
+    BRAVE = "brave", "Brave Search"
+    YAHOO = "yahoo", "Yahoo"
+
+
 MAX_UI_STATE_BYTES = 20_000
 
 
@@ -129,6 +142,12 @@ class UserPreferences(models.Model):
     # How the user left the interface, kept with the account so it follows them to any
     # computer: e.g. {"sideMenu": {"wide": "open"}, "filters": {"customers": true}}
     ui_state = models.JSONField(_("interface state"), default=dict, blank=True)
+    web_search_engine = models.CharField(
+        _("web search engine"),
+        max_length=12,
+        choices=WebSearchEngine,
+        default=WebSearchEngine.GOOGLE,
+    )
     # Smart Tools (conveniences of the interface)
     # Entering a text field selects its content (typing replaces it)
     select_on_focus = models.BooleanField(_("select on focus"), default=True)
