@@ -97,6 +97,9 @@ const TOTALS: efmvApi.ScenarioTotals = {
   hw_percent: '100.00',
   sw_percent: '0.00',
   sv_percent: '0.00',
+  hw_total: '200000.00',
+  sw_total: '0.00',
+  sv_total: '0.00',
 }
 
 const ANALYSIS: efmvApi.EfmvAnalysis = {
@@ -299,6 +302,12 @@ describe('EfmvAnalysisView', () => {
       /42\.50%\s*· R\$\s?85,000\.00/,
     )
     expect(inBody('[data-testid="total-hw"]')!.textContent).toContain('100.00%')
+    // HW / SW / SV: the percentage and its value, as eFMV at EOL
+    expect(inBody('[data-testid="hw-total"]')!.textContent).toMatch(/R\$\s?200,000\.00/)
+    // Lined up with the scope: the shares sit beside it in the head
+    expect(
+      inBody('[data-testid="totals-shares"]')!.previousElementSibling!.getAttribute('data-testid'),
+    ).toBe('scenario-scope')
     // Below the row's total: its share of the scenario's LO (no column of its own)
     const headers = [...document.querySelectorAll('[data-testid="assets"] th')].map((th) =>
       th.textContent?.trim(),

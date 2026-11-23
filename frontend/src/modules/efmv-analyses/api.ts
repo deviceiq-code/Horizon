@@ -28,6 +28,10 @@ export interface ScenarioTotals {
   hw_percent: string | null
   sw_percent: string | null
   sv_percent: string | null
+  /** The same shares in money */
+  hw_total: string
+  sw_total: string
+  sv_total: string
 }
 
 /** How a typed value compares with Average Prices (limits set in the Pricing control panel). */

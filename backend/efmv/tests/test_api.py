@@ -133,6 +133,9 @@ def test_create_with_totals(logged_client, managers, customers, prices):
         "hw_percent": "100.00000",
         "sw_percent": "0.00000",
         "sv_percent": "0.00000",
+        "hw_total": "250000.00",
+        "sw_total": "0.00",
+        "sv_total": "0.00",
     }
     # The next one gets the next number
     r = post(logged_client, body(managers, customers, prices))

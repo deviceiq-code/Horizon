@@ -42,6 +42,10 @@ class ScenarioTotals(NamedTuple):
     hw_percent: Decimal | None  # of the LO, 5 places; None without any value
     sw_percent: Decimal | None
     sv_percent: Decimal | None
+    # How much of the LO each kind is, in money (2 places)
+    hw_total: Decimal = Decimal("0.00")
+    sw_total: Decimal = Decimal("0.00")
+    sv_total: Decimal = Decimal("0.00")
 
 
 def line_total(quantity: int, unit_value: Decimal) -> Decimal:
@@ -72,6 +76,9 @@ def scenario_totals(lines: Iterable[Line]) -> ScenarioTotals:
         hw_percent=share("hw"),
         sw_percent=share("sw"),
         sv_percent=share("sv"),
+        hw_total=by_category["hw"].quantize(CENTS, rounding=ROUND_HALF_UP),
+        sw_total=by_category["sw"].quantize(CENTS, rounding=ROUND_HALF_UP),
+        sv_total=by_category["sv"].quantize(CENTS, rounding=ROUND_HALF_UP),
     )
 
 

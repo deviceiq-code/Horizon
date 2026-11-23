@@ -98,5 +98,11 @@ def test_services_count_in_the_lo_but_not_in_the_efmv():
     )
     assert totals.lo == D("22000.00")
     assert (totals.hw_percent, totals.sv_percent) == (D("90.90909"), D("9.09091"))
+    # The same shares in money
+    assert (totals.hw_total, totals.sw_total, totals.sv_total) == (
+        D("20000.00"),
+        D("0.00"),
+        D("2000.00"),
+    )
     # 8,000 of 22,000: lower than the 40% without the service
     assert totals.efmv_percent == D("36.36364")

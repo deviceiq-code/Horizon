@@ -335,7 +335,7 @@ Multi-user web system for **operating lease residual value pricing**
     with the premises as labels and the creation date (saving PATCHes only `scenarios`) and one
     tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
     open one — (`ScenarioPanel.vue`: name, term, scope and
-    `ScenarioTotalsBar.vue` on top; assets grid below — "+ Row" adds an empty row whose
+    `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the HW / SW / SV shares (`part="shares"`: percentage and value, the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "+ Row" adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
     number (assets counted by kind beside "Assets" — `AssetCounts.vue`, `draft.ts::assetCounts`:

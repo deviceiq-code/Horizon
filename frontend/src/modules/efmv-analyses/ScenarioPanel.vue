@@ -450,77 +450,83 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 <template>
   <div class="scenario-panel" :data-testid="`scenario-${index}`">
     <div class="scenario-head pa-4 pb-2">
-      <v-row dense>
-        <v-col cols="12" lg="6">
-          <div class="d-flex ga-2 mb-2">
-            <v-text-field
-              ref="nameField"
-              v-model="scenario.name"
-              :label="$t('efmv.scenario.name')"
-              :hint="$t('efmv.scenario.nameHint', { title })"
-              persistent-hint
-              :rules="nameRules"
-              :error-messages="errors?.name"
-              maxlength="100"
-              density="compact"
-              class="flex-grow-1"
-              data-testid="scenario-name"
-            />
-            <v-text-field
-              v-model="scenario.term"
-              :label="`${$t('efmv.scenario.term')} *`"
-              :suffix="$t('efmv.scenario.months')"
-              inputmode="numeric"
-              :rules="termRules"
-              :error-messages="errors?.term_months"
-              density="compact"
-              class="term"
-              data-testid="scenario-term"
-            />
-          </div>
-          <v-textarea
-            v-model="scenario.scope"
-            :label="$t('efmv.scenario.scope')"
-            :placeholder="scopeSuggestion || $t('efmv.scenario.scopeHint')"
-            persistent-placeholder
-            :error-messages="errors?.scope"
-            :hint="
-              scopeSuggestion && !scenario.scope.trim()
-                ? $t('efmv.scenario.scopeAutoHint')
-                : undefined
-            "
+      <!-- Two rows lined up: name and term beside LO and eFMV at EOL; the scope beside the
+           HW / SW / SV shares -->
+      <div class="head-grid">
+        <div class="d-flex ga-2 head-name">
+          <v-text-field
+            ref="nameField"
+            v-model="scenario.name"
+            :label="$t('efmv.scenario.name')"
+            :hint="$t('efmv.scenario.nameHint', { title })"
             persistent-hint
-            rows="2"
-            no-resize
+            :rules="nameRules"
+            :error-messages="errors?.name"
+            maxlength="100"
             density="compact"
-            hide-details="auto"
-            data-testid="scenario-scope"
-          >
-            <!-- Smart Tools: write it from the assets -->
-            <template #append-inner>
-              <v-btn
-                icon="mdi-auto-fix"
-                variant="text"
-                size="small"
-                density="comfortable"
-                color="primary"
-                :disabled="!scopeSuggestion || scenario.scope === scopeSuggestion"
-                :title="$t('efmv.scenario.scopeWrite')"
-                :aria-label="$t('efmv.scenario.scopeWrite')"
-                data-testid="scope-write"
-                @click="writeScope"
-              />
-            </template>
-          </v-textarea>
-        </v-col>
-        <v-col cols="12" lg="6">
-          <ScenarioTotalsBar
-            :totals="scenario.preview?.totals ?? null"
-            :currency="currency"
-            :loading="pending"
+            class="flex-grow-1"
+            data-testid="scenario-name"
           />
-        </v-col>
-      </v-row>
+          <v-text-field
+            v-model="scenario.term"
+            :label="`${$t('efmv.scenario.term')} *`"
+            :suffix="$t('efmv.scenario.months')"
+            inputmode="numeric"
+            :rules="termRules"
+            :error-messages="errors?.term_months"
+            density="compact"
+            class="term"
+            data-testid="scenario-term"
+          />
+        </div>
+        <ScenarioTotalsBar
+          :totals="scenario.preview?.totals ?? null"
+          :currency="currency"
+          :loading="pending"
+          class="head-main"
+        />
+        <v-textarea
+          v-model="scenario.scope"
+          :label="$t('efmv.scenario.scope')"
+          :placeholder="scopeSuggestion || $t('efmv.scenario.scopeHint')"
+          persistent-placeholder
+          :error-messages="errors?.scope"
+          :hint="
+            scopeSuggestion && !scenario.scope.trim()
+              ? $t('efmv.scenario.scopeAutoHint')
+              : undefined
+          "
+          persistent-hint
+          rows="2"
+          no-resize
+          density="compact"
+          hide-details="auto"
+          data-testid="scenario-scope"
+        >
+          <!-- Smart Tools: write it from the assets -->
+          <template #append-inner>
+            <v-btn
+              icon="mdi-auto-fix"
+              variant="text"
+              size="small"
+              density="comfortable"
+              color="primary"
+              :disabled="!scopeSuggestion || scenario.scope === scopeSuggestion"
+              :title="$t('efmv.scenario.scopeWrite')"
+              :aria-label="$t('efmv.scenario.scopeWrite')"
+              data-testid="scope-write"
+              @click="writeScope"
+            />
+          </template>
+        </v-textarea>
+        <ScenarioTotalsBar
+          :totals="scenario.preview?.totals ?? null"
+          :currency="currency"
+          :loading="pending"
+          part="shares"
+          class="head-shares"
+        />
+      </div>
       <div class="d-flex flex-wrap align-center ga-3 mt-3">
         <div class="text-subtitle-2 mr-auto">
           {{ $t('efmv.scenario.assets') }}
@@ -1012,6 +1018,21 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
 </template>
 
 <style scoped>
+/* The scenario's head: fields on the left, figures on the right, row by row */
+.head-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px 12px;
+}
+@media (min-width: 1280px) {
+  .head-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .head-shares {
+    align-self: stretch;
+  }
+}
 .scenario-panel {
   display: flex;
   flex-direction: column;

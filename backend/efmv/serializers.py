@@ -93,6 +93,10 @@ def totals_payload(totals) -> dict:
         "hw_percent": as_text(totals.hw_percent),
         "sw_percent": as_text(totals.sw_percent),
         "sv_percent": as_text(totals.sv_percent),
+        # The same shares in money
+        "hw_total": str(totals.hw_total),
+        "sw_total": str(totals.sw_total),
+        "sv_total": str(totals.sv_total),
     }
 
 
