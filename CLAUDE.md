@@ -63,7 +63,13 @@ Multi-user web system for **operating lease residual value pricing**
     `LotErasureTool`, part harvesting) and pure `grades.py`; **grade code "B1C"** = conservation
     A–D · functioning 1/2/3/0 · completeness C/P/I (`GRADE_CODES`; meanings in `GradeLevel`;
     `Asset.condition_grade`); kit checklist items `{item, essential}`;
-    `AssetClass.required_photo_kinds`; the report page is printable (PDF by the browser). **Blind count**: expected
+    `AssetClass.required_photo_kinds`; the report page is printable (PDF by the browser). Phase 4:
+    `followups.py` — access blocks (`BlockFollowUp`, deadline from the notification; released →
+    new version + IN_INSPECTION; expired → chargeable + supervisor's decision), disputes
+    (`Dispute`; asset `held_for_dispute`; analyst ≠ technician; upheld → new approved version),
+    charges, `check_deadlines` (daily routine, idempotent; management command + cron, README)
+    and `Alert`s (top bar bell, `components/AlertsMenu.vue`); `DeadlineSetting`, `Holiday`,
+    `AgingLimit`; pure `deadlines.py` (business days). **Blind count**: expected
     lists never reach receivers (`EXPECTED_READERS`). Roles: `users.models` receiver,
     inspection_technician, storekeeper, inventory_supervisor, commercial_finance,
     remarketing_analyst (`inventory/permissions.py`; frontend `inventory/roles.ts`). API

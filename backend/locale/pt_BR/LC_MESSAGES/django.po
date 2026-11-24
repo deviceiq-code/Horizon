@@ -2321,3 +2321,195 @@ msgstr "fotos obrigatórias"
 
 msgid "Enter a list."
 msgstr "Informe uma lista."
+
+msgid "dispute deadline"
+msgstr "prazo de contestação"
+
+msgid "Block Release"
+msgstr "Liberação de Bloqueio"
+
+msgid "Report Dispute"
+msgstr "Contestação do Laudo"
+
+msgid "Dispute Analysis"
+msgstr "Análise da Contestação"
+
+msgid "days"
+msgstr "dias"
+
+msgid "business days"
+msgstr "dias úteis"
+
+msgid "reminders"
+msgstr "lembretes"
+
+msgid "deadline"
+msgstr "prazo"
+
+msgid "deadlines"
+msgstr "prazos"
+
+msgid "date"
+msgstr "data"
+
+msgid "holiday"
+msgstr "feriado"
+
+msgid "holidays"
+msgstr "feriados"
+
+msgid "aging limit"
+msgstr "limite de permanência"
+
+msgid "aging limits"
+msgstr "limites de permanência"
+
+msgid "Release Reported"
+msgstr "Liberação Informada"
+
+msgid "Released"
+msgstr "Liberado"
+
+msgid "Expired"
+msgstr "Vencido"
+
+msgid "Parts"
+msgstr "Peças"
+
+msgid "notified at"
+msgstr "notificado em"
+
+msgid "release reported at"
+msgstr "liberação informada em"
+
+msgid "checked at"
+msgstr "conferido em"
+
+msgid "decision"
+msgstr "decisão"
+
+msgid "decision notes"
+msgstr "justificativa da decisão"
+
+msgid "decided at"
+msgstr "decidido em"
+
+msgid "block follow-up"
+msgstr "pendência de bloqueio"
+
+msgid "block follow-ups"
+msgstr "pendências de bloqueio"
+
+msgid "In Analysis"
+msgstr "Em Análise"
+
+msgid "Decided"
+msgstr "Decidida"
+
+msgid "Escalated"
+msgstr "Escalada"
+
+msgid "Upheld"
+msgstr "Procedente"
+
+msgid "Partially Upheld"
+msgstr "Parcialmente Procedente"
+
+msgid "Rejected"
+msgstr "Improcedente"
+
+msgid "justification"
+msgstr "justificativa"
+
+msgid "registered at"
+msgstr "registrada em"
+
+msgid "analysis due date"
+msgstr "prazo de análise"
+
+msgid "reinspected"
+msgstr "revistoriado"
+
+msgid "dispute"
+msgstr "contestação"
+
+msgid "disputes"
+msgstr "contestações"
+
+msgid "evidence"
+msgstr "evidência"
+
+msgid "alert"
+msgstr "alerta"
+
+msgid "alerts"
+msgstr "alertas"
+
+msgid "Only open blocks are notified."
+msgstr "Só bloqueios abertos são notificados."
+
+msgid "Only open blocks wait for a release."
+msgstr "Só bloqueios abertos aguardam liberação."
+
+msgid "No release was reported for this block."
+msgstr "Nenhuma liberação foi informada para este bloqueio."
+
+msgid "Access block released."
+msgstr "Bloqueio de acesso liberado."
+
+msgid "Only expired blocks need a decision."
+msgstr "Só bloqueios vencidos precisam de decisão."
+
+msgid "Choose the decision."
+msgstr "Escolha a decisão."
+
+msgid "Describe the decision."
+msgstr "Descreva a decisão."
+
+msgid "Access block expired."
+msgstr "Bloqueio de acesso vencido."
+
+msgid "Only the current approved report can be disputed."
+msgstr "Só o laudo aprovado vigente pode ser contestado."
+
+msgid "This report was not sent to the customer."
+msgstr "Este laudo não foi enviado ao cliente."
+
+msgid "The dispute deadline is over."
+msgstr "O prazo de contestação terminou."
+
+msgid "Write the customer's justification."
+msgstr "Escreva a justificativa do cliente."
+
+msgid "Choose findings of this report."
+msgstr "Escolha apontamentos deste laudo."
+
+msgid "Only approved findings can be disputed."
+msgstr "Só apontamentos aprovados podem ser contestados."
+
+msgid "The report's technician cannot analyse its dispute."
+msgstr "O técnico do laudo não pode analisar a contestação."
+
+msgid "This dispute is not waiting for analysis."
+msgstr "Esta contestação não está aguardando análise."
+
+msgid "This dispute was already decided."
+msgstr "Esta contestação já foi decidida."
+
+msgid "Justify the decision."
+msgstr "Justifique a decisão."
+
+msgid "Choose some (not all) of the disputed findings to cancel."
+msgstr "Escolha alguns (não todos) dos apontamentos contestados para cancelar."
+
+msgid "Dispute %(decision)s: %(notes)s"
+msgstr "Contestação %(decision)s: %(notes)s"
+
+msgid "Only chargeable findings can be marked as charged."
+msgstr "Só apontamentos cobráveis podem ser marcados como cobrados."
+
+msgid "Choose a valid report."
+msgstr "Escolha um laudo válido."
+
+msgid "Only inventory supervisors analyse disputes."
+msgstr "Só supervisores de estoque analisam contestações."

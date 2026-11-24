@@ -221,6 +221,10 @@ const when = (value: string | null) => (value ? d(new Date(value), 'dateTime') :
         <strong>{{ $t('inventory.reports.sentAt') }}:</strong>
         {{ when(report.sent_to_customer_at) }}
       </span>
+      <span v-if="report.dispute_deadline">
+        <strong>{{ $t('inventory.reports.disputeDeadline') }}:</strong>
+        {{ d(new Date(`${report.dispute_deadline}T12:00`), 'short') }}
+      </span>
     </div>
     <p v-if="report.new_version_reason" class="text-caption mt-2">
       {{ $t('inventory.reports.versionReason') }}: {{ report.new_version_reason }}

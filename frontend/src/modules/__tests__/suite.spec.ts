@@ -70,6 +70,8 @@ describe('suite apps and routes', () => {
       'inventory-appointments',
       'inventory-receiving',
       'inventory-inspections',
+      'inventory-blocks',
+      'inventory-disputes',
       'inventory-movement',
       'inventory-assets',
       'inventory-accessories',
@@ -79,6 +81,7 @@ describe('suite apps and routes', () => {
       'inventory-grades',
       'inventory-penalties',
       'inventory-erasure-tools',
+      'inventory-deadlines',
       'warehouses',
     ])
     expect(appModules('admin', true).map((m) => m.name)).toEqual([

@@ -1,5 +1,6 @@
 import re
 
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -15,19 +16,26 @@ from .grades import periods_overlap
 from .models import (
     GRADE_CODES,
     AccessoryBalance,
+    AgingLimit,
+    Alert,
     Appointment,
     AppointmentKind,
     AppointmentStatus,
     Asset,
+    BlockFollowUp,
     Container,
+    DeadlineSetting,
+    Dispute,
     ErasureCertificate,
     ErasureMethod,
     ErasureTool,
+    Evidence,
     ExpectedItem,
     Finding,
     FindingKind,
     GradeDomain,
     GradeLevel,
+    Holiday,
     InspectionReport,
     LabelRange,
     Location,
@@ -1112,6 +1120,7 @@ class InspectionReportListSerializer(serializers.ModelSerializer):
             "recommended_destination",
             "approved_at",
             "sent_to_customer_at",
+            "dispute_deadline",
         ]
         read_only_fields = fields
 
@@ -1257,3 +1266,182 @@ class InspectionReportSerializer(InspectionReportListSerializer):
         ):
             raise serializers.ValidationError(_("Answer the checks of the model's test script."))
         return value
+
+
+# --- Phase 4: deadlines, holidays, blocks, disputes, findings to charge, alerts -------------
+
+
+class DeadlineSettingSerializer(serializers.ModelSerializer):
+    reminder_days = serializers.ListField(
+        child=serializers.IntegerField(min_value=1, max_value=60), required=False
+    )
+
+    class Meta:
+        model = DeadlineSetting
+        fields = ["id", "kind", "days", "business_days", "reminder_days", "updated_at"]
+        read_only_fields = ["id", "kind", "updated_at"]
+        extra_kwargs = {"days": {"min_value": 1, "max_value": 365}}
+
+    def validate_reminder_days(self, value):
+        return sorted(set(value), reverse=True)
+
+
+class HolidaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Holiday
+        fields = ["id", "date", "name"]
+
+    def validate_name(self, value):
+        value = collapse_spaces(value)
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        return value
+
+
+class AgingLimitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AgingLimit
+        fields = ["id", "status", "days"]
+        read_only_fields = ["id", "status"]
+        extra_kwargs = {"days": {"min_value": 1, "max_value": 3650}}
+
+
+class EvidenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Evidence
+        fields = ["id", "name", "size", "content_type", "uploaded_at"]
+        read_only_fields = fields
+
+
+def _asset_summary(asset) -> dict:
+    return {
+        "id": asset.id,
+        "horizon_id": asset.horizon_id,
+        "model": _model_label(asset.asset_model),
+        "serial": asset.serial,
+        "status": asset.status,
+        "customer": _customer_name(asset.customer),
+        "lot": asset.lot.code if asset.lot_id else None,
+        "location": asset.current_location.code,
+    }
+
+
+class BlockFollowUpSerializer(serializers.ModelSerializer):
+    asset_detail = serializers.SerializerMethodField()
+    report = serializers.IntegerField(source="finding.report_id", read_only=True)
+    finding_value = serializers.DecimalField(
+        source="finding.value", max_digits=12, decimal_places=2, read_only=True
+    )
+    finding_status = serializers.CharField(source="finding.status", read_only=True)
+    days_left = serializers.SerializerMethodField()
+    checked_by_name = serializers.SerializerMethodField()
+    decided_by_name = serializers.SerializerMethodField()
+    evidence = EvidenceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = BlockFollowUp
+        fields = [
+            "id",
+            "asset",
+            "asset_detail",
+            "report",
+            "block_type",
+            "status",
+            "notified_at",
+            "due_date",
+            "days_left",
+            "release_reported_at",
+            "checked_by_name",
+            "checked_at",
+            "decision",
+            "decision_notes",
+            "decided_by_name",
+            "decided_at",
+            "finding_value",
+            "finding_status",
+            "evidence",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_asset_detail(self, obj) -> dict:
+        return _asset_summary(obj.asset)
+
+    def get_days_left(self, obj) -> int | None:
+        from .deadlines import days_left
+
+        return days_left(timezone.localdate(), obj.due_date) if obj.due_date else None
+
+    def get_checked_by_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.checked_by) if obj.checked_by else None
+
+    def get_decided_by_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.decided_by) if obj.decided_by else None
+
+
+class DisputeSerializer(serializers.ModelSerializer):
+    asset_detail = serializers.SerializerMethodField()
+    report_version = serializers.IntegerField(source="report.version", read_only=True)
+    report_technician = serializers.IntegerField(source="report.technician_id", read_only=True)
+    findings_detail = FindingSerializer(source="findings", many=True, read_only=True)
+    registered_by_name = serializers.SerializerMethodField()
+    analyst_name = serializers.SerializerMethodField()
+    evidence = EvidenceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Dispute
+        fields = [
+            "id",
+            "report",
+            "report_version",
+            "report_technician",
+            "asset_detail",
+            "findings",
+            "findings_detail",
+            "justification",
+            "registered_by_name",
+            "registered_at",
+            "analysis_due",
+            "analyst",
+            "analyst_name",
+            "reinspected",
+            "status",
+            "decision",
+            "decision_notes",
+            "new_report",
+            "decided_at",
+            "evidence",
+        ]
+        read_only_fields = fields
+
+    def get_asset_detail(self, obj) -> dict:
+        return _asset_summary(obj.report.asset)
+
+    def get_registered_by_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.registered_by)
+
+    def get_analyst_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.analyst) if obj.analyst else None
+
+
+class ChargeFindingSerializer(FindingSerializer):
+    """A finding to charge: with its asset, customer and report."""
+
+    asset_detail = serializers.SerializerMethodField()
+    report_id = serializers.IntegerField(source="report.id", read_only=True)
+
+    class Meta(FindingSerializer.Meta):
+        fields = FindingSerializer.Meta.fields + ["asset_detail", "report_id"]
+        read_only_fields = fields
+
+    def get_asset_detail(self, obj) -> dict:
+        return _asset_summary(obj.report.asset)
+
+
+class AlertSerializer(serializers.ModelSerializer):
+    read = serializers.BooleanField(read_only=True, default=False)
+
+    class Meta:
+        model = Alert
+        fields = ["id", "kind", "params", "ref", "created_at", "read"]
+        read_only_fields = fields

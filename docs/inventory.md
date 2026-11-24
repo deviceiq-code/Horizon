@@ -9,7 +9,7 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | 1. Foundation | Warehouse codes, locations, containers, asset models, assets and Horizon IDs, labels, movement trail, state machine, movement service, roles | **Done** |
 | 2. Appointments and triage | Appointments (receiving and shipping), expected lists, receiving lots, triage of units and accessories, accessory balances, occurrences, reconciliation, closing | **Done** |
 | 3. Inspection | Versioned reports, grade code, photos, checklists, findings, penalty table, data erasure tools and certificates (+ the lot's tools per asset class), approval, printable report, part harvesting | **Done** |
-| 4. Blocks and disputes | Block follow-ups, disputes, deadline parameters, holidays, daily routine, alerts | To do |
+| 4. Blocks and disputes | Block follow-ups, disputes, charges, deadline parameters, holidays, aging limits, daily routine, alerts | **Done** |
 | 5. Disposal | Stock query, disposals, reservation, picking, shipping, write-off | To do |
 | 6. Transfers | Transfers between warehouses, virtual transit location, receiving with discrepancies | To do |
 | 7. Cycle counts and indicators | Counts, adjustments with approval, indicators panel | To do |
@@ -142,6 +142,36 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 - **Part harvesting**: a scrap asset taken apart — unit parts become child assets awaiting
   inspection, quantity parts enter the balance where it is; the asset is written off.
 
+### Phase 4 (blocks and disputes)
+
+- **Deadlines** (`DeadlineSetting`, editable in Inventory Catalogs › Deadlines and Holidays):
+  block release 15 calendar days, report dispute 10 business days, dispute analysis 5
+  business days, reminders 3 and 1 day before (analysis: 1) — proposed and accepted.
+  Business days skip weekends and the registered **holidays** (`Holiday`; the list starts
+  empty — decision). Pure calculation: `inventory/deadlines.py`.
+- **Access blocks** (`BlockFollowUp`): created when a report with an access-block finding is
+  approved. Commercial marks them notified (the deadline starts) and prints a notice per
+  customer; records a release the customer reports; a technician checks it — released: a new
+  report version (block finding cancelled) and the asset back IN_INSPECTION (erase the data,
+  finish); not released: open again. Past the deadline (routine): expired, the finding
+  chargeable (RN-20); a supervisor decides parts / scrap (asset → scrap) / other.
+- **Disputes** (`Dispute`): only findings of the current approved report **sent to the
+  customer**, within `InspectionReport.dispute_deadline` (set when sent — RN-21). Disputed
+  findings → disputed, the other approved ones → chargeable, the asset **held** (no new
+  version; reservations and transfers will refuse it). Analysis by a supervisor other than
+  the report's technician (RN-14): upheld / partially upheld → a new report version approved
+  by the analyst with the findings cancelled (the rest chargeable); rejected → chargeable.
+  Analysis past its deadline → escalated + alert. No dispute in time → approved findings
+  chargeable (routine, RN-22).
+- **Charges**: chargeable findings listed per customer; commercial marks them charged (billing
+  outside Horizon).
+- **Daily routine**: `python manage.py check_deadlines` (cron — see README; supervisors also
+  have "Check Deadlines Now"). Idempotent: alerts have unique keys, changes only apply to
+  records still in the earlier status.
+- **Alerts** (`Alert`: kind + params translated by the UI, for a role or a user, read per user):
+  the top bar's bell (unread count, every 3 minutes). Aging alerts use `AgingLimit` (days per
+  status; empty = none).
+
 ## Business rules → tests
 
 | Rule | Where | Tests |
@@ -166,6 +196,12 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | RN-12 erased before available | `inspection.problems`, `approve` | `test_data_must_be_erased_before_available_rn12` |
 | RN-13 failed erasure removes the disk | `inspection.add_certificate` → `services.register_child` | `test_failed_erasure_removes_the_disk_rn13` |
 | Grade suggestions, destination | `inventory/grades.py` | `test_grades.py` |
+| RN-14 analyst ≠ technician | `followups._check_analyst` | `test_dispute_partially_upheld_new_version_rn14`, `followups.spec.ts` |
+| RN-20 expired block | `followups.check_deadlines`, `decide_expired` | `test_block_expired_rn20_then_decided` |
+| RN-21 dispute sent and in time | `followups.register_dispute` | `test_dispute_only_of_a_report_sent_and_in_time_rn21` |
+| RN-22 chargeable without dispute | `followups.check_deadlines` | `test_no_dispute_in_time_findings_chargeable_rn22` |
+| Routine idempotent | `followups.check_deadlines` | `test_block_expired_rn20_then_decided` (runs twice) |
+| Business days | `inventory/deadlines.py` | `test_business_days_skip_weekends_and_holidays`, `test_dispute_deadline_counts_business_days` |
 
 ## API (`/api/inventory/`)
 
@@ -177,7 +213,10 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 `occurrences/` (+ `resolve/`, `accept/`), `accessory-balances/`, `grade-levels/`,
 `penalty-rates/`, `erasure-tools/`, `lots/<id>/erasure-tools/`, `inspections/` (`start/`;
 draft PATCH; `serial/`, `specs/`, `photos/`, `findings/`, `certificates/`, `submit/`,
-`return/`, `approve/`, `sent/`), `assets/<id>/reports/`, `new-report/`, `disassemble/`.
+`return/`, `approve/`, `sent/`), `assets/<id>/reports/`, `new-report/`, `disassemble/`,
+`deadline-settings/`, `aging-limits/`, `holidays/`, `deadline-check/` (POST), `blocks/`
+(`notify/`, `report-release/`, `check/`, `decide/`, `evidence/`), `disputes/` (`analyze/`,
+`decide/`, `evidence/`), `charges/` (`charged/`), `alerts/` (`count/`, `read/`, `read-all/`).
 Business rule refusals answer 400 `{"detail": "<translated reason>", "field": "<field>"}`.
 Asset models: `/api/catalogs/asset-models/`.
 
@@ -186,10 +225,12 @@ Asset models: `/api/catalogs/asset-models/`.
 Appointments (calendar month/week/day + list; expected list editor), Receiving (lots; lot page:
 Triage, Received, Occurrences, Files, Data Erasure, Expected List), Inspection (queue, in
 progress, awaiting approval, approved; report page = step-by-step inspection for a draft, the
-printable report otherwise), Movement (scan the object, then the
+printable report otherwise), Blocks (notify, print the notice, release, decide), Disputes and
+Charges, Movement (scan the object, then the
 destination), Assets (grid, detail with history), Accessories (balances), Locations (tree per
 warehouse, labels), Containers (label printed on creation), Labels (reserve and print ranges,
-print again by code), Warehouses. Inventory Catalogs: Grades, Penalty Table, Erasure Tools. Asset Models are in
+print again by code), Warehouses. Inventory Catalogs: Grades, Penalty Table, Erasure Tools, Deadlines and Holidays. Top bar:
+notifications (alerts). Asset Models are in
 Administration › Catalogs.
 
 ## Open points (to become parameters, not constants)

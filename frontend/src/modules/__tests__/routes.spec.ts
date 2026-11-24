@@ -55,6 +55,8 @@ describe('module routes', () => {
         'inventory-appointments',
         'inventory-receiving',
         'inventory-inspections',
+        'inventory-blocks',
+        'inventory-disputes',
         'inventory-movement',
         'inventory-assets',
         'inventory-accessories',
@@ -62,10 +64,12 @@ describe('module routes', () => {
         'inventory-containers',
         'inventory-labels',
       ].map((name) => [name, 'menu.sections.inventory']),
-      ...['inventory-grades', 'inventory-penalties', 'inventory-erasure-tools'].map((name) => [
-        name,
-        'menu.sections.inventorySettings',
-      ]),
+      ...[
+        'inventory-grades',
+        'inventory-penalties',
+        'inventory-erasure-tools',
+        'inventory-deadlines',
+      ].map((name) => [name, 'menu.sections.inventorySettings']),
       ['warehouses', 'menu.sections.inventory'],
     ])
   })

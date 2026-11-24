@@ -2321,3 +2321,195 @@ msgstr "fotos obligatorias"
 
 msgid "Enter a list."
 msgstr "Indique una lista."
+
+msgid "dispute deadline"
+msgstr "plazo de impugnación"
+
+msgid "Block Release"
+msgstr "Liberación de Bloqueo"
+
+msgid "Report Dispute"
+msgstr "Impugnación del Informe"
+
+msgid "Dispute Analysis"
+msgstr "Análisis de la Impugnación"
+
+msgid "days"
+msgstr "días"
+
+msgid "business days"
+msgstr "días hábiles"
+
+msgid "reminders"
+msgstr "recordatorios"
+
+msgid "deadline"
+msgstr "plazo"
+
+msgid "deadlines"
+msgstr "plazos"
+
+msgid "date"
+msgstr "fecha"
+
+msgid "holiday"
+msgstr "feriado"
+
+msgid "holidays"
+msgstr "feriados"
+
+msgid "aging limit"
+msgstr "límite de permanencia"
+
+msgid "aging limits"
+msgstr "límites de permanencia"
+
+msgid "Release Reported"
+msgstr "Liberación Informada"
+
+msgid "Released"
+msgstr "Liberado"
+
+msgid "Expired"
+msgstr "Vencido"
+
+msgid "Parts"
+msgstr "Piezas"
+
+msgid "notified at"
+msgstr "notificado el"
+
+msgid "release reported at"
+msgstr "liberación informada el"
+
+msgid "checked at"
+msgstr "verificado el"
+
+msgid "decision"
+msgstr "decisión"
+
+msgid "decision notes"
+msgstr "justificación de la decisión"
+
+msgid "decided at"
+msgstr "decidido el"
+
+msgid "block follow-up"
+msgstr "pendiente de bloqueo"
+
+msgid "block follow-ups"
+msgstr "pendientes de bloqueo"
+
+msgid "In Analysis"
+msgstr "En Análisis"
+
+msgid "Decided"
+msgstr "Decidida"
+
+msgid "Escalated"
+msgstr "Escalada"
+
+msgid "Upheld"
+msgstr "Procedente"
+
+msgid "Partially Upheld"
+msgstr "Parcialmente Procedente"
+
+msgid "Rejected"
+msgstr "Improcedente"
+
+msgid "justification"
+msgstr "justificación"
+
+msgid "registered at"
+msgstr "registrada el"
+
+msgid "analysis due date"
+msgstr "plazo de análisis"
+
+msgid "reinspected"
+msgstr "reinspeccionado"
+
+msgid "dispute"
+msgstr "impugnación"
+
+msgid "disputes"
+msgstr "impugnaciones"
+
+msgid "evidence"
+msgstr "evidencia"
+
+msgid "alert"
+msgstr "alerta"
+
+msgid "alerts"
+msgstr "alertas"
+
+msgid "Only open blocks are notified."
+msgstr "Solo se notifican bloqueos abiertos."
+
+msgid "Only open blocks wait for a release."
+msgstr "Solo los bloqueos abiertos esperan liberación."
+
+msgid "No release was reported for this block."
+msgstr "No se informó ninguna liberación para este bloqueo."
+
+msgid "Access block released."
+msgstr "Bloqueo de acceso liberado."
+
+msgid "Only expired blocks need a decision."
+msgstr "Solo los bloqueos vencidos necesitan decisión."
+
+msgid "Choose the decision."
+msgstr "Elija la decisión."
+
+msgid "Describe the decision."
+msgstr "Describa la decisión."
+
+msgid "Access block expired."
+msgstr "Bloqueo de acceso vencido."
+
+msgid "Only the current approved report can be disputed."
+msgstr "Solo se puede impugnar el informe aprobado vigente."
+
+msgid "This report was not sent to the customer."
+msgstr "Este informe no se envió al cliente."
+
+msgid "The dispute deadline is over."
+msgstr "El plazo de impugnación terminó."
+
+msgid "Write the customer's justification."
+msgstr "Escriba la justificación del cliente."
+
+msgid "Choose findings of this report."
+msgstr "Elija hallazgos de este informe."
+
+msgid "Only approved findings can be disputed."
+msgstr "Solo se pueden impugnar hallazgos aprobados."
+
+msgid "The report's technician cannot analyse its dispute."
+msgstr "El técnico del informe no puede analizar su impugnación."
+
+msgid "This dispute is not waiting for analysis."
+msgstr "Esta impugnación no espera análisis."
+
+msgid "This dispute was already decided."
+msgstr "Esta impugnación ya fue decidida."
+
+msgid "Justify the decision."
+msgstr "Justifique la decisión."
+
+msgid "Choose some (not all) of the disputed findings to cancel."
+msgstr "Elija algunos (no todos) de los hallazgos impugnados para cancelar."
+
+msgid "Dispute %(decision)s: %(notes)s"
+msgstr "Impugnación %(decision)s: %(notes)s"
+
+msgid "Only chargeable findings can be marked as charged."
+msgstr "Solo los hallazgos cobrables pueden marcarse como cobrados."
+
+msgid "Choose a valid report."
+msgstr "Elija un informe válido."
+
+msgid "Only inventory supervisors analyse disputes."
+msgstr "Solo los supervisores de inventario analizan impugnaciones."

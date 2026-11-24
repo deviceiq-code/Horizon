@@ -9,7 +9,7 @@
  *   hovered); the button on the top bar opens/collapses it and the choice is remembered in this
  *   browser, separately for wide and narrow windows. Phones: a drawer over the page.
  * - Top bar (light): that button, the path of the page; then search, documentation and
- *   notifications (to come), light/dark mode, language, the app launcher and the user's menu
+ *   notifications (alerts), light/dark mode, language, the app launcher and the user's menu
  *   (who they are and their roles; Profile and Help to come; Settings; Sign out).
  */
 import { computed, ref, watch } from 'vue'
@@ -18,6 +18,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { appName, SUITE_APPS, suiteApp, type AppId } from '@/apps'
 import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
+import AlertsMenu from '@/components/AlertsMenu.vue'
 import AppLauncher from '@/components/AppLauncher.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
@@ -211,7 +212,7 @@ async function logout() {
     <AppBreadcrumbs class="flex-grow-1" />
     <template #append>
       <div class="d-flex align-center ga-1 mr-1">
-        <!-- Search, documentation and notifications: to come -->
+        <!-- Search and documentation: to come; notifications: the inventory's alerts -->
         <v-btn
           icon="mdi-magnify"
           variant="text"
@@ -244,16 +245,7 @@ async function logout() {
           @click="setTheme(isDark ? 'light' : 'dark')"
         />
         <LanguageSelector />
-        <v-btn
-          icon="mdi-bell-outline"
-          variant="text"
-          size="small"
-          class="bar-icon"
-          :title="$t('menu.notifications')"
-          :aria-label="$t('menu.notifications')"
-          data-testid="notifications"
-          @click="comingSoon('menu.notifications')"
-        />
+        <AlertsMenu />
         <AppLauncher />
       </div>
       <!-- The signed-in user: who they are, their pages and signing out -->

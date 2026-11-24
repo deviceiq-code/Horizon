@@ -1071,6 +1071,8 @@ class InspectionReport(models.Model):
     )
     approved_at = models.DateTimeField(_("approved at"), null=True, blank=True)
     sent_to_customer_at = models.DateTimeField(_("sent to customer at"), null=True, blank=True)
+    # Last day the customer may dispute its findings (set when it is sent)
+    dispute_deadline = models.DateField(_("dispute deadline"), null=True, blank=True)
     new_version_reason = models.TextField(_("reason for a new version"), blank=True)
 
     class Meta:
@@ -1234,3 +1236,246 @@ class ErasureCertificate(models.Model):
 
     def __str__(self):
         return f"{self.asset} · {self.result}"
+
+
+# --- Phase 4: deadlines, blocks, disputes, alerts ----------------------------------------------
+
+
+class DeadlineKind(models.TextChoices):
+    BLOCK_RELEASE = "block_release", _("Block Release")
+    DISPUTE = "dispute", _("Report Dispute")
+    DISPUTE_ANALYSIS = "dispute_analysis", _("Dispute Analysis")
+
+
+class DeadlineSetting(models.Model):
+    """How long something may take: days, counted as calendar or business days (holidays
+    skipped), and how many days before the end reminders are sent."""
+
+    kind = models.CharField(_("kind"), max_length=20, choices=DeadlineKind.choices, unique=True)
+    days = models.PositiveSmallIntegerField(_("days"))
+    business_days = models.BooleanField(_("business days"), default=False)
+    reminder_days = ArrayField(
+        models.PositiveSmallIntegerField(), default=list, blank=True, verbose_name=_("reminders")
+    )
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("deadline")
+        verbose_name_plural = _("deadlines")
+        ordering = ["kind"]
+
+    def __str__(self):
+        return self.kind
+
+    @classmethod
+    def of(cls, kind: str) -> "DeadlineSetting":
+        defaults = DEFAULT_DEADLINES[kind]
+        setting, _created = cls.objects.get_or_create(kind=kind, defaults=defaults)
+        return setting
+
+
+# Proposed with Fernando (editable): block release 15 calendar days; dispute 10 business days;
+# analysis 5 business days; reminders 3 and 1 day before
+DEFAULT_DEADLINES = {
+    DeadlineKind.BLOCK_RELEASE: {"days": 15, "business_days": False, "reminder_days": [3, 1]},
+    DeadlineKind.DISPUTE: {"days": 10, "business_days": True, "reminder_days": [3, 1]},
+    DeadlineKind.DISPUTE_ANALYSIS: {"days": 5, "business_days": True, "reminder_days": [1]},
+}
+
+
+class Holiday(models.Model):
+    """A day not counted as a business day."""
+
+    date = models.DateField(_("date"), unique=True)
+    name = models.CharField(_("name"), max_length=100)
+
+    class Meta:
+        verbose_name = _("holiday")
+        verbose_name_plural = _("holidays")
+        ordering = ["date"]
+
+    def __str__(self):
+        return f"{self.date} {self.name}"
+
+
+class AgingLimit(models.Model):
+    """How many days an asset may stay in a status before an alert (empty: no alert)."""
+
+    status = models.CharField(_("status"), max_length=20, choices=AssetStatus.choices, unique=True)
+    days = models.PositiveSmallIntegerField(_("days"), null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("aging limit")
+        verbose_name_plural = _("aging limits")
+        ordering = ["status"]
+
+    def __str__(self):
+        return self.status
+
+
+class BlockStatus(models.TextChoices):
+    OPEN = "open", _("Open")
+    RELEASE_REPORTED = "release_reported", _("Release Reported")
+    RELEASED = "released", _("Released")
+    EXPIRED = "expired", _("Expired")
+    CLOSED = "closed", _("Closed")
+
+
+class ExpiredDecision(models.TextChoices):
+    PARTS = "parts", _("Parts")
+    SCRAP = "scrap", _("Scrap")
+    OTHER = "other", _("Other")
+
+
+class BlockFollowUp(models.Model):
+    """The customer must release an access block (cloud account, MDM, BIOS password…) by a
+    deadline counted from the notification. Released → the asset goes back to inspection;
+    expired → the finding becomes chargeable and a supervisor decides the asset's destination
+    (RN-20)."""
+
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="block_followups")
+    finding = models.OneToOneField(Finding, on_delete=models.PROTECT, related_name="followup")
+    block_type = models.CharField(_("block type"), max_length=15, choices=BlockType.choices)
+    status = models.CharField(
+        _("status"), max_length=20, choices=BlockStatus.choices, default=BlockStatus.OPEN
+    )
+    notified_at = models.DateTimeField(_("notified at"), null=True, blank=True)
+    due_date = models.DateField(_("due date"), null=True, blank=True)
+    release_reported_at = models.DateTimeField(_("release reported at"), null=True, blank=True)
+    checked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    checked_at = models.DateTimeField(_("checked at"), null=True, blank=True)
+    decision = models.CharField(
+        _("decision"), max_length=10, choices=ExpiredDecision.choices, blank=True
+    )
+    decision_notes = models.TextField(_("decision notes"), blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    decided_at = models.DateTimeField(_("decided at"), null=True, blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("block follow-up")
+        verbose_name_plural = _("block follow-ups")
+        ordering = ["due_date", "id"]
+
+    def __str__(self):
+        return f"{self.asset} · {self.block_type}"
+
+
+class DisputeStatus(models.TextChoices):
+    OPEN = "open", _("Open")
+    IN_ANALYSIS = "in_analysis", _("In Analysis")
+    DECIDED = "decided", _("Decided")
+    ESCALATED = "escalated", _("Escalated")
+
+
+class DisputeDecision(models.TextChoices):
+    UPHELD = "upheld", _("Upheld")
+    PARTIALLY_UPHELD = "partially_upheld", _("Partially Upheld")
+    REJECTED = "rejected", _("Rejected")
+
+
+class Dispute(models.Model):
+    """A customer disputes findings of a report sent to them, within the dispute deadline
+    (RN-21). The asset is held until a decision by someone other than the report's technician
+    (RN-14): upheld (all or part) → a new report version with the findings cancelled; rejected
+    → the findings are chargeable."""
+
+    report = models.ForeignKey(InspectionReport, on_delete=models.PROTECT, related_name="disputes")
+    findings = models.ManyToManyField(Finding, related_name="disputes")
+    justification = models.TextField(_("justification"))
+    registered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    registered_at = models.DateTimeField(_("registered at"), auto_now_add=True)
+    analysis_due = models.DateField(_("analysis due date"))
+    analyst = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    reinspected = models.BooleanField(_("reinspected"), default=False)
+    status = models.CharField(
+        _("status"), max_length=12, choices=DisputeStatus.choices, default=DisputeStatus.OPEN
+    )
+    decision = models.CharField(
+        _("decision"), max_length=20, choices=DisputeDecision.choices, blank=True
+    )
+    decision_notes = models.TextField(_("decision notes"), blank=True)
+    new_report = models.ForeignKey(
+        InspectionReport, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    decided_at = models.DateTimeField(_("decided at"), null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("dispute")
+        verbose_name_plural = _("disputes")
+        ordering = ["-registered_at", "-id"]
+
+    def __str__(self):
+        return f"{self.report} · {self.status}"
+
+
+def _evidence_path(instance, filename: str) -> str:
+    ext = posixpath.splitext(filename)[1].lower()
+    return f"inventory/evidence/{uuid.uuid4().hex}{ext}"
+
+
+class Evidence(models.Model):
+    """A file attached to a block follow-up or a dispute."""
+
+    followup = models.ForeignKey(
+        BlockFollowUp, on_delete=models.CASCADE, null=True, blank=True, related_name="evidence"
+    )
+    dispute = models.ForeignKey(
+        Dispute, on_delete=models.CASCADE, null=True, blank=True, related_name="evidence"
+    )
+    file = models.FileField(_("file"), upload_to=_evidence_path, max_length=255)
+    name = models.CharField(_("name"), max_length=255)
+    size = models.PositiveBigIntegerField(_("size (bytes)"))
+    content_type = models.CharField(_("content type"), max_length=100)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    uploaded_at = models.DateTimeField(_("uploaded at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("evidence")
+        verbose_name_plural = _("evidence")
+        ordering = ["uploaded_at", "id"]
+
+    def __str__(self):
+        return self.name
+
+    def delete(self, *args, **kwargs):
+        storage, path = self.file.storage, self.file.name
+        result = super().delete(*args, **kwargs)
+        transaction.on_commit(lambda: storage.delete(path))
+        return result
+
+
+class Alert(models.Model):
+    """Something someone must look at (a deadline near or past, an asset aging in a status…).
+    For the users of a role, or one user. Created by the daily routine, once each (`key`)."""
+
+    kind = models.CharField(_("kind"), max_length=30)
+    # Values the message shows ({"asset": "H…", "days": 3, …}); the text is translated by the UI
+    params = models.JSONField(default=dict, blank=True)
+    # What it is about: "block:12", "dispute:3", "asset:40"…
+    ref = models.CharField(max_length=40, blank=True)
+    role_key = models.CharField(max_length=50, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
+    key = models.CharField(max_length=120, unique=True)
+    read_by = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="+")
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("alert")
+        verbose_name_plural = _("alerts")
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return self.key

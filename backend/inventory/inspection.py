@@ -459,6 +459,9 @@ def approve(report: InspectionReport, *, user) -> InspectionReport:
         services.change_status(
             asset, to_status=target, user=user, document_ref=f"report:{report.pk}"
         )
+    from .followups import create_followups  # (circular: follow-ups build on reports)
+
+    create_followups(report)
     return report
 
 
@@ -498,8 +501,12 @@ def mark_sent(report: InspectionReport, *, user) -> InspectionReport:
     if report.status != ReportStatus.APPROVED or not report.is_current:
         raise DomainError(_("Only the current approved report is sent."), field="status")
     if report.sent_to_customer_at is None:
+        from .followups import deadline
+        from .models import DeadlineKind
+
         report.sent_to_customer_at = timezone.now()
-        report.save(update_fields=["sent_to_customer_at"])
+        report.dispute_deadline = deadline(DeadlineKind.DISPUTE)
+        report.save(update_fields=["sent_to_customer_at", "dispute_deadline"])
     return report
 
 

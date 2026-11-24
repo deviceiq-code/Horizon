@@ -1,7 +1,7 @@
 import re
 from decimal import Decimal, InvalidOperation
 
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -19,23 +19,34 @@ from config.keywords import KeywordSearchFilter
 from config.parties import column_filters
 from pricing.documents import content_type_for, opens_inline
 from users.models import INVENTORY_SUPERVISOR
+from users.permissions import is_administrator
 
-from . import inspection, receiving, services
+from . import followups, inspection, receiving, services
 from .expected import model_key, parse_pasted
 from .models import (
     AccessoryBalance,
     AccessoryCondition,
+    AgingLimit,
+    Alert,
     Appointment,
     AppointmentKind,
     AppointmentStatus,
     Asset,
     AttachmentKind,
+    BlockFollowUp,
+    BlockStatus,
     Container,
     ContainerKind,
+    DeadlineSetting,
+    Dispute,
+    DisputeStatus,
     ErasureTool,
     ExpectedItem,
+    Finding,
     FindingKind,
+    FindingStatus,
     GradeLevel,
+    Holiday,
     InspectionReport,
     LabelRange,
     Location,
@@ -66,13 +77,21 @@ from .permissions import (
 )
 from .serializers import (
     AccessoryBalanceSerializer,
+    AgingLimitSerializer,
+    AlertSerializer,
     AppointmentSerializer,
     AssetSerializer,
+    BlockFollowUpSerializer,
+    ChargeFindingSerializer,
     ContainerSerializer,
+    DeadlineSettingSerializer,
+    DisputeSerializer,
     ErasureToolSerializer,
+    EvidenceSerializer,
     ExpectedItemSerializer,
     FindingSerializer,
     GradeLevelSerializer,
+    HolidaySerializer,
     InspectionReportListSerializer,
     InspectionReportSerializer,
     LabelRangeSerializer,
@@ -1410,3 +1429,379 @@ class InspectionViewSet(
     def sent(self, request, pk=None):
         report = self.get_object()
         return self._do(lambda: self._report(inspection.mark_sent(report, user=request.user)))
+
+
+# --- Phase 4: deadlines, holidays, blocks, disputes, charges, alerts ----------------------------
+
+
+class DeadlineSettingViewSet(
+    mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+):
+    """The deadlines (block release, dispute, dispute analysis). Supervisors edit them."""
+
+    queryset = DeadlineSetting.objects.all()
+    serializer_class = DeadlineSettingSerializer
+    permission_classes = [role_permission(*SUPERVISORS)]
+    pagination_class = None
+
+
+class AgingLimitViewSet(mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    """Days an asset may stay in each status before an alert (empty: none)."""
+
+    queryset = AgingLimit.objects.all()
+    serializer_class = AgingLimitSerializer
+    permission_classes = [role_permission(*SUPERVISORS)]
+    pagination_class = None
+
+
+class HolidayViewSet(viewsets.ModelViewSet):
+    """Holidays (not business days). ?year=."""
+
+    queryset = Holiday.objects.all()
+    serializer_class = HolidaySerializer
+    permission_classes = [role_permission(*SUPERVISORS)]
+    ordering = ["date"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        year = self.request.query_params.get("year", "")
+        return queryset.filter(date__year=int(year)) if year.isdigit() else queryset
+
+
+class DeadlineCheckView(APIView):
+    """POST: run the daily routine now (supervisors)."""
+
+    permission_classes = [role_permission(*SUPERVISORS, read_for_all=False)]
+
+    def post(self, request):
+        return Response(followups.check_deadlines())
+
+
+def _evidence(request, *, followup=None, dispute=None):
+    try:
+        followups.add_evidence(
+            upload=_upload(request), user=request.user, followup=followup, dispute=dispute
+        )
+    except DomainError as exc:
+        return domain_error(exc)
+    return None
+
+
+class BlockFollowUpViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """Access blocks to be released by customers. ?status=, ?customer=, ?lot=, ?search=
+    (Horizon ID, serial, customer). Actions: notify (POST {ids}; commercial, supervisors),
+    report-release (commercial, supervisors), check (POST {released}; inspectors), decide
+    (POST {decision, notes}; supervisors), evidence (GET/POST multipart)."""
+
+    queryset = BlockFollowUp.objects.select_related(
+        "asset__asset_model__manufacturer",
+        "asset__customer",
+        "asset__lot",
+        "asset__current_location",
+        "finding",
+        "checked_by",
+        "decided_by",
+    ).prefetch_related("evidence")
+    serializer_class = BlockFollowUpSerializer
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = [
+        "asset__horizon_id",
+        "asset__serial",
+        "asset__customer__name",
+        "asset__customer__trade_name",
+    ]
+    ordering_fields = ["due_date", "created_at", "status"]
+    ordering = ["due_date", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("status") in BlockStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        if params.get("customer", "").isdigit():
+            queryset = queryset.filter(asset__customer_id=int(params["customer"]))
+        if params.get("lot", "").isdigit():
+            queryset = queryset.filter(asset__lot_id=int(params["lot"]))
+        return queryset
+
+    def _respond(self, followup):
+        return Response(self.get_serializer(self.get_queryset().get(pk=followup.pk)).data)
+
+    def _guard(self, request, *keys):
+        if not has_role(request.user, *keys):
+            return Response(
+                {"detail": _("You do not have permission to perform this action.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    @action(detail=False, methods=["post"])
+    def notify(self, request):
+        refused = self._guard(request, *SENDERS)
+        if refused:
+            return refused
+        ids = [i for i in request.data.get("ids") or [] if str(i).isdigit()]
+        try:
+            done = followups.mark_notified(
+                list(BlockFollowUp.objects.filter(pk__in=ids)), user=request.user
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(
+            self.get_serializer(
+                self.get_queryset().filter(pk__in=[f.pk for f in done]), many=True
+            ).data
+        )
+
+    @action(detail=True, methods=["post"], url_path="report-release")
+    def report_release(self, request, pk=None):
+        refused = self._guard(request, *SENDERS)
+        if refused:
+            return refused
+        try:
+            return self._respond(followups.report_release(self.get_object(), user=request.user))
+        except DomainError as exc:
+            return domain_error(exc)
+
+    @action(detail=True, methods=["post"])
+    def check(self, request, pk=None):
+        refused = self._guard(request, *INSPECTORS)
+        if refused:
+            return refused
+        try:
+            followup = followups.check_release(
+                self.get_object(), user=request.user, released=bool(request.data.get("released"))
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._respond(followup)
+
+    @action(detail=True, methods=["post"])
+    def decide(self, request, pk=None):
+        refused = self._guard(request, *SUPERVISORS)
+        if refused:
+            return refused
+        try:
+            followup = followups.decide_expired(
+                self.get_object(),
+                user=request.user,
+                decision=request.data.get("decision", ""),
+                notes=request.data.get("notes", ""),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._respond(followup)
+
+    @action(detail=True, methods=["get", "post"])
+    def evidence(self, request, pk=None):
+        followup = self.get_object()
+        if request.method == "POST":
+            refused = self._guard(request, *SENDERS, *INSPECTORS)
+            if refused:
+                return refused
+            error = _evidence(request, followup=followup)
+            if error:
+                return error
+        return Response(EvidenceSerializer(followup.evidence.all(), many=True).data)
+
+    @action(detail=True, methods=["get"], url_path=r"evidence/(?P<evidence_id>\d+)/file")
+    def evidence_file(self, request, pk=None, evidence_id=None):
+        item = self.get_object().evidence.filter(pk=evidence_id).first()
+        if item is None:
+            raise Http404
+        return _file_response(item.file, item.name, item.content_type, inline=True)
+
+
+class DisputeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """Disputes of reports. ?status=, ?search= (Horizon ID, customer). POST (commercial,
+    supervisors) {report, findings, justification}. analyze/ and decide/ {decision, notes,
+    upheld_findings, reinspected} by supervisors other than the report's technician (RN-14);
+    evidence (GET/POST multipart)."""
+
+    queryset = Dispute.objects.select_related(
+        "report__asset__asset_model__manufacturer",
+        "report__asset__customer",
+        "report__asset__lot",
+        "report__asset__current_location",
+        "registered_by",
+        "analyst",
+    ).prefetch_related("findings", "evidence")
+    serializer_class = DisputeSerializer
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = [
+        "report__asset__horizon_id",
+        "report__asset__customer__name",
+        "report__asset__customer__trade_name",
+    ]
+    ordering_fields = ["registered_at", "analysis_due", "status"]
+    ordering = ["-registered_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.query_params.get("status") in DisputeStatus.values:
+            queryset = queryset.filter(status=self.request.query_params["status"])
+        return queryset
+
+    def _respond(self, dispute, code=200):
+        return Response(
+            self.get_serializer(self.get_queryset().get(pk=dispute.pk)).data, status=code
+        )
+
+    def create(self, request):
+        if not has_role(request.user, *SENDERS):
+            return Response(
+                {"detail": _("You do not have permission to perform this action.")}, status=403
+            )
+        report = InspectionReport.objects.filter(pk=request.data.get("report") or 0).first()
+        if report is None:
+            return Response({"report": [_("Choose a valid report.")]}, status=400)
+        ids = [int(i) for i in request.data.get("findings") or [] if str(i).isdigit()]
+        try:
+            dispute = followups.register_dispute(
+                report,
+                user=request.user,
+                findings=list(Finding.objects.filter(pk__in=ids)) if ids else [],
+                justification=request.data.get("justification", ""),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._respond(dispute, 201)
+
+    def _supervisor(self, request):
+        if not has_role(request.user, INVENTORY_SUPERVISOR):
+            return Response(
+                {"detail": _("Only inventory supervisors analyse disputes.")}, status=403
+            )
+        return None
+
+    @action(detail=True, methods=["post"])
+    def analyze(self, request, pk=None):
+        refused = self._supervisor(request)
+        if refused:
+            return refused
+        try:
+            return self._respond(followups.start_analysis(self.get_object(), user=request.user))
+        except DomainError as exc:
+            return domain_error(exc)
+
+    @action(detail=True, methods=["post"])
+    def decide(self, request, pk=None):
+        refused = self._supervisor(request)
+        if refused:
+            return refused
+        ids = [int(i) for i in request.data.get("upheld_findings") or [] if str(i).isdigit()]
+        try:
+            dispute = followups.decide_dispute(
+                self.get_object(),
+                user=request.user,
+                decision=request.data.get("decision", ""),
+                notes=request.data.get("notes", ""),
+                upheld_findings=list(Finding.objects.filter(pk__in=ids)),
+                reinspected=bool(request.data.get("reinspected")),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._respond(dispute)
+
+    @action(detail=True, methods=["get", "post"])
+    def evidence(self, request, pk=None):
+        dispute = self.get_object()
+        if request.method == "POST":
+            if not has_role(request.user, *SENDERS):
+                return Response(
+                    {"detail": _("You do not have permission to perform this action.")}, status=403
+                )
+            error = _evidence(request, dispute=dispute)
+            if error:
+                return error
+        return Response(EvidenceSerializer(dispute.evidence.all(), many=True).data)
+
+    @action(detail=True, methods=["get"], url_path=r"evidence/(?P<evidence_id>\d+)/file")
+    def evidence_file(self, request, pk=None, evidence_id=None):
+        item = self.get_object().evidence.filter(pk=evidence_id).first()
+        if item is None:
+            raise Http404
+        return _file_response(item.file, item.name, item.content_type, inline=True)
+
+
+class ChargeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Findings to charge customers: ?status=chargeable (default) | charged, ?customer=,
+    ?search=. POST <id>/charged/ (commercial, supervisors): the penalty was charged."""
+
+    queryset = Finding.objects.select_related(
+        "report__asset__asset_model__manufacturer",
+        "report__asset__customer",
+        "report__asset__lot",
+        "report__asset__current_location",
+    )
+    serializer_class = ChargeFindingSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "report__asset__horizon_id",
+        "report__asset__customer__name",
+        "report__asset__customer__trade_name",
+    ]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        wanted = params.get("status", FindingStatus.CHARGEABLE)
+        queryset = queryset.filter(
+            status=wanted
+            if wanted in (FindingStatus.CHARGEABLE, FindingStatus.CHARGED)
+            else FindingStatus.CHARGEABLE
+        )
+        if params.get("customer", "").isdigit():
+            queryset = queryset.filter(report__asset__customer_id=int(params["customer"]))
+        return queryset.order_by("report__asset__customer__name", "id")
+
+    @action(detail=True, methods=["post"])
+    def charged(self, request, pk=None):
+        if not has_role(request.user, *SENDERS):
+            return Response(
+                {"detail": _("You do not have permission to perform this action.")}, status=403
+            )
+        try:
+            finding = followups.mark_charged(self.get_object(), user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(self.get_serializer(finding).data)
+
+
+class AlertViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """The signed-in user's alerts (for them or one of their roles; administrators: all).
+    ?unread=true. POST <id>/read/, POST read-all/."""
+
+    serializer_class = AlertSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Alert.objects.all()
+        if not is_administrator(user):
+            keys = list(user.roles.exclude(key="").values_list("key", flat=True))
+            queryset = queryset.filter(Q(user=user) | Q(role_key__in=keys, user__isnull=True))
+        queryset = queryset.annotate(
+            read=Exists(
+                Alert.read_by.through.objects.filter(alert_id=OuterRef("pk"), user_id=user.pk)
+            )
+        )
+        if self.request.query_params.get("unread") == "true":
+            queryset = queryset.filter(read=False)
+        return queryset.order_by("-created_at", "-id")
+
+    @action(detail=True, methods=["post"])
+    def read(self, request, pk=None):
+        self.get_object().read_by.add(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["post"], url_path="read-all")
+    def read_all(self, request):
+        for alert in self.get_queryset().filter(read=False):
+            alert.read_by.add(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["get"])
+    def count(self, request):
+        return Response({"unread": self.get_queryset().filter(read=False).count()})

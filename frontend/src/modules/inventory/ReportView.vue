@@ -15,6 +15,7 @@ import InspectionWizard from './InspectionWizard.vue'
 import ReportSheet from './ReportSheet.vue'
 import {
   approveReport,
+  createDispute,
   getReport,
   markReportSent,
   returnReport,
@@ -68,6 +69,46 @@ async function act(call: () => Promise<InspectionReport>, message: string) {
 
 const approve = () => act(() => approveReport(props.id), 'inventory.reports.approved')
 const markSent = () => act(() => markReportSent(props.id), 'inventory.reports.sent')
+
+// --- A customer's dispute (within the deadline) ----------------------------------------------------
+
+const today = new Date().toISOString().slice(0, 10)
+const canDispute = computed(
+  () =>
+    !!report.value &&
+    canSend.value &&
+    report.value.status === 'approved' &&
+    report.value.is_current &&
+    !!report.value.sent_to_customer_at &&
+    (!report.value.dispute_deadline || report.value.dispute_deadline >= today) &&
+    report.value.findings.some((f) => f.status === 'approved') &&
+    !report.value.asset_detail.held_for_dispute,
+)
+const disputeOpen = ref(false)
+const disputed = ref<number[]>([])
+const justification = ref('')
+const disputeError = ref('')
+function openDispute() {
+  disputed.value = []
+  justification.value = ''
+  disputeError.value = ''
+  disputeOpen.value = true
+}
+async function registerDispute() {
+  disputeError.value = ''
+  try {
+    await createDispute({
+      report: props.id,
+      findings: disputed.value,
+      justification: justification.value,
+    })
+    disputeOpen.value = false
+    notifications.notify(t('inventory.disputes.registered'))
+    await load()
+  } catch (error) {
+    disputeError.value = error instanceof ApiError ? error.message : t('common.saveError')
+  }
+}
 
 const returnOpen = ref(false)
 const returnNotes = ref('')
@@ -162,6 +203,16 @@ function print() {
           >
             {{ $t('inventory.reports.markSent') }}
           </v-btn>
+          <v-btn
+            v-if="canDispute"
+            variant="tonal"
+            color="warning"
+            prepend-icon="mdi-gavel"
+            data-testid="register-dispute"
+            @click="openDispute"
+          >
+            {{ $t('inventory.disputes.register') }}
+          </v-btn>
         </template>
       </div>
 
@@ -219,6 +270,62 @@ function print() {
         </v-card>
       </template>
     </template>
+
+    <v-dialog v-model="disputeOpen" max-width="620">
+      <v-card :title="$t('inventory.disputes.register')">
+        <v-card-text>
+          <p class="text-body-2 text-medium-emphasis mb-2">
+            {{ $t('inventory.disputes.registerHint') }}
+          </p>
+          <v-list density="compact">
+            <v-list-item
+              v-for="f in report?.findings.filter((x) => x.status === 'approved') ?? []"
+              :key="f.id"
+              class="px-0"
+            >
+              <template #prepend>
+                <v-checkbox-btn
+                  v-model="disputed"
+                  :value="f.id"
+                  density="compact"
+                  data-testid="dispute-finding"
+                />
+              </template>
+              <v-list-item-title
+                >{{ $t(`inventory.findings.kinds.${f.kind}`) }} ·
+                {{ f.item || f.description }}</v-list-item-title
+              >
+              <v-list-item-subtitle>{{
+                f.value ? formatMoney(f.value, 'BRL', locale) : '—'
+              }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+          <v-textarea
+            v-model="justification"
+            :label="$t('inventory.disputes.justification')"
+            rows="3"
+            auto-grow
+            data-testid="dispute-justification"
+          />
+          <v-alert v-if="disputeError" type="error" variant="tonal" density="compact">{{
+            disputeError
+          }}</v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="disputeOpen = false">{{ $t('common.cancel') }}</v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :disabled="!disputed.length"
+            data-testid="dispute-save"
+            @click="registerDispute"
+          >
+            {{ $t('inventory.disputes.register') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-dialog v-model="returnOpen" max-width="560">
       <v-card :title="$t('inventory.reports.sendBack')">

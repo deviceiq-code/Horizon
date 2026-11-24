@@ -123,12 +123,12 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('search, documentation and notifications are coming soon', async () => {
+  it('search is coming soon; notifications open the alerts', async () => {
     const { wrapper } = await mountLayout()
     await click('search')
     expect(useNotificationsStore().text).toBe('Search: coming soon.')
     await click('notifications')
-    expect(useNotificationsStore().text).toBe('Notifications: coming soon.')
+    expect(inBody('[data-testid="alerts-menu"]')!.textContent).toContain('No notifications.')
     wrapper.unmount()
   })
 

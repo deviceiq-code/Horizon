@@ -124,6 +124,24 @@ export const inspections: AppModule = {
   ],
 }
 
+export const blocks = page(
+  'inventory-blocks',
+  'blocks',
+  'mdi-lock-clock',
+  'inventory.blocks',
+  () => import('./BlocksView.vue'),
+  false,
+)
+
+export const disputes = page(
+  'inventory-disputes',
+  'disputes',
+  'mdi-gavel',
+  'inventory.disputes',
+  () => import('./DisputesView.vue'),
+  false,
+)
+
 export const accessories = page(
   'inventory-accessories',
   'accessories',
@@ -188,6 +206,13 @@ export const penalties = settingsPage(
   'inventory.penalties',
   () => import('./PenaltyRatesTab.vue'),
 )
+export const deadlines = settingsPage(
+  'inventory-deadlines',
+  'deadlines',
+  'mdi-calendar-clock-outline',
+  'inventory.deadlines',
+  () => import('./DeadlinesTab.vue'),
+)
 export const erasureTools = settingsPage(
   'inventory-erasure-tools',
   'erasure-tools',
@@ -200,6 +225,8 @@ export default [
   appointments,
   receiving,
   inspections,
+  blocks,
+  disputes,
   movement,
   assets,
   accessories,
@@ -209,4 +236,5 @@ export default [
   gradeLevels,
   penalties,
   erasureTools,
+  deadlines,
 ]

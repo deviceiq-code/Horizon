@@ -63,8 +63,8 @@ export function rangeLabels(first: number, last: number): Label[] {
   return labels
 }
 
-/** Print through a hidden frame (the page itself is left alone). */
-export function printLabels(labels: Label[], documentTitle: string): void {
+/** Print a whole HTML document through a hidden frame (the page itself is left alone). */
+export function printDocument(html: string): void {
   const frame = document.createElement('iframe')
   frame.setAttribute('aria-hidden', 'true')
   frame.style.position = 'fixed'
@@ -78,10 +78,17 @@ export function printLabels(labels: Label[], documentTitle: string): void {
     return
   }
   doc.open()
-  doc.write(labelsDocument(labels, documentTitle))
+  doc.write(html)
   doc.close()
   frame.contentWindow.focus()
   frame.contentWindow.print()
   // Removed once the print dialog has taken the document
   setTimeout(() => frame.remove(), 60_000)
 }
+
+/** Print labels, one per page. */
+export function printLabels(labels: Label[], documentTitle: string): void {
+  printDocument(labelsDocument(labels, documentTitle))
+}
+
+export { escape as escapeHtml }

@@ -1,6 +1,9 @@
 """Fixtures shared by the inventory's tests: a warehouse with a dock, an inspection queue, a
 stock area and a quarantine; a notebook model; users with the inventory roles."""
 
+from datetime import date
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 
@@ -8,6 +11,7 @@ from catalogs.models import AssetClass, AssetModel, Manufacturer, SubVertical, T
 from customers.models import Customer
 from users.models import (
     COMMERCIAL_FINANCE,
+    INSPECTION_TECHNICIAN,
     INVENTORY_SUPERVISOR,
     RECEIVER,
     REMARKETING_ANALYST,
@@ -16,8 +20,8 @@ from users.models import (
 )
 from users.testing import make_account_manager
 
-from . import services
-from .models import Location, Warehouse
+from . import receiving, services
+from .models import ErasureTool, Location, LotErasureTool, PenaltyRate, Warehouse
 from .states import AreaType
 
 User = get_user_model()
@@ -164,3 +168,48 @@ def customer(db):
     return Customer.objects.create(
         name="Transportes Rápidos Ltda", tax_id="11222333000181", primary_account_manager=manager
     )
+
+
+# --- Inspection (Phases 3 and 4) -----------------------------------------------------------
+
+
+@pytest.fixture
+def technician(db):
+    return user_with_roles("technician", INSPECTION_TECHNICIAN)
+
+
+@pytest.fixture
+def setup(notebook, notebook_class, places, receiver, supervisor, warehouse, customer):
+    """A notebook (data storage; kit and test script; front photo required) waiting for
+    inspection, its lot's erasure tool defined and a penalty table."""
+    notebook.kit_checklist = [
+        {"item": "Charger", "essential": False},
+        {"item": "Battery", "essential": True},
+    ]
+    notebook.test_script = ["Boots", "Keyboard"]
+    notebook.save()
+    notebook_class.required_photo_kinds = ["front"]
+    notebook_class.save()
+    lot = receiving.open_lot(
+        warehouse=warehouse, customer=customer, dock=places["dock"], user=receiver
+    )
+    asset = receiving.triage_unit(lot, user=receiver, asset_model=notebook, serial="ABC0001")
+    receiving.close_lot(lot, user=receiver)
+    tool = ErasureTool.objects.create(name="Blancco", version="7.1", methods=["purge"])
+    tool.asset_classes.add(notebook_class)
+    LotErasureTool.objects.create(
+        lot=lot, asset_class=notebook_class, tool=tool, method="purge", defined_by=supervisor
+    )
+    for kind, value in (
+        ("missing_item", "150.00"),
+        ("heavy_cleaning", "80.00"),
+        ("access_block", "500.00"),
+    ):
+        PenaltyRate.objects.create(
+            asset_class=notebook_class,
+            finding_kind=kind,
+            value=Decimal(value),
+            valid_from=date(2026, 1, 1),
+        )
+    asset.refresh_from_db()
+    return {"asset": asset, "lot": lot, "tool": tool}

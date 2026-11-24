@@ -772,6 +772,8 @@ export interface ReportSummary {
   recommended_destination: Destination | ''
   approved_at: string | null
   sent_to_customer_at: string | null
+  /** Last day the customer may dispute its findings (set when sent) */
+  dispute_deadline: string | null
 }
 
 export interface InspectionReport extends ReportSummary {
@@ -1014,4 +1016,242 @@ export function disassemble(
     method: 'POST',
     body: JSON.stringify({ parts, reason }),
   })
+}
+
+// --- Phase 4: deadlines, holidays, blocks, disputes, charges, alerts ----------------------------
+
+export type DeadlineKind = 'block_release' | 'dispute' | 'dispute_analysis'
+
+export interface DeadlineSetting {
+  id: number
+  kind: DeadlineKind
+  days: number
+  business_days: boolean
+  /** Days before the end when reminders are sent */
+  reminder_days: number[]
+  updated_at: string
+}
+
+export interface Holiday {
+  id: number
+  date: string
+  name: string
+}
+
+export interface AgingLimit {
+  id: number
+  status: AssetStatus
+  days: number | null
+}
+
+export interface Evidence {
+  id: number
+  name: string
+  size: number
+  content_type: string
+  uploaded_at: string
+}
+
+export interface AssetSummary {
+  id: number
+  horizon_id: string
+  model: string
+  serial: string
+  status: AssetStatus
+  customer: string | null
+  lot: string | null
+  location: string
+}
+
+export type BlockStatus = 'open' | 'release_reported' | 'released' | 'expired' | 'closed'
+
+export interface BlockFollowUp {
+  id: number
+  asset: number
+  asset_detail: AssetSummary
+  report: number
+  block_type: BlockType
+  status: BlockStatus
+  notified_at: string | null
+  due_date: string | null
+  days_left: number | null
+  release_reported_at: string | null
+  checked_by_name: string | null
+  checked_at: string | null
+  decision: '' | 'parts' | 'scrap' | 'other'
+  decision_notes: string
+  decided_by_name: string | null
+  decided_at: string | null
+  finding_value: string | null
+  finding_status: string
+  evidence: Evidence[]
+  created_at: string
+}
+
+export type DisputeStatus = 'open' | 'in_analysis' | 'decided' | 'escalated'
+export type DisputeDecision = 'upheld' | 'partially_upheld' | 'rejected'
+
+export interface Dispute {
+  id: number
+  report: number
+  report_version: number
+  report_technician: number
+  asset_detail: AssetSummary
+  findings: number[]
+  findings_detail: Finding[]
+  justification: string
+  registered_by_name: string
+  registered_at: string
+  analysis_due: string
+  analyst: number | null
+  analyst_name: string | null
+  reinspected: boolean
+  status: DisputeStatus
+  decision: DisputeDecision | ''
+  decision_notes: string
+  new_report: number | null
+  decided_at: string | null
+  evidence: Evidence[]
+}
+
+export interface ChargeFinding extends Finding {
+  asset_detail: AssetSummary
+  report_id: number
+}
+
+export interface Alert {
+  id: number
+  kind: string
+  params: Record<string, string | number>
+  ref: string
+  created_at: string
+  read: boolean
+}
+
+export function listDeadlineSettings() {
+  return api<DeadlineSetting[]>(`${BASE}/deadline-settings/`)
+}
+
+export function updateDeadlineSetting(
+  id: number,
+  data: Partial<Pick<DeadlineSetting, 'days' | 'business_days' | 'reminder_days'>>,
+) {
+  return api<DeadlineSetting>(`${BASE}/deadline-settings/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export function listAgingLimits() {
+  return api<AgingLimit[]>(`${BASE}/aging-limits/`)
+}
+
+export function updateAgingLimit(id: number, days: number | null) {
+  return api<AgingLimit>(`${BASE}/aging-limits/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ days }),
+  })
+}
+
+export function listHolidays(year?: number) {
+  return api<Paginated<Holiday>>(`${BASE}/holidays/?page_size=200${year ? `&year=${year}` : ''}`)
+}
+
+export function createHoliday(data: { date: string; name: string }) {
+  return api<Holiday>(`${BASE}/holidays/`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function deleteHoliday(id: number) {
+  return api<void>(`${BASE}/holidays/${id}/`, { method: 'DELETE' })
+}
+
+export function runDeadlineCheck() {
+  return api<Record<string, number>>(`${BASE}/deadline-check/`, { method: 'POST', body: '{}' })
+}
+
+/** Filters: `status`, `customer`, `lot`. */
+export function listBlocks(params: ListParams) {
+  return api<Paginated<BlockFollowUp>>(`${BASE}/blocks/` + listQuery(params))
+}
+
+export function notifyBlocks(ids: number[]) {
+  return api<BlockFollowUp[]>(`${BASE}/blocks/notify/`, {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  })
+}
+
+const blockAction = (id: number, action: string, data: object = {}) =>
+  api<BlockFollowUp>(`${BASE}/blocks/${id}/${action}/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+export const reportBlockRelease = (id: number) => blockAction(id, 'report-release')
+export const checkBlockRelease = (id: number, released: boolean) =>
+  blockAction(id, 'check', { released })
+export const decideBlock = (id: number, decision: string, notes: string) =>
+  blockAction(id, 'decide', { decision, notes })
+
+/** Filters: `status`. */
+export function listDisputes(params: ListParams) {
+  return api<Paginated<Dispute>>(`${BASE}/disputes/` + listQuery(params))
+}
+
+export function createDispute(data: { report: number; findings: number[]; justification: string }) {
+  return api<Dispute>(`${BASE}/disputes/`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function analyzeDispute(id: number) {
+  return api<Dispute>(`${BASE}/disputes/${id}/analyze/`, { method: 'POST', body: '{}' })
+}
+
+export function decideDispute(
+  id: number,
+  data: {
+    decision: DisputeDecision
+    notes: string
+    upheld_findings: number[]
+    reinspected: boolean
+  },
+) {
+  return api<Dispute>(`${BASE}/disputes/${id}/decide/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function uploadEvidence(kind: 'blocks' | 'disputes', id: number, file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  return api<Evidence[]>(`${BASE}/${kind}/${id}/evidence/`, { method: 'POST', body })
+}
+
+export function evidenceUrl(kind: 'blocks' | 'disputes', id: number, evidenceId: number) {
+  return `/api${BASE}/${kind}/${id}/evidence/${evidenceId}/file/`
+}
+
+/** Filters: `status` (chargeable | charged), `customer`. */
+export function listCharges(params: ListParams) {
+  return api<Paginated<ChargeFinding>>(`${BASE}/charges/` + listQuery(params))
+}
+
+export function markCharged(id: number) {
+  return api<ChargeFinding>(`${BASE}/charges/${id}/charged/`, { method: 'POST', body: '{}' })
+}
+
+export function listAlerts(unread = false) {
+  return api<Paginated<Alert>>(`${BASE}/alerts/?page_size=30${unread ? '&unread=true' : ''}`)
+}
+
+export function alertCount() {
+  return api<{ unread: number }>(`${BASE}/alerts/count/`)
+}
+
+export function readAlert(id: number) {
+  return api<void>(`${BASE}/alerts/${id}/read/`, { method: 'POST', body: '{}' })
+}
+
+export function readAllAlerts() {
+  return api<void>(`${BASE}/alerts/read-all/`, { method: 'POST', body: '{}' })
 }

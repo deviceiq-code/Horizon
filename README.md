@@ -73,6 +73,15 @@ only their names. When several machines use the same database (e.g. the homelab'
 point `MEDIA_ROOT` on all of them to the same shared folder (e.g. a TrueNAS share); otherwise a
 photo uploaded on one machine answers 404 on the others (initials instead of the photo).
 
+## Inventory daily routine
+The inventory's deadlines (access blocks, disputes) and alerts are checked by a command that
+must run once a day. With cron, on the machine that runs Horizon (`crontab -e`):
+```bash
+0 6 * * *  cd /path/to/horizon/backend && uv run python manage.py check_deadlines >> /path/to/horizon/.run/check_deadlines.log 2>&1
+```
+Running it more than once a day is harmless (it is idempotent). Supervisors can also run it
+from Remarketing › Inventory Catalogs › Deadlines and Holidays ("Check Deadlines Now").
+
 ## Tests and quality
 ```bash
 cd backend  && uv run pytest && uv run ruff check .
