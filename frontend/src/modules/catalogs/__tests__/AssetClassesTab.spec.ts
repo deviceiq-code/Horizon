@@ -17,6 +17,7 @@ vi.mock('../asset-classes/api', async (importOriginal) => ({
   deleteAssetClass: vi.fn<typeof assetClassesApi.deleteAssetClass>(),
   getSpecTemplate: vi.fn<typeof assetClassesApi.getSpecTemplate>(),
   saveSpecTemplate: vi.fn<typeof assetClassesApi.saveSpecTemplate>(),
+  getAssetClass: vi.fn<typeof assetClassesApi.getAssetClass>(),
 }))
 vi.mock('../verticals/api', () => ({
   listSubVerticals: vi.fn<typeof verticalsApi.listSubVerticals>(),
@@ -459,6 +460,33 @@ describe('AssetClassesTab', () => {
 
     expect(api.deleteAssetClass).toHaveBeenCalledWith(100)
     expect(useNotificationsStore().text).toBe('Asset class deleted.')
+    wrapper.unmount()
+  })
+
+  it('compares asset classes as Battle Cards: most stars win, the template comes last', async () => {
+    api.getAssetClass.mockImplementation(async (id) =>
+      [DRILLS, EXCAVATORS].find((c) => c.id === id)!,
+    )
+    const wrapper = mountTab()
+    await settle()
+    await wrapper.find('[data-testid="compare-start"]').trigger('click')
+    await settle()
+    const boxes = wrapper.findAll('.v-data-table tbody input[type="checkbox"]')
+    await boxes[0]!.trigger('click')
+    await settle()
+    await boxes[1]!.trigger('click')
+    await settle()
+    await wrapper.find('[data-testid="compare-open"]').trigger('click')
+    await settle()
+    const wins = [...document.body.querySelectorAll('[data-testid="compare-wins"]')].map((w) =>
+      w.textContent?.trim(),
+    )
+    // Excavators beat 0-star Drills in the four ratings and the average
+    expect(wins).toEqual(['0', '5'])
+    const rows = [...document.body.querySelectorAll('[data-testid="compare-spec"]')]
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.textContent).toContain('—')
+    expect(rows[1]!.textContent).toContain('Number (h) *')
     wrapper.unmount()
   })
 })

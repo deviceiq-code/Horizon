@@ -4,9 +4,10 @@
  * calculated): at each term the highest eFMV % wins (keeps more of its value); among
  * ratings, the most stars. Terms or specifications a card lacks show as empty and never win.
  */
+import { MAX_COMPARED, winners } from '@/utils/battle'
 import type { AveragePriceDetail, PricePoint, SpecValue } from './api'
 
-export const MAX_COMPARED = 3
+export { MAX_COMPARED, winners }
 
 export interface TermRow {
   term: number
@@ -20,15 +21,6 @@ export interface SpecRow {
   label: string
   specs: (SpecValue | null)[]
   best: boolean[]
-}
-
-/** Which cards hold the highest value (none when fewer than two cards have one, or all tie). */
-export function winners(values: (number | null)[]): boolean[] {
-  const present = values.filter((v): v is number => v !== null && !Number.isNaN(v))
-  if (present.length < 2) return values.map(() => false)
-  const top = Math.max(...present)
-  if (present.every((v) => v === top)) return values.map(() => false)
-  return values.map((v) => v !== null && v === top)
 }
 
 /** Every term of any card, in order. */

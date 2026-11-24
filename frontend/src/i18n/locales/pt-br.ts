@@ -1634,6 +1634,19 @@ const ptBR: Messages = {
     deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
   },
   assetClasses: {
+    compare: {
+      button: 'Comparar',
+      selected: '{n} de {max} selecionados',
+      max: 'É possível comparar até {n} itens.',
+      title: 'Comparar Classes de Ativo',
+      subtitle:
+        'Battle Cards: o troféu marca mais estrelas em cada avaliação de Remarketing. O template de especificações vem por último, pois difere entre as classes.',
+      winsHint: 'Avaliações que esta carta vence',
+      average: 'Média',
+      template: 'Template de Especificações',
+      fields: 'Campos do Template',
+      date: 'Atualizada em {date}',
+    },
     requiredPhotosHint: 'Fotos que todo laudo de vistoria dos bens desta classe deve ter.',
     translations: {
       title: 'Traduções',
@@ -1890,6 +1903,19 @@ const ptBR: Messages = {
     },
   },
   specTemplate: {
+    import: {
+      button: 'Importar Template',
+      title: 'Importar um Template',
+      hint: 'Traga os campos de outra classe de ativo — da mesma vertical ou de qualquer vertical. Nada é salvo até você salvar este template.',
+      source: 'Classe de Ativo',
+      none: 'Nenhuma outra classe de ativo aqui tem campos.',
+      sameVertical: 'Mesma Vertical',
+      anyVertical: 'Qualquer Vertical',
+      add: 'Adicionar os campos que este template ainda não tem',
+      replace: 'Substituir estes campos pelo outro template',
+      apply: 'Importar',
+      done: '{added} campo(s) importado(s), {skipped} já existia(m). Salve para mantê-los.',
+    },
     title: 'Template de Especificações',
     hint: 'Campos preenchidos em cada preço médio desta classe de ativo. Os preços já salvos mantêm o template com que foram criados.',
     empty: 'Nenhum campo ainda.',

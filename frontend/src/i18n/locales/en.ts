@@ -1631,6 +1631,19 @@ const en = {
     deleteConfirm: 'Delete "{name}"? This cannot be undone.',
   },
   assetClasses: {
+    compare: {
+      button: 'Compare',
+      selected: '{n} of {max} selected',
+      max: 'Up to {n} items can be compared.',
+      title: 'Compare Asset Classes',
+      subtitle:
+        'Battle Cards: the trophy marks the most stars in each Remarketing rating. The specification template comes last, as it differs between classes.',
+      winsHint: 'Ratings this card wins',
+      average: 'Average',
+      template: 'Specification Template',
+      fields: 'Template Fields',
+      date: 'Updated on {date}',
+    },
     requiredPhotosHint: 'Photos every inspection report of its assets must have.',
     translations: {
       title: 'Translations',
@@ -1889,6 +1902,19 @@ const en = {
     },
   },
   specTemplate: {
+    import: {
+      button: 'Import Template',
+      title: 'Import a Template',
+      hint: 'Bring the fields of another asset class — of the same vertical or of any vertical. Nothing is saved until you save this template.',
+      source: 'Asset Class',
+      none: 'No other asset class here has fields.',
+      sameVertical: 'Same Vertical',
+      anyVertical: 'Any Vertical',
+      add: 'Add the fields this template does not have yet',
+      replace: 'Replace these fields by that template',
+      apply: 'Import',
+      done: '{added} field(s) imported, {skipped} already here. Save to keep them.',
+    },
     title: 'Specification Template',
     hint: 'Fields filled in for every average price of this asset class. Saved prices keep the template they were created with.',
     empty: 'No fields yet.',

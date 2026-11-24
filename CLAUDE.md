@@ -392,6 +392,16 @@ Multi-user web system for **operating lease residual value pricing**
     clears them; `hide-create` hides "New"; `toolbar` slot: buttons between Filters and New; `selectable` + `v-model:selected`: a checkbox per row, ids kept across pages, no select-all); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
+  - **Battle Cards** (`src/components/BattleCards.vue`: cards as columns of one grid, a line per
+    attribute so they align; picture in a small fixed frame; trophies for the `best` cells and
+    their count per card; `src/utils/battle.ts`: `MAX_COMPARED` = 3, `winners` — the highest,
+    no trophy for ties or a lone value). Used by Average Prices and Asset Classes (ratings and
+    their average compete; the specification template comes last and does not compete).
+  - **Specification template import** (Asset Classes): "Import Template" brings the fields of
+    another asset class — of the same vertical (default) or of any vertical (a selector in the
+    import dialog) (`asset-classes/templateImport.ts`: add the
+    missing ones by name, or replace keeping the keys of same-named fields); saved with the
+    template.
   - **Compare** (Average Prices): "Compare" (between Filters and New) turns on row checkboxes;
     2–3 prices (`compare.ts::MAX_COMPARED`) open `ComparePricesDialog.vue` — Battle Cards
     (one grid: a column per card, a line per attribute, aligned across cards; photo in a fixed
@@ -439,7 +449,7 @@ Multi-user web system for **operating lease residual value pricing**
     with the premises as labels and the creation date (saving PATCHes only `scenarios`) and one
     tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
     open one — (`ScenarioPanel.vue`: name, term, scope and
-    `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the HW / SW / SV shares (`part="shares"`: percentage and value, the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "+ Row" adds an empty row whose
+    `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the LO's mix (`part="shares"`: a grey borderless panel with one bar, a segment per share in the list's colors, then HW / SW / SV with icon, percentage and value — the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "+ Row" adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
     number (assets counted by kind beside "Assets" — `AssetCounts.vue`, `draft.ts::assetCounts`:

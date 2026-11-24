@@ -1645,6 +1645,19 @@ const es: Messages = {
     deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
   },
   assetClasses: {
+    compare: {
+      button: 'Comparar',
+      selected: '{n} de {max} seleccionados',
+      max: 'Se pueden comparar hasta {n} ítems.',
+      title: 'Comparar Clases de Activo',
+      subtitle:
+        'Battle Cards: el trofeo marca más estrellas en cada calificación de Remarketing. La plantilla de especificaciones va al final, pues difiere entre las clases.',
+      winsHint: 'Calificaciones que gana esta carta',
+      average: 'Promedio',
+      template: 'Plantilla de Especificaciones',
+      fields: 'Campos de la Plantilla',
+      date: 'Actualizada el {date}',
+    },
     requiredPhotosHint:
       'Fotos que todo informe de inspección de los bienes de esta clase debe tener.',
     translations: {
@@ -1903,6 +1916,19 @@ const es: Messages = {
     },
   },
   specTemplate: {
+    import: {
+      button: 'Importar Plantilla',
+      title: 'Importar una Plantilla',
+      hint: 'Traiga los campos de otra clase de activo — de la misma vertical o de cualquier vertical. Nada se guarda hasta que guarde esta plantilla.',
+      source: 'Clase de Activo',
+      none: 'Ninguna otra clase de activo aquí tiene campos.',
+      sameVertical: 'Misma Vertical',
+      anyVertical: 'Cualquier Vertical',
+      add: 'Agregar los campos que esta plantilla aún no tiene',
+      replace: 'Reemplazar estos campos por la otra plantilla',
+      apply: 'Importar',
+      done: '{added} campo(s) importado(s), {skipped} ya existía(n). Guarde para conservarlos.',
+    },
     title: 'Plantilla de Especificaciones',
     hint: 'Campos completados en cada precio promedio de esta clase de activo. Los precios ya guardados mantienen la plantilla con la que se crearon.',
     empty: 'Todavía no hay campos.',

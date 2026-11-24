@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -7,6 +7,8 @@ import EnabledChip from '../EnabledChip.vue'
 import AssetClassFormDialog from './AssetClassFormDialog.vue'
 import { useAssetClassFilters } from './useAssetClassFilters'
 import SpecTemplateDialog from './SpecTemplateDialog.vue'
+import CompareAssetClassesDialog from './CompareAssetClassesDialog.vue'
+import { MAX_COMPARED } from '@/utils/battle'
 import RemarketingAverage from '../remarketing/RemarketingAverage.vue'
 import { deleteAssetClass, listAssetClasses, REMARKETING_RATINGS, type AssetClass } from './api'
 
@@ -59,6 +61,29 @@ function onSaved(_assetClass: AssetClass, created: boolean) {
 
 // --- Specification template ------------------------------------------------------------------
 
+// --- Compare (up to three, as Battle Cards) -------------------------------------------------
+
+const comparing = ref(false)
+const selected = ref<number[]>([])
+const compareOpen = ref(false)
+
+function startComparing() {
+  selected.value = []
+  comparing.value = true
+}
+
+function stopComparing() {
+  comparing.value = false
+  selected.value = []
+}
+
+watch(selected, (ids) => {
+  if (ids.length > MAX_COMPARED) {
+    selected.value = ids.slice(0, MAX_COMPARED)
+    notifications.notify(t('assetClasses.compare.max', { n: MAX_COMPARED }), 'warning')
+  }
+})
+
 const templateOpen = ref(false)
 const templateOf = ref<AssetClass | null>(null)
 
@@ -82,6 +107,8 @@ function openTemplate(assetClass: AssetClass) {
     :search-placeholder="$t('assetClasses.searchPlaceholder')"
     :filters="filters"
     filters-storage-key="asset-classes"
+    :selectable="comparing"
+    v-model:selected="selected"
     @clear-filters="clearFilters"
     :empty-text="$t('assetClasses.empty')"
     :no-results-text="$t('assetClasses.noResults')"
@@ -91,6 +118,35 @@ function openTemplate(assetClass: AssetClass) {
     @create="openForm(null)"
     @edit="openForm"
   >
+    <template #toolbar>
+      <v-btn
+        v-if="!comparing"
+        variant="text"
+        prepend-icon="mdi-cards-outline"
+        data-testid="compare-start"
+        @click="startComparing"
+      >
+        {{ $t('assetClasses.compare.button') }}
+      </v-btn>
+      <template v-else>
+        <span class="text-body-2 text-medium-emphasis" data-testid="compare-count">{{
+          $t('assetClasses.compare.selected', { n: selected.length, max: MAX_COMPARED })
+        }}</span>
+        <v-btn
+          color="primary"
+          variant="tonal"
+          prepend-icon="mdi-cards-outline"
+          :disabled="selected.length < 2"
+          data-testid="compare-open"
+          @click="compareOpen = true"
+        >
+          {{ $t('assetClasses.compare.button') }}
+        </v-btn>
+        <v-btn variant="text" data-testid="compare-cancel" @click="stopComparing">{{
+          $t('common.cancel')
+        }}</v-btn>
+      </template>
+    </template>
     <template #row-actions="{ item }">
       <v-btn
         icon
@@ -201,10 +257,12 @@ function openTemplate(assetClass: AssetClass) {
     </template>
   </ServerCrudTable>
 
+  <CompareAssetClassesDialog v-model="compareOpen" :ids="selected" />
   <AssetClassFormDialog v-model="formOpen" :asset-class="editing" @saved="onSaved" />
   <SpecTemplateDialog
     v-model="templateOpen"
     :asset-class-id="templateOf?.id ?? null"
+    :vertical-id="templateOf?.sub_vertical_detail.vertical.id ?? null"
     :label="templateOf ? `${templateOf.name} — ${templateOf.sub_vertical_detail.label}` : ''"
     @saved="table?.reload()"
   />
