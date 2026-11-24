@@ -25,6 +25,9 @@ from .models import (
     BlockFollowUp,
     Container,
     DeadlineSetting,
+    Disposal,
+    DisposalFile,
+    DisposalItem,
     Dispute,
     ErasureCertificate,
     ErasureMethod,
@@ -1445,3 +1448,234 @@ class AlertSerializer(serializers.ModelSerializer):
         model = Alert
         fields = ["id", "kind", "params", "ref", "created_at", "read"]
         read_only_fields = fields
+
+
+# --- Phase 5: stock and disposals ----------------------------------------------------------
+
+
+def asset_class_name(asset_class, *, many: bool = False) -> str:
+    """The asset class's name in the active language (English when not translated)."""
+    from django.utils.translation import get_language
+
+    from catalogs.names import english_plural, localized
+
+    return localized(
+        asset_class.name,
+        asset_class.plural_name or english_plural(asset_class.name),
+        asset_class.translations,
+        (get_language() or "en").lower(),
+        many=many,
+    )
+
+
+class StockAssetSerializer(serializers.ModelSerializer):
+    """An asset of the stock query with its current report's data (for pricing — spec §11)."""
+
+    model = serializers.SerializerMethodField()
+    asset_class = serializers.SerializerMethodField()
+    warehouse = serializers.CharField(source="current_location.warehouse.code", read_only=True)
+    location = serializers.CharField(source="current_location.code", read_only=True)
+    customer = serializers.SerializerMethodField()
+    lot = serializers.SerializerMethodField()
+    days_in_stock = serializers.SerializerMethodField()
+    report = serializers.SerializerMethodField()
+    disposal = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Asset
+        fields = [
+            "id",
+            "horizon_id",
+            "serial",
+            "model",
+            "asset_class",
+            "specs",
+            "status",
+            "condition_grade",
+            "held_for_dispute",
+            "warehouse",
+            "location",
+            "customer",
+            "lot",
+            "created_at",
+            "days_in_stock",
+            "report",
+            "disposal",
+        ]
+        read_only_fields = fields
+
+    def get_model(self, obj):
+        return _model_label(obj.asset_model)
+
+    def get_asset_class(self, obj):
+        return asset_class_name(obj.asset_model.asset_class)
+
+    def get_customer(self, obj):
+        return _customer_name(obj.customer)
+
+    def get_lot(self, obj):
+        return obj.lot.code if obj.lot_id else None
+
+    def get_days_in_stock(self, obj):
+        return (timezone.localdate() - timezone.localtime(obj.created_at).date()).days
+
+    def get_report(self, obj):
+        current = getattr(obj, "current_reports", None)
+        report = current[0] if current else None
+        if report is None:
+            return None
+        return {
+            "id": report.id,
+            "version": report.version,
+            "conservation": report.conservation,
+            "functioning": report.functioning,
+            "completeness": report.completeness,
+            "missing_items": report.missing_items,
+            "approved_at": report.approved_at,
+        }
+
+    def get_disposal(self, obj):
+        items = getattr(obj, "open_disposal_items", None)
+        if not items:
+            return None
+        return {"id": items[0].disposal_id, "code": items[0].disposal.code}
+
+
+class DisposalFileSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DisposalFile
+        fields = ["id", "kind", "name", "size", "content_type", "uploaded_at", "uploaded_by_name"]
+        read_only_fields = fields
+
+    def get_uploaded_by_name(self, obj):
+        return display_name_in(self.context, obj.uploaded_by)
+
+
+class DisposalItemSerializer(serializers.ModelSerializer):
+    asset_detail = serializers.SerializerMethodField()
+    accessory_model_label = serializers.SerializerMethodField()
+    picked = serializers.BooleanField(read_only=True)
+    picked_by_name = serializers.SerializerMethodField()
+    line_total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DisposalItem
+        fields = [
+            "id",
+            "asset",
+            "asset_detail",
+            "accessory_model",
+            "accessory_model_label",
+            "quantity",
+            "condition",
+            "unit_value",
+            "line_total",
+            "picked_quantity",
+            "picked",
+            "picked_at",
+            "picked_by_name",
+        ]
+        read_only_fields = fields
+
+    def get_asset_detail(self, obj):
+        if obj.asset is None:
+            return None
+        asset = obj.asset
+        return {
+            **_asset_summary(asset),
+            "asset_class": asset_class_name(asset.asset_model.asset_class),
+            "grade": asset.condition_grade,
+            "held_for_dispute": asset.held_for_dispute,
+            "area_type": asset.current_location.area_type,
+        }
+
+    def get_accessory_model_label(self, obj):
+        return _model_label(obj.accessory_model) if obj.accessory_model_id else None
+
+    def get_picked_by_name(self, obj):
+        return display_name_in(self.context, obj.picked_by) if obj.picked_by else None
+
+    def get_line_total(self, obj):
+        if obj.unit_value is None:
+            return None
+        return f"{obj.unit_value * obj.quantity:.2f}"
+
+
+class DisposalSerializer(serializers.ModelSerializer):
+    """Header of a disposal. Writing: kind and warehouse only on creation; the rest while open.
+    The detail adds `items`, `files`, `totals` and `problems` (what keeps it from shipping)."""
+
+    code = serializers.CharField(read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    discard_provider_name = serializers.SerializerMethodField()
+    appointment_code = serializers.SerializerMethodField()
+    items_count = serializers.IntegerField(read_only=True, default=None)
+    picked_count = serializers.IntegerField(read_only=True, default=None)
+    created_by_name = serializers.SerializerMethodField()
+    shipped_by_name = serializers.SerializerMethodField()
+    cancelled_by_name = serializers.SerializerMethodField()
+    keywords = KeywordsField(required=False)
+
+    class Meta:
+        model = Disposal
+        fields = [
+            "id",
+            "code",
+            "kind",
+            "status",
+            "warehouse",
+            "warehouse_code",
+            "warehouse_name",
+            "customer",
+            "customer_name",
+            "contract",
+            "discard_provider",
+            "discard_provider_name",
+            "appointment",
+            "appointment_code",
+            "document_number",
+            "notes",
+            "keywords",
+            "items_count",
+            "picked_count",
+            "created_by_name",
+            "created_at",
+            "updated_at",
+            "shipped_by_name",
+            "shipped_at",
+            "cancelled_by_name",
+            "cancelled_at",
+            "cancel_reason",
+        ]
+        read_only_fields = [
+            "id",
+            "status",
+            "created_at",
+            "updated_at",
+            "shipped_at",
+            "cancelled_at",
+            "cancel_reason",
+        ]
+
+    def get_customer_name(self, obj):
+        return _customer_name(obj.customer)
+
+    def get_discard_provider_name(self, obj):
+        provider = obj.discard_provider
+        return (provider.trade_name or provider.name) if provider else None
+
+    def get_appointment_code(self, obj):
+        return obj.appointment.code if obj.appointment_id else None
+
+    def get_created_by_name(self, obj):
+        return display_name_in(self.context, obj.created_by)
+
+    def get_shipped_by_name(self, obj):
+        return display_name_in(self.context, obj.shipped_by) if obj.shipped_by else None
+
+    def get_cancelled_by_name(self, obj):
+        return display_name_in(self.context, obj.cancelled_by) if obj.cancelled_by else None

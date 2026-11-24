@@ -10,7 +10,7 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | 2. Appointments and triage | Appointments (receiving and shipping), expected lists, receiving lots, triage of units and accessories, accessory balances, occurrences, reconciliation, closing | **Done** |
 | 3. Inspection | Versioned reports, grade code, photos, checklists, findings, penalty table, data erasure tools and certificates (+ the lot's tools per asset class), approval, printable report, part harvesting | **Done** |
 | 4. Blocks and disputes | Block follow-ups, disputes, charges, deadline parameters, holidays, aging limits, daily routine, alerts | **Done** |
-| 5. Disposal | Stock query, disposals, reservation, picking, shipping, write-off | To do |
+| 5. Disposal | Stock query, disposals, reservation, picking, shipping, write-off | **Done** |
 | 6. Transfers | Transfers between warehouses, virtual transit location, receiving with discrepancies | To do |
 | 7. Cycle counts and indicators | Counts, adjustments with approval, indicators panel | To do |
 
@@ -172,6 +172,44 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
   the top bar's bell (unread count, every 3 minutes). Aging alerts use `AgingLimit` (days per
   status; empty = none).
 
+### Phase 5 (disposal)
+
+- **Stock query** (`GET /stock/`): assets grouped by asset class × model × grade × status ×
+  warehouse — units, average and longest days in stock (days since the entry, i.e. the triage).
+  Filters: status (default available; "all" = every status but written off), warehouse,
+  origin customer, asset class, model, grade, minimum/maximum days, search. A group opens to its
+  units (`GET /stock/assets/`) with the **current report's data** (functioning, conservation,
+  completeness, missing items, entry date, days in stock) and the open disposal holding them —
+  the data pricing may use (spec §11); pricing itself is unchanged.
+- **Disposals** (`Disposal`, code `DSP-<year>-<NNNN>`; only `inventory/disposals.py` writes
+  them): relocation (customer + contract text — contracts live outside Horizon), sale to the
+  lessee (customer), **sale to third parties (the buyer is a customer — decision)**, discard
+  (a provider offering disposal) and parts (recorded by taking scrap apart — never by hand).
+  Optional shipping appointment of the same warehouse: the first picking starts it, the shipping
+  finishes it. Status reserved → picking → shipped, or cancelled.
+- **Reservation**: an asset read or typed is reserved (AVAILABLE → RESERVED). **Held for a
+  dispute, at another warehouse, in another open disposal or in another status → refused.**
+  **Scrap assets join discards and stay SCRAP** (the spec's transitions have no SCRAP →
+  RESERVED — decision); the open disposal holds them (no other disposal, no taking apart).
+  Accessories by quantity (good; scrap only in discards), limited to the warehouse's balances
+  minus what other open disposals still have to pick. **Value per unit** on each line
+  (decision), the total = Σ quantity × unit value.
+- **Picking**: read the shipping area (a SHIPPING area of the warehouse), then each ID: it must
+  be on the list (else refused, with a sound) and **moves to the shipping area** (PICKING event —
+  decision). Accessories are read from their container or location with a quantity (the
+  balance goes down; PICKING event).
+- **Shipping** needs every item picked and still in a shipping area, no asset held for a
+  dispute (a dispute registered after the reservation blocks it), the document's number and
+  file, and for a **discard the destination certificate (RN-23)**. Assets → WRITTEN_OFF
+  (SHIPPING events, the last place kept); accessories leave (SHIPPING event with the quantity).
+- **Cancelling** (with a reason): picked assets go back to where they were picked from, reserved
+  ones are available again (scrap stays scrap), picked accessories return to their balance
+  (REVERSAL events). Events of a disposal are never reversed by hand (Movement › reverse refuses
+  them). Removing a line is only possible before it is picked.
+- **Roles**: commercial/finance, remarketing analysts and supervisors create disposals, reserve,
+  set values and cancel (`DISPOSERS`); storekeepers and supervisors pick and ship (`PICKERS`);
+  both attach files.
+
 ## Business rules → tests
 
 | Rule | Where | Tests |
@@ -201,6 +239,10 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | RN-21 dispute sent and in time | `followups.register_dispute` | `test_dispute_only_of_a_report_sent_and_in_time_rn21` |
 | RN-22 chargeable without dispute | `followups.check_deadlines` | `test_no_dispute_in_time_findings_chargeable_rn22` |
 | Routine idempotent | `followups.check_deadlines` | `test_block_expired_rn20_then_decided` (runs twice) |
+| RN-23 discard needs its certificate | `disposals.problems`, `ship` | `test_discard_needs_the_certificate_rn23` |
+| Held asset not reservable | `disposals.add_asset` | `test_a_held_asset_is_never_reserved`, `test_a_dispute_after_reserving_blocks_the_shipping` |
+| Picking against the list; divergence blocks shipping | `disposals.pick_asset`, `ship` | `test_pick_against_the_list_and_ship`, `disposals.spec.ts` |
+| Cancelling gives everything back | `disposals.cancel` | `test_cancel_gives_everything_back` |
 | Business days | `inventory/deadlines.py` | `test_business_days_skip_weekends_and_holidays`, `test_dispute_deadline_counts_business_days` |
 
 ## API (`/api/inventory/`)
@@ -216,7 +258,10 @@ draft PATCH; `serial/`, `specs/`, `photos/`, `findings/`, `certificates/`, `subm
 `return/`, `approve/`, `sent/`), `assets/<id>/reports/`, `new-report/`, `disassemble/`,
 `deadline-settings/`, `aging-limits/`, `holidays/`, `deadline-check/` (POST), `blocks/`
 (`notify/`, `report-release/`, `check/`, `decide/`, `evidence/`), `disputes/` (`analyze/`,
-`decide/`, `evidence/`), `charges/` (`charged/`), `alerts/` (`count/`, `read/`, `read-all/`).
+`decide/`, `evidence/`), `charges/` (`charged/`), `alerts/` (`count/`, `read/`, `read-all/`),
+`stock/`, `stock/assets/`, `disposals/` (POST creates; PATCH header; `items/`,
+`items/<id>/` PATCH/DELETE, `pick/`, `ship/`, `cancel/`, `files/`, `files/<id>/`,
+`files/<id>/file/`).
 Business rule refusals answer 400 `{"detail": "<translated reason>", "field": "<field>"}`.
 Asset models: `/api/catalogs/asset-models/`.
 
@@ -226,7 +271,8 @@ Appointments (calendar month/week/day + list; expected list editor), Receiving (
 Triage, Received, Occurrences, Files, Data Erasure, Expected List), Inspection (queue, in
 progress, awaiting approval, approved; report page = step-by-step inspection for a draft, the
 printable report otherwise), Blocks (notify, print the notice, release, decide), Disputes and
-Charges, Movement (scan the object, then the
+Charges, Stock (groups → units with their report), Disposals (list; disposal page: Items,
+Picking — scan the shipping area, then each ID —, Documents; Ship, Cancel), Movement (scan the object, then the
 destination), Assets (grid, detail with history), Accessories (balances), Locations (tree per
 warehouse, labels), Containers (label printed on creation), Labels (reserve and print ranges,
 print again by code), Warehouses. Inventory Catalogs: Grades, Penalty Table, Erasure Tools, Deadlines and Holidays. Top bar:

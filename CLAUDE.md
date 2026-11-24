@@ -69,7 +69,15 @@ Multi-user web system for **operating lease residual value pricing**
     (`Dispute`; asset `held_for_dispute`; analyst ≠ technician; upheld → new approved version),
     charges, `check_deadlines` (daily routine, idempotent; management command + cron, README)
     and `Alert`s (top bar bell, `components/AlertsMenu.vue`); `DeadlineSetting`, `Holiday`,
-    `AgingLimit`; pure `deadlines.py` (business days). **Blind count**: expected
+    `AgingLimit`; pure `deadlines.py` (business days). Phase 5: `disposals.py` — `Disposal` (`DSP-…`;
+    relocation | lessee_sale | third_party_sale — buyer = a customer — | discard — a provider
+    offering disposal — | parts — recorded by `inspection.disassemble`), `DisposalItem` (asset
+    or accessory quantity, `unit_value` per unit), `DisposalFile` (document | certificate |
+    other): reserve (AVAILABLE → RESERVED; held → refused; scrap joins discards and stays
+    SCRAP), pick (read the shipping area, then each ID against the list → moved there),
+    ship (all picked, document; discard: certificate — RN-23 → WRITTEN_OFF), cancel (all
+    back); stock query `GET /stock/` + `/stock/assets/` (current report's data for pricing).
+    Pages Stock and Disposals (`StockView.vue`, `DisposalsView.vue`, `DisposalView.vue`). **Blind count**: expected
     lists never reach receivers (`EXPECTED_READERS`). Roles: `users.models` receiver,
     inspection_technician, storekeeper, inventory_supervisor, commercial_finance,
     remarketing_analyst (`inventory/permissions.py`; frontend `inventory/roles.ts`). API

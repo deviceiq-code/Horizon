@@ -12,6 +12,7 @@ from .views import (
     ContainerViewSet,
     DeadlineCheckView,
     DeadlineSettingViewSet,
+    DisposalViewSet,
     DisputeViewSet,
     ErasureToolViewSet,
     GradeLevelViewSet,
@@ -24,6 +25,8 @@ from .views import (
     OccurrenceViewSet,
     PenaltyRateViewSet,
     ReceivingLotViewSet,
+    StockAssetViewSet,
+    StockView,
     WarehouseViewSet,
 )
 
@@ -49,9 +52,12 @@ router.register("blocks", BlockFollowUpViewSet, basename="block")
 router.register("disputes", DisputeViewSet, basename="dispute")
 router.register("charges", ChargeViewSet, basename="charge")
 router.register("alerts", AlertViewSet, basename="alert")
+router.register("stock/assets", StockAssetViewSet, basename="stock-asset")
+router.register("disposals", DisposalViewSet, basename="disposal")
 
 urlpatterns = [
     path("lookup/", LookupView.as_view(), name="inventory-lookup"),
     path("deadline-check/", DeadlineCheckView.as_view(), name="inventory-deadline-check"),
+    path("stock/", StockView.as_view(), name="inventory-stock"),
     *router.urls,
 ]

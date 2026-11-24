@@ -544,6 +544,9 @@ def disassemble(asset: Asset, *, user, parts: list[dict], reason: str = "") -> l
     asset = Asset.objects.select_for_update().get(pk=asset.pk)
     if asset.status != AssetStatus.SCRAP:
         raise DomainError(_("Only scrap assets are taken apart."), field="asset")
+    from .disposals import check_not_in_disposal, record_parts
+
+    check_not_in_disposal(asset)
     if not parts:
         raise DomainError(_("List the parts taken."), field="parts")
     ref = f"disassembly:{asset.pk}"
@@ -572,6 +575,7 @@ def disassemble(asset: Asset, *, user, parts: list[dict], reason: str = "") -> l
                 document_ref=ref,
                 reason=reason,
             )
+    record_parts(asset, user=user)
     services.change_status(
         asset, to_status=AssetStatus.WRITTEN_OFF, user=user, document_ref=ref, reason=reason
     )

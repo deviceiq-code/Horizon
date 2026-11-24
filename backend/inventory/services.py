@@ -236,6 +236,7 @@ def move_asset(
     to_container: Container | None = None,
     reason: str = "",
     kind: str = EventKind.RELOCATION,
+    document_ref: str = "",
 ) -> MovementEvent:
     """Move an asset to a location (leaving any container) or into a container (where the
     container is). The destination's area must take the asset's status (RN-02)."""
@@ -267,6 +268,7 @@ def move_asset(
         status_before=asset.status,
         status_after=asset.status,
         reason=reason,
+        document_ref=document_ref,
     )
     asset.current_location = to_location
     asset.current_container = to_container
@@ -336,6 +338,7 @@ def change_status(
     reason: str = "",
     document_ref: str = "",
     to_location: Location | None = None,
+    kind: str = EventKind.STATUS_CHANGE,
 ) -> MovementEvent:
     """Change an asset's status (RN-01), optionally moving it at the same time (then the
     destination must take the new status — RN-02). Going in transit keeps the status to come
@@ -350,7 +353,7 @@ def change_status(
         check_area(to_location.area_type, to_status, held_for_dispute=asset.held_for_dispute)
 
     event = _record(
-        EventKind.STATUS_CHANGE,
+        kind,
         user=user,
         asset=asset,
         from_location=asset.current_location,
@@ -389,6 +392,11 @@ def reverse_event(event: MovementEvent, *, user, reason: str) -> MovementEvent:
         raise DomainError(_("Only an asset's own events can be reversed."), field="event")
     if event.kind in (EventKind.ENTRY, EventKind.REVERSAL, EventKind.LABEL_REPRINT):
         raise DomainError(_("This event cannot be reversed."), field="event")
+    if event.document_ref.startswith("disposal:"):
+        raise DomainError(
+            _("Events of a disposal are undone by the disposal (remove the item or cancel it)."),
+            field="event",
+        )
     asset = Asset.objects.select_for_update().get(pk=event.asset_id)
     latest = asset.events.exclude(kind=EventKind.LABEL_REPRINT).order_by("-at", "-id").first()
     if latest != event:

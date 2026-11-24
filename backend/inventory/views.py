@@ -1,7 +1,9 @@
 import re
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db import transaction
+from django.db.models import Count, Exists, F, Min, OuterRef, Prefetch, Q
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -21,9 +23,10 @@ from pricing.documents import content_type_for, opens_inline
 from users.models import INVENTORY_SUPERVISOR
 from users.permissions import is_administrator
 
-from . import followups, inspection, receiving, services
+from . import disposals, followups, inspection, receiving, services
 from .expected import model_key, parse_pasted
 from .models import (
+    OPEN_DISPOSAL,
     AccessoryBalance,
     AccessoryCondition,
     AgingLimit,
@@ -38,6 +41,10 @@ from .models import (
     Container,
     ContainerKind,
     DeadlineSetting,
+    Disposal,
+    DisposalItem,
+    DisposalKind,
+    DisposalStatus,
     Dispute,
     DisputeStatus,
     ErasureTool,
@@ -63,11 +70,13 @@ from .models import (
     Warehouse,
 )
 from .permissions import (
+    DISPOSERS,
     EXPECTED_READERS,
     INSPECTORS,
     LABELERS,
     LOCATION_KEEPERS,
     MOVERS,
+    PICKERS,
     RECEIVERS,
     SCHEDULERS,
     SENDERS,
@@ -85,6 +94,9 @@ from .serializers import (
     ChargeFindingSerializer,
     ContainerSerializer,
     DeadlineSettingSerializer,
+    DisposalFileSerializer,
+    DisposalItemSerializer,
+    DisposalSerializer,
     DisputeSerializer,
     ErasureToolSerializer,
     EvidenceSerializer,
@@ -105,7 +117,9 @@ from .serializers import (
     PenaltyRateSerializer,
     ReceivingLotSerializer,
     ReportPhotoSerializer,
+    StockAssetSerializer,
     WarehouseSerializer,
+    asset_class_name,
 )
 from .states import AreaType, AssetStatus, DomainError
 
@@ -1805,3 +1819,442 @@ class AlertViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     @action(detail=False, methods=["get"])
     def count(self, request):
         return Response({"unread": self.get_queryset().filter(read=False).count()})
+
+
+# --- Phase 5: stock query and disposals ------------------------------------------------------
+
+
+def stock_queryset(params):
+    """Assets of the stock query. ?status= (default available; "all" = every status but written
+    off), ?warehouse=, ?customer=, ?asset_class=, ?asset_model=, ?grade=, ?min_days= /
+    ?max_days= (days since the entry), ?search= (Horizon ID, serial, model, manufacturer)."""
+    queryset = Asset.objects.exclude(status=AssetStatus.WRITTEN_OFF)
+    wanted = params.get("status") or AssetStatus.AVAILABLE
+    if wanted in AssetStatus.values:
+        queryset = queryset.filter(status=wanted)
+    for param, lookup in (
+        ("warehouse", "current_location__warehouse_id"),
+        ("customer", "customer_id"),
+        ("asset_class", "asset_model__asset_class_id"),
+        ("asset_model", "asset_model_id"),
+    ):
+        if params.get(param, "").isdigit():
+            queryset = queryset.filter(**{lookup: int(params[param])})
+    if "grade" in params:
+        queryset = queryset.filter(condition_grade=params["grade"].strip().upper())
+    today = timezone.localdate()
+    if params.get("min_days", "").isdigit():
+        queryset = queryset.filter(
+            created_at__date__lte=today - timedelta(days=int(params["min_days"]))
+        )
+    if params.get("max_days", "").isdigit():
+        queryset = queryset.filter(
+            created_at__date__gte=today - timedelta(days=int(params["max_days"]))
+        )
+    search = " ".join(params.get("search", "").split())
+    if search:
+        queryset = queryset.filter(
+            Q(horizon_id__icontains=search)
+            | Q(serial__icontains=search)
+            | Q(asset_model__name__icontains=search)
+            | Q(asset_model__manufacturer__name__icontains=search)
+        )
+    return queryset
+
+
+class StockView(APIView):
+    """GET: the stock grouped by asset class × model × grade × status × warehouse — units, the
+    oldest entry and the average days in stock (filters: see stock_queryset)."""
+
+    def get(self, request):
+        rows = (
+            stock_queryset(request.query_params)
+            .values(
+                "asset_model__asset_class_id",
+                "asset_model_id",
+                "condition_grade",
+                "status",
+                "current_location__warehouse_id",
+            )
+            .annotate(units=Count("id"), oldest=Min("created_at"))
+            .order_by()
+        )
+        rows = list(rows)
+        models = AssetModel.objects.select_related("manufacturer", "asset_class").in_bulk(
+            {r["asset_model_id"] for r in rows}
+        )
+        warehouses = Warehouse.objects.in_bulk({r["current_location__warehouse_id"] for r in rows})
+        ages = {}
+        today = timezone.localdate()
+        for key in stock_queryset(request.query_params).values_list(
+            "asset_model_id",
+            "condition_grade",
+            "status",
+            "current_location__warehouse_id",
+            "created_at",
+        ):
+            ages.setdefault(key[:4], []).append((today - timezone.localtime(key[4]).date()).days)
+        result = []
+        for row in rows:
+            model = models[row["asset_model_id"]]
+            warehouse = warehouses[row["current_location__warehouse_id"]]
+            key = (row["asset_model_id"], row["condition_grade"], row["status"], warehouse.pk)
+            days = ages.get(key, [0])
+            result.append(
+                {
+                    "asset_class": model.asset_class_id,
+                    "asset_class_name": asset_class_name(model.asset_class),
+                    "asset_model": model.pk,
+                    "model": f"{model.manufacturer.name} {model.name}",
+                    "grade": row["condition_grade"],
+                    "status": row["status"],
+                    "warehouse": warehouse.pk,
+                    "warehouse_code": warehouse.code,
+                    "units": row["units"],
+                    "oldest_entry": row["oldest"],
+                    "average_days": round(sum(days) / len(days)),
+                    "max_days": max(days),
+                }
+            )
+        result.sort(key=lambda r: (r["asset_class_name"].lower(), r["model"].lower(), r["grade"]))
+        return Response(result)
+
+
+class StockAssetViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """GET stock/assets/: the units of the stock query (same filters), each with its current
+    report's data — functioning, conservation, completeness, missing items, entry date, days
+    in stock (for pricing, spec §11) — and the open disposal it is in."""
+
+    serializer_class = StockAssetSerializer
+    ordering = ["created_at"]
+
+    def get_queryset(self):
+        return (
+            stock_queryset(self.request.query_params)
+            .select_related(
+                "asset_model__manufacturer",
+                "asset_model__asset_class",
+                "current_location__warehouse",
+                "customer",
+                "lot",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "reports",
+                    queryset=InspectionReport.objects.filter(is_current=True),
+                    to_attr="current_reports",
+                ),
+                Prefetch(
+                    "disposal_items",
+                    queryset=DisposalItem.objects.filter(
+                        disposal__status__in=OPEN_DISPOSAL
+                    ).select_related("disposal"),
+                    to_attr="open_disposal_items",
+                ),
+            )
+            .order_by("created_at", "id")
+        )
+
+
+class DisposalViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Disposals (relocation, sales, discard; parts are recorded by taking scrap apart).
+
+    List: ?status=, ?kind=, ?warehouse=, ?customer=, ?search= (code "DSP-2026-0001", customer,
+    provider, document number, keywords), pagination. Never deleted (cancel instead).
+    Commercial, analysts and supervisors create, change the header, add/remove items
+    (items/: {codes: [...], unit_value} or {accessory_model, quantity, condition, unit_value};
+    items/<id>/ PATCH {unit_value} / DELETE) and cancel ({reason}). Storekeepers and
+    supervisors pick (pick/: {code, shipping_location} or {item, code, quantity}) and ship.
+    files/ (GET, POST multipart kind + file), files/<id>/ DELETE, files/<id>/file GET.
+    """
+
+    queryset = Disposal.objects.select_related(
+        "warehouse",
+        "customer",
+        "discard_provider",
+        "appointment",
+        "created_by",
+        "shipped_by",
+        "cancelled_by",
+    ).annotate(
+        items_count=Count("items", distinct=True),
+        picked_count=Count(
+            "items", filter=Q(items__picked_quantity__gte=F("items__quantity")), distinct=True
+        ),
+    )
+    serializer_class = DisposalSerializer
+    permission_classes = [role_permission(*DISPOSERS)]
+    filter_backends = [KeywordSearchFilter, NullsLastOrderingFilter]
+    search_fields = [
+        "customer__name",
+        "customer__trade_name",
+        "discard_provider__name",
+        "discard_provider__trade_name",
+        "document_number",
+        "contract",
+    ]
+    ordering_fields = ["created_at", "status", "kind", "shipped_at"]
+    ordering = ["-created_at"]
+
+    def get_permissions(self):
+        if self.action in ("pick", "ship"):
+            return [role_permission(*PICKERS)()]
+        if self.action == "files":
+            return [role_permission(*DISPOSERS, *PICKERS)()]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("status") == "open":
+            queryset = queryset.filter(status__in=OPEN_DISPOSAL)
+        elif params.get("status") in DisposalStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        if params.get("kind") in DisposalKind.values:
+            queryset = queryset.filter(kind=params["kind"])
+        for param in ("warehouse", "customer"):
+            if params.get(param, "").isdigit():
+                queryset = queryset.filter(**{f"{param}_id": int(params[param])})
+        return queryset
+
+    def filter_queryset(self, queryset):
+        match = re.fullmatch(
+            r"\s*DSP-(\d{4})-(\d+)\s*", self.request.query_params.get("search", ""), re.I
+        )
+        if match:
+            return queryset.filter(year=int(match[1]), sequence=int(match[2])).order_by("id")
+        return super().filter_queryset(queryset)
+
+    def _detail(self, disposal, code=200):
+        disposal = self.get_queryset().get(pk=disposal.pk)
+        context = self.get_serializer_context()
+        data = self.get_serializer(disposal).data
+        items = disposal.items.select_related(
+            "asset__asset_model__manufacturer",
+            "asset__asset_model__asset_class",
+            "asset__customer",
+            "asset__lot",
+            "asset__current_location",
+            "accessory_model__manufacturer",
+            "picked_by",
+        )
+        data["items"] = DisposalItemSerializer(items, many=True, context=context).data
+        data["files"] = DisposalFileSerializer(
+            disposal.files.select_related("uploaded_by"), many=True, context=context
+        ).data
+        data["totals"] = disposals.totals(disposal)
+        data["problems"] = (
+            [str(p) for p in disposals.problems(disposal)]
+            if disposal.status in OPEN_DISPOSAL
+            else []
+        )
+        return Response(data, status=code)
+
+    def retrieve(self, request, *args, **kwargs):
+        return self._detail(self.get_object())
+
+    def _header(self, data, *, partial):
+        serializer = self.get_serializer(data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        return serializer.validated_data
+
+    def create(self, request, *args, **kwargs):
+        values = self._header(request.data, partial=False)
+        try:
+            disposal = disposals.create(
+                kind=values.get("kind", ""),
+                warehouse=values["warehouse"],
+                user=request.user,
+                customer=values.get("customer"),
+                contract=values.get("contract", ""),
+                discard_provider=values.get("discard_provider"),
+                appointment=values.get("appointment"),
+                notes=values.get("notes", ""),
+                keywords=values.get("keywords"),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(disposal, 201)
+
+    def update(self, request, *args, **kwargs):
+        disposal = self.get_object()
+        values = self._header(request.data, partial=True)
+        allowed = {
+            "customer",
+            "contract",
+            "discard_provider",
+            "appointment",
+            "document_number",
+            "notes",
+            "keywords",
+        }
+        try:
+            disposals.update_header(disposal, **{k: v for k, v in values.items() if k in allowed})
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(disposal)
+
+    @action(detail=True, methods=["post"])
+    def items(self, request, pk=None):
+        disposal = self.get_object()
+        try:
+            value = _money(request.data.get("unit_value"))
+            if request.data.get("accessory_model"):
+                model = AssetModel.objects.filter(pk=request.data["accessory_model"]).first()
+                if model is None:
+                    raise DomainError(_("Choose a valid model."), field="accessory_model")
+                disposals.add_accessory(
+                    disposal,
+                    model,
+                    int(request.data.get("quantity") or 0),
+                    user=request.user,
+                    condition=request.data.get("condition") or AccessoryCondition.GOOD,
+                    unit_value=value,
+                )
+            else:
+                codes = request.data.get("codes") or []
+                if not codes:
+                    raise DomainError(_("Read the asset's ID."), field="code")
+                with transaction.atomic():
+                    for code in codes:
+                        asset = _read(code, Asset, "code", _("Read the asset's ID."))
+                        disposals.add_asset(disposal, asset, user=request.user, unit_value=value)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(disposal)
+
+    @action(detail=True, methods=["patch", "delete"], url_path=r"items/(?P<item_id>\d+)")
+    def item(self, request, pk=None, item_id=None):
+        disposal = self.get_object()
+        item = disposal.items.filter(pk=item_id).first()
+        if item is None:
+            raise Http404
+        try:
+            if request.method == "DELETE":
+                disposals.remove_item(item, user=request.user)
+            else:
+                disposals.set_unit_value(item, _money(request.data.get("unit_value")))
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(disposal)
+
+    @action(detail=True, methods=["post"])
+    def pick(self, request, pk=None):
+        disposal = self.get_object()
+        try:
+            code = str(request.data.get("code") or "")
+            if request.data.get("item"):
+                item = disposal.items.filter(pk=request.data["item"]).first()
+                if item is None:
+                    raise DomainError(_("Choose an item of the list."), field="item")
+                place = _read(
+                    code,
+                    (Container, Location),
+                    "code",
+                    _("Read the container or location the accessories are taken from."),
+                )
+                disposals.pick_accessory(
+                    disposal,
+                    item,
+                    int(request.data.get("quantity") or 0),
+                    user=request.user,
+                    container=place if isinstance(place, Container) else None,
+                    location=place if isinstance(place, Location) else None,
+                )
+            else:
+                shipping = _read(
+                    request.data.get("shipping_location"),
+                    Location,
+                    "shipping_location",
+                    _("Read the shipping area first."),
+                )
+                asset = _read(code, Asset, "code", _("Read the asset's ID."))
+                disposals.pick_asset(disposal, asset, shipping_location=shipping, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(disposal)
+
+    @action(detail=True, methods=["post"])
+    def ship(self, request, pk=None):
+        disposal = self.get_object()
+        try:
+            disposals.ship(disposal, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(disposal)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        disposal = self.get_object()
+        try:
+            disposals.cancel(disposal, user=request.user, reason=request.data.get("reason", ""))
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(disposal)
+
+    @action(detail=True, methods=["get", "post"])
+    def files(self, request, pk=None):
+        disposal = self.get_object()
+        if request.method == "POST":
+            try:
+                disposals.add_file(
+                    disposal,
+                    kind=request.data.get("kind", ""),
+                    upload=_upload(request),
+                    user=request.user,
+                )
+            except DomainError as exc:
+                return domain_error(exc)
+        return Response(
+            DisposalFileSerializer(
+                disposal.files.select_related("uploaded_by"),
+                many=True,
+                context=self.get_serializer_context(),
+            ).data
+        )
+
+    @action(detail=True, methods=["delete"], url_path=r"files/(?P<file_id>\d+)")
+    def file_delete(self, request, pk=None, file_id=None):
+        item = self.get_object().files.filter(pk=file_id).first()
+        if item is None:
+            raise Http404
+        try:
+            disposals.remove_file(item)
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(status=204)
+
+    @action(detail=True, methods=["get"], url_path=r"files/(?P<file_id>\d+)/file")
+    def file_download(self, request, pk=None, file_id=None):
+        item = self.get_object().files.filter(pk=file_id).first()
+        if item is None:
+            raise Http404
+        return _file_response(item.file, item.name, item.content_type, inline=True)
+
+
+def _read(code, kind, field: str, message):
+    """The object of a code read, of the expected kind (required)."""
+    if not str(code or "").strip():
+        raise DomainError(message, field=field)
+    found = services.resolve_code(str(code), field=field)
+    if not isinstance(found, kind):
+        raise DomainError(message, field=field)
+    return found
+
+
+def _money(value) -> Decimal | None:
+    if value in (None, ""):
+        return None
+    try:
+        amount = Decimal(str(value))
+    except InvalidOperation as exc:
+        raise DomainError(_("Enter a valid value."), field="unit_value") from exc
+    if not amount.is_finite():
+        raise DomainError(_("Enter a valid value."), field="unit_value")
+    return amount.quantize(Decimal("0.01"))

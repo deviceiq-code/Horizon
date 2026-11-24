@@ -72,6 +72,8 @@ describe('suite apps and routes', () => {
       'inventory-inspections',
       'inventory-blocks',
       'inventory-disputes',
+      'inventory-stock',
+      'inventory-disposals-list',
       'inventory-movement',
       'inventory-assets',
       'inventory-accessories',

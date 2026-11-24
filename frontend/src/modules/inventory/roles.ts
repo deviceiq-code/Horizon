@@ -30,5 +30,9 @@ export function useInventoryRoles() {
     canInspect: computed(() => has(TECHNICIAN, SUPERVISOR)),
     /** Mark reports as sent to customers */
     canSend: computed(() => has(COMMERCIAL, SUPERVISOR)),
+    /** Disposals: create, reserve assets, values, cancel */
+    canDispose: computed(() => has(COMMERCIAL, ANALYST, SUPERVISOR)),
+    /** Disposals: pick (read each ID) and ship */
+    canPick: computed(() => has(STOREKEEPER, SUPERVISOR)),
   }
 }

@@ -2513,3 +2513,215 @@ msgstr "Escolha um laudo válido."
 
 msgid "Only inventory supervisors analyse disputes."
 msgstr "Só supervisores de estoque analisam contestações."
+
+msgid "Choose the kind of disposal."
+msgstr "Escolha o tipo de destinação."
+
+msgid "Choose the buyer (registered as a customer)."
+msgstr "Escolha o comprador (cadastrado como cliente)."
+
+msgid "Choose the provider that receives the discard."
+msgstr "Escolha o prestador que recebe o descarte."
+
+msgid "Choose an active provider offering disposal."
+msgstr "Escolha um prestador ativo que ofereça descarte."
+
+msgid "Choose a shipping appointment."
+msgstr "Escolha um agendamento de expedição."
+
+msgid "The appointment is at another warehouse."
+msgstr "O agendamento é de outro armazém."
+
+msgid "This appointment is closed."
+msgstr "Este agendamento está encerrado."
+
+msgid "This disposal is closed."
+msgstr "Esta destinação está encerrada."
+
+#, python-format
+msgid "This asset is in disposal %(code)s."
+msgstr "Este bem está na destinação %(code)s."
+
+#, python-format
+msgid "%(asset)s is held for a dispute and cannot be reserved."
+msgstr "%(asset)s está retido por contestação e não pode ser reservado."
+
+#, python-format
+msgid "%(asset)s is at another warehouse."
+msgstr "%(asset)s está em outro armazém."
+
+#, python-format
+msgid "%(asset)s is already in disposal %(code)s."
+msgstr "%(asset)s já está na destinação %(code)s."
+
+#, python-format
+msgid "%(asset)s is %(status)s: only available assets are reserved (scrap ones only in discards)."
+msgstr "%(asset)s está %(status)s: só bens disponíveis são reservados (sucata só em descartes)."
+
+msgid "Only models controlled by quantity are added by quantity."
+msgstr "Só modelos controlados por quantidade são adicionados por quantidade."
+
+msgid "Scrap accessories only go in discards."
+msgstr "Acessórios sucata só entram em descartes."
+
+#, python-format
+msgid "Only %(available)d available in this warehouse."
+msgstr "Só há %(available)d disponíveis neste armazém."
+
+msgid "The value cannot be negative."
+msgstr "O valor não pode ser negativo."
+
+#, python-format
+msgid "%(asset)s is at %(location)s: move it back to a stock area first."
+msgstr "%(asset)s está em %(location)s: devolva-o antes a uma área de estoque."
+
+msgid "This item was already picked: cancel the disposal to give it back."
+msgstr "Este item já foi separado: cancele a destinação para devolvê-lo."
+
+#, python-format
+msgid "Removed from %(code)s"
+msgstr "Retirado de %(code)s"
+
+#, python-format
+msgid "Read a shipping area of warehouse %(code)s."
+msgstr "Leia uma área de expedição do armazém %(code)s."
+
+#, python-format
+msgid "%(asset)s is not in this disposal."
+msgstr "%(asset)s não está nesta destinação."
+
+#, python-format
+msgid "%(asset)s was already picked."
+msgstr "%(asset)s já foi separado."
+
+msgid "Read the asset's ID."
+msgstr "Leia o ID do bem."
+
+#, python-format
+msgid "Only %(left)d left to pick."
+msgstr "Faltam só %(left)d a separar."
+
+#, python-format
+msgid "Read a container or location of warehouse %(code)s."
+msgstr "Leia um contêiner ou local do armazém %(code)s."
+
+msgid "This disposal was cancelled."
+msgstr "Esta destinação foi cancelada."
+
+msgid "Choose the kind of file."
+msgstr "Escolha o tipo de arquivo."
+
+msgid "Only discards have a destination certificate."
+msgstr "Só descartes têm certificado de destinação."
+
+msgid "The documents of a shipped disposal are kept."
+msgstr "Os documentos de uma destinação expedida são mantidos."
+
+msgid "Add the assets or accessories that leave."
+msgstr "Adicione os bens ou acessórios que saem."
+
+#, python-format
+msgid "%(count)d item(s) not picked yet: read each one against the list."
+msgstr "%(count)d item(ns) ainda não separado(s): leia cada um contra a lista."
+
+#, python-format
+msgid "%(asset)s is held for a dispute."
+msgstr "%(asset)s está retido por contestação."
+
+#, python-format
+msgid "%(asset)s left the shipping area: pick it again."
+msgstr "%(asset)s saiu da área de expedição: separe-o de novo."
+
+msgid "Enter the shipping document's number."
+msgstr "Informe o número do documento de saída."
+
+msgid "Attach the shipping document."
+msgstr "Anexe o documento de saída."
+
+msgid "Attach the destination certificate (required to write off a discard)."
+msgstr "Anexe o certificado de destinação (exigido para baixar um descarte)."
+
+msgid "Say why the disposal is cancelled."
+msgstr "Informe por que a destinação é cancelada."
+
+#, python-format
+msgid "Cancelled: %(code)s"
+msgstr "Cancelada: %(code)s"
+
+msgid "Sale to the Lessee"
+msgstr "Venda ao Arrendatário"
+
+msgid "Sale to Third Parties"
+msgstr "Venda a Terceiros"
+
+msgid "Discard"
+msgstr "Descarte"
+
+msgid "Shipped"
+msgstr "Expedida"
+
+msgid "contract"
+msgstr "contrato"
+
+msgid "discard provider"
+msgstr "prestador do descarte"
+
+msgid "shipping appointment"
+msgstr "agendamento de expedição"
+
+msgid "document number"
+msgstr "número do documento"
+
+msgid "shipped at"
+msgstr "expedida em"
+
+msgid "cancelled at"
+msgstr "cancelada em"
+
+msgid "reason for cancelling"
+msgstr "motivo do cancelamento"
+
+msgid "disposal"
+msgstr "destinação"
+
+msgid "disposals"
+msgstr "destinações"
+
+msgid "picked quantity"
+msgstr "quantidade separada"
+
+msgid "picked at"
+msgstr "separado em"
+
+msgid "disposal item"
+msgstr "item de destinação"
+
+msgid "disposal items"
+msgstr "itens de destinação"
+
+msgid "Shipping Document"
+msgstr "Documento de Saída"
+
+msgid "Destination Certificate"
+msgstr "Certificado de Destinação"
+
+msgid "disposal file"
+msgstr "arquivo de destinação"
+
+msgid "disposal files"
+msgstr "arquivos de destinação"
+
+msgid "Choose an item of the list."
+msgstr "Escolha um item da lista."
+
+msgid "Read the container or location the accessories are taken from."
+msgstr "Leia o contêiner ou local de onde os acessórios são retirados."
+
+msgid "Read the shipping area first."
+msgstr "Leia antes a área de expedição."
+
+msgid "Enter a valid value."
+msgstr "Informe um valor válido."
+
+msgid "Events of a disposal are undone by the disposal (remove the item or cancel it)."
+msgstr "Eventos de uma destinação são desfeitos pela destinação (retire o item ou cancele-a)."

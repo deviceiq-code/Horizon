@@ -33,6 +33,10 @@ INSPECTORS = (INSPECTION_TECHNICIAN, INVENTORY_SUPERVISOR)
 SUPERVISORS = (INVENTORY_SUPERVISOR,)
 # Marking reports as sent to customers
 SENDERS = (COMMERCIAL_FINANCE, INVENTORY_SUPERVISOR)
+# Disposals: creating, reserving assets, values, cancelling
+DISPOSERS = (COMMERCIAL_FINANCE, REMARKETING_ANALYST, INVENTORY_SUPERVISOR)
+# Disposals: picking (reading each ID) and shipping
+PICKERS = (STOREKEEPER, INVENTORY_SUPERVISOR)
 
 
 def has_role(user, *keys: str) -> bool:

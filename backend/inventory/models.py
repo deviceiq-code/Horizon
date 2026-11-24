@@ -1479,3 +1479,222 @@ class Alert(models.Model):
 
     def __str__(self):
         return self.key
+
+
+# --- Phase 5: disposals ---------------------------------------------------------------------
+
+
+class DisposalKind(models.TextChoices):
+    RELOCATION = "relocation", _("Relocation")
+    LESSEE_SALE = "lessee_sale", _("Sale to the Lessee")
+    THIRD_PARTY_SALE = "third_party_sale", _("Sale to Third Parties")
+    DISCARD = "discard", _("Discard")
+    # Recorded by taking a scrap asset apart (never created by hand)
+    PARTS = "parts", _("Parts")
+
+
+# Kinds whose destination is a customer (relocation and lessee sale: a lessee; third-party
+# sale: the buyer, registered as a customer — decision)
+CUSTOMER_KINDS = (DisposalKind.RELOCATION, DisposalKind.LESSEE_SALE, DisposalKind.THIRD_PARTY_SALE)
+
+
+class DisposalStatus(models.TextChoices):
+    RESERVED = "reserved", _("Reserved")
+    PICKING = "picking", _("Picking")
+    SHIPPED = "shipped", _("Shipped")
+    CANCELLED = "cancelled", _("Cancelled")
+
+
+OPEN_DISPOSAL = (DisposalStatus.RESERVED, DisposalStatus.PICKING)
+
+
+class Disposal(models.Model):
+    """The way out of the stock: a relocation to another lessee, a sale (to the lessee or to a
+    buyer), a discard, or the parts of a scrap asset taken apart. Assets are reserved, picked by
+    reading each ID against the list (to a shipping area) and shipped — written off. Only
+    inventory.disposals changes it."""
+
+    year = models.PositiveSmallIntegerField(_("year"))
+    sequence = models.PositiveIntegerField(_("sequence"))
+    kind = models.CharField(_("kind"), max_length=20, choices=DisposalKind.choices)
+    status = models.CharField(
+        _("status"),
+        max_length=10,
+        choices=DisposalStatus.choices,
+        default=DisposalStatus.RESERVED,
+    )
+    warehouse = models.ForeignKey(
+        Warehouse, on_delete=models.PROTECT, related_name="disposals", verbose_name=_("warehouse")
+    )
+    # Relocation / lessee sale: the lessee; third-party sale: the buyer
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="disposals",
+        verbose_name=_("customer"),
+    )
+    # Relocation: the contract the assets go to (contracts live outside Horizon)
+    contract = models.CharField(_("contract"), max_length=60, blank=True)
+    # Discard: the provider that destroys or recycles them
+    discard_provider = models.ForeignKey(
+        "service_providers.ServiceProvider",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="disposals",
+        verbose_name=_("discard provider"),
+    )
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="disposals",
+        verbose_name=_("shipping appointment"),
+    )
+    document_number = models.CharField(_("document number"), max_length=60, blank=True)
+    notes = models.TextField(_("notes"), blank=True)
+    keywords = keywords_field()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    shipped_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    shipped_at = models.DateTimeField(_("shipped at"), null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    cancelled_at = models.DateTimeField(_("cancelled at"), null=True, blank=True)
+    cancel_reason = models.CharField(_("reason for cancelling"), max_length=300, blank=True)
+
+    class Meta:
+        verbose_name = _("disposal")
+        verbose_name_plural = _("disposals")
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["year", "sequence"], name="disposal_unique_code"),
+        ]
+
+    def __str__(self):
+        return self.code
+
+    @property
+    def code(self) -> str:
+        return yearly_code("DSP", self.year, self.sequence)
+
+    @property
+    def ref(self) -> str:
+        """The movement events' `document_ref`."""
+        return f"disposal:{self.pk}"
+
+
+class DisposalItem(models.Model):
+    """One line of a disposal: an asset, or a quantity of an accessory model (condition good,
+    or scrap in discards), with its value per unit (sales and relocations — decision)."""
+
+    disposal = models.ForeignKey(Disposal, on_delete=models.CASCADE, related_name="items")
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="disposal_items",
+        verbose_name=_("asset"),
+    )
+    accessory_model = models.ForeignKey(
+        "catalogs.AssetModel",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("accessory model"),
+    )
+    quantity = models.PositiveIntegerField(_("quantity"), default=1)
+    condition = models.CharField(
+        _("condition"),
+        max_length=10,
+        choices=AccessoryCondition.choices,
+        default=AccessoryCondition.GOOD,
+    )
+    unit_value = models.DecimalField(
+        _("unit value"), max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    # Picking: units read (assets: 0 or 1; accessories: up to the quantity)
+    picked_quantity = models.PositiveIntegerField(_("picked quantity"), default=0)
+    picked_at = models.DateTimeField(_("picked at"), null=True, blank=True)
+    picked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+
+    class Meta:
+        verbose_name = _("disposal item")
+        verbose_name_plural = _("disposal items")
+        ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(asset__isnull=False, accessory_model__isnull=True, quantity=1)
+                | models.Q(asset__isnull=True, accessory_model__isnull=False, quantity__gt=0),
+                name="disposal_item_asset_or_accessory",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(picked_quantity__lte=models.F("quantity")),
+                name="disposal_item_picked_at_most_quantity",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(unit_value__isnull=True) | models.Q(unit_value__gte=0),
+                name="disposal_item_value_not_negative",
+            ),
+        ]
+
+    def __str__(self):
+        return str(self.asset or f"{self.accessory_model} × {self.quantity}")
+
+    @property
+    def picked(self) -> bool:
+        return self.picked_quantity >= self.quantity
+
+
+class DisposalFileKind(models.TextChoices):
+    DOCUMENT = "document", _("Shipping Document")
+    CERTIFICATE = "certificate", _("Destination Certificate")
+    OTHER = "other", _("Other")
+
+
+def _disposal_file_path(instance, filename: str) -> str:
+    ext = posixpath.splitext(filename)[1].lower()
+    return f"inventory/disposals/{uuid.uuid4().hex}{ext}"
+
+
+class DisposalFile(models.Model):
+    """The shipping document (invoice…), the destination certificate of a discard (RN-23) or
+    another file of a disposal."""
+
+    disposal = models.ForeignKey(Disposal, on_delete=models.CASCADE, related_name="files")
+    kind = models.CharField(_("kind"), max_length=12, choices=DisposalFileKind.choices)
+    file = models.FileField(_("file"), upload_to=_disposal_file_path, max_length=255)
+    name = models.CharField(_("name"), max_length=255)
+    size = models.PositiveBigIntegerField(_("size (bytes)"))
+    content_type = models.CharField(_("content type"), max_length=100)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    uploaded_at = models.DateTimeField(_("uploaded at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("disposal file")
+        verbose_name_plural = _("disposal files")
+        ordering = ["uploaded_at", "id"]
+
+    def __str__(self):
+        return self.name
+
+    def delete(self, *args, **kwargs):
+        storage, path = self.file.storage, self.file.name
+        result = super().delete(*args, **kwargs)
+        transaction.on_commit(lambda: storage.delete(path))
+        return result

@@ -1255,3 +1255,259 @@ export function readAlert(id: number) {
 export function readAllAlerts() {
   return api<void>(`${BASE}/alerts/read-all/`, { method: 'POST', body: '{}' })
 }
+
+// --- Phase 5: stock query and disposals ------------------------------------------------------
+
+/** A group of the stock query: asset class × model × grade × status × warehouse. */
+export interface StockGroup {
+  asset_class: number
+  asset_class_name: string
+  asset_model: number
+  model: string
+  grade: string
+  status: AssetStatus
+  warehouse: number
+  warehouse_code: string
+  units: number
+  oldest_entry: string
+  average_days: number
+  max_days: number
+}
+
+/** An asset of the stock query with its current report's data (for pricing). */
+export interface StockAsset {
+  id: number
+  horizon_id: string
+  serial: string
+  model: string
+  asset_class: string
+  specs: SpecValue[]
+  status: AssetStatus
+  condition_grade: string
+  held_for_dispute: boolean
+  warehouse: string
+  location: string
+  customer: string | null
+  lot: string | null
+  created_at: string
+  days_in_stock: number
+  report: {
+    id: number
+    version: number
+    conservation: string
+    functioning: string
+    completeness: string
+    missing_items: string[]
+    approved_at: string | null
+  } | null
+  disposal: { id: number; code: string } | null
+}
+
+/** Filters of the stock query (`status`: an asset status, default available; `all`). */
+export type StockFilters = Record<string, string | number | null | undefined>
+
+function stockQuery(filters: StockFilters) {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null && value !== undefined && value !== '') query.set(key, String(value))
+  }
+  const text = query.toString()
+  return text ? `?${text}` : ''
+}
+
+export function stockGroups(filters: StockFilters) {
+  return api<StockGroup[]>(`${BASE}/stock/` + stockQuery(filters))
+}
+
+export function stockAssets(filters: StockFilters, page = 1, pageSize = 50) {
+  return api<Paginated<StockAsset>>(
+    `${BASE}/stock/assets/` + stockQuery({ ...filters, page, page_size: pageSize }),
+  )
+}
+
+export const DISPOSAL_KINDS = ['relocation', 'lessee_sale', 'third_party_sale', 'discard'] as const
+export type DisposalKind = (typeof DISPOSAL_KINDS)[number] | 'parts'
+export const DISPOSAL_STATUSES = ['reserved', 'picking', 'shipped', 'cancelled'] as const
+export type DisposalStatus = (typeof DISPOSAL_STATUSES)[number]
+export type DisposalFileKind = 'document' | 'certificate' | 'other'
+/** Kinds whose destination is a customer (third-party sale: the buyer). */
+export const CUSTOMER_KINDS: DisposalKind[] = ['relocation', 'lessee_sale', 'third_party_sale']
+
+export interface Disposal {
+  id: number
+  code: string
+  kind: DisposalKind
+  status: DisposalStatus
+  warehouse: number
+  warehouse_code: string
+  warehouse_name: string
+  customer: number | null
+  customer_name: string | null
+  contract: string
+  discard_provider: number | null
+  discard_provider_name: string | null
+  appointment: number | null
+  appointment_code: string | null
+  document_number: string
+  notes: string
+  keywords: string[]
+  items_count: number | null
+  picked_count: number | null
+  created_by_name: string
+  created_at: string
+  updated_at: string
+  shipped_by_name: string | null
+  shipped_at: string | null
+  cancelled_by_name: string | null
+  cancelled_at: string | null
+  cancel_reason: string
+}
+
+export interface DisposalItem {
+  id: number
+  asset: number | null
+  asset_detail:
+    | (AssetSummary & {
+        asset_class: string
+        grade: string
+        held_for_dispute: boolean
+        area_type: AreaType
+      })
+    | null
+  accessory_model: number | null
+  accessory_model_label: string | null
+  quantity: number
+  condition: 'good' | 'scrap'
+  /** Money as a string ("1500.00"); null = not valued */
+  unit_value: string | null
+  line_total: string | null
+  picked_quantity: number
+  picked: boolean
+  picked_at: string | null
+  picked_by_name: string | null
+}
+
+export interface DisposalFile {
+  id: number
+  kind: DisposalFileKind
+  name: string
+  size: number
+  content_type: string
+  uploaded_at: string
+  uploaded_by_name: string
+}
+
+export interface DisposalDetail extends Disposal {
+  items: DisposalItem[]
+  files: DisposalFile[]
+  totals: { assets: number; accessories: number; total_value: string | null }
+  /** What still keeps it from shipping (translated) */
+  problems: string[]
+}
+
+export interface DisposalInput {
+  kind?: DisposalKind
+  warehouse?: number
+  customer?: number | null
+  contract?: string
+  discard_provider?: number | null
+  appointment?: number | null
+  document_number?: string
+  notes?: string
+  keywords?: string[]
+}
+
+/** Filters: `status` (also `open`), `kind`, `warehouse`, `customer`. */
+export function listDisposals(params: ListParams) {
+  return api<Paginated<Disposal>>(`${BASE}/disposals/` + listQuery(params))
+}
+
+export function getDisposal(id: number) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/`)
+}
+
+export function createDisposal(data: DisposalInput) {
+  return api<DisposalDetail>(`${BASE}/disposals/`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updateDisposal(id: number, data: DisposalInput) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export function addDisposalAssets(id: number, codes: string[], unitValue: string | null = null) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/items/`, {
+    method: 'POST',
+    body: JSON.stringify({ codes, unit_value: unitValue }),
+  })
+}
+
+export function addDisposalAccessory(
+  id: number,
+  data: {
+    accessory_model: number
+    quantity: number
+    condition: 'good' | 'scrap'
+    unit_value: string | null
+  },
+) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/items/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function setDisposalItemValue(id: number, itemId: number, unitValue: string | null) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/items/${itemId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ unit_value: unitValue }),
+  })
+}
+
+export function removeDisposalItem(id: number, itemId: number) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/items/${itemId}/`, { method: 'DELETE' })
+}
+
+/** An asset read at picking (to the shipping area read before). */
+export function pickDisposalAsset(id: number, code: string, shippingLocation: string) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/pick/`, {
+    method: 'POST',
+    body: JSON.stringify({ code, shipping_location: shippingLocation }),
+  })
+}
+
+/** Units of an accessory line taken from a container or location (`code`). */
+export function pickDisposalAccessory(id: number, item: number, code: string, quantity: number) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/pick/`, {
+    method: 'POST',
+    body: JSON.stringify({ item, code, quantity }),
+  })
+}
+
+export function shipDisposal(id: number) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/ship/`, { method: 'POST', body: '{}' })
+}
+
+export function cancelDisposal(id: number, reason: string) {
+  return api<DisposalDetail>(`${BASE}/disposals/${id}/cancel/`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+
+export function uploadDisposalFile(id: number, kind: DisposalFileKind, file: File) {
+  const body = new FormData()
+  body.append('kind', kind)
+  body.append('file', file)
+  return api<DisposalFile[]>(`${BASE}/disposals/${id}/files/`, { method: 'POST', body })
+}
+
+export function deleteDisposalFile(id: number, fileId: number) {
+  return api<void>(`${BASE}/disposals/${id}/files/${fileId}/`, { method: 'DELETE' })
+}
+
+export function disposalFileUrl(id: number, fileId: number) {
+  return `/api${BASE}/disposals/${id}/files/${fileId}/file/`
+}

@@ -142,6 +142,46 @@ export const disputes = page(
   false,
 )
 
+export const stock = page(
+  'inventory-stock',
+  'stock',
+  'mdi-warehouse',
+  'inventory.stock',
+  () => import('./StockView.vue'),
+  false,
+)
+
+export const disposals: AppModule = {
+  name: 'inventory-disposals-list',
+  icon: 'mdi-truck-delivery-outline',
+  titleKey: 'inventory.disposals.title',
+  app: 'remarketing',
+  section: INVENTORY_SECTION,
+  routes: [
+    {
+      // The menu links here; the list and a disposal are its pages
+      path: 'inventory/disposals',
+      name: 'inventory-disposals-list',
+      component: RouterView,
+      redirect: { name: 'inventory-disposals-index' },
+      children: [
+        {
+          path: '',
+          name: 'inventory-disposals-index',
+          component: () => import('./DisposalsView.vue'),
+        },
+        {
+          path: ':id(\\d+)',
+          name: 'inventory-disposal',
+          meta: { titleKey: 'inventory.disposals.disposal' },
+          component: () => import('./DisposalView.vue'),
+          props: (route) => ({ id: Number(route.params.id) }),
+        },
+      ],
+    },
+  ],
+}
+
 export const accessories = page(
   'inventory-accessories',
   'accessories',
@@ -227,6 +267,8 @@ export default [
   inspections,
   blocks,
   disputes,
+  stock,
+  disposals,
   movement,
   assets,
   accessories,
