@@ -380,9 +380,15 @@ Multi-user web system for **operating lease residual value pricing**
     confirmation, notifications; optional `expandable` + `expanded-row` slot; column filters:
     `filters` object + `filter.<key>` slots, a row under the titles turned on/off with the
     "Filters" button — remembered per grid with `filters-storage-key`, in the account's `ui_state`; turning off
-    clears them; `hide-create` hides "New"); pages pass columns, texts and `item.<key>` cell slots, open
+    clears them; `hide-create` hides "New"; `toolbar` slot: buttons between Filters and New; `selectable` + `v-model:selected`: a checkbox per row, ids kept across pages, no select-all); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
+  - **Compare** (Average Prices): "Compare" (between Filters and New) turns on row checkboxes;
+    2–3 prices (`compare.ts::MAX_COMPARED`) open `ComparePricesDialog.vue` — Battle Cards
+    (one grid: a column per card, a line per attribute, aligned across cards; photo in a fixed
+    small frame, model, class, original value, eFMV per term, specs last — they may differ); the trophy marks the best
+    value of each attribute (highest eFMV % at a term, most stars in a rating — values from
+    the API, nothing recalculated; ties and lone values never win) and each card counts its wins.
   - `src/modules/average-prices/` — the photo and documents are managed in the form's third
     tab, **Photo and Documents** (`PriceMediaTab.vue`): every change pending (`media.ts`:
     `MediaChanges`, `applyMediaChanges` after saving; Cancel discards them); they belong to

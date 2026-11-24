@@ -69,7 +69,7 @@ const en = {
     home: 'Home',
     comingSoon: 'Coming Soon',
     pricing: {
-      description: 'Residual value pricing: average prices of assets and their value curves.',
+      description: 'eFMV pricing: average prices of assets, their value curves and eFMV analyses.',
     },
     remarketing: {
       description: 'Asset and inventory management, inspection reports and sale of used assets.',
@@ -1590,6 +1590,19 @@ const en = {
     deleteConfirm: 'Delete "{name}"? This cannot be undone.',
   },
   averagePrices: {
+    compare: {
+      button: 'Compare',
+      selected: '{n} of {max} selected',
+      max: 'Up to {n} items can be compared.',
+      title: 'Compare Average Prices',
+      subtitle:
+        'Battle Cards: the trophy marks the best value of each attribute — the highest eFMV % at each term, the most stars in a rating. Specifications come last, as they may differ between items.',
+      winsHint: 'Attributes this card wins',
+      efmv: 'eFMV by Term',
+      months: '{n} Months',
+      specs: 'Specifications',
+      date: 'Price of {date}',
+    },
     title: 'Average Prices',
     subtitle:
       'Market value estimates of assets over time. Rows are never edited: a change creates a new version and the previous one stays in the history.',

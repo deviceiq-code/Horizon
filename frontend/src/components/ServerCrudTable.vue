@@ -7,7 +7,9 @@
  * show the `expanded-row` slot ({ item, columns }). Column filters: pass `filters` (sent to the
  * API as query parameters) and a `filter.<key>` slot per filtered column; they show in a row
  * under the titles, turned on and off with the "Filters" button (remembered per grid with
- * `filtersStorageKey`, kept with the account; turning them off clears them).
+ * `filtersStorageKey`, kept with the account; turning them off clears them). The `toolbar`
+ * slot adds buttons between Filters and New; `selectable` shows a checkbox per row
+ * (v-model:selected — ids, kept across pages; the page limits how many).
  */
 import { computed, ref, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -48,7 +50,12 @@ const props = defineProps<{
   hideCreate?: boolean
   canEdit?: (item: T) => boolean
   canDelete?: (item: T) => boolean
+  /** Rows show a checkbox (v-model:selected = their ids; no "select all") */
+  selectable?: boolean
 }>()
+
+/** Ids of the selected rows (with `selectable`), kept across pages */
+const selected = defineModel<number[]>('selected', { default: () => [] })
 
 const emit = defineEmits<{ create: []; edit: [item: T]; clearFilters: [] }>()
 
@@ -173,6 +180,8 @@ defineExpose({ reload: load })
       >
         {{ $t(filtersShown ? 'common.hideFilters' : 'common.showFilters') }}
       </v-btn>
+      <!-- Page buttons between Filters and New (e.g. Compare) -->
+      <slot name="toolbar" />
       <v-btn
         v-if="!hideCreate"
         color="primary"
@@ -204,12 +213,16 @@ defineExpose({ reload: load })
         :items-per-page-options="[10, 25, 50, 100]"
         :no-data-text="search ? noResultsText : emptyText"
         v-model:expanded="expanded"
+        v-model="selected"
+        :show-select="selectable"
         item-value="id"
         :show-expand="!!expandable"
         must-sort
         hover
         @update:options="load"
       >
+        <!-- Selecting is row by row (pages limit how many) -->
+        <template #[`header.data-table-select`] />
         <!-- Cell slots provided by the page (item.<key>) -->
         <template v-for="(_, name) in cellSlots" #[name]="slotProps">
           <slot :name="name" v-bind="slotProps ?? {}" />

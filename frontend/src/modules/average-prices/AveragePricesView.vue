@@ -6,7 +6,7 @@
  * one left becomes current). Deleting from the grid hides every version (all kept).
  */
 import { useDateFormat } from '@/composables/useDateFormat'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNumberFormat } from '@/composables/useNumberFormat'
 import MoneyField from '@/components/MoneyField.vue'
@@ -14,6 +14,8 @@ import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import { formatMoney } from '@/utils/money'
 import AveragePriceDetailDialog from './AveragePriceDetailDialog.vue'
+import ComparePricesDialog from './ComparePricesDialog.vue'
+import { MAX_COMPARED } from './compare'
 import AssetClassPicker from '@/modules/catalogs/asset-classes/AssetClassPicker.vue'
 import AveragePriceFormDialog from './AveragePriceFormDialog.vue'
 import type { SaveOutcome } from './media'
@@ -100,6 +102,29 @@ const {
   clear: clearFilters,
 } = usePriceFilters(() => locale.value)
 
+// --- Compare (up to three, as Battle Cards) -------------------------------------------------
+
+const comparing = ref(false)
+const selected = ref<number[]>([])
+const compareOpen = ref(false)
+
+function startComparing() {
+  selected.value = []
+  comparing.value = true
+}
+
+function stopComparing() {
+  comparing.value = false
+  selected.value = []
+}
+
+watch(selected, (ids) => {
+  if (ids.length > MAX_COMPARED) {
+    selected.value = ids.slice(0, MAX_COMPARED)
+    notifications.notify(t('averagePrices.compare.max', { n: MAX_COMPARED }), 'warning')
+  }
+})
+
 const money = (row: AveragePrice) => formatMoney(row.original_value, row.currency, locale.value)
 </script>
 
@@ -129,10 +154,41 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       :expandable="(row: AveragePrice) => row.supersedes !== null"
       :filters="filters"
       filters-storage-key="average-prices"
+      :selectable="comparing"
+      v-model:selected="selected"
       @clear-filters="clearFilters"
       @create="openNew"
       @edit="openNewVersion"
     >
+      <template #toolbar>
+        <v-btn
+          v-if="!comparing"
+          variant="text"
+          prepend-icon="mdi-cards-outline"
+          data-testid="compare-start"
+          @click="startComparing"
+        >
+          {{ $t('averagePrices.compare.button') }}
+        </v-btn>
+        <template v-else>
+          <span class="text-body-2 text-medium-emphasis" data-testid="compare-count">{{
+            $t('averagePrices.compare.selected', { n: selected.length, max: MAX_COMPARED })
+          }}</span>
+          <v-btn
+            color="primary"
+            variant="tonal"
+            prepend-icon="mdi-cards-outline"
+            :disabled="selected.length < 2"
+            data-testid="compare-open"
+            @click="compareOpen = true"
+          >
+            {{ $t('averagePrices.compare.button') }}
+          </v-btn>
+          <v-btn variant="text" data-testid="compare-cancel" @click="stopComparing">{{
+            $t('common.cancel')
+          }}</v-btn>
+        </template>
+      </template>
       <template #[`item.asset_class`]="{ item }">
         <div class="d-flex align-center ga-3 py-2">
           <v-avatar color="primary" variant="tonal" size="36" rounded>
@@ -266,5 +322,6 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       @new-version="openNewVersion"
       @changed="table?.reload()"
     />
+    <ComparePricesDialog v-model="compareOpen" :ids="selected" />
   </v-container>
 </template>

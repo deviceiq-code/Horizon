@@ -67,7 +67,7 @@ const es: Messages = {
     comingSoon: 'Próximamente',
     pricing: {
       description:
-        'Precios de valor residual: precios promedio de los bienes y sus curvas de valor.',
+        'Precios de eFMV: precios promedio de los bienes, sus curvas de valor y análisis de eFMV.',
     },
     remarketing: {
       description:
@@ -1605,6 +1605,19 @@ const es: Messages = {
     deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
   },
   averagePrices: {
+    compare: {
+      button: 'Comparar',
+      selected: '{n} de {max} seleccionados',
+      max: 'Se pueden comparar hasta {n} ítems.',
+      title: 'Comparar Precios Promedio',
+      subtitle:
+        'Battle Cards: el trofeo marca el mejor valor de cada atributo — el mayor eFMV % en cada plazo, más estrellas en una calificación. Las especificaciones van al final, pues pueden ser diferentes entre los ítems.',
+      winsHint: 'Atributos que gana esta carta',
+      efmv: 'eFMV por Plazo',
+      months: '{n} Meses',
+      specs: 'Especificaciones',
+      date: 'Precio del {date}',
+    },
     title: 'Precios Promedio',
     subtitle:
       'Estimaciones del valor de mercado de los bienes en el tiempo. Las filas no se editan: un cambio crea una nueva versión y la anterior queda en el historial.',

@@ -694,4 +694,51 @@ describe('AveragePricesView', () => {
     expect(inBody('.v-overlay--active [data-testid="detail-original"]')).toBeNull()
     wrapper.unmount()
   })
+
+  it('compares up to three prices as cards; the best eFMV at each term wins', async () => {
+    const OTHER = {
+      ...ROW,
+      id: 101,
+      model: '323 GC',
+      points: [
+        { ...ROW.points[0]!, value: '75000.00', percent: '75.00' },
+        { ...ROW.points[1]!, value: '50000.00', percent: '50.00' },
+      ],
+    }
+    const THIRD = { ...ROW, id: 102, model: '336 GC' }
+    const FOURTH = { ...ROW, id: 103, model: '349 GC' }
+    prices.listAveragePrices.mockResolvedValue(page([ROW, OTHER, THIRD, FOURTH]))
+    prices.getAveragePrice.mockImplementation(async (id) =>
+      [ROW, OTHER, THIRD, FOURTH].find((r) => r.id === id)!,
+    )
+    const wrapper = mountView()
+    await settle()
+    expect(wrapper.find('.v-data-table input[type="checkbox"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="compare-start"]').trigger('click')
+    await settle()
+    expect(wrapper.find('[data-testid="compare-open"]').attributes('disabled')).toBeDefined()
+    const boxes = () => wrapper.findAll('.v-data-table tbody input[type="checkbox"]')
+    await boxes()[0]!.trigger('click')
+    await settle()
+    await boxes()[1]!.trigger('click')
+    await settle()
+    expect(wrapper.find('[data-testid="compare-count"]').text()).toBe('2 of 3 selected')
+    await wrapper.find('[data-testid="compare-open"]').trigger('click')
+    await settle()
+    const cards = document.body.querySelectorAll('[data-testid="compare-card"]')
+    expect(cards).toHaveLength(2)
+    const models = document.body.querySelectorAll('[data-testid="compare-model"]')
+    expect(models[0]!.textContent).toContain('320 GC')
+    // Aligned: each term is one line with a cell per card
+    expect(document.body.querySelectorAll('[data-testid="compare-term"]')).toHaveLength(4)
+    // 12 months: 75% beats 70%; 24 months: 55% beats 50% — one win each
+    const wins = [...document.body.querySelectorAll('[data-testid="compare-wins"]')].map((w) =>
+      w.textContent?.trim(),
+    )
+    expect(wins).toEqual(['1', '1'])
+    const best = document.body.querySelectorAll('.best[data-card="1"]')
+    expect(best).toHaveLength(1)
+    expect(best[0]!.textContent).toContain('75.00%')
+    wrapper.unmount()
+  })
 })

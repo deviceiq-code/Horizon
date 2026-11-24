@@ -67,7 +67,7 @@ const ptBR: Messages = {
     comingSoon: 'Em Breve',
     pricing: {
       description:
-        'Precificação de valor residual: preços médios dos bens e suas curvas de valor.',
+        'Precificação de eFMV: preços médios dos bens, suas curvas de valor e análises de eFMV.',
     },
     remarketing: {
       description: 'Gestão de ativos e estoque, relatórios de vistoria e venda de bens usados.',
@@ -1592,6 +1592,19 @@ const ptBR: Messages = {
     deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
   },
   averagePrices: {
+    compare: {
+      button: 'Comparar',
+      selected: '{n} de {max} selecionados',
+      max: 'É possível comparar até {n} itens.',
+      title: 'Comparar Preços Médios',
+      subtitle:
+        'Battle Cards: o troféu marca o melhor valor de cada atributo — o maior eFMV % em cada prazo, mais estrelas numa avaliação. As especificações vêm por último, pois podem ser diferentes entre os itens.',
+      winsHint: 'Atributos que esta carta vence',
+      efmv: 'eFMV por Prazo',
+      months: '{n} Meses',
+      specs: 'Especificações',
+      date: 'Preço de {date}',
+    },
     title: 'Average Prices',
     subtitle:
       'Estimativas de valor de mercado dos bens ao longo do tempo. As linhas não são editadas: uma alteração cria uma nova versão e a anterior fica no histórico.',
