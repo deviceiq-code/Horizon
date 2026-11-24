@@ -58,6 +58,40 @@ const en = {
   language: {
     select: 'Select language',
   },
+  partners: {
+    underConstruction: 'Under Construction',
+    underConstructionHint:
+      'This page is part of the app’s skeleton: its business rules are being defined.',
+    planned: 'Planned',
+    services: {
+      title: 'Services',
+      subtitle: 'The services and software Horizon offers, to choose in eFMV analyses.',
+      planned: [
+        'Catalog of services and software (name, kind, provider, suggested value)',
+        'Picking them in eFMV analyses instead of typing the description',
+        'History of the values used',
+      ],
+    },
+    partners: {
+      title: 'Partners',
+      subtitle: 'Manufacturers, distributors and integrators Horizon works with.',
+      planned: [
+        'Partners and their agreements',
+        'Contacts and terms',
+        'Link with service providers',
+      ],
+    },
+    incentives: {
+      title: 'Incentive Programs',
+      subtitle: 'Programs that reward sales and renewals.',
+      planned: ['Programs and their rules', 'Goals and periods', 'Results per account manager'],
+    },
+    discounts: {
+      title: 'Discounts and Fees',
+      subtitle: 'Discounts granted and fees charged in the operations.',
+      planned: ['Discount policies', 'Fees per operation', 'Approvals'],
+    },
+  },
   login: {
     username: 'Username',
     password: 'Password',
@@ -75,7 +109,7 @@ const en = {
       description: 'Asset and inventory management, inspection reports and sale of used assets.',
     },
     partners: {
-      description: 'Partnerships, incentive programs, discounts and fees.',
+      description: 'Services and software, partners, incentive programs, discounts and fees.',
     },
     admin: {
       title: 'Administration',

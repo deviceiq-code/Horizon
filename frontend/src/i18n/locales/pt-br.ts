@@ -55,6 +55,41 @@ const ptBR: Messages = {
   language: {
     select: 'Selecionar idioma',
   },
+  partners: {
+    underConstruction: 'Em Construção',
+    underConstructionHint:
+      'Esta página faz parte do esqueleto do app: suas regras de negócio estão sendo definidas.',
+    planned: 'Previsto',
+    services: {
+      title: 'Serviços',
+      subtitle:
+        'Os serviços e softwares que a Horizon oferece, para escolher nas análises de eFMV.',
+      planned: [
+        'Catálogo de serviços e software (nome, tipo, prestador, valor sugerido)',
+        'Escolha nas análises de eFMV em vez de digitar a descrição',
+        'Histórico dos valores usados',
+      ],
+    },
+    partners: {
+      title: 'Parceiros',
+      subtitle: 'Fabricantes, distribuidores e integradores com quem a Horizon trabalha.',
+      planned: [
+        'Parceiros e seus acordos',
+        'Contatos e condições',
+        'Vínculo com prestadores de serviços',
+      ],
+    },
+    incentives: {
+      title: 'Programas de Incentivo',
+      subtitle: 'Programas que premiam vendas e renovações.',
+      planned: ['Programas e suas regras', 'Metas e períodos', 'Resultados por gerente de contas'],
+    },
+    discounts: {
+      title: 'Descontos e Taxas',
+      subtitle: 'Descontos concedidos e taxas cobradas nas operações.',
+      planned: ['Políticas de desconto', 'Taxas por operação', 'Aprovações'],
+    },
+  },
   login: {
     username: 'Usuário',
     password: 'Senha',
@@ -73,7 +108,7 @@ const ptBR: Messages = {
       description: 'Gestão de ativos e estoque, relatórios de vistoria e venda de bens usados.',
     },
     partners: {
-      description: 'Parcerias, programas de incentivo, descontos e fees.',
+      description: 'Serviços e software, parceiros, programas de incentivo, descontos e taxas.',
     },
     admin: {
       title: 'Administração',

@@ -12,6 +12,7 @@ import catalogs from './catalogs'
 import customers from './customers'
 import efmvAnalyses from './efmv-analyses'
 import inventory from './inventory'
+import partners from './partners'
 import pricingSettings from './pricing-settings'
 import serviceProviders from './service-providers'
 import { roles, users } from './users'
@@ -50,6 +51,8 @@ export const MODULES: AppModule[] = [
   // Remarketing: Inventory
   ...inventory,
   warehouses,
+  // Services, Partners and Alliances (a skeleton for now)
+  ...partners,
   // Administration: Management, then Catalogs (customers and service providers first)
   users,
   roles,

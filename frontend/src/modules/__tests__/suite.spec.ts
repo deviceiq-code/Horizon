@@ -53,18 +53,24 @@ describe('suite apps and routes', () => {
     expect(router.currentRoute.value.path).toBe('/admin/catalogs/verticals')
   })
 
-  it('Pricing, Remarketing, Partners and Alliances (coming soon) and Administration; menus per app', () => {
+  it('Pricing, Remarketing, Services, Partners and Alliances and Administration; menus per app', () => {
     const t = (key: string) => i18n.global.t(key)
     setLanguage('pt-br')
     expect(SUITE_APPS.map((app) => appName(app, t))).toEqual([
       'Pricing',
       'Remarketing',
-      'Partners and Alliances',
+      'Services, Partners and Alliances',
       'Administração',
     ])
     expect(appModules('pricing', false).map((m) => m.name)).toEqual([
       'efmv-analyses',
       'average-prices',
+    ])
+    expect(appModules('partners', false).map((m) => m.name)).toEqual([
+      'partners-services',
+      'partners-partners',
+      'partners-incentives',
+      'partners-discounts',
     ])
     expect(appModules('remarketing', false).map((m) => m.name)).toEqual([
       'inventory-appointments',

@@ -139,7 +139,7 @@ describe('MainLayout', () => {
     expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-app-admin"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-app-remarketing"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-app-partners"]')).toBeNull() // coming soon
+    expect(inBody('[data-testid="menu-app-partners"]')).not.toBeNull()
     wrapper.unmount()
   })
 
@@ -185,14 +185,14 @@ describe('MainLayout', () => {
     again.wrapper.unmount()
   })
 
-  it('the app launcher lists the apps; Partners and Alliances is coming soon', async () => {
+  it('the app launcher lists the apps (all available)', async () => {
     const { wrapper } = await mountLayout('/pricing/average-prices')
     expect(inBody('[data-testid="app-title"]')!.textContent!.trim()).toBe('Pricing')
     await click('app-launcher')
     const menu = inBody('[data-testid="app-launcher-menu"]')!
     expect(menu.textContent).toContain('Pricing')
-    expect(menu.textContent).toContain('Coming Soon')
-    expect(inBody('[data-testid="launcher-partners"]')!.className).toContain(
+    expect(menu.textContent).toContain('Services, Partners and Alliances')
+    expect(inBody('[data-testid="launcher-partners"]')!.className).not.toContain(
       'v-list-item--disabled',
     )
     expect(inBody('[data-testid="launcher-remarketing"]')!.className).not.toContain(
