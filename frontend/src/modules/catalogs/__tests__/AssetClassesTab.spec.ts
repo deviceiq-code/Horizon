@@ -66,6 +66,7 @@ const EXCAVATORS: assetClassesApi.AssetClass = {
       options: [],
     },
   ],
+  required_photo_kinds: [],
   is_enabled: true,
   created_at: '',
   updated_at: '',
@@ -317,6 +318,7 @@ describe('AssetClassesTab', () => {
       keywords: ['guindaste', 'içamento'],
       notes: 'Truck-mounted.',
       is_enabled: true,
+      required_photo_kinds: [],
     })
     expect(useNotificationsStore().text).toBe('Asset class created.')
     wrapper.unmount()
@@ -398,6 +400,7 @@ describe('AssetClassesTab', () => {
       keywords: ['hidráulica'],
       notes: 'Crawler and wheeled.',
       is_enabled: true,
+      required_photo_kinds: [],
     })
     wrapper.unmount()
   })

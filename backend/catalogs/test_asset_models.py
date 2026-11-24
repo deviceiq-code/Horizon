@@ -48,7 +48,7 @@ def _payload(catalog, **overrides):
         "asset_class": catalog["notebook"].id,
         "specs": {"ram_gb": "16", "panel": "ips"},
         "serial_regex": "[A-Z0-9]{7}",
-        "kit_checklist": ["Charger", " charger ", "", "Battery"],
+        "kit_checklist": ["Charger", " charger ", "", {"item": "Battery", "essential": True}],
         "test_script": ["Boots", "Keyboard"],
         "has_storage": True,
         "keywords": ["Corporate"],
@@ -64,7 +64,10 @@ def test_create_asset_model(logged_client, catalog):
     assert data["manufacturer_name"] == "Dell"
     assert data["asset_class_detail"]["name"] == "Notebook"
     assert {f["key"]: f["value"] for f in data["spec_values"]} == {"ram_gb": "16", "panel": "IPS"}
-    assert data["kit_checklist"] == ["Charger", "Battery"]
+    assert data["kit_checklist"] == [
+        {"item": "Charger", "essential": False},
+        {"item": "Battery", "essential": True},
+    ]
     assert data["tracking"] == "unit"
     assert data["keywords"] == ["corporate"]
     assert data["assets_count"] == 0

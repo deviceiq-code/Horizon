@@ -17,6 +17,7 @@ from .models import (
     AssetClass,
     AssetModel,
     Manufacturer,
+    PhotoKind,
     SubVertical,
     Vertical,
     general_names,
@@ -304,6 +305,7 @@ class AssetClassSerializer(serializers.ModelSerializer):
             "keywords",
             "notes",
             "spec_template",
+            "required_photo_kinds",
             "is_enabled",
             "created_at",
             "updated_at",
@@ -358,6 +360,10 @@ class AssetClassSerializer(serializers.ModelSerializer):
             if any(texts.values()):
                 clean[code] = texts
         return clean
+
+    def validate_required_photo_kinds(self, value):
+        """No repeats, in the kinds' order."""
+        return [kind for kind in PhotoKind.values if kind in set(value)]
 
     def validate_icon(self, value):
         value = (value or "").strip()
@@ -450,9 +456,8 @@ class AssetModelSerializer(serializers.ModelSerializer):
     asset_class_detail = serializers.SerializerMethodField()
     specs = serializers.DictField(required=False, default=dict, write_only=True)
     spec_values = serializers.JSONField(source="specs", read_only=True)
-    kit_checklist = serializers.ListField(
-        child=serializers.CharField(allow_blank=True), required=False
-    )
+    # [{"item": "Charger", "essential": false}, …] (a plain text is an accessory item)
+    kit_checklist = serializers.JSONField(required=False)
     test_script = serializers.ListField(
         child=serializers.CharField(allow_blank=True), required=False
     )
@@ -515,7 +520,21 @@ class AssetModelSerializer(serializers.ModelSerializer):
         return value
 
     def validate_kit_checklist(self, value):
-        return _clean_list(value)
+        if not isinstance(value, list):
+            raise serializers.ValidationError(_("Enter a list."))
+        names, essential = [], {}
+        for entry in value:
+            if isinstance(entry, dict):
+                name = _collapse_spaces(str(entry.get("item") or ""))
+                flag = bool(entry.get("essential"))
+            else:
+                name, flag = _collapse_spaces(str(entry)), False
+            if name:
+                names.append(name)
+                essential.setdefault(name.casefold(), flag)
+        return [
+            {"item": name, "essential": essential[name.casefold()]} for name in _clean_list(names)
+        ]
 
     def validate_test_script(self, value):
         return _clean_list(value)

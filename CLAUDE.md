@@ -57,7 +57,13 @@ Multi-user web system for **operating lease residual value pricing**
     overlaps only warned), `ExpectedItem` (the appointment's list; pasted lists parsed by
     `expected.py`), `ReceivingLot` (`LOT-…`, from an appointment or unscheduled; not per
     contract), triage and reconciliation in `receiving.py` (pure `reconciliation.py`),
-    `AccessoryBalance` (never negative), `Occurrence`, `LotAttachment`. **Blind count**: expected
+    `AccessoryBalance` (never negative), `Occurrence`, `LotAttachment`. Phase 3: `inspection.py`
+    (reports — `InspectionReport` versioned, approved never changes, approver ≠ technician —,
+    photos, findings valued by `PenaltyRate`, erasure certificates with the lot's
+    `LotErasureTool`, part harvesting) and pure `grades.py`; **grade code "B1C"** = conservation
+    A–D · functioning 1/2/3/0 · completeness C/P/I (`GRADE_CODES`; meanings in `GradeLevel`;
+    `Asset.condition_grade`); kit checklist items `{item, essential}`;
+    `AssetClass.required_photo_kinds`; the report page is printable (PDF by the browser). **Blind count**: expected
     lists never reach receivers (`EXPECTED_READERS`). Roles: `users.models` receiver,
     inspection_technician, storekeeper, inventory_supervisor, commercial_finance,
     remarketing_analyst (`inventory/permissions.py`; frontend `inventory/roles.ts`). API
@@ -312,8 +318,10 @@ Multi-user web system for **operating lease residual value pricing**
     administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
     Classes, Manufacturers, shared by every app). Remarketing (`/remarketing/…`): section
     Inventory — Appointments (calendar `v-calendar` + list), Receiving (lots; lot page
-    `/remarketing/inventory/receiving/:id`), Movement, Assets, Accessories, Locations,
-    Containers, Labels (`src/modules/inventory/`) and
+    `/remarketing/inventory/receiving/:id`), Inspection (queue; report page
+    `/remarketing/inventory/inspection/:id` — `InspectionWizard.vue` for drafts, `ReportSheet.vue`
+    printable), Movement, Assets, Accessories, Locations, Containers, Labels
+    (`src/modules/inventory/`), section Inventory Catalogs — Grades, Penalty Table, Erasure Tools — and
     Warehouses (`/remarketing/inventory/<page>`). Scan screens are for barcode guns (keyboard
     wedge + Enter; focused field, color + sound — `inventory/beep.ts`); codes checked in the
     browser by `src/utils/inventoryCodes.ts`; labels are Code 128 SVG (`src/utils/code128.ts`,

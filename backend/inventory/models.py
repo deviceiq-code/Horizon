@@ -2,10 +2,12 @@ import posixpath
 import uuid
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
+from catalogs.models import PhotoKind
 from config.keywords import keywords_field
 
 from .codes import next_warehouse_code, warehouse_code_prefix
@@ -267,6 +269,8 @@ class Asset(models.Model):
     # The status it had when it went in transit (it comes back to it at the destination)
     status_before_transit = models.CharField(max_length=20, choices=AssetStatus.choices, blank=True)
     held_for_dispute = models.BooleanField(_("held for dispute"), default=False)
+    # The grade of its current inspection report ("B1C"), kept here to filter and group by
+    condition_grade = models.CharField(_("grade"), max_length=3, blank=True)
     # Parts taken from it and disks removed for destruction point to it
     parent_asset = models.ForeignKey(
         "self",
@@ -851,3 +855,382 @@ class Occurrence(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} ({self.lot})"
+
+
+# --- Phase 3: inspection -------------------------------------------------------------------
+
+
+class GradeDomain(models.TextChoices):
+    """The three domains of an asset's grade, written as one code ("B1C")."""
+
+    CONSERVATION = "conservation", _("Conservation")
+    FUNCTIONING = "functioning", _("Functioning")
+    COMPLETENESS = "completeness", _("Completeness")
+
+
+# The fixed codes of each domain (their meanings are editable: GradeLevel)
+GRADE_CODES = {
+    GradeDomain.CONSERVATION: ["A", "B", "C", "D"],
+    GradeDomain.FUNCTIONING: ["1", "2", "3", "0"],
+    GradeDomain.COMPLETENESS: ["C", "P", "I"],
+}
+
+
+class GradeLevel(models.Model):
+    """What a level of a grade domain means (e.g. conservation "B": light marks of normal use).
+    The codes are fixed (the grade code always has the same shape); descriptions are editable."""
+
+    domain = models.CharField(_("domain"), max_length=15, choices=GradeDomain.choices)
+    code = models.CharField(_("code"), max_length=1)
+    name = models.CharField(_("name"), max_length=80)
+    description = models.CharField(_("description"), max_length=300, blank=True)
+    order = models.PositiveSmallIntegerField(_("order"), default=0)
+
+    class Meta:
+        verbose_name = _("grade level")
+        verbose_name_plural = _("grade levels")
+        ordering = ["domain", "order"]
+        constraints = [
+            models.UniqueConstraint(fields=["domain", "code"], name="grade_level_unique_code"),
+        ]
+
+    def __str__(self):
+        return f"{self.domain}:{self.code}"
+
+
+class FindingKind(models.TextChoices):
+    ACCESS_BLOCK = "access_block", _("Access Block")
+    CUSTOMIZATION = "customization", _("Customization")
+    HEAVY_CLEANING = "heavy_cleaning", _("Heavy Cleaning")
+    MISSING_ITEM = "missing_item", _("Missing Item")
+    DAMAGE = "damage", _("Damage Beyond Normal Wear")
+
+
+class PenaltyRate(models.Model):
+    """The penalty charged to customers for a kind of finding on an asset class, valid in a
+    period (one table for every customer). Periods of the same class and kind never overlap
+    (RN-03); a finding takes the rate valid on its report's date."""
+
+    asset_class = models.ForeignKey(
+        "catalogs.AssetClass",
+        on_delete=models.PROTECT,
+        related_name="penalty_rates",
+        verbose_name=_("asset class"),
+    )
+    finding_kind = models.CharField(_("finding kind"), max_length=20, choices=FindingKind.choices)
+    value = models.DecimalField(_("value"), max_digits=12, decimal_places=2)
+    valid_from = models.DateField(_("valid from"))
+    valid_to = models.DateField(_("valid to"), null=True, blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("penalty rate")
+        verbose_name_plural = _("penalty rates")
+        ordering = ["asset_class__name", "finding_kind", "-valid_from"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(value__gte=0), name="penalty_not_negative"),
+            models.CheckConstraint(
+                condition=models.Q(valid_to__isnull=True)
+                | models.Q(valid_to__gte=models.F("valid_from")),
+                name="penalty_period_order",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.asset_class} · {self.finding_kind}"
+
+
+class ErasureMethod(models.TextChoices):
+    CLEAR = "clear", _("Clear")
+    PURGE = "purge", _("Purge")
+    DESTROY = "destroy", _("Destroy")
+    CRYPTO_ERASE = "crypto_erase", _("Cryptographic Erase")
+
+
+class ErasureTool(models.Model):
+    """A data erasure tool (software or equipment), its version, the methods it applies and the
+    asset classes it serves."""
+
+    name = models.CharField(_("name"), max_length=100)
+    version = models.CharField(_("version"), max_length=40, blank=True)
+    methods = ArrayField(
+        models.CharField(max_length=15, choices=ErasureMethod.choices),
+        default=list,
+        verbose_name=_("methods"),
+    )
+    asset_classes = models.ManyToManyField(
+        "catalogs.AssetClass",
+        blank=True,
+        related_name="erasure_tools",
+        verbose_name=_("asset classes"),
+    )
+    notes = models.TextField(_("notes"), blank=True)
+    is_active = models.BooleanField(_("active"), default=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("erasure tool")
+        verbose_name_plural = _("erasure tools")
+        ordering = ["name", "version"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("name"), Lower("version"), name="erasure_tool_unique_name_version"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} {self.version}".strip()
+
+
+class LotErasureTool(models.Model):
+    """The tool and method a lot's assets of an asset class (with data storage) are erased with
+    (RN-04): set by a supervisor, at the latest before their inspection erases them."""
+
+    lot = models.ForeignKey(ReceivingLot, on_delete=models.CASCADE, related_name="erasure_tools")
+    asset_class = models.ForeignKey(
+        "catalogs.AssetClass", on_delete=models.PROTECT, related_name="+"
+    )
+    tool = models.ForeignKey(ErasureTool, on_delete=models.PROTECT, related_name="lots")
+    method = models.CharField(_("method"), max_length=15, choices=ErasureMethod.choices)
+    defined_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    defined_at = models.DateTimeField(_("defined at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("lot erasure tool")
+        verbose_name_plural = _("lot erasure tools")
+        constraints = [
+            models.UniqueConstraint(fields=["lot", "asset_class"], name="lot_erasure_tool_unique"),
+        ]
+
+    def __str__(self):
+        return f"{self.lot} · {self.asset_class}"
+
+
+class ReportStatus(models.TextChoices):
+    DRAFT = "draft", _("Draft")
+    AWAITING_APPROVAL = "awaiting_approval", _("Awaiting Approval")
+    APPROVED = "approved", _("Approved")
+    SUPERSEDED = "superseded", _("Superseded")
+
+
+class Cleaning(models.TextChoices):
+    STANDARD = "standard", _("Standard")
+    HEAVY = "heavy", _("Heavy")
+
+
+class Destination(models.TextChoices):
+    AVAILABLE = "available", _("Available")
+    BLOCKED = "blocked", _("Blocked")
+    SCRAP = "scrap", _("Scrap")
+
+
+class InspectionReport(models.Model):
+    """The technical inspection of an asset, versioned: an approved report never changes
+    (RN-09) — a correction is a new version and the previous one becomes superseded. Only one
+    current (approved) report per asset; whoever approves is not its technician (RN-10).
+
+    Grade: conservation (A–D) · functioning (1, 2, 3, 0 = not testable) · completeness
+    (C, P, I), written "B1C" (inventory.grades)."""
+
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="reports")
+    version = models.PositiveIntegerField(_("version"))
+    is_current = models.BooleanField(_("current"), default=False)
+    status = models.CharField(
+        _("status"), max_length=20, choices=ReportStatus.choices, default=ReportStatus.DRAFT
+    )
+    technician = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    started_at = models.DateTimeField(_("started at"), auto_now_add=True)
+    finished_at = models.DateTimeField(_("finished at"), null=True, blank=True)
+    conservation = models.CharField(_("conservation"), max_length=1, blank=True)
+    functioning = models.CharField(_("functioning"), max_length=1, blank=True)
+    completeness = models.CharField(_("completeness"), max_length=1, blank=True)
+    failed_components = models.TextField(_("failed components"), blank=True)
+    # Not working and not worth repairing → scrap
+    irreparable = models.BooleanField(_("repair not viable"), default=False)
+    # Kit items missing (names of the model's checklist) and the test script's results
+    missing_items = models.JSONField(_("missing items"), default=list, blank=True)
+    checklist_done = models.BooleanField(default=False)
+    test_results = models.JSONField(_("test results"), default=dict, blank=True)
+    cleaning = models.CharField(
+        _("cleaning"), max_length=10, choices=Cleaning.choices, default=Cleaning.STANDARD
+    )
+    recommended_destination = models.CharField(
+        _("recommended destination"), max_length=10, choices=Destination.choices, blank=True
+    )
+    notes = models.TextField(_("notes"), blank=True)
+    # A supervisor sent it back to the technician (why)
+    review_notes = models.TextField(_("review notes"), blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    approved_at = models.DateTimeField(_("approved at"), null=True, blank=True)
+    sent_to_customer_at = models.DateTimeField(_("sent to customer at"), null=True, blank=True)
+    new_version_reason = models.TextField(_("reason for a new version"), blank=True)
+
+    class Meta:
+        verbose_name = _("inspection report")
+        verbose_name_plural = _("inspection reports")
+        ordering = ["asset", "-version"]
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "version"], name="report_unique_version"),
+            models.UniqueConstraint(
+                fields=["asset"],
+                condition=models.Q(is_current=True),
+                name="report_one_current_per_asset",
+            ),
+            # At most one report being prepared per asset
+            models.UniqueConstraint(
+                fields=["asset"],
+                condition=models.Q(status__in=["draft", "awaiting_approval"]),
+                name="report_one_open_per_asset",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.asset} v{self.version}"
+
+    @property
+    def grade(self) -> str:
+        """ "B1C" once the three domains are set ("" before)."""
+        parts = (self.conservation, self.functioning, self.completeness)
+        return "".join(parts) if all(parts) else ""
+
+
+def _report_file_path(instance, filename: str) -> str:
+    ext = posixpath.splitext(filename)[1].lower()
+    return f"inventory/reports/{instance.report.asset_id}/{uuid.uuid4().hex}{ext}"
+
+
+class ReportPhoto(models.Model):
+    report = models.ForeignKey(InspectionReport, on_delete=models.CASCADE, related_name="photos")
+    kind = models.CharField(_("kind"), max_length=10, choices=PhotoKind.choices)
+    file = models.FileField(_("file"), upload_to=_report_file_path, max_length=255)
+    name = models.CharField(_("name"), max_length=255)
+    size = models.PositiveBigIntegerField(_("size (bytes)"))
+    content_type = models.CharField(_("content type"), max_length=100)
+    description = models.CharField(_("description"), max_length=200, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    uploaded_at = models.DateTimeField(_("uploaded at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("report photo")
+        verbose_name_plural = _("report photos")
+        ordering = ["kind", "id"]
+
+    def __str__(self):
+        return self.name
+
+    def delete(self, *args, **kwargs):
+        storage, path = self.file.storage, self.file.name
+        result = super().delete(*args, **kwargs)
+        transaction.on_commit(lambda: storage.delete(path))
+        return result
+
+
+class BlockType(models.TextChoices):
+    CLOUD_ACCOUNT = "cloud_account", _("Cloud Account")
+    MDM = "mdm", _("MDM")
+    BIOS_PASSWORD = "bios_password", _("BIOS Password")
+    FACTORY_RESET = "factory_reset", _("Factory Reset Protection")
+    OTHER = "other", _("Other")
+
+
+class FindingStatus(models.TextChoices):
+    SUGGESTED = "suggested", _("Suggested")
+    APPROVED = "approved", _("Approved")
+    DISPUTED = "disputed", _("Disputed")
+    CHARGEABLE = "chargeable", _("Chargeable")
+    CHARGED = "charged", _("Charged")
+    CANCELLED = "cancelled", _("Cancelled")
+
+
+class Finding(models.Model):
+    """A problem recorded in a report that may be charged to the customer. Its value comes from
+    the penalty table (asset class × kind, on the report's date); without a rate it cannot be
+    approved (RN-11). Only supervisors change a value, with a justification."""
+
+    report = models.ForeignKey(InspectionReport, on_delete=models.CASCADE, related_name="findings")
+    kind = models.CharField(_("kind"), max_length=20, choices=FindingKind.choices)
+    block_type = models.CharField(
+        _("block type"), max_length=15, choices=BlockType.choices, blank=True
+    )
+    # The kit item it is about (missing items)
+    item = models.CharField(_("item"), max_length=200, blank=True)
+    description = models.TextField(_("description"), blank=True)
+    value = models.DecimalField(_("value"), max_digits=12, decimal_places=2, null=True, blank=True)
+    value_overridden = models.BooleanField(default=False)
+    value_justification = models.TextField(_("value justification"), blank=True)
+    status = models.CharField(
+        _("status"), max_length=12, choices=FindingStatus.choices, default=FindingStatus.SUGGESTED
+    )
+    # Suggested by the system (missing kit items, heavy cleaning): kept in step with the report
+    automatic = models.BooleanField(_("automatic"), default=False)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("finding")
+        verbose_name_plural = _("findings")
+        ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(value__isnull=True) | models.Q(value__gte=0),
+                name="finding_value_not_negative",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} ({self.report})"
+
+
+class ErasureResult(models.TextChoices):
+    SUCCESS = "success", _("Success")
+    FAILURE = "failure", _("Failure")
+
+
+def _certificate_path(instance, filename: str) -> str:
+    ext = posixpath.splitext(filename)[1].lower()
+    return f"inventory/certificates/{instance.asset_id}/{uuid.uuid4().hex}{ext}"
+
+
+class ErasureCertificate(models.Model):
+    """A data erasure of one storage device of an asset, with the tool and method defined for
+    its lot and class (RN-04). A failure removes the disk for physical destruction: it becomes a
+    child asset in scrap (RN-13)."""
+
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="erasures")
+    report = models.ForeignKey(
+        InspectionReport, on_delete=models.PROTECT, null=True, blank=True, related_name="erasures"
+    )
+    disk_serial = models.CharField(_("disk serial number"), max_length=100, blank=True)
+    tool = models.ForeignKey(ErasureTool, on_delete=models.PROTECT, related_name="certificates")
+    tool_version = models.CharField(_("tool version"), max_length=40, blank=True)
+    method = models.CharField(_("method"), max_length=15, choices=ErasureMethod.choices)
+    result = models.CharField(_("result"), max_length=10, choices=ErasureResult.choices)
+    removed_disk = models.ForeignKey(
+        Asset, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    operator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    at = models.DateTimeField(_("date and time"), auto_now_add=True)
+    file = models.FileField(_("file"), upload_to=_certificate_path, max_length=255, blank=True)
+    name = models.CharField(_("name"), max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = _("erasure certificate")
+        verbose_name_plural = _("erasure certificates")
+        ordering = ["-at", "-id"]
+
+    def __str__(self):
+        return f"{self.asset} · {self.result}"

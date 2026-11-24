@@ -109,6 +109,8 @@ export interface Asset {
   current_container: number | null
   current_container_detail: { id: number; code: string } | null
   held_for_dispute: boolean
+  /** Grade of its current inspection report ("B1C"; empty before) */
+  condition_grade: string
   parent_asset: number | null
   notes: string
   created_at: string
@@ -630,4 +632,386 @@ export function acceptOccurrence(id: number, resolution: string) {
 /** Filters: `asset_model`, `warehouse`, `condition`. */
 export function listAccessoryBalances(params: ListParams) {
   return api<Paginated<AccessoryBalance>>(`${BASE}/accessory-balances/` + listQuery(params))
+}
+
+// --- Phase 3: grades, penalty table, erasure tools, inspection reports -------------------------
+
+export type GradeDomain = 'conservation' | 'functioning' | 'completeness'
+/** The fixed codes of each grade domain, in order ("B1C") */
+export const GRADE_CODES: Record<GradeDomain, string[]> = {
+  conservation: ['A', 'B', 'C', 'D'],
+  functioning: ['1', '2', '3', '0'],
+  completeness: ['C', 'P', 'I'],
+}
+
+export interface GradeLevel {
+  id: number
+  domain: GradeDomain
+  code: string
+  name: string
+  description: string
+  order: number
+}
+
+export const FINDING_KINDS = [
+  'access_block',
+  'customization',
+  'heavy_cleaning',
+  'missing_item',
+  'damage',
+] as const
+export type FindingKind = (typeof FINDING_KINDS)[number]
+export const BLOCK_TYPES = [
+  'cloud_account',
+  'mdm',
+  'bios_password',
+  'factory_reset',
+  'other',
+] as const
+export type BlockType = (typeof BLOCK_TYPES)[number]
+export const ERASURE_METHODS = ['clear', 'purge', 'destroy', 'crypto_erase'] as const
+export type ErasureMethod = (typeof ERASURE_METHODS)[number]
+export const PHOTO_KINDS = ['front', 'back', 'side', 'screen', 'damage', 'serial', 'other'] as const
+export type PhotoKind = (typeof PHOTO_KINDS)[number]
+export type ReportStatus = 'draft' | 'awaiting_approval' | 'approved' | 'superseded'
+export type Destination = 'available' | 'blocked' | 'scrap'
+
+export interface PenaltyRate {
+  id: number
+  asset_class: number
+  asset_class_name: string
+  finding_kind: FindingKind
+  /** Decimal as text ("150.00") */
+  value: string
+  valid_from: string
+  valid_to: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ErasureTool {
+  id: number
+  name: string
+  version: string
+  methods: ErasureMethod[]
+  asset_classes: number[]
+  asset_classes_detail: { id: number; name: string }[]
+  notes: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface LotErasureToolRow {
+  asset_class: number
+  asset_class_name: string
+  definition: {
+    asset_class: number
+    tool: number
+    tool_label: string
+    method: ErasureMethod
+    defined_by_name: string
+    defined_at: string
+  } | null
+  tools: { id: number; label: string; methods: ErasureMethod[] }[]
+}
+
+export interface ReportPhoto {
+  id: number
+  kind: PhotoKind
+  name: string
+  size: number
+  description: string
+  uploaded_at: string
+}
+
+export interface Finding {
+  id: number
+  kind: FindingKind
+  block_type: BlockType | ''
+  item: string
+  description: string
+  value: string | null
+  value_overridden: boolean
+  value_justification: string
+  status: string
+  automatic: boolean
+}
+
+export interface ErasureCertificate {
+  id: number
+  disk_serial: string
+  tool_label: string
+  tool_version: string
+  method: ErasureMethod
+  result: 'success' | 'failure'
+  removed_disk: number | null
+  removed_disk_code: string | null
+  operator_name: string
+  at: string
+  name: string
+}
+
+export interface ReportSummary {
+  id: number
+  asset: number
+  asset_code: string
+  asset_model_label: string
+  asset_class_icon: string
+  serial: string
+  customer_name: string | null
+  lot_code: string | null
+  version: number
+  is_current: boolean
+  status: ReportStatus
+  technician: number
+  technician_name: string
+  started_at: string
+  finished_at: string | null
+  grade: string
+  recommended_destination: Destination | ''
+  approved_at: string | null
+  sent_to_customer_at: string | null
+}
+
+export interface InspectionReport extends ReportSummary {
+  asset_detail: Asset
+  conservation: string
+  functioning: string
+  completeness: string
+  failed_components: string
+  irreparable: boolean
+  missing_items: string[]
+  checklist_done: boolean
+  test_results: Record<string, 'pass' | 'fail' | 'na'>
+  cleaning: 'standard' | 'heavy'
+  notes: string
+  review_notes: string
+  approved_by_name: string | null
+  new_version_reason: string
+  kit_checklist: { item: string; essential: boolean }[]
+  test_script: string[]
+  has_storage: boolean
+  required_photo_kinds: PhotoKind[]
+  photos: ReportPhoto[]
+  findings: Finding[]
+  erasures: ErasureCertificate[]
+  lot_tool: LotErasureToolRow['definition']
+  suggestions: { functioning: string; completeness: string; destination: Destination }
+  /** What still prevents submitting (draft only) */
+  problems: string[]
+}
+
+export type ReportDraft = Partial<
+  Pick<
+    InspectionReport,
+    | 'conservation'
+    | 'functioning'
+    | 'completeness'
+    | 'failed_components'
+    | 'irreparable'
+    | 'missing_items'
+    | 'checklist_done'
+    | 'test_results'
+    | 'cleaning'
+    | 'notes'
+  >
+>
+
+export function listGradeLevels() {
+  return api<GradeLevel[]>(`${BASE}/grade-levels/`)
+}
+
+export function updateGradeLevel(id: number, data: { name?: string; description?: string }) {
+  return api<GradeLevel>(`${BASE}/grade-levels/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+/** Filters: `asset_class`, `finding_kind`, `current`. */
+export function listPenaltyRates(params: ListParams) {
+  return api<Paginated<PenaltyRate>>(`${BASE}/penalty-rates/` + listQuery(params))
+}
+
+export type PenaltyRateInput = Pick<
+  PenaltyRate,
+  'finding_kind' | 'value' | 'valid_from' | 'valid_to'
+> & { asset_class: number | null }
+
+export function createPenaltyRate(data: PenaltyRateInput) {
+  return api<PenaltyRate>(`${BASE}/penalty-rates/`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updatePenaltyRate(id: number, data: PenaltyRateInput) {
+  return api<PenaltyRate>(`${BASE}/penalty-rates/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export function deletePenaltyRate(id: number) {
+  return api<void>(`${BASE}/penalty-rates/${id}/`, { method: 'DELETE' })
+}
+
+/** Filters: `asset_class`, `is_active`. */
+export function listErasureTools(params: ListParams) {
+  return api<Paginated<ErasureTool>>(`${BASE}/erasure-tools/` + listQuery(params))
+}
+
+export type ErasureToolInput = Pick<
+  ErasureTool,
+  'name' | 'version' | 'methods' | 'asset_classes' | 'notes' | 'is_active'
+>
+
+export function createErasureTool(data: ErasureToolInput) {
+  return api<ErasureTool>(`${BASE}/erasure-tools/`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updateErasureTool(id: number, data: ErasureToolInput) {
+  return api<ErasureTool>(`${BASE}/erasure-tools/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteErasureTool(id: number) {
+  return api<void>(`${BASE}/erasure-tools/${id}/`, { method: 'DELETE' })
+}
+
+export function lotErasureTools(lotId: number) {
+  return api<LotErasureToolRow[]>(`${BASE}/lots/${lotId}/erasure-tools/`)
+}
+
+export function setLotErasureTools(
+  lotId: number,
+  definitions: { asset_class: number; tool: number; method: ErasureMethod }[],
+) {
+  return api<LotErasureToolRow[]>(`${BASE}/lots/${lotId}/erasure-tools/`, {
+    method: 'PUT',
+    body: JSON.stringify({ definitions }),
+  })
+}
+
+/** Filters: `status`, `asset`, `mine`. */
+export function listReports(params: ListParams) {
+  return api<Paginated<ReportSummary>>(`${BASE}/inspections/` + listQuery(params))
+}
+
+export function getReport(id: number) {
+  return api<InspectionReport>(`${BASE}/inspections/${id}/`)
+}
+
+export function startInspection(assetCode: string, benchCode: string) {
+  return api<InspectionReport>(`${BASE}/inspections/start/`, {
+    method: 'POST',
+    body: JSON.stringify({ asset_code: assetCode, bench_code: benchCode }),
+  })
+}
+
+export function updateReport(id: number, data: ReportDraft) {
+  return api<InspectionReport>(`${BASE}/inspections/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+const reportAction = (id: number, action: string, data: object = {}) =>
+  api<InspectionReport>(`${BASE}/inspections/${id}/${action}/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+export const completeSerial = (id: number, serial: string) => reportAction(id, 'serial', { serial })
+export const setReportSpecs = (id: number, specs: Record<string, string>) =>
+  reportAction(id, 'specs', { specs })
+export const submitReport = (id: number) => reportAction(id, 'submit')
+export const returnReport = (id: number, notes: string) => reportAction(id, 'return', { notes })
+export const approveReport = (id: number) => reportAction(id, 'approve')
+export const markReportSent = (id: number) => reportAction(id, 'sent')
+export const addFinding = (
+  id: number,
+  data: { kind: FindingKind; block_type: string; description: string },
+) => reportAction(id, 'findings', data)
+
+export function updateFinding(
+  reportId: number,
+  findingId: number,
+  data: Partial<Pick<Finding, 'kind' | 'block_type' | 'description'>> & {
+    value?: string | null
+    value_justification?: string
+  },
+) {
+  return api<InspectionReport>(`${BASE}/inspections/${reportId}/findings/${findingId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteFinding(reportId: number, findingId: number) {
+  return api<InspectionReport>(`${BASE}/inspections/${reportId}/findings/${findingId}/`, {
+    method: 'DELETE',
+  })
+}
+
+export function uploadReportPhoto(reportId: number, kind: PhotoKind, file: File, description = '') {
+  const body = new FormData()
+  body.append('file', file)
+  body.append('kind', kind)
+  body.append('description', description)
+  return api<ReportPhoto[]>(`${BASE}/inspections/${reportId}/photos/`, { method: 'POST', body })
+}
+
+export function deleteReportPhoto(reportId: number, photoId: number) {
+  return api<void>(`${BASE}/inspections/${reportId}/photos/${photoId}/`, { method: 'DELETE' })
+}
+
+export function reportPhotoUrl(reportId: number, photoId: number) {
+  return `/api${BASE}/inspections/${reportId}/photos/${photoId}/file/`
+}
+
+export function addCertificate(
+  reportId: number,
+  data: {
+    result: 'success' | 'failure'
+    disk_serial: string
+    file?: File | null
+    disk_model?: number | null
+  },
+) {
+  const body = new FormData()
+  body.append('result', data.result)
+  body.append('disk_serial', data.disk_serial)
+  if (data.file) body.append('file', data.file)
+  if (data.disk_model) body.append('disk_model', String(data.disk_model))
+  return api<InspectionReport>(`${BASE}/inspections/${reportId}/certificates/`, {
+    method: 'POST',
+    body,
+  })
+}
+
+export function certificateUrl(reportId: number, certificateId: number) {
+  return `/api${BASE}/inspections/${reportId}/certificates/${certificateId}/file/?inline=1`
+}
+
+export function assetReports(assetId: number) {
+  return api<ReportSummary[]>(`${BASE}/assets/${assetId}/reports/`)
+}
+
+export function newReportVersion(assetId: number, reason: string) {
+  return api<{ id: number }>(`${BASE}/assets/${assetId}/new-report/`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+
+export function disassemble(
+  assetId: number,
+  parts: { asset_model: number; quantity: number; serial: string }[],
+  reason: string,
+) {
+  return api<Asset[]>(`${BASE}/assets/${assetId}/disassemble/`, {
+    method: 'POST',
+    body: JSON.stringify({ parts, reason }),
+  })
 }

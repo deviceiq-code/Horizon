@@ -10,6 +10,7 @@ import { ApiError } from '@/api'
 import FormDialog from '@/components/FormDialog.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
 import ListItemsField from '@/components/ListItemsField.vue'
+import KitChecklistField from './KitChecklistField.vue'
 import { useValidationRules } from '@/composables/useValidationRules'
 import SpecValuesInput from '@/modules/average-prices/SpecValuesInput.vue'
 import AssetClassPicker from '@/modules/catalogs/asset-classes/AssetClassPicker.vue'
@@ -105,7 +106,7 @@ watch(open, async (isOpen) => {
         asset_class: m.asset_class,
         tracking: m.tracking,
         serial_regex: m.serial_regex,
-        kit_checklist: [...m.kit_checklist],
+        kit_checklist: m.kit_checklist.map((entry) => ({ ...entry })),
         test_script: [...m.test_script],
         has_storage: m.has_storage,
         keywords: [...m.keywords],
@@ -293,12 +294,11 @@ function clearError(field: string) {
         />
       </v-col>
       <v-col cols="12" md="6">
-        <ListItemsField
+        <KitChecklistField
           v-model="form.kit_checklist"
           :label="$t('assetModels.fields.kitChecklist')"
           :hint="$t('assetModels.kitChecklistHint')"
           :error-messages="fieldErrors.kit_checklist"
-          :max-length="200"
         />
       </v-col>
       <v-col cols="12" md="6">

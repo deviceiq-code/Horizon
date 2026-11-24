@@ -93,6 +93,37 @@ export const assets = page(
   () => import('./AssetsTab.vue'),
 )
 
+export const inspections: AppModule = {
+  name: 'inventory-inspections',
+  icon: 'mdi-clipboard-search-outline',
+  titleKey: 'inventory.inspections.title',
+  app: 'remarketing',
+  section: INVENTORY_SECTION,
+  routes: [
+    {
+      // The menu links here; the queue and a report are its pages
+      path: 'inventory/inspection',
+      name: 'inventory-inspections',
+      component: RouterView,
+      redirect: { name: 'inventory-inspection-queue' },
+      children: [
+        {
+          path: '',
+          name: 'inventory-inspection-queue',
+          component: () => import('./InspectionsView.vue'),
+        },
+        {
+          path: ':id(\\d+)',
+          name: 'inventory-report',
+          meta: { titleKey: 'inventory.reports.report' },
+          component: () => import('./ReportView.vue'),
+          props: (route) => ({ id: Number(route.params.id) }),
+        },
+      ],
+    },
+  ],
+}
+
 export const accessories = page(
   'inventory-accessories',
   'accessories',
@@ -128,13 +159,54 @@ export const labels = page(
 // Inventory opens its first page
 appointments.routes.push({ path: 'inventory', redirect: { name: 'inventory-appointments' } })
 
+// Inventory catalogs: what the inspection is measured against
+export const INVENTORY_SETTINGS_SECTION = 'menu.sections.inventorySettings'
+
+function settingsPage(
+  name: string,
+  path: string,
+  icon: string,
+  key: string,
+  view: () => Promise<{ default: Component }>,
+) {
+  const module = page(name, path, icon, key, view)
+  module.section = INVENTORY_SETTINGS_SECTION
+  return module
+}
+
+export const gradeLevels = settingsPage(
+  'inventory-grades',
+  'grades',
+  'mdi-medal-outline',
+  'inventory.grades',
+  () => import('./GradeLevelsTab.vue'),
+)
+export const penalties = settingsPage(
+  'inventory-penalties',
+  'penalties',
+  'mdi-cash-multiple',
+  'inventory.penalties',
+  () => import('./PenaltyRatesTab.vue'),
+)
+export const erasureTools = settingsPage(
+  'inventory-erasure-tools',
+  'erasure-tools',
+  'mdi-harddisk-remove',
+  'inventory.erasure',
+  () => import('./ErasureToolsTab.vue'),
+)
+
 export default [
   appointments,
   receiving,
+  inspections,
   movement,
   assets,
   accessories,
   locations,
   containers,
   labels,
+  gradeLevels,
+  penalties,
+  erasureTools,
 ]

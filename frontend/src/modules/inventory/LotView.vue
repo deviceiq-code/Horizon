@@ -12,6 +12,7 @@ import { useDateFormat } from '@/composables/useDateFormat'
 import { useNotificationsStore } from '@/stores/notifications'
 import ExpectedItemsEditor from './ExpectedItemsEditor.vue'
 import LotAttachmentsPanel from './LotAttachmentsPanel.vue'
+import LotErasureToolsPanel from './LotErasureToolsPanel.vue'
 import LotStatusChip from './LotStatusChip.vue'
 import OccurrencesPanel from './OccurrencesPanel.vue'
 import StatusChip from './StatusChip.vue'
@@ -176,6 +177,9 @@ function eventPlace(code: string | null, container: string | null) {
             </v-chip>
           </v-tab>
           <v-tab value="files">{{ $t('inventory.lots.tabs.files') }}</v-tab>
+          <v-tab value="erasure" data-testid="tab-erasure">{{
+            $t('inventory.lots.tabs.erasure')
+          }}</v-tab>
           <v-tab
             v-if="canSeeExpected && lot.appointment"
             value="expected"
@@ -264,6 +268,9 @@ function eventPlace(code: string | null, container: string | null) {
             </v-window-item>
             <v-window-item value="files">
               <LotAttachmentsPanel :lot="lot" />
+            </v-window-item>
+            <v-window-item value="erasure">
+              <LotErasureToolsPanel :lot="lot" />
             </v-window-item>
             <v-window-item v-if="canSeeExpected && lot.appointment" value="expected">
               <ExpectedItemsEditor v-model="expected" readonly />

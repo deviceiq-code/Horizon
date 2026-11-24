@@ -204,6 +204,18 @@ class Manufacturer(models.Model):
         return average_stars(getattr(self, field) for field in MANUFACTURER_RATINGS)
 
 
+class PhotoKind(models.TextChoices):
+    """Kinds of photo of an inspection report; an asset class says which ones are required."""
+
+    FRONT = "front", _("Front")
+    BACK = "back", _("Back")
+    SIDE = "side", _("Side")
+    SCREEN = "screen", _("Screen")
+    DAMAGE = "damage", _("Damage")
+    SERIAL = "serial", _("Serial Number")
+    OTHER = "other", _("Other")
+
+
 class AssetClass(models.Model):
     """A kind of leased asset within a sub-vertical (e.g. Industry / Yellow line / Excavators).
 
@@ -238,6 +250,13 @@ class AssetClass(models.Model):
     notes = models.TextField(_("notes"), blank=True)
     # Specification fields every priced asset of this class describes (see catalogs/specs.py)
     spec_template = models.JSONField(_("specification template"), default=list, blank=True)
+    # Photos every inspection report of an asset of this class must have (PhotoKind values)
+    required_photo_kinds = ArrayField(
+        models.CharField(max_length=10, choices=PhotoKind.choices),
+        default=list,
+        blank=True,
+        verbose_name=_("required photos"),
+    )
     is_enabled = models.BooleanField(_("enabled"), default=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
@@ -298,6 +317,8 @@ class AssetModel(models.Model):
         _("tracking"), max_length=10, choices=Tracking.choices, default=Tracking.UNIT
     )
     serial_regex = models.CharField(_("serial number pattern"), max_length=200, blank=True)
+    # Items expected with each unit: [{"item": "Charger", "essential": false}, …] — a missing
+    # essential item makes the unit incomplete (I), a missing accessory partial (P)
     kit_checklist = models.JSONField(_("kit checklist"), default=list, blank=True)
     test_script = models.JSONField(_("test script"), default=list, blank=True)
     has_storage = models.BooleanField(_("has data storage"), default=False)

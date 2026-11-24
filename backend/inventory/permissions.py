@@ -7,6 +7,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from users.models import (
     COMMERCIAL_FINANCE,
+    INSPECTION_TECHNICIAN,
     INVENTORY_SUPERVISOR,
     RECEIVER,
     REMARKETING_ANALYST,
@@ -26,6 +27,12 @@ SCHEDULERS = (REMARKETING_ANALYST, INVENTORY_SUPERVISOR)
 EXPECTED_READERS = (REMARKETING_ANALYST, INVENTORY_SUPERVISOR, COMMERCIAL_FINANCE)
 # Opening lots, triage, occurrences, closing
 RECEIVERS = (RECEIVER, INVENTORY_SUPERVISOR)
+# Inspecting: reports, photos, findings, erasure certificates, part harvesting
+INSPECTORS = (INSPECTION_TECHNICIAN, INVENTORY_SUPERVISOR)
+# Inventory catalogs (grade meanings, penalty table, erasure tools) and approvals
+SUPERVISORS = (INVENTORY_SUPERVISOR,)
+# Marking reports as sent to customers
+SENDERS = (COMMERCIAL_FINANCE, INVENTORY_SUPERVISOR)
 
 
 def has_role(user, *keys: str) -> bool:

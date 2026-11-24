@@ -80,6 +80,7 @@ const EXCAVATORS: assetClassesApi.AssetClass = {
   keywords: [],
   notes: '',
   spec_template: [HOURS, TRACKS],
+  required_photo_kinds: [],
   is_enabled: true,
   created_at: '',
   updated_at: '',

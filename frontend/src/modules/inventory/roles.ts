@@ -10,6 +10,7 @@ export const STOREKEEPER = 'storekeeper'
 export const SUPERVISOR = 'inventory_supervisor'
 export const ANALYST = 'remarketing_analyst'
 export const COMMERCIAL = 'commercial_finance'
+export const TECHNICIAN = 'inspection_technician'
 
 export function useInventoryRoles() {
   const auth = useAuthStore()
@@ -23,7 +24,11 @@ export function useInventoryRoles() {
     canSeeExpected: computed(() => has(ANALYST, SUPERVISOR, COMMERCIAL)),
     /** Open lots, triage, register and resolve occurrences, close */
     canReceive: computed(() => has(RECEIVER, SUPERVISOR)),
-    /** Accept occurrences */
+    /** Accept occurrences, approve reports, keep the inventory catalogs */
     isSupervisor: computed(() => has(SUPERVISOR)),
+    /** Inspect: reports, photos, findings, erasure certificates, part harvesting */
+    canInspect: computed(() => has(TECHNICIAN, SUPERVISOR)),
+    /** Mark reports as sent to customers */
+    canSend: computed(() => has(COMMERCIAL, SUPERVISOR)),
   }
 }

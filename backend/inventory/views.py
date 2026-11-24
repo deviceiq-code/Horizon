@@ -1,7 +1,9 @@
 import re
+from decimal import Decimal, InvalidOperation
 
 from django.db.models import Count, Q
 from django.http import FileResponse, Http404
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_noop
@@ -10,15 +12,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from catalogs.models import AssetModel
+from catalogs.models import AssetClass, AssetModel, PhotoKind
 from catalogs.views import RefuseDeletingWhenInUse
 from config.filters import NullsLastOrderingFilter
 from config.keywords import KeywordSearchFilter
 from config.parties import column_filters
-from pricing.documents import opens_inline
+from pricing.documents import content_type_for, opens_inline
 from users.models import INVENTORY_SUPERVISOR
 
-from . import receiving, services
+from . import inspection, receiving, services
 from .expected import model_key, parse_pasted
 from .models import (
     AccessoryBalance,
@@ -30,25 +32,35 @@ from .models import (
     AttachmentKind,
     Container,
     ContainerKind,
+    ErasureTool,
     ExpectedItem,
+    FindingKind,
+    GradeLevel,
+    InspectionReport,
     LabelRange,
     Location,
+    LotErasureTool,
     LotStatus,
     MovementEvent,
     Occurrence,
     OccurrenceKind,
     OccurrenceStatus,
     Ownership,
+    PenaltyRate,
     ReceivingLot,
+    ReportStatus,
     Warehouse,
 )
 from .permissions import (
     EXPECTED_READERS,
+    INSPECTORS,
     LABELERS,
     LOCATION_KEEPERS,
     MOVERS,
     RECEIVERS,
     SCHEDULERS,
+    SENDERS,
+    SUPERVISORS,
     has_role,
     role_permission,
 )
@@ -57,15 +69,23 @@ from .serializers import (
     AppointmentSerializer,
     AssetSerializer,
     ContainerSerializer,
+    ErasureToolSerializer,
     ExpectedItemSerializer,
+    FindingSerializer,
+    GradeLevelSerializer,
+    InspectionReportListSerializer,
+    InspectionReportSerializer,
     LabelRangeSerializer,
     LocationSerializer,
     LotAttachmentSerializer,
+    LotErasureToolSerializer,
     LotOpenSerializer,
     MovementEventSerializer,
     MovementSerializer,
     OccurrenceSerializer,
+    PenaltyRateSerializer,
     ReceivingLotSerializer,
+    ReportPhotoSerializer,
     WarehouseSerializer,
 )
 from .states import AreaType, AssetStatus, DomainError
@@ -287,6 +307,8 @@ class AssetViewSet(
     ordering = ["-horizon_id"]
 
     def get_permissions(self):
+        if self.action in ("new_report", "disassemble"):
+            return [role_permission(*INSPECTORS)()]
         if self.action == "reprint":
             return [role_permission(*LABELERS)()]
         return [role_permission(*MOVERS)()]
@@ -331,6 +353,69 @@ class AssetViewSet(
         asset = self.get_object()
         services.reprint_label(asset, user=request.user, reason=request.data.get("reason", ""))
         return Response(self.get_serializer(asset).data)
+
+    @action(detail=True, methods=["get"])
+    def reports(self, request, pk=None):
+        asset = self.get_object()
+        return Response(
+            InspectionReportListSerializer(
+                asset.reports.select_related(
+                    "asset__asset_model__manufacturer",
+                    "asset__asset_model__asset_class",
+                    "asset__customer",
+                    "asset__lot",
+                    "technician",
+                ),
+                many=True,
+                context=self.get_serializer_context(),
+            ).data
+        )
+
+    @action(detail=True, methods=["post"], url_path="new-report")
+    def new_report(self, request, pk=None):
+        if not has_role(request.user, *INSPECTORS):
+            return Response(
+                {"detail": _("You do not have permission to perform this action.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        asset = self.get_object()
+        try:
+            report = inspection.new_version(
+                asset, user=request.user, reason=request.data.get("reason", "")
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response({"id": report.id}, status=201)
+
+    @action(detail=True, methods=["post"])
+    def disassemble(self, request, pk=None):
+        """{"parts": [{"asset_model", "quantity", "serial"}], "reason"} — a scrap asset taken
+        apart (inspectors)."""
+        if not has_role(request.user, *INSPECTORS):
+            return Response(
+                {"detail": _("You do not have permission to perform this action.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        asset = self.get_object()
+        parts = []
+        for entry in request.data.get("parts") or []:
+            model = AssetModel.objects.filter(pk=entry.get("asset_model") or 0).first()
+            quantity = str(entry.get("quantity") or "1")
+            if model is None or not quantity.isdigit() or int(quantity) < 1:
+                return Response(
+                    {"parts": [_("Choose each part's model and quantity.")]}, status=400
+                )
+            parts.append(
+                {"asset_model": model, "quantity": int(quantity), "serial": entry.get("serial", "")}
+            )
+        try:
+            children = inspection.disassemble(
+                asset, user=request.user, parts=parts, reason=request.data.get("reason", "")
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        context = self.get_serializer_context()
+        return Response(AssetSerializer(children, many=True, context=context).data, status=201)
 
 
 class MovementViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
@@ -823,6 +908,60 @@ class ReceivingLotViewSet(
             filename=attachment.name,
         )
 
+    @action(detail=True, methods=["get", "put"], url_path="erasure-tools")
+    def erasure_tools(self, request, pk=None):
+        """The erasure tool and method per asset class with data storage in the lot (RN-04).
+        GET: each class, its definition and the active tools serving it. PUT (supervisors):
+        {"definitions": [{"asset_class", "tool", "method"}]} sets them."""
+        lot = self.get_object()
+        if request.method == "PUT":
+            if not has_role(request.user, INVENTORY_SUPERVISOR):
+                return Response(
+                    {"detail": _("Only inventory supervisors define the lot's tools.")},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            for entry in request.data.get("definitions") or []:
+                tool = ErasureTool.objects.filter(pk=entry.get("tool") or 0, is_active=True).first()
+                class_id = entry.get("asset_class")
+                if tool is None or not tool.asset_classes.filter(pk=class_id).exists():
+                    return Response(
+                        {"detail": _("Choose an active tool that serves this asset class.")},
+                        status=400,
+                    )
+                if entry.get("method") not in tool.methods:
+                    return Response({"detail": _("Choose a method of this tool.")}, status=400)
+                LotErasureTool.objects.update_or_create(
+                    lot=lot,
+                    asset_class_id=class_id,
+                    defaults={"tool": tool, "method": entry["method"], "defined_by": request.user},
+                )
+        classes = (
+            AssetClass.objects.filter(asset_models__assets__lot=lot, asset_models__has_storage=True)
+            .distinct()
+            .order_by("name")
+        )
+        definitions = {
+            d.asset_class_id: d
+            for d in lot.erasure_tools.select_related("tool", "asset_class", "defined_by")
+        }
+        context = self.get_serializer_context()
+        return Response(
+            [
+                {
+                    "asset_class": c.id,
+                    "asset_class_name": c.name,
+                    "definition": LotErasureToolSerializer(definitions[c.id], context=context).data
+                    if c.id in definitions
+                    else None,
+                    "tools": [
+                        {"id": t.id, "label": str(t), "methods": t.methods}
+                        for t in ErasureTool.objects.filter(is_active=True, asset_classes=c)
+                    ],
+                }
+                for c in classes
+            ]
+        )
+
 
 class OccurrenceViewSet(
     mixins.ListModelMixin,
@@ -919,3 +1058,355 @@ class AccessoryBalanceViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                 | Q(container__current_location__warehouse_id=warehouse)
             )
         return queryset
+
+
+# --- Phase 3: grades, penalty table, erasure tools, inspection ---------------------------------
+
+
+def _upload(request, field="file"):
+    upload = request.FILES.get(field)
+    if upload is None:
+        raise DomainError(_("Choose a file to upload."), field=field)
+    return upload
+
+
+def _file_response(file_field, name, content_type, inline):
+    try:
+        handle = file_field.open("rb")
+    except (FileNotFoundError, ValueError) as exc:
+        raise Http404 from exc
+    return FileResponse(
+        handle,
+        content_type=content_type,
+        as_attachment=not (inline and opens_inline(name)),
+        filename=name,
+    )
+
+
+class GradeLevelViewSet(mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    """The meanings of the grade levels (codes are fixed). Supervisors edit them."""
+
+    queryset = GradeLevel.objects.all()
+    serializer_class = GradeLevelSerializer
+    permission_classes = [role_permission(*SUPERVISORS)]
+    pagination_class = None
+
+
+class PenaltyRateViewSet(viewsets.ModelViewSet):
+    """The penalty table (asset class × kind of finding, with validity; no overlaps — RN-03).
+    ?asset_class=, ?finding_kind=, ?current=true (valid today), ?search= (asset class)."""
+
+    queryset = PenaltyRate.objects.select_related("asset_class")
+    serializer_class = PenaltyRateSerializer
+    permission_classes = [role_permission(*SUPERVISORS)]
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = ["asset_class__name"]
+    ordering_fields = ["asset_class__name", "finding_kind", "value", "valid_from", "valid_to"]
+    ordering = ["asset_class__name", "finding_kind", "-valid_from"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("asset_class", "").isdigit():
+            queryset = queryset.filter(asset_class_id=int(params["asset_class"]))
+        if params.get("finding_kind") in FindingKind.values:
+            queryset = queryset.filter(finding_kind=params["finding_kind"])
+        if params.get("current") == "true":
+            today = timezone.localdate()
+            queryset = queryset.filter(valid_from__lte=today).filter(
+                Q(valid_to__isnull=True) | Q(valid_to__gte=today)
+            )
+        return queryset
+
+
+class ErasureToolViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
+    """Data erasure tools. ?asset_class= (tools serving it), ?is_active=, ?search=."""
+
+    queryset = ErasureTool.objects.prefetch_related("asset_classes")
+    serializer_class = ErasureToolSerializer
+    permission_classes = [role_permission(*SUPERVISORS)]
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = ["name", "version", "asset_classes__name"]
+    ordering_fields = ["name", "version", "is_active"]
+    ordering = ["name", "version"]
+    in_use_message = gettext_noop(
+        "This tool was used in lots or certificates and cannot be deleted. Deactivate it instead."
+    )
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("asset_class", "").isdigit():
+            queryset = queryset.filter(asset_classes__id=int(params["asset_class"]))
+        if params.get("is_active") in ("true", "false"):
+            queryset = queryset.filter(is_active=params["is_active"] == "true")
+        return queryset.distinct()
+
+
+class InspectionViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Inspection reports. List: ?status=, ?asset=, ?mine=true (started by me), ?search=
+    (Horizon ID, serial, model). The draft is edited with PATCH; actions below. Inspectors
+    (technicians, supervisors) prepare them; supervisors approve; commercial marks sent."""
+
+    queryset = InspectionReport.objects.select_related(
+        "asset__asset_model__manufacturer",
+        "asset__asset_model__asset_class",
+        "asset__customer",
+        "asset__lot",
+        "asset__current_location__warehouse",
+        "asset__current_container",
+        "technician",
+        "approved_by",
+    ).prefetch_related("photos", "findings")
+    permission_classes = [role_permission(*INSPECTORS)]
+    filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
+    search_fields = ["asset__horizon_id", "asset__serial", "asset__asset_model__name"]
+    ordering_fields = ["started_at", "finished_at", "approved_at", "version"]
+    ordering = ["-started_at"]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return InspectionReportListSerializer
+        return InspectionReportSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("status") in ReportStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        if params.get("asset", "").isdigit():
+            queryset = queryset.filter(asset_id=int(params["asset"]))
+        if params.get("mine") == "true":
+            queryset = queryset.filter(technician=self.request.user)
+        return queryset
+
+    def _report(self, report):
+        return Response(
+            InspectionReportSerializer(
+                self.get_queryset().get(pk=report.pk), context=self.get_serializer_context()
+            ).data
+        )
+
+    def perform_update(self, serializer):
+        inspection.lock_draft(serializer.instance)
+        serializer.save()
+        inspection.sync_report(serializer.instance)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            super().update(request, *args, **kwargs)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._report(self.get_object())
+
+    def _do(self, call):
+        try:
+            return call()
+        except DomainError as exc:
+            return domain_error(exc)
+
+    @action(detail=False, methods=["post"])
+    def start(self, request):
+        def run():
+            asset = services.resolve_code(request.data.get("asset_code", ""), field="asset")
+            bench = services.resolve_code(request.data.get("bench_code", ""), field="bench")
+            if not isinstance(asset, Asset):
+                raise DomainError(_("Read the asset's label."), field="asset")
+            if not isinstance(bench, Location):
+                raise DomainError(_("Read an active bench."), field="bench")
+            report = inspection.start_inspection(asset, bench=bench, user=request.user)
+            return self._report(report)
+
+        return self._do(run)
+
+    @action(detail=True, methods=["post"])
+    def serial(self, request, pk=None):
+        report = self.get_object()
+        return self._do(
+            lambda: (
+                inspection.complete_serial(report, request.data.get("serial", "")),
+                self._report(report),
+            )[1]
+        )
+
+    @action(detail=True, methods=["post"])
+    def specs(self, request, pk=None):
+        report = self.get_object()
+        values = request.data.get("specs") or {}
+        if not isinstance(values, dict):
+            return Response({"specs": [_("Enter the values by field.")]}, status=400)
+        return self._do(lambda: (inspection.set_specs(report, values), self._report(report))[1])
+
+    @action(detail=True, methods=["get", "post"])
+    def photos(self, request, pk=None):
+        report = self.get_object()
+        if request.method == "POST":
+            kind = request.data.get("kind", "")
+            if kind not in PhotoKind.values:
+                return Response({"kind": [_("Choose a valid type.")]}, status=400)
+            result = self._do(
+                lambda: inspection.add_photo(
+                    report,
+                    kind=kind,
+                    upload=_upload(request),
+                    user=request.user,
+                    description=request.data.get("description", ""),
+                )
+            )
+            if isinstance(result, Response):
+                return result
+        return Response(ReportPhotoSerializer(report.photos.all(), many=True).data)
+
+    @action(detail=True, methods=["delete"], url_path=r"photos/(?P<photo_id>\d+)")
+    def delete_photo(self, request, pk=None, photo_id=None):
+        report = self.get_object()
+        photo = report.photos.filter(pk=photo_id).first()
+        if photo is None:
+            raise Http404
+        if report.status != ReportStatus.DRAFT:
+            return Response({"detail": _("Only a draft report can be changed.")}, status=409)
+        photo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["get"], url_path=r"photos/(?P<photo_id>\d+)/file")
+    def photo_file(self, request, pk=None, photo_id=None):
+        photo = self.get_object().photos.filter(pk=photo_id).first()
+        if photo is None:
+            raise Http404
+        return _file_response(photo.file, photo.name, photo.content_type, inline=True)
+
+    @action(detail=True, methods=["post"])
+    def findings(self, request, pk=None):
+        report = self.get_object()
+        serializer = FindingSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        def run():
+            inspection.lock_draft(report)
+            serializer.save(report=report)
+            inspection.apply_values(report)
+            return self._report(report)
+
+        return self._do(run)
+
+    @action(detail=True, methods=["patch", "delete"], url_path=r"findings/(?P<finding_id>\d+)")
+    def finding(self, request, pk=None, finding_id=None):
+        report = self.get_object()
+        finding = report.findings.filter(pk=finding_id).first()
+        if finding is None:
+            raise Http404
+        if "value" in request.data or "value_justification" in request.data:
+            # Only supervisors set a value (null: back to the table's)
+            if not has_role(request.user, INVENTORY_SUPERVISOR):
+                return Response(
+                    {"detail": _("Only inventory supervisors change a finding's value.")},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            raw = request.data.get("value")
+            try:
+                value = None if raw in (None, "") else Decimal(str(raw))
+            except (InvalidOperation, ValueError):
+                return Response({"value": [_("Enter a number.")]}, status=400)
+            return self._do(
+                lambda: (
+                    inspection.set_finding_value(
+                        finding,
+                        value=value,
+                        justification=request.data.get("value_justification", ""),
+                    ),
+                    self._report(report),
+                )[1]
+            )
+
+        def run():
+            inspection.lock_draft(report)
+            if request.method == "DELETE":
+                if finding.automatic:
+                    raise DomainError(
+                        _("Automatic findings follow the kit and the cleaning."), field="finding"
+                    )
+                finding.delete()
+            else:
+                serializer = FindingSerializer(finding, data=request.data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                inspection.apply_values(report)
+            return self._report(report)
+
+        return self._do(run)
+
+    @action(detail=True, methods=["post"])
+    def certificates(self, request, pk=None):
+        report = self.get_object()
+        disk_model = AssetModel.objects.filter(pk=request.data.get("disk_model") or 0).first()
+        return self._do(
+            lambda: (
+                inspection.add_certificate(
+                    report,
+                    user=request.user,
+                    result=request.data.get("result", ""),
+                    disk_serial=request.data.get("disk_serial", ""),
+                    upload=request.FILES.get("file"),
+                    disk_model=disk_model,
+                ),
+                self._report(report),
+            )[1]
+        )
+
+    @action(detail=True, methods=["get"], url_path=r"certificates/(?P<certificate_id>\d+)/file")
+    def certificate_file(self, request, pk=None, certificate_id=None):
+        report = self.get_object()
+        certificate = report.asset.erasures.filter(pk=certificate_id).first()
+        if certificate is None or not certificate.file:
+            raise Http404
+        return _file_response(
+            certificate.file,
+            certificate.name,
+            content_type_for(certificate.name),
+            inline=request.query_params.get("inline") == "1",
+        )
+
+    @action(detail=True, methods=["post"])
+    def submit(self, request, pk=None):
+        report = self.get_object()
+        return self._do(lambda: self._report(inspection.submit(report, user=request.user)))
+
+    def _supervisor(self, request):
+        if not has_role(request.user, INVENTORY_SUPERVISOR):
+            return Response(
+                {"detail": _("Only inventory supervisors approve reports.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    @action(detail=True, methods=["post"], url_path="return")
+    def send_back(self, request, pk=None):
+        refused = self._supervisor(request)
+        if refused:
+            return refused
+        report = self.get_object()
+        return self._do(
+            lambda: self._report(
+                inspection.return_to_draft(
+                    report, user=request.user, notes=request.data.get("notes", "")
+                )
+            )
+        )
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        refused = self._supervisor(request)
+        if refused:
+            return refused
+        report = self.get_object()
+        return self._do(lambda: self._report(inspection.approve(report, user=request.user)))
+
+    @action(detail=True, methods=["post"], permission_classes=[role_permission(*SENDERS)])
+    def sent(self, request, pk=None):
+        report = self.get_object()
+        return self._do(lambda: self._report(inspection.mark_sent(report, user=request.user)))

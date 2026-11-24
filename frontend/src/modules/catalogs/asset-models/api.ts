@@ -7,6 +7,12 @@ export type Tracking = 'unit' | 'quantity'
 /** A stored specification value (the asset class's field + its value as text). */
 export type SpecValue = SpecField & { value: string }
 
+/** An item expected with each unit; a missing essential one makes it incomplete ("I"). */
+export interface KitItem {
+  item: string
+  essential: boolean
+}
+
 export interface AssetModel {
   id: number
   manufacturer: number
@@ -20,7 +26,7 @@ export interface AssetModel {
   /** Regular expression the serial numbers read at triage must match (empty: any) */
   serial_regex: string
   /** Items expected with each unit (checked at inspection) */
-  kit_checklist: string[]
+  kit_checklist: KitItem[]
   /** Checks run at inspection */
   test_script: string[]
   has_storage: boolean
@@ -41,7 +47,7 @@ export interface AssetModelInput {
   specs: Record<string, string>
   tracking: Tracking
   serial_regex: string
-  kit_checklist: string[]
+  kit_checklist: KitItem[]
   test_script: string[]
   has_storage: boolean
   keywords: string[]

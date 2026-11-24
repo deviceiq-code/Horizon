@@ -50,19 +50,30 @@ describe('module routes', () => {
     await router.push('/inventory')
     expect(router.currentRoute.value.name).toBe('inventory-appointments')
     const remarketing = MODULES.filter((m) => m.app === 'remarketing')
-    expect(remarketing.map((m) => [m.name, m.section])).toEqual(
-      [
+    expect(remarketing.map((m) => [m.name, m.section])).toEqual([
+      ...[
         'inventory-appointments',
         'inventory-receiving',
+        'inventory-inspections',
         'inventory-movement',
         'inventory-assets',
         'inventory-accessories',
         'inventory-locations',
         'inventory-containers',
         'inventory-labels',
-        'warehouses',
       ].map((name) => [name, 'menu.sections.inventory']),
-    )
+      ...['inventory-grades', 'inventory-penalties', 'inventory-erasure-tools'].map((name) => [
+        name,
+        'menu.sections.inventorySettings',
+      ]),
+      ['warehouses', 'menu.sections.inventory'],
+    ])
+  })
+
+  it('a report opens under Inspection', async () => {
+    const router = makeRouter()
+    await router.push('/inventory/inspection/3')
+    expect(router.currentRoute.value.name).toBe('inventory-report')
   })
 
   it('a lot opens under Receiving', async () => {

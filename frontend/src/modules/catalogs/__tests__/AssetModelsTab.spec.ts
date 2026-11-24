@@ -58,7 +58,7 @@ const LATITUDE: modelsApi.AssetModel = {
   spec_values: [{ ...RAM, value: '16' }],
   tracking: 'unit',
   serial_regex: '',
-  kit_checklist: ['Charger'],
+  kit_checklist: [{ item: 'Charger', essential: false }],
   test_script: [],
   has_storage: true,
   keywords: [],

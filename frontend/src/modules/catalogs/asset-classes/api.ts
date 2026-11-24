@@ -54,6 +54,8 @@ export interface AssetClass {
   notes: string
   /** Fields described by every average price of this class; read-only (saveSpecTemplate) */
   spec_template: SpecField[]
+  /** Photos every inspection report of its assets must have */
+  required_photo_kinds: string[]
   is_enabled: boolean
   created_at: string
   updated_at: string
@@ -69,6 +71,7 @@ export type AssetClassInput = Pick<
   | 'keywords'
   | 'notes'
   | 'is_enabled'
+  | 'required_photo_kinds'
 > & {
   /** null only while editing a new asset class */
   sub_vertical: number | null

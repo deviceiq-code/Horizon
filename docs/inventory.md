@@ -8,7 +8,7 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | --- | --- | --- |
 | 1. Foundation | Warehouse codes, locations, containers, asset models, assets and Horizon IDs, labels, movement trail, state machine, movement service, roles | **Done** |
 | 2. Appointments and triage | Appointments (receiving and shipping), expected lists, receiving lots, triage of units and accessories, accessory balances, occurrences, reconciliation, closing | **Done** |
-| 3. Inspection | Versioned reports, photos, checklists, findings, penalty table, data erasure tools and certificates (+ the lot's tools per asset class, moved from Phase 2), approval, report PDF, part harvesting | To do |
+| 3. Inspection | Versioned reports, grade code, photos, checklists, findings, penalty table, data erasure tools and certificates (+ the lot's tools per asset class), approval, printable report, part harvesting | **Done** |
 | 4. Blocks and disputes | Block follow-ups, disputes, deadline parameters, holidays, daily routine, alerts | To do |
 | 5. Disposal | Stock query, disposals, reservation, picking, shipping, write-off | To do |
 | 6. Transfers | Transfers between warehouses, virtual transit location, receiving with discrepancies | To do |
@@ -106,6 +106,42 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
   container).
 - The Phase 1 manual entry is gone: assets enter through triage only.
 
+### Phase 3 (inspection)
+
+- **Grade code in 3 positions** (decided with Fernando): Conservation A–D (A like new, B light
+  marks, C heavy use, D accident or misuse) · Functioning 1 works, 2 with restrictions, 3 does
+  not work, 0 not testable · Completeness C complete, P accessory items missing, I essential
+  parts missing — e.g. **B1C**. Codes are fixed (`GRADE_CODES`); names and descriptions are
+  editable (`GradeLevel`, Remarketing › Inventory Catalogs › Grades). The three values are kept
+  separately on the report (for pricing); the asset keeps its current grade
+  (`Asset.condition_grade`).
+- **Suggestions** (`inventory/grades.py`, pure): functioning from the model's test script (all
+  pass → 1, any fail → 2; 3 and 0 are the technician's), completeness from the kit checklist —
+  each item is **essential or accessory** (`AssetModel.kit_checklist` = `[{item, essential}]`):
+  an essential one missing → I, only accessories → P, none → C. Recommended destination: an
+  access block → blocked; does not work and repair not viable → scrap; else available.
+- **Reports** (`InspectionReport`): started by reading the asset at a **bench** (the asset goes
+  there, IN_INSPECTION); a draft saved at every change; the technician completes a pending
+  serial and the asset's own specifications; photos (each asset class lists its required kinds,
+  `AssetClass.required_photo_kinds`); findings — automatic ones follow the missing kit items and
+  heavy cleaning, manual ones (access block with its type, customization, damage); values from
+  the **penalty table** on the report's date (`PenaltyRate`, one table for every customer, no
+  overlapping periods — RN-03); supervisors change a value with a justification; without a rate
+  a finding blocks the approval (RN-11). Submitting lists what is missing
+  (`inspection.problems`). Approval by a supervisor other than the technician (RN-10) sets the
+  asset's grade and status (put away later with Movement); an approved report never changes —
+  a correction is a new version (RN-09) and the previous one is superseded. Supervisors may send
+  a report back with notes. "Mark as sent to the customer" records the date (dispute period —
+  Phase 4).
+- **Printable report**: the report lives as data; its page is the document — "Print → Save as
+  PDF" in the browser (decision: no PDF library).
+- **Data erasure**: supervisors set the lot's tool and method per asset class with storage (lot
+  page, Data Erasure tab; RN-04); certificates always use them. A model with storage is
+  available only after a successful erasure or a removed disk (RN-12); a failure removes the
+  disk — a child asset in scrap whose model the technician chooses (RN-13).
+- **Part harvesting**: a scrap asset taken apart — unit parts become child assets awaiting
+  inspection, quantity parts enter the balance where it is; the asset is written off.
+
 ## Business rules → tests
 
 | Rule | Where | Tests |
@@ -122,6 +158,14 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | RN-17 blind count | `EXPECTED_READERS`, `AppointmentSerializer.to_representation`, `lots/<id>/expected/` | `test_receivers_never_see_the_expected_list`, `receiving.spec.ts` (lot page) |
 | RN-18 close with occurrences handled | `receiving.close_lot` | `test_reconcile_and_close_with_divergences_handled` |
 | Reconciliation | `inventory/reconciliation.py` | `test_reconciliation.py` |
+| RN-03 no overlapping penalty periods | `PenaltyRateSerializer.validate`, `grades.periods_overlap` | `test_penalty_periods_never_overlap_rn03`, `test_grades.py` |
+| RN-04 lot's erasure tool | `inspection.add_certificate`, `lot_tool` | `test_erasure_uses_the_lots_tool_rn04` |
+| RN-09 approved report never changes | `inspection.lock_draft`, `new_version` | `test_approved_report_never_changes_new_version_rn09` |
+| RN-10 approver ≠ technician | `inspection.approve` | `test_approval_by_another_user_rn10` |
+| RN-11 rate required to approve | `inspection.approve` | `test_findings_without_a_rate_block_approval_rn11` |
+| RN-12 erased before available | `inspection.problems`, `approve` | `test_data_must_be_erased_before_available_rn12` |
+| RN-13 failed erasure removes the disk | `inspection.add_certificate` → `services.register_child` | `test_failed_erasure_removes_the_disk_rn13` |
+| Grade suggestions, destination | `inventory/grades.py` | `test_grades.py` |
 
 ## API (`/api/inventory/`)
 
@@ -130,17 +174,22 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 `{object_code, destination_code, reason}`; + `<id>/reverse/`), `lookup/?code=`, `label-ranges/`,
 `appointments/` (+ `<id>/status/`, `parse-expected/`), `lots/` (POST opens; `units/`,
 `accessories/`, `received/`, `expected/`, `reconcile/`, `close/`, `attachments/`),
-`occurrences/` (+ `resolve/`, `accept/`), `accessory-balances/`.
+`occurrences/` (+ `resolve/`, `accept/`), `accessory-balances/`, `grade-levels/`,
+`penalty-rates/`, `erasure-tools/`, `lots/<id>/erasure-tools/`, `inspections/` (`start/`;
+draft PATCH; `serial/`, `specs/`, `photos/`, `findings/`, `certificates/`, `submit/`,
+`return/`, `approve/`, `sent/`), `assets/<id>/reports/`, `new-report/`, `disassemble/`.
 Business rule refusals answer 400 `{"detail": "<translated reason>", "field": "<field>"}`.
 Asset models: `/api/catalogs/asset-models/`.
 
 ## Pages (Remarketing › Inventory)
 
 Appointments (calendar month/week/day + list; expected list editor), Receiving (lots; lot page:
-Triage, Received, Occurrences, Files, Expected List), Movement (scan the object, then the
+Triage, Received, Occurrences, Files, Data Erasure, Expected List), Inspection (queue, in
+progress, awaiting approval, approved; report page = step-by-step inspection for a draft, the
+printable report otherwise), Movement (scan the object, then the
 destination), Assets (grid, detail with history), Accessories (balances), Locations (tree per
 warehouse, labels), Containers (label printed on creation), Labels (reserve and print ranges,
-print again by code), Warehouses. Asset Models are in
+print again by code), Warehouses. Inventory Catalogs: Grades, Penalty Table, Erasure Tools. Asset Models are in
 Administration › Catalogs.
 
 ## Open points (to become parameters, not constants)

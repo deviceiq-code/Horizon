@@ -7,6 +7,7 @@ import { useValidationRules } from '@/composables/useValidationRules'
 import SubVerticalPicker from '../verticals/SubVerticalPicker.vue'
 import IconPicker from './IconPicker.vue'
 import KeywordsField from '@/components/KeywordsField.vue'
+import { PHOTO_KINDS } from '@/modules/inventory/api'
 import RemarketingEditor from '../remarketing/RemarketingEditor.vue'
 import {
   createAssetClass,
@@ -36,6 +37,7 @@ const FIELDS = [
   ...REMARKETING_RATINGS,
   'keywords',
   'notes',
+  'required_photo_kinds',
 ]
 
 /** The other languages: an optional name and plural each (empty: English) */
@@ -64,6 +66,7 @@ function emptyForm(): AssetClassInput {
     keywords: [],
     notes: '',
     is_enabled: true,
+    required_photo_kinds: [],
   }
 }
 
@@ -75,6 +78,9 @@ const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null
 const openCount = ref(0) // remounts the sub-vertical picker on every open
 
 const isEdit = computed(() => props.assetClass !== null)
+const photoKindOptions = computed(() =>
+  PHOTO_KINDS.map((value) => ({ value, title: t(`inventory.photoKinds.${value}`) })),
+)
 const subVerticalRules = [
   (v: unknown) => (v !== null && v !== undefined) || t('validation.required'),
 ]
@@ -104,6 +110,7 @@ watch(open, (isOpen) => {
         keywords: [...a.keywords],
         notes: a.notes,
         is_enabled: a.is_enabled,
+        required_photo_kinds: [...(a.required_photo_kinds ?? [])],
       }
     : emptyForm()
   fieldErrors.value = {}
@@ -258,6 +265,20 @@ function clearError(field: string) {
       :errors="fieldErrors"
       class="mb-4"
       @edited="clearError"
+    />
+
+    <!-- Photos every inspection report of its assets must have -->
+    <v-select
+      v-model="form.required_photo_kinds"
+      :items="photoKindOptions"
+      :label="$t('assetClasses.fields.requiredPhotos')"
+      :hint="$t('assetClasses.requiredPhotosHint')"
+      persistent-hint
+      multiple
+      chips
+      closable-chips
+      class="mb-4"
+      data-testid="required-photos"
     />
 
     <!-- Keywords, notes, status -->

@@ -554,3 +554,70 @@ def remove_accessories(
         reason=reason,
         document_ref=document_ref,
     )
+
+
+# --- Children of an asset (a removed disk, harvested parts) ----------------------------------
+
+
+@transaction.atomic
+def register_child(
+    parent: Asset,
+    *,
+    asset_model,
+    user,
+    status: str,
+    serial: str = "",
+    reason: str = "",
+    document_ref: str = "",
+) -> Asset:
+    """A unit taken out of an asset (a disk removed for destruction, a harvested part): a new
+    asset pointing to its parent, where the parent is, in `status`, with its entry event."""
+    if asset_model.tracking != Tracking.UNIT:
+        raise DomainError(
+            _("Models controlled by quantity have no units with their own ID."),
+            field="asset_model",
+        )
+    serial = "".join((serial or "").split()).upper()
+    if (
+        serial
+        and Asset.objects.filter(
+            asset_model=asset_model, serial=serial, serial_status=SerialStatus.CAPTURED
+        ).exists()
+    ):
+        raise DomainError(
+            _("An asset of this model with this serial number already exists."), field="serial"
+        )
+    template = asset_model.asset_class.spec_template
+    required = {f["key"]: f["required"] for f in template}
+    try:
+        snapshot = snapshot_values(
+            [{**f, "required": False} for f in template],
+            {f["key"]: f["value"] for f in asset_model.specs},
+            spec_messages(),
+        )
+    except SpecError:
+        snapshot = []
+    child = Asset.objects.create(
+        horizon_id=new_horizon_id(),
+        asset_model=asset_model,
+        specs=[{**f, "required": required.get(f["key"], False)} for f in snapshot],
+        serial=serial,
+        serial_status=SerialStatus.CAPTURED if serial else SerialStatus.NONE,
+        no_serial_reason="" if serial else NoSerialReason.UNREADABLE,
+        status=status,
+        current_location=parent.current_location,
+        parent_asset=parent,
+        lot=parent.lot,
+        customer=parent.customer,
+        created_by=user,
+    )
+    _record(
+        EventKind.ENTRY,
+        user=user,
+        asset=child,
+        to_location=child.current_location,
+        status_after=status,
+        reason=reason,
+        document_ref=document_ref,
+    )
+    return child

@@ -1919,3 +1919,405 @@ msgstr "A lista esperada não é mostrada a quem conta (contagem cega)."
 
 msgid "Only inventory supervisors accept occurrences."
 msgstr "Só supervisores de estoque aceitam ocorrências."
+
+msgid "grade"
+msgstr "grau"
+
+msgid "Conservation"
+msgstr "Conservação"
+
+msgid "Functioning"
+msgstr "Funcionamento"
+
+msgid "Completeness"
+msgstr "Completude"
+
+msgid "domain"
+msgstr "domínio"
+
+msgid "order"
+msgstr "ordem"
+
+msgid "grade level"
+msgstr "nível de grau"
+
+msgid "grade levels"
+msgstr "níveis de grau"
+
+msgid "Access Block"
+msgstr "Bloqueio de Acesso"
+
+msgid "Customization"
+msgstr "Customização"
+
+msgid "Heavy Cleaning"
+msgstr "Limpeza Pesada"
+
+msgid "Missing Item"
+msgstr "Falta de Item"
+
+msgid "Damage Beyond Normal Wear"
+msgstr "Dano Além do Desgaste"
+
+msgid "finding kind"
+msgstr "tipo de apontamento"
+
+msgid "valid from"
+msgstr "válido desde"
+
+msgid "valid to"
+msgstr "válido até"
+
+msgid "penalty rate"
+msgstr "valor de penalidade"
+
+msgid "penalty rates"
+msgstr "tabela de penalidades"
+
+msgid "Clear"
+msgstr "Clear"
+
+msgid "Purge"
+msgstr "Purge"
+
+msgid "Destroy"
+msgstr "Destroy"
+
+msgid "Cryptographic Erase"
+msgstr "Apagamento Criptográfico"
+
+msgid "version"
+msgstr "versão"
+
+msgid "methods"
+msgstr "métodos"
+
+msgid "erasure tool"
+msgstr "ferramenta de exclusão"
+
+msgid "erasure tools"
+msgstr "ferramentas de exclusão"
+
+msgid "method"
+msgstr "método"
+
+msgid "defined at"
+msgstr "definida em"
+
+msgid "lot erasure tool"
+msgstr "ferramenta de exclusão do lote"
+
+msgid "lot erasure tools"
+msgstr "ferramentas de exclusão do lote"
+
+msgid "Draft"
+msgstr "Rascunho"
+
+msgid "Awaiting Approval"
+msgstr "Aguardando Aprovação"
+
+msgid "Approved"
+msgstr "Aprovado"
+
+msgid "Superseded"
+msgstr "Substituído"
+
+msgid "Standard"
+msgstr "Padrão"
+
+msgid "Heavy"
+msgstr "Pesada"
+
+msgid "current"
+msgstr "vigente"
+
+msgid "started at"
+msgstr "iniciado em"
+
+msgid "finished at"
+msgstr "concluído em"
+
+msgid "conservation"
+msgstr "conservação"
+
+msgid "functioning"
+msgstr "funcionamento"
+
+msgid "completeness"
+msgstr "completude"
+
+msgid "failed components"
+msgstr "componentes com falha"
+
+msgid "repair not viable"
+msgstr "reparo inviável"
+
+msgid "missing items"
+msgstr "itens faltantes"
+
+msgid "test results"
+msgstr "resultados dos testes"
+
+msgid "cleaning"
+msgstr "limpeza"
+
+msgid "recommended destination"
+msgstr "destino recomendado"
+
+msgid "review notes"
+msgstr "observações da revisão"
+
+msgid "approved at"
+msgstr "aprovado em"
+
+msgid "sent to customer at"
+msgstr "enviado ao cliente em"
+
+msgid "reason for a new version"
+msgstr "motivo da nova versão"
+
+msgid "inspection report"
+msgstr "laudo de vistoria"
+
+msgid "inspection reports"
+msgstr "laudos de vistoria"
+
+msgid "report photo"
+msgstr "foto do laudo"
+
+msgid "report photos"
+msgstr "fotos do laudo"
+
+msgid "Cloud Account"
+msgstr "Conta na Nuvem"
+
+msgid "MDM"
+msgstr "MDM"
+
+msgid "BIOS Password"
+msgstr "Senha de BIOS"
+
+msgid "Factory Reset Protection"
+msgstr "Proteção de Restauração de Fábrica"
+
+msgid "Suggested"
+msgstr "Sugerido"
+
+msgid "Disputed"
+msgstr "Contestado"
+
+msgid "Chargeable"
+msgstr "Cobrável"
+
+msgid "Charged"
+msgstr "Cobrado"
+
+msgid "block type"
+msgstr "tipo de bloqueio"
+
+msgid "item"
+msgstr "item"
+
+msgid "value justification"
+msgstr "justificativa do valor"
+
+msgid "finding"
+msgstr "apontamento"
+
+msgid "findings"
+msgstr "apontamentos"
+
+msgid "Success"
+msgstr "Sucesso"
+
+msgid "Failure"
+msgstr "Falha"
+
+msgid "disk serial number"
+msgstr "número de série do disco"
+
+msgid "tool version"
+msgstr "versão da ferramenta"
+
+msgid "result"
+msgstr "resultado"
+
+msgid "erasure certificate"
+msgstr "certificado de exclusão"
+
+msgid "erasure certificates"
+msgstr "certificados de exclusão"
+
+msgid "Only assets awaiting inspection (or blocked) can be inspected."
+msgstr "Só bens aguardando vistoria (ou bloqueados) podem ser vistoriados."
+
+msgid "This asset is held for a dispute."
+msgstr "Este bem está retido por contestação."
+
+msgid "Read an active bench."
+msgstr "Leia uma bancada ativa."
+
+msgid "Only a draft report can be changed."
+msgstr "Só um laudo em rascunho pode ser alterado."
+
+msgid "Read the serial number."
+msgstr "Leia o número de série."
+
+msgid "This model has no data storage."
+msgstr "Este modelo não tem armazenamento de dados."
+
+msgid "The erasure tool of this lot and asset class is not defined yet."
+msgstr "A ferramenta de exclusão deste lote e classe de ativo ainda não foi definida."
+
+msgid "Choose the result."
+msgstr "Escolha o resultado."
+
+msgid "Attach the erasure certificate."
+msgstr "Anexe o certificado de exclusão."
+
+msgid "Choose the model of the removed disk."
+msgstr "Escolha o modelo do disco removido."
+
+msgid "Disk removed for destruction (erasure failed)."
+msgstr "Disco removido para destruição (a exclusão falhou)."
+
+msgid "Read the serial number (pending since triage)."
+msgstr "Leia o número de série (pendente desde a triagem)."
+
+msgid "Fill in the specifications: %(fields)s."
+msgstr "Preencha as especificações: %(fields)s."
+
+msgid "Add the photos: %(kinds)s."
+msgstr "Adicione as fotos: %(kinds)s."
+
+msgid "Check the kit."
+msgstr "Confira o kit."
+
+msgid "Answer the test script: %(items)s."
+msgstr "Responda o roteiro de teste: %(items)s."
+
+msgid "Grade the %(domain)s."
+msgstr "Classifique: %(domain)s."
+
+msgid "Say the type of each access block."
+msgstr "Informe o tipo de cada bloqueio de acesso."
+
+msgid "Erase the data (certificate) or remove the disk before the asset is available."
+msgstr "Exclua os dados (certificado) ou remova o disco antes de o bem ficar disponível."
+
+msgid "Only a report awaiting approval can be sent back."
+msgstr "Só um laudo aguardando aprovação pode ser devolvido."
+
+msgid "Say what the technician must review."
+msgstr "Informe o que o técnico deve revisar."
+
+msgid "Only a report awaiting approval can be approved."
+msgstr "Só um laudo aguardando aprovação pode ser aprovado."
+
+msgid "Whoever prepared the report cannot approve it."
+msgstr "Quem elaborou o laudo não pode aprová-lo."
+
+msgid "No penalty rate for: %(kinds)s. Add it to the penalty table first."
+msgstr "Sem valor de penalidade para: %(kinds)s. Inclua-o antes na tabela de penalidades."
+
+msgid "Say why a new version is needed."
+msgstr "Informe por que é preciso uma nova versão."
+
+msgid "This asset is held for a dispute: its report changes only through the dispute."
+msgstr "Este bem está retido por contestação: o laudo só muda pela contestação."
+
+msgid "This asset has no approved report yet."
+msgstr "Este bem ainda não tem laudo aprovado."
+
+msgid "A report of this asset is already being prepared."
+msgstr "Um laudo deste bem já está em elaboração."
+
+msgid "Only the current approved report is sent."
+msgstr "Só o laudo aprovado vigente é enviado."
+
+msgid "An approved report never changes."
+msgstr "Um laudo aprovado nunca muda."
+
+msgid "Enter a value of zero or more."
+msgstr "Informe um valor de zero ou mais."
+
+msgid "Justify the new value."
+msgstr "Justifique o novo valor."
+
+msgid "Only scrap assets are taken apart."
+msgstr "Só bens em sucata são desmontados."
+
+msgid "List the parts taken."
+msgstr "Liste as peças retiradas."
+
+msgid "Another rate of this asset class and kind is valid in this period."
+msgstr "Outro valor desta classe de ativo e tipo vale neste período."
+
+msgid "Choose at least one method."
+msgstr "Escolha ao menos um método."
+
+msgid "This tool and version are already registered."
+msgstr "Esta ferramenta e versão já estão cadastradas."
+
+msgid "Choose a valid level."
+msgstr "Escolha um nível válido."
+
+msgid "Choose items of the model's kit checklist."
+msgstr "Escolha itens do checklist do kit do modelo."
+
+msgid "Answer the checks of the model's test script."
+msgstr "Responda as verificações do roteiro de teste do modelo."
+
+msgid "Choose each part's model and quantity."
+msgstr "Escolha o modelo e a quantidade de cada peça."
+
+msgid "Only inventory supervisors define the lot's tools."
+msgstr "Só supervisores de estoque definem as ferramentas do lote."
+
+msgid "Choose an active tool that serves this asset class."
+msgstr "Escolha uma ferramenta ativa que atenda esta classe de ativo."
+
+msgid "Choose a method of this tool."
+msgstr "Escolha um método desta ferramenta."
+
+msgid "This tool was used in lots or certificates and cannot be deleted. Deactivate it instead."
+msgstr "Esta ferramenta foi usada em lotes ou certificados e não pode ser excluída. Desative-a."
+
+msgid "Read the asset's label."
+msgstr "Leia a etiqueta do bem."
+
+msgid "Enter the values by field."
+msgstr "Informe os valores por campo."
+
+msgid "Only inventory supervisors change a finding's value."
+msgstr "Só supervisores de estoque alteram o valor de um apontamento."
+
+msgid "Automatic findings follow the kit and the cleaning."
+msgstr "Apontamentos automáticos seguem o kit e a limpeza."
+
+msgid "Only inventory supervisors approve reports."
+msgstr "Só supervisores de estoque aprovam laudos."
+
+msgid "Front"
+msgstr "Frente"
+
+msgid "Back"
+msgstr "Verso"
+
+msgid "Side"
+msgstr "Lateral"
+
+msgid "Screen"
+msgstr "Tela"
+
+msgid "Damage"
+msgstr "Avaria"
+
+msgid "Serial Number"
+msgstr "Número de Série"
+
+msgid "required photos"
+msgstr "fotos obrigatórias"
+
+msgid "Enter a list."
+msgstr "Informe uma lista."

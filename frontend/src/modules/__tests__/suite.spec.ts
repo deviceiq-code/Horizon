@@ -69,12 +69,16 @@ describe('suite apps and routes', () => {
     expect(appModules('remarketing', false).map((m) => m.name)).toEqual([
       'inventory-appointments',
       'inventory-receiving',
+      'inventory-inspections',
       'inventory-movement',
       'inventory-assets',
       'inventory-accessories',
       'inventory-locations',
       'inventory-containers',
       'inventory-labels',
+      'inventory-grades',
+      'inventory-penalties',
+      'inventory-erasure-tools',
       'warehouses',
     ])
     expect(appModules('admin', true).map((m) => m.name)).toEqual([

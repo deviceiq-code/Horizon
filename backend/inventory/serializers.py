@@ -11,23 +11,37 @@ from service_providers.models import ServiceKind
 from users.display import display_name_in
 
 from .codes import ASSET_PREFIX, format_code
+from .grades import periods_overlap
 from .models import (
+    GRADE_CODES,
     AccessoryBalance,
     Appointment,
     AppointmentKind,
     AppointmentStatus,
     Asset,
     Container,
+    ErasureCertificate,
+    ErasureMethod,
+    ErasureTool,
     ExpectedItem,
+    Finding,
+    FindingKind,
+    GradeDomain,
+    GradeLevel,
+    InspectionReport,
     LabelRange,
     Location,
     LotAttachment,
+    LotErasureTool,
     LotStatus,
     MovementEvent,
     Occurrence,
     OccurrenceStatus,
     Ownership,
+    PenaltyRate,
     ReceivingLot,
+    ReportPhoto,
+    ReportStatus,
     Warehouse,
 )
 from .states import AreaType, accepted_statuses
@@ -336,6 +350,7 @@ class AssetSerializer(serializers.ModelSerializer):
             "current_container",
             "current_container_detail",
             "held_for_dispute",
+            "condition_grade",
             "parent_asset",
             "notes",
             "created_at",
@@ -859,3 +874,386 @@ class AccessoryBalanceSerializer(serializers.ModelSerializer):
             if warehouse
             else None
         )
+
+
+# --- Phase 3: grades, penalty table, erasure tools, inspection reports ----------------------
+
+
+class GradeLevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GradeLevel
+        fields = ["id", "domain", "code", "name", "description", "order"]
+        read_only_fields = ["id", "domain", "code", "order"]
+
+    def validate_name(self, value):
+        value = collapse_spaces(value)
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        return value
+
+
+class PenaltyRateSerializer(serializers.ModelSerializer):
+    asset_class_name = serializers.CharField(source="asset_class.name", read_only=True)
+
+    class Meta:
+        model = PenaltyRate
+        fields = [
+            "id",
+            "asset_class",
+            "asset_class_name",
+            "finding_kind",
+            "value",
+            "valid_from",
+            "valid_to",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {"value": {"min_value": 0}}
+
+    def validate(self, attrs):
+        def current(field):
+            return attrs.get(field, getattr(self.instance, field, None))
+
+        start, end = current("valid_from"), current("valid_to")
+        if start and end and end < start:
+            raise serializers.ValidationError({"valid_to": [_("The end must be after the start.")]})
+        others = PenaltyRate.objects.filter(
+            asset_class=current("asset_class"), finding_kind=current("finding_kind")
+        )
+        if self.instance is not None:
+            others = others.exclude(pk=self.instance.pk)
+        for other in others:
+            if periods_overlap(start, end, other.valid_from, other.valid_to):  # RN-03
+                raise serializers.ValidationError(
+                    {
+                        "valid_from": [
+                            _("Another rate of this asset class and kind is valid in this period.")
+                        ]
+                    }
+                )
+        return attrs
+
+
+class ErasureToolSerializer(serializers.ModelSerializer):
+    methods = serializers.ListField(child=serializers.ChoiceField(choices=ErasureMethod.choices))
+    asset_classes_detail = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ErasureTool
+        fields = [
+            "id",
+            "name",
+            "version",
+            "methods",
+            "asset_classes",
+            "asset_classes_detail",
+            "notes",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {"asset_classes": {"required": False}}
+        validators = []
+
+    def get_asset_classes_detail(self, obj) -> list[dict]:
+        return [{"id": c.id, "name": c.name} for c in obj.asset_classes.all()]
+
+    def validate_name(self, value):
+        value = collapse_spaces(value)
+        if not value:
+            raise serializers.ValidationError(_("This field may not be blank."))
+        return value
+
+    def validate_version(self, value):
+        return collapse_spaces(value)
+
+    def validate_methods(self, value):
+        chosen = set(value)
+        if not chosen:
+            raise serializers.ValidationError(_("Choose at least one method."))
+        return [m for m in ErasureMethod.values if m in chosen]
+
+    def validate(self, attrs):
+        name = attrs.get("name", getattr(self.instance, "name", ""))
+        version = attrs.get("version", getattr(self.instance, "version", ""))
+        duplicates = ErasureTool.objects.filter(name__iexact=name, version__iexact=version)
+        if self.instance is not None:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError(
+                {"name": [_("This tool and version are already registered.")]}
+            )
+        return attrs
+
+
+class LotErasureToolSerializer(serializers.ModelSerializer):
+    asset_class_name = serializers.CharField(source="asset_class.name", read_only=True)
+    tool_label = serializers.CharField(source="tool.__str__", read_only=True)
+    defined_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LotErasureTool
+        fields = [
+            "asset_class",
+            "asset_class_name",
+            "tool",
+            "tool_label",
+            "method",
+            "defined_by_name",
+            "defined_at",
+        ]
+
+    def get_defined_by_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.defined_by)
+
+
+class ReportPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportPhoto
+        fields = ["id", "kind", "name", "size", "description", "uploaded_at"]
+        read_only_fields = fields
+
+
+class FindingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Finding
+        fields = [
+            "id",
+            "kind",
+            "block_type",
+            "item",
+            "description",
+            "value",
+            "value_overridden",
+            "value_justification",
+            "status",
+            "automatic",
+        ]
+        read_only_fields = [
+            "id",
+            "item",
+            "value",
+            "value_overridden",
+            "value_justification",
+            "status",
+            "automatic",
+        ]
+
+    def validate(self, attrs):
+        kind = attrs.get("kind", getattr(self.instance, "kind", None))
+        if self.instance is not None and self.instance.automatic and "kind" in attrs:
+            raise serializers.ValidationError({"kind": [_("This cannot be changed.")]})
+        if kind != FindingKind.ACCESS_BLOCK:
+            attrs["block_type"] = ""
+        return attrs
+
+
+class ErasureCertificateSerializer(serializers.ModelSerializer):
+    tool_label = serializers.CharField(source="tool.__str__", read_only=True)
+    operator_name = serializers.SerializerMethodField()
+    removed_disk_code = serializers.CharField(
+        source="removed_disk.horizon_id", read_only=True, default=None
+    )
+
+    class Meta:
+        model = ErasureCertificate
+        fields = [
+            "id",
+            "disk_serial",
+            "tool_label",
+            "tool_version",
+            "method",
+            "result",
+            "removed_disk",
+            "removed_disk_code",
+            "operator_name",
+            "at",
+            "name",
+        ]
+        read_only_fields = fields
+
+    def get_operator_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.operator)
+
+
+class InspectionReportListSerializer(serializers.ModelSerializer):
+    asset_code = serializers.CharField(source="asset.horizon_id", read_only=True)
+    asset_model_label = serializers.SerializerMethodField()
+    asset_class_icon = serializers.CharField(
+        source="asset.asset_model.asset_class.icon", read_only=True
+    )
+    serial = serializers.CharField(source="asset.serial", read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    lot_code = serializers.SerializerMethodField()
+    technician_name = serializers.SerializerMethodField()
+    grade = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = InspectionReport
+        fields = [
+            "id",
+            "asset",
+            "asset_code",
+            "asset_model_label",
+            "asset_class_icon",
+            "serial",
+            "customer_name",
+            "lot_code",
+            "version",
+            "is_current",
+            "status",
+            "technician",
+            "technician_name",
+            "started_at",
+            "finished_at",
+            "grade",
+            "recommended_destination",
+            "approved_at",
+            "sent_to_customer_at",
+        ]
+        read_only_fields = fields
+
+    def get_asset_model_label(self, obj) -> str:
+        return _model_label(obj.asset.asset_model)
+
+    def get_customer_name(self, obj) -> str | None:
+        return _customer_name(obj.asset.customer)
+
+    def get_lot_code(self, obj) -> str | None:
+        return obj.asset.lot.code if obj.asset.lot_id else None
+
+    def get_technician_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.technician)
+
+
+class InspectionReportSerializer(InspectionReportListSerializer):
+    """A report with everything the inspection needs: the asset, its model's kit checklist and
+    test script, the photos required by its class, photos, findings, the asset's erasures, the
+    lot's erasure tool, the system's suggestions and what still prevents submitting."""
+
+    asset_detail = serializers.SerializerMethodField()
+    kit_checklist = serializers.JSONField(source="asset.asset_model.kit_checklist", read_only=True)
+    test_script = serializers.JSONField(source="asset.asset_model.test_script", read_only=True)
+    has_storage = serializers.BooleanField(source="asset.asset_model.has_storage", read_only=True)
+    required_photo_kinds = serializers.JSONField(
+        source="asset.asset_model.asset_class.required_photo_kinds", read_only=True
+    )
+    photos = ReportPhotoSerializer(many=True, read_only=True)
+    findings = FindingSerializer(many=True, read_only=True)
+    erasures = serializers.SerializerMethodField()
+    lot_tool = serializers.SerializerMethodField()
+    suggestions = serializers.SerializerMethodField()
+    problems = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+
+    class Meta(InspectionReportListSerializer.Meta):
+        fields = InspectionReportListSerializer.Meta.fields + [
+            "asset_detail",
+            "conservation",
+            "functioning",
+            "completeness",
+            "failed_components",
+            "irreparable",
+            "missing_items",
+            "checklist_done",
+            "test_results",
+            "cleaning",
+            "notes",
+            "review_notes",
+            "approved_by_name",
+            "new_version_reason",
+            "kit_checklist",
+            "test_script",
+            "has_storage",
+            "required_photo_kinds",
+            "photos",
+            "findings",
+            "erasures",
+            "lot_tool",
+            "suggestions",
+            "problems",
+        ]
+        read_only_fields = [
+            f
+            for f in InspectionReportListSerializer.Meta.fields
+            + [
+                "asset_detail",
+                "review_notes",
+                "approved_by_name",
+                "new_version_reason",
+                "kit_checklist",
+                "test_script",
+                "has_storage",
+                "required_photo_kinds",
+                "photos",
+                "findings",
+                "erasures",
+                "lot_tool",
+                "suggestions",
+                "problems",
+            ]
+        ]
+
+    def get_asset_detail(self, obj) -> dict:
+        return AssetSerializer(obj.asset, context=self.context).data
+
+    def get_erasures(self, obj) -> list[dict]:
+        return ErasureCertificateSerializer(
+            obj.asset.erasures.select_related("tool", "operator", "removed_disk"),
+            many=True,
+            context=self.context,
+        ).data
+
+    def get_lot_tool(self, obj) -> dict | None:
+        from .inspection import lot_tool
+
+        definition = lot_tool(obj.asset)
+        return (
+            LotErasureToolSerializer(definition, context=self.context).data if definition else None
+        )
+
+    def get_suggestions(self, obj) -> dict:
+        from .inspection import suggestions
+
+        return suggestions(obj)
+
+    def get_problems(self, obj) -> list[str]:
+        from .inspection import problems
+
+        return problems(obj) if obj.status == ReportStatus.DRAFT else []
+
+    def get_approved_by_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.approved_by) if obj.approved_by else None
+
+    def _code(self, domain, value):
+        if value and value not in GRADE_CODES[domain]:
+            raise serializers.ValidationError(_("Choose a valid level."))
+        return value
+
+    def validate_conservation(self, value):
+        return self._code(GradeDomain.CONSERVATION, value)
+
+    def validate_functioning(self, value):
+        return self._code(GradeDomain.FUNCTIONING, value)
+
+    def validate_completeness(self, value):
+        return self._code(GradeDomain.COMPLETENESS, value)
+
+    def validate_missing_items(self, value):
+        kit = {
+            e["item"].casefold(): e["item"] for e in self.instance.asset.asset_model.kit_checklist
+        }
+        if not isinstance(value, list) or any(str(v).casefold() not in kit for v in value):
+            raise serializers.ValidationError(_("Choose items of the model's kit checklist."))
+        return list(dict.fromkeys(kit[str(v).casefold()] for v in value))
+
+    def validate_test_results(self, value):
+        script = set(self.instance.asset.asset_model.test_script)
+        if not isinstance(value, dict) or any(
+            key not in script or result not in ("pass", "fail", "na")
+            for key, result in value.items()
+        ):
+            raise serializers.ValidationError(_("Answer the checks of the model's test script."))
+        return value
