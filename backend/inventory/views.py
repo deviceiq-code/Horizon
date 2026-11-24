@@ -23,7 +23,7 @@ from pricing.documents import content_type_for, opens_inline
 from users.models import INVENTORY_SUPERVISOR
 from users.permissions import is_administrator
 
-from . import disposals, followups, inspection, receiving, services, transfers
+from . import counting, disposals, followups, indicators, inspection, receiving, services, transfers
 from .expected import model_key, parse_pasted
 from .models import (
     BEFORE_SENDING,
@@ -41,6 +41,8 @@ from .models import (
     BlockStatus,
     Container,
     ContainerKind,
+    CountReading,
+    CountStatus,
     DeadlineSetting,
     Disposal,
     DisposalItem,
@@ -56,6 +58,7 @@ from .models import (
     GradeLevel,
     Holiday,
     InspectionReport,
+    InventoryCount,
     LabelRange,
     Location,
     LotErasureTool,
@@ -73,6 +76,7 @@ from .models import (
     Warehouse,
 )
 from .permissions import (
+    COUNTERS,
     DISPOSERS,
     EXPECTED_READERS,
     INSPECTORS,
@@ -98,6 +102,8 @@ from .serializers import (
     BlockFollowUpSerializer,
     ChargeFindingSerializer,
     ContainerSerializer,
+    CountDivergenceSerializer,
+    CountReadingSerializer,
     DeadlineSettingSerializer,
     DisposalFileSerializer,
     DisposalItemSerializer,
@@ -111,6 +117,7 @@ from .serializers import (
     HolidaySerializer,
     InspectionReportListSerializer,
     InspectionReportSerializer,
+    InventoryCountSerializer,
     LabelRangeSerializer,
     LocationSerializer,
     LotAttachmentSerializer,
@@ -461,7 +468,9 @@ class AssetViewSet(
 
 class MovementViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     """GET: the latest events (?asset=, ?container=, ?mine=true); POST {object_code,
-    destination_code, reason}: move what was read to where it was read (RN-02, RN-08).
+    destination_code, reason, origin_code?}: move what was read to where it was read (RN-02,
+    RN-08); with the origin read, a different recorded location is an occurrence + alert that
+    never blocks (RN-19 — `location_mismatch` in the answer).
     POST <id>/reverse/ {reason}: undo an asset's latest event (supervisors)."""
 
     queryset = MovementEvent.objects.select_related(
@@ -491,9 +500,17 @@ class MovementViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
         serializer = MovementSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        mismatch = None
         try:
             target = services.resolve_code(data["object_code"], field="object")
             destination = services.resolve_code(data["destination_code"], field="destination")
+            if data.get("origin_code"):
+                origin = services.resolve_code(data["origin_code"], field="origin")
+                if not isinstance(origin, Location):
+                    raise DomainError(_("Read the location where it is."), field="origin")
+                if isinstance(target, (Asset, Container)):
+                    # RN-19: recorded, alerted, never blocking
+                    mismatch = counting.report_location_mismatch(target, origin, user=request.user)
             if isinstance(target, Asset):
                 if isinstance(destination, Asset):
                     raise DomainError(_("Read a location or a container."), field="destination")
@@ -513,8 +530,13 @@ class MovementViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
             else:
                 raise DomainError(_("Read an asset or a container."), field="object")
         except DomainError as exc:
-            return domain_error(exc)
-        return Response(self.get_serializer(event).data, status=status.HTTP_201_CREATED)
+            response = domain_error(exc)
+            if mismatch is not None:
+                response.data["location_mismatch"] = mismatch.description
+            return response
+        data = self.get_serializer(event).data
+        data["location_mismatch"] = mismatch.description if mismatch else None
+        return Response(data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
     def reverse(self, request, pk=None):
@@ -1015,7 +1037,13 @@ class OccurrenceViewSet(
     resolve them; only supervisors accept them (POST <id>/accept/ {resolution})."""
 
     queryset = Occurrence.objects.select_related(
-        "lot", "transfer", "asset", "asset_model__manufacturer", "responsible", "resolved_by"
+        "lot",
+        "transfer",
+        "count",
+        "asset",
+        "asset_model__manufacturer",
+        "responsible",
+        "resolved_by",
     ).annotate(attachments_count=Count("attachments"))
     serializer_class = OccurrenceSerializer
     permission_classes = [role_permission(*RECEIVERS)]
@@ -1027,6 +1055,22 @@ class OccurrenceViewSet(
             queryset = queryset.filter(lot_id=int(params["lot"]))
         if params.get("transfer", "").isdigit():
             queryset = queryset.filter(transfer_id=int(params["transfer"]))
+        if params.get("count", "").isdigit():
+            queryset = queryset.filter(count_id=int(params["count"]))
+        # Where it was found: lot | transfer | count | movement (none of them — RN-19)
+        source = params.get("source")
+        if source in ("lot", "transfer", "count"):
+            queryset = queryset.filter(**{f"{source}__isnull": False})
+        elif source == "movement":
+            queryset = queryset.filter(lot__isnull=True, transfer__isnull=True, count__isnull=True)
+        search = " ".join(params.get("search", "").split())
+        if search:
+            queryset = queryset.filter(
+                Q(asset__horizon_id__icontains=search)
+                | Q(description__icontains=search)
+                | Q(expected_serial__icontains=search)
+                | Q(received_serial__icontains=search)
+            )
         if params.get("status") in OccurrenceStatus.values:
             queryset = queryset.filter(status=params["status"])
         if params.get("kind") in OccurrenceKind.values:
@@ -2616,3 +2660,233 @@ class TransferViewSet(
         if item is None:
             raise Http404
         return _file_response(item.file, item.name, item.content_type, inline=True)
+
+
+# --- Phase 7: inventory counts and indicators ----------------------------------------------------
+
+
+class InventoryCountViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """Inventory counts. List: ?status=, ?warehouse=, ?search= (code). POST (supervisors)
+    {warehouse, kind, locations: [ids], responsible, notes}. Blind: while counting, the detail
+    shows only what was read. readings/ GET; POST {location (code), code (asset ID)} or
+    {location, accessory_model, quantity, container (code), condition} (storekeepers,
+    supervisors); readings/<id>/ DELETE; close/; cancel/ {reason} (supervisors);
+    divergences/ GET (after closing); divergences/<id>/decide/ {approve, reason} — supervisors
+    who did not count (RN-26)."""
+
+    queryset = InventoryCount.objects.select_related(
+        "warehouse", "responsible", "created_by", "closed_by"
+    ).annotate(
+        locations_count=Count("locations", distinct=True),
+        readings_count=Count("readings", distinct=True),
+        divergences_count=Count("divergences", distinct=True),
+        pending_count=Count("divergences", filter=Q(divergences__status="pending"), distinct=True),
+    )
+    serializer_class = InventoryCountSerializer
+    permission_classes = [role_permission(*COUNTERS)]
+    filter_backends = [NullsLastOrderingFilter]
+    ordering_fields = ["created_at", "status", "closed_at"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("status") in CountStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        if params.get("warehouse", "").isdigit():
+            queryset = queryset.filter(warehouse_id=int(params["warehouse"]))
+        match = re.fullmatch(r"\s*INV-(\d{4})-(\d+)\s*", params.get("search", ""), re.I)
+        if match:
+            queryset = queryset.filter(year=int(match[1]), sequence=int(match[2]))
+        return queryset
+
+    def _supervisor(self, request):
+        if not has_role(request.user, *SUPERVISORS):
+            return Response(
+                {"detail": _("You do not have permission to perform this action.")}, status=403
+            )
+        return None
+
+    def _detail(self, count, code=200):
+        return Response(self.get_serializer(self.get_queryset().get(pk=count.pk)).data, status=code)
+
+    def retrieve(self, request, *args, **kwargs):
+        count = self.get_object()
+        data = self.get_serializer(count).data
+        data["location_codes"] = list(
+            count.locations.order_by("code").values_list("code", flat=True)[:200]
+        )
+        return Response(data)
+
+    def create(self, request, *args, **kwargs):
+        refused = self._supervisor(request)
+        if refused:
+            return refused
+        warehouse = Warehouse.objects.filter(pk=request.data.get("warehouse") or 0).first()
+        if warehouse is None:
+            return Response({"warehouse": [_("Choose a warehouse.")]}, status=400)
+        ids = [int(i) for i in request.data.get("locations") or [] if str(i).isdigit()]
+        from django.contrib.auth import get_user_model
+
+        responsible = (
+            get_user_model().objects.filter(pk=request.data.get("responsible") or 0).first()
+        )
+        try:
+            count = counting.open_count(
+                warehouse=warehouse,
+                kind=request.data.get("kind", ""),
+                user=request.user,
+                responsible=responsible,
+                locations=Location.objects.filter(pk__in=ids),
+                notes=request.data.get("notes", ""),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(count, 201)
+
+    @action(detail=True, methods=["get", "post"])
+    def readings(self, request, pk=None):
+        count = self.get_object()
+        if request.method == "POST":
+            try:
+                location = _read(
+                    request.data.get("location"),
+                    Location,
+                    "location",
+                    _("Read the location first."),
+                )
+                if request.data.get("accessory_model"):
+                    model = AssetModel.objects.filter(pk=request.data["accessory_model"]).first()
+                    if model is None:
+                        raise DomainError(_("Choose a valid model."), field="accessory_model")
+                    container = None
+                    if str(request.data.get("container") or "").strip():
+                        container = _read(
+                            request.data["container"],
+                            Container,
+                            "container",
+                            _("Read a container."),
+                        )
+                    counting.read_accessories(
+                        count,
+                        model,
+                        int(request.data.get("quantity") or 0),
+                        location=location,
+                        user=request.user,
+                        container=container,
+                        condition=request.data.get("condition") or AccessoryCondition.GOOD,
+                    )
+                else:
+                    asset = _read(
+                        request.data.get("code"), Asset, "code", _("Read the asset's ID.")
+                    )
+                    counting.read_asset(count, asset, location=location, user=request.user)
+            except DomainError as exc:
+                return domain_error(exc)
+        readings = count.readings.select_related(
+            "location",
+            "asset__asset_model__manufacturer",
+            "accessory_model__manufacturer",
+            "container",
+            "counted_by",
+        ).order_by("-counted_at", "-id")
+        return Response(
+            CountReadingSerializer(readings, many=True, context=self.get_serializer_context()).data
+        )
+
+    @action(detail=True, methods=["delete"], url_path=r"readings/(?P<reading_id>\d+)")
+    def reading(self, request, pk=None, reading_id=None):
+        reading = CountReading.objects.filter(count=self.get_object(), pk=reading_id).first()
+        if reading is None:
+            raise Http404
+        try:
+            counting.remove_reading(reading)
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(status=204)
+
+    @action(detail=True, methods=["post"])
+    def close(self, request, pk=None):
+        try:
+            count = counting.close(self.get_object(), user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(count)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        refused = self._supervisor(request)
+        if refused:
+            return refused
+        try:
+            count = counting.cancel(
+                self.get_object(), user=request.user, reason=request.data.get("reason", "")
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(count)
+
+    @action(detail=True, methods=["get"])
+    def divergences(self, request, pk=None):
+        count = self.get_object()
+        return Response(
+            CountDivergenceSerializer(
+                count.divergences.select_related(
+                    "asset__asset_model__manufacturer",
+                    "accessory_model__manufacturer",
+                    "container",
+                    "expected_location",
+                    "found_location",
+                    "decided_by",
+                ),
+                many=True,
+                context=self.get_serializer_context(),
+            ).data
+        )
+
+    @action(detail=True, methods=["post"], url_path=r"divergences/(?P<divergence_id>\d+)/decide")
+    def decide(self, request, pk=None, divergence_id=None):
+        refused = self._supervisor(request)
+        if refused:
+            return refused
+        divergence = self.get_object().divergences.filter(pk=divergence_id).first()
+        if divergence is None:
+            raise Http404
+        try:
+            counting.decide(
+                divergence,
+                user=request.user,
+                approve=bool(request.data.get("approve")),
+                reason=request.data.get("reason", ""),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self.divergences(request, pk=pk)
+
+
+class IndicatorsView(APIView):
+    """GET: the indicators panel (?from=&to= dates, ?warehouse=, ?customer=)."""
+
+    def get(self, request):
+        from customers.models import Customer
+
+        params = request.query_params
+        warehouse = (
+            Warehouse.objects.filter(pk=params["warehouse"]).first()
+            if params.get("warehouse", "").isdigit()
+            else None
+        )
+        customer = (
+            Customer.objects.filter(pk=params["customer"]).first()
+            if params.get("customer", "").isdigit()
+            else None
+        )
+        data = indicators.panel(
+            start=parse_date(params.get("from") or "") if params.get("from") else None,
+            end=parse_date(params.get("to") or "") if params.get("to") else None,
+            warehouse=warehouse,
+            customer=customer,
+        )
+        return Response(indicators.as_strings(data))

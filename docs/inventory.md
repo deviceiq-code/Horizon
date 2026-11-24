@@ -12,7 +12,7 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | 4. Blocks and disputes | Block follow-ups, disputes, charges, deadline parameters, holidays, aging limits, daily routine, alerts | **Done** |
 | 5. Disposal | Stock query, disposals, reservation, picking, shipping, write-off | **Done** |
 | 6. Transfers | Transfers between warehouses, virtual transit location, receiving with discrepancies | **Done** |
-| 7. Cycle counts and indicators | Counts, adjustments with approval, indicators panel | To do |
+| 7. Cycle counts and indicators | Counts, adjustments with approval, indicators panel | **Done** |
 
 ## Decisions
 
@@ -246,6 +246,44 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 - **RN-25**: the daily routine alerts supervisors once per late transfer (`transfer_late`).
 - Events of a transfer are never reversed by hand.
 
+### Phase 7 (counts and indicators)
+
+- **Counts** (`InventoryCount`, code `INV-<year>-<NNNN>`; only `inventory/counting.py` writes
+  them): opened by a supervisor — **cyclic** (the locations chosen and everything under them)
+  or **general** (every active location of the warehouse); overlapping counts are refused.
+- **Locations frozen while counting** (decision): no event moves anything in or out of them
+  (`services.check_not_counting`, called by every event except label reprints and the count's
+  own adjustments) — movements, picking, receiving, triage, status changes there.
+- **Blind readings** (storekeepers, supervisors): read the location, then each asset's ID (read
+  again elsewhere: the last reading counts); accessories by model, quantity and condition, at
+  the location or in a container there (readings add up). Nothing expected is shown.
+- **Closing** compares (`find_divergences`, pure): expected asset not read → **not found**;
+  read at another location of the scope → **at another location**; read but recorded outside
+  the scope → **not expected here**; accessory quantities different → **balance difference**.
+  No divergence → finished at once. The count keeps expected/matched (location accuracy).
+- **Adjustments (RN-26)**: each divergence is approved or rejected, always with a reason, by
+  a supervisor **who neither counted nor is responsible** for the count (checked in the
+  service). Approved: not found → **written off as lost** (decision; INVENTORY_ADJUSTMENT
+  event outside the transition table + a LOST occurrence); found elsewhere / not expected →
+  the location becomes where it was found (the count is the truth; RN-02 not applied); an asset
+  lost by an earlier count comes back in the status it had; balance → set to the count.
+  Assets in an open disposal or transfer must be released first. Rejected: nothing changes.
+  The count finishes with the last decision.
+- **RN-19** (decision: optional): Movement's "Read Origin" switch (remembered with the
+  account) adds a first reading — the location where the object is. A different recorded
+  location → a LOCATION_MISMATCH occurrence (no lot, transfer or count) + an alert to the
+  supervisors; the movement goes on.
+- **Occurrences page**: every occurrence (lots, transfers, counts, movements) with filters and
+  resolve/accept.
+- **Indicators** (`inventory/indicators.py`, `GET /indicators/?from=&to=&warehouse=&customer=`;
+  no chart library — decision): lead time arrival → available (by customer, asset class),
+  aging by status in bands (0–7, 8–30, 31–90, 91+ days since the last status change), location
+  accuracy per count, triage divergences per lot and customer, assets without a serial
+  number, conservation by asset class (current reports), blocks released in time, disputes
+  upheld, penalties found × to charge × charged × cancelled (current reports), scrap rate.
+  Percentages with 5 places, sent as strings.
+- ABC classification for counting frequency: left for after the MVP (as the spec allows).
+
 ## Business rules → tests
 
 | Rule | Where | Tests |
@@ -284,6 +322,11 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | Back to the previous status at the destination (RN-02) | `services.transfer_in` | `test_full_flow_back_to_the_status_rn24`, `test_containers_travel_with_their_assets` |
 | Held asset not transferable | `transfers._check_eligible` | `test_eligible_assets`, `test_a_dispute_before_sending_blocks_it` |
 | Shortage, surplus, damage | `transfers.receive`, `finish` | `test_shortage_surplus_and_late_arrival` |
+| RN-19 location divergence while moving | `counting.report_location_mismatch` | `test_movement_with_a_different_origin_rn19`, `MovementView.spec.ts` |
+| RN-26 adjustment approved by someone who did not count | `counting.decide` | `test_full_count_and_adjustments_rn26`, `counts.spec.ts` |
+| Divergences | `counting.find_divergences` | `test_find_divergences` |
+| Locations frozen while counting | `services.check_not_counting` | `test_cyclic_scope_includes_children_and_freezes_them` |
+| Indicators | `inventory/indicators.py` | `test_indicator_helpers`, `test_api_counts_and_indicators` |
 | Business days | `inventory/deadlines.py` | `test_business_days_skip_weekends_and_holidays`, `test_dispute_deadline_counts_business_days` |
 
 ## API (`/api/inventory/`)
@@ -304,7 +347,9 @@ draft PATCH; `serial/`, `specs/`, `photos/`, `findings/`, `certificates/`, `subm
 `items/<id>/` PATCH/DELETE, `pick/`, `ship/`, `cancel/`, `files/`, `files/<id>/`,
 `files/<id>/file/`), `transfers/` (POST requests; PATCH header; `items/`, `items/<id>/`
 DELETE, `approve/`, `pick/`, `send/`, `receive/`, `finish/`, `cancel/`, `files/`), occurrences
-`?transfer=`.
+`?transfer=`, `?count=`, `?source=lot|transfer|count|movement`; `counts/` (POST opens;
+`readings/`, `readings/<id>/` DELETE, `close/`, `cancel/`, `divergences/`,
+`divergences/<id>/decide/`), `indicators/`; movements accept `origin_code` (RN-19).
 Business rule refusals answer 400 `{"detail": "<translated reason>", "field": "<field>"}`.
 Asset models: `/api/catalogs/asset-models/`.
 
@@ -317,7 +362,8 @@ printable report otherwise), Blocks (notify, print the notice, release, decide),
 Charges, Stock (groups → units with their report), Disposals (list; disposal page: Items,
 Picking — scan the shipping area, then each ID —, Documents; Ship, Cancel), Transfers (list;
 transfer page: Items, Picking, Receiving — scan the location, then each ID or container —,
-Occurrences, Documents; Approve, Send, Finish Receipt, Cancel), Movement (scan the object, then the
+Occurrences, Documents; Approve, Send, Finish Receipt, Cancel), Inventory Counts (list; count
+page: Counting, Readings, Divergences), Occurrences, Indicators, Movement (scan the object, then the
 destination), Assets (grid, detail with history), Accessories (balances), Locations (tree per
 warehouse, labels), Containers (label printed on creation), Labels (reserve and print ranges,
 print again by code), Warehouses. Inventory Catalogs: Grades, Penalty Table, Erasure Tools, Deadlines and Holidays. Top bar:

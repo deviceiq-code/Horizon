@@ -24,6 +24,8 @@ from .models import (
     Asset,
     BlockFollowUp,
     Container,
+    CountDivergence,
+    CountReading,
     DeadlineSetting,
     Disposal,
     DisposalFile,
@@ -40,6 +42,7 @@ from .models import (
     GradeLevel,
     Holiday,
     InspectionReport,
+    InventoryCount,
     LabelRange,
     Location,
     LotAttachment,
@@ -460,6 +463,8 @@ class MovementSerializer(serializers.Serializer):
 
     object_code = serializers.CharField(max_length=80)
     destination_code = serializers.CharField(max_length=80)
+    # Optional: where the object was read (RN-19)
+    origin_code = serializers.CharField(max_length=80, required=False, allow_blank=True)
     reason = serializers.CharField(required=False, allow_blank=True, default="", max_length=300)
 
 
@@ -755,6 +760,7 @@ class OccurrenceSerializer(serializers.ModelSerializer):
     asset_model_label = serializers.SerializerMethodField()
     lot_code = serializers.SerializerMethodField()
     transfer_code = serializers.SerializerMethodField()
+    count_code = serializers.SerializerMethodField()
     responsible_name = serializers.SerializerMethodField()
     resolved_by_name = serializers.SerializerMethodField()
     attachments_count = serializers.IntegerField(read_only=True, default=0)
@@ -768,6 +774,8 @@ class OccurrenceSerializer(serializers.ModelSerializer):
             "lot_code",
             "transfer",
             "transfer_code",
+            "count",
+            "count_code",
             "asset",
             "asset_code",
             "asset_model",
@@ -797,6 +805,7 @@ class OccurrenceSerializer(serializers.ModelSerializer):
             "expected_serial",
             "received_serial",
             "transfer",
+            "count",
         ]
         extra_kwargs = {"lot": {"required": True, "allow_null": False}}
 
@@ -808,6 +817,9 @@ class OccurrenceSerializer(serializers.ModelSerializer):
 
     def get_transfer_code(self, obj) -> str | None:
         return obj.transfer.code if obj.transfer_id else None
+
+    def get_count_code(self, obj) -> str | None:
+        return obj.count.code if obj.count_id else None
 
     def get_responsible_name(self, obj) -> str | None:
         return display_name_in(self.context, obj.responsible) if obj.responsible else None
@@ -1844,3 +1856,144 @@ class TransferSerializer(serializers.ModelSerializer):
         from .transfers import days_late
 
         return days_late(obj, timezone.localdate())
+
+
+# --- Phase 7: inventory counts ----------------------------------------------------------------
+
+
+class InventoryCountSerializer(serializers.ModelSerializer):
+    code = serializers.CharField(read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    responsible_name = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+    closed_by_name = serializers.SerializerMethodField()
+    locations_count = serializers.IntegerField(read_only=True, default=0)
+    readings_count = serializers.IntegerField(read_only=True, default=0)
+    pending_count = serializers.IntegerField(read_only=True, default=0)
+    divergences_count = serializers.IntegerField(read_only=True, default=0)
+    accuracy = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InventoryCount
+        fields = [
+            "id",
+            "code",
+            "warehouse",
+            "warehouse_code",
+            "warehouse_name",
+            "kind",
+            "status",
+            "responsible",
+            "responsible_name",
+            "notes",
+            "locations_count",
+            "readings_count",
+            "divergences_count",
+            "pending_count",
+            "expected_assets",
+            "matched_assets",
+            "accuracy",
+            "created_by_name",
+            "created_at",
+            "closed_by_name",
+            "closed_at",
+            "finished_at",
+            "cancelled_at",
+            "cancel_reason",
+        ]
+        read_only_fields = fields
+
+    def get_responsible_name(self, obj):
+        return display_name_in(self.context, obj.responsible)
+
+    def get_created_by_name(self, obj):
+        return display_name_in(self.context, obj.created_by)
+
+    def get_closed_by_name(self, obj):
+        return display_name_in(self.context, obj.closed_by) if obj.closed_by else None
+
+    def get_accuracy(self, obj):
+        from .indicators import ratio
+
+        if obj.status not in ("closed", "finished"):
+            return None
+        value = ratio(obj.matched_assets, obj.expected_assets)
+        return str(value) if value is not None else None
+
+
+class CountReadingSerializer(serializers.ModelSerializer):
+    location_code = serializers.CharField(source="location.code", read_only=True)
+    asset_code = serializers.CharField(source="asset.horizon_id", read_only=True, default=None)
+    asset_model_label = serializers.SerializerMethodField()
+    container_code = serializers.CharField(source="container.code", read_only=True, default=None)
+    counted_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CountReading
+        fields = [
+            "id",
+            "location",
+            "location_code",
+            "asset",
+            "asset_code",
+            "accessory_model",
+            "asset_model_label",
+            "container",
+            "container_code",
+            "quantity",
+            "condition",
+            "counted_by_name",
+            "counted_at",
+        ]
+        read_only_fields = fields
+
+    def get_asset_model_label(self, obj):
+        model = obj.asset.asset_model if obj.asset_id else obj.accessory_model
+        return _model_label(model)
+
+    def get_counted_by_name(self, obj):
+        return display_name_in(self.context, obj.counted_by)
+
+
+class CountDivergenceSerializer(serializers.ModelSerializer):
+    asset_code = serializers.CharField(source="asset.horizon_id", read_only=True, default=None)
+    asset_status = serializers.CharField(source="asset.status", read_only=True, default=None)
+    model_label = serializers.SerializerMethodField()
+    container_code = serializers.CharField(source="container.code", read_only=True, default=None)
+    expected_location_code = serializers.CharField(
+        source="expected_location.code", read_only=True, default=None
+    )
+    found_location_code = serializers.CharField(
+        source="found_location.code", read_only=True, default=None
+    )
+    decided_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CountDivergence
+        fields = [
+            "id",
+            "kind",
+            "asset",
+            "asset_code",
+            "asset_status",
+            "model_label",
+            "condition",
+            "container_code",
+            "expected_location_code",
+            "found_location_code",
+            "expected_quantity",
+            "counted_quantity",
+            "status",
+            "reason",
+            "decided_by_name",
+            "decided_at",
+        ]
+        read_only_fields = fields
+
+    def get_model_label(self, obj):
+        model = obj.asset.asset_model if obj.asset_id else obj.accessory_model
+        return _model_label(model) if model else None
+
+    def get_decided_by_name(self, obj):
+        return display_name_in(self.context, obj.decided_by) if obj.decided_by else None

@@ -86,7 +86,16 @@ Multi-user web system for **operating lease residual value pricing**
     all its assets (they travel in it); RN-24 picking against the list; `services.transfer_out`
     / `transfer_in` (IN_TRANSIT at VIRTUAL-TRANSIT and back to the previous status where the
     receiver reads — RN-02); damage only an occurrence; surplus recorded; finish → shortages
-    (`Occurrence.transfer`). Pages `TransfersView.vue`, `TransferView.vue`. **Blind count**: expected
+    (`Occurrence.transfer`). Pages `TransfersView.vue`, `TransferView.vue`. Phase 7: `counting.py` —
+    `InventoryCount` (`INV-…`; cyclic = chosen locations + descendants, general = whole
+    warehouse; its locations are frozen: `services.check_not_counting` in `_record`), blind
+    `CountReading`s, `find_divergences` (pure) on close → `CountDivergence` = adjustment approved
+    or rejected with a reason by a supervisor who did not count (RN-26): not found → written
+    off as lost (`services.adjust_lost`) + LOST occurrence; elsewhere → `adjust_place`;
+    balance → `adjust_balance`; RN-19 `report_location_mismatch` (Movement's optional "Read
+    Origin", `ui_state.readOrigin`). `indicators.py` (pure ratios + `panel()`), page
+    `IndicatorsView.vue` (tiles and Vuetify bars, no chart library); `OccurrencesView.vue`
+    lists every occurrence. **Blind count**: expected
     lists never reach receivers (`EXPECTED_READERS`). Roles: `users.models` receiver,
     inspection_technician, storekeeper, inventory_supervisor, commercial_finance,
     remarketing_analyst (`inventory/permissions.py`; frontend `inventory/roles.ts`). API

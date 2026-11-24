@@ -3,11 +3,14 @@
  * Movement by reading codes with a barcode gun (it types the code and Enter): read the asset or
  * container, then the destination (a location, or a container for an asset). One field, always
  * focused; every reading answers with a color and a sound. The check digit is verified here
- * and again by the server (RN-15); the server applies the area rules (RN-02).
+ * and again by the server (RN-15); the server applies the area rules (RN-02). With "Read Origin"
+ * (remembered with the account) the location where the object is comes first: a different
+ * recorded location is registered as an occurrence and alerted, never blocking (RN-19).
  */
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError } from '@/api'
+import { usePreferencesStore } from '@/stores/preferences'
 import { useDateFormat } from '@/composables/useDateFormat'
 import { parseCode } from '@/utils/inventoryCodes'
 import AreaChip from './AreaChip.vue'
@@ -23,11 +26,21 @@ import { beep } from './beep'
 
 const { t } = useI18n()
 const { d } = useDateFormat()
+const preferences = usePreferencesStore()
 
-type Step = 'object' | 'destination'
-type Feedback = { kind: 'success' | 'error' | 'info'; text: string } | null
+type Step = 'origin' | 'object' | 'destination'
+type Feedback = { kind: 'success' | 'error' | 'info' | 'warning'; text: string } | null
 
-const step = ref<Step>('object')
+const readOrigin = computed({
+  get: () => !!preferences.uiState.readOrigin,
+  set: (value: boolean) => {
+    preferences.saveUiState((state) => ({ ...state, readOrigin: value }))
+    reset()
+  },
+})
+const firstStep = (): Step => (readOrigin.value ? 'origin' : 'object')
+const step = ref<Step>(firstStep())
+const origin = ref('')
 const reading = ref('')
 const reason = ref('')
 const busy = ref(false)
@@ -36,11 +49,23 @@ const feedback = ref<Feedback>(null)
 const latest = ref<MovementEvent[]>([])
 const scanField = ref<{ focus: () => void } | null>(null)
 
-const prompt = computed(() =>
-  step.value === 'object'
-    ? t('inventory.movement.readObject')
-    : t('inventory.movement.readDestination'),
+const prompt = computed(
+  () =>
+    ({
+      origin: t('inventory.movement.readOrigin'),
+      object: t('inventory.movement.readObject'),
+      destination: t('inventory.movement.readDestination'),
+    })[step.value],
 )
+
+function readOriginCode(text: string) {
+  const parsed = parseCode(text)
+  if (parsed.kind !== 'location') return fail(t('inventory.movement.originFirst'))
+  origin.value = parsed.code
+  step.value = 'object'
+  feedback.value = { kind: 'info', text: t('inventory.movement.originRead', { code: parsed.code }) }
+  beep(true)
+}
 
 function focusScan() {
   nextTick(() => scanField.value?.focus())
@@ -76,12 +101,15 @@ async function readDestination(text: string) {
   if (!parsed.valid) return fail(t('inventory.movement.wrongDigit'))
   const objectCode =
     target.value!.kind === 'asset' ? target.value!.item.horizon_id : target.value!.item.code
-  const event = await moveByCodes(objectCode, parsed.code, reason.value)
+  const event = await moveByCodes(objectCode, parsed.code, reason.value, origin.value)
   latest.value = [event, ...latest.value].slice(0, 10)
-  feedback.value = {
-    kind: 'success',
-    text: t('inventory.movement.moved', { object: objectCode, destination: parsed.code }),
-  }
+  const moved = t('inventory.movement.moved', { object: objectCode, destination: parsed.code })
+  feedback.value = event.location_mismatch
+    ? {
+        kind: 'warning',
+        text: `${moved} ${t('inventory.movement.mismatch', { text: event.location_mismatch })}`,
+      }
+    : { kind: 'success', text: moved }
   beep(true)
   reset(false)
 }
@@ -92,7 +120,8 @@ async function onEnter() {
   if (!text || busy.value) return focusScan()
   busy.value = true
   try {
-    if (step.value === 'object') await readObject(text)
+    if (step.value === 'origin') readOriginCode(text)
+    else if (step.value === 'object') await readObject(text)
     else await readDestination(text)
   } catch (error) {
     fail(errorText(error))
@@ -104,7 +133,8 @@ async function onEnter() {
 
 /** Back to reading an object (Esc or the Cancel button). */
 function reset(clearFeedback = true) {
-  step.value = 'object'
+  step.value = firstStep()
+  origin.value = ''
   target.value = null
   reason.value = ''
   reading.value = ''
@@ -136,13 +166,23 @@ function eventText(event: MovementEvent): string {
     <v-row>
       <v-col cols="12" md="7">
         <v-card class="pa-6" data-testid="scan-card">
-          <div class="d-flex align-center ga-3 mb-4">
+          <div class="d-flex align-center flex-wrap ga-3 mb-4">
+            <template v-if="readOrigin">
+              <v-chip
+                :color="step === 'origin' ? 'primary' : undefined"
+                :variant="step === 'origin' ? 'flat' : 'tonal'"
+                label
+              >
+                1 · {{ $t('inventory.movement.origin') }}
+              </v-chip>
+              <v-icon icon="mdi-chevron-right" />
+            </template>
             <v-chip
               :color="step === 'object' ? 'primary' : undefined"
               :variant="step === 'object' ? 'flat' : 'tonal'"
               label
             >
-              1 · {{ $t('inventory.movement.object') }}
+              {{ readOrigin ? 2 : 1 }} · {{ $t('inventory.movement.object') }}
             </v-chip>
             <v-icon icon="mdi-chevron-right" />
             <v-chip
@@ -150,8 +190,18 @@ function eventText(event: MovementEvent): string {
               :variant="step === 'destination' ? 'flat' : 'tonal'"
               label
             >
-              2 · {{ $t('inventory.movement.destination') }}
+              {{ readOrigin ? 3 : 2 }} · {{ $t('inventory.movement.destination') }}
             </v-chip>
+            <v-spacer />
+            <v-switch
+              v-model="readOrigin"
+              :label="$t('inventory.movement.readOriginSwitch')"
+              color="primary"
+              density="compact"
+              hide-details
+              inset
+              data-testid="read-origin"
+            />
           </div>
 
           <v-text-field

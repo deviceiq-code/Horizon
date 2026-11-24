@@ -828,6 +828,15 @@ class Occurrence(models.Model):
         related_name="occurrences",
         verbose_name=_("transfer"),
     )
+    # Or of an inventory count (an asset lost); none: found while moving (RN-19)
+    count = models.ForeignKey(
+        "InventoryCount",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="occurrences",
+        verbose_name=_("inventory count"),
+    )
     asset = models.ForeignKey(
         Asset, on_delete=models.PROTECT, null=True, blank=True, related_name="occurrences"
     )
@@ -863,7 +872,7 @@ class Occurrence(models.Model):
         ordering = ["created_at", "id"]
 
     def __str__(self):
-        return f"{self.get_kind_display()} ({self.lot or self.transfer})"
+        return f"{self.get_kind_display()} ({self.lot or self.transfer or self.count or '-'})"
 
 
 # --- Phase 3: inspection -------------------------------------------------------------------
@@ -1920,3 +1929,189 @@ class TransferFile(models.Model):
         result = super().delete(*args, **kwargs)
         transaction.on_commit(lambda: storage.delete(path))
         return result
+
+
+# --- Phase 7: inventory counts ---------------------------------------------------------------
+
+
+class CountKind(models.TextChoices):
+    CYCLIC = "cyclic", _("Cyclic")
+    GENERAL = "general", _("General")
+
+
+class CountStatus(models.TextChoices):
+    COUNTING = "counting", _("Counting")
+    # Closed: divergences found, adjustments waiting for a supervisor
+    CLOSED = "closed", _("Closed")
+    FINISHED = "finished", _("Finished")
+    CANCELLED = "cancelled", _("Cancelled")
+
+
+class InventoryCount(models.Model):
+    """Counting what is physically at some locations of a warehouse (cyclic) or at all of them
+    (general). Blind: the counters read IDs and quantities without seeing what is expected.
+    While counting, nothing moves in or out of its locations. Closing finds the divergences;
+    each becomes an adjustment a supervisor other than the counters approves (RN-26). Only
+    inventory.counting changes it."""
+
+    year = models.PositiveSmallIntegerField(_("year"))
+    sequence = models.PositiveIntegerField(_("sequence"))
+    warehouse = models.ForeignKey(
+        Warehouse, on_delete=models.PROTECT, related_name="counts", verbose_name=_("warehouse")
+    )
+    kind = models.CharField(_("kind"), max_length=10, choices=CountKind.choices)
+    # The scope: the chosen locations and everything under them (all, in a general count)
+    locations = models.ManyToManyField(Location, related_name="counts", verbose_name=_("locations"))
+    status = models.CharField(
+        _("status"), max_length=10, choices=CountStatus.choices, default=CountStatus.COUNTING
+    )
+    responsible = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    notes = models.TextField(_("notes"), blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    closed_at = models.DateTimeField(_("closed at"), null=True, blank=True)
+    finished_at = models.DateTimeField(_("finished at"), null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    cancelled_at = models.DateTimeField(_("cancelled at"), null=True, blank=True)
+    cancel_reason = models.CharField(_("reason for cancelling"), max_length=300, blank=True)
+    # Expected assets and matches found when closing (for the location accuracy indicator)
+    expected_assets = models.PositiveIntegerField(_("expected assets"), default=0)
+    matched_assets = models.PositiveIntegerField(_("assets found where expected"), default=0)
+
+    class Meta:
+        verbose_name = _("inventory count")
+        verbose_name_plural = _("inventory counts")
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["year", "sequence"], name="count_unique_code"),
+        ]
+
+    def __str__(self):
+        return self.code
+
+    @property
+    def code(self) -> str:
+        return yearly_code("INV", self.year, self.sequence)
+
+    @property
+    def ref(self) -> str:
+        return f"count:{self.pk}"
+
+
+class CountReading(models.Model):
+    """What a counter read at a location: an asset's ID, or a quantity of an accessory model
+    (at the location or in a container there)."""
+
+    count = models.ForeignKey(InventoryCount, on_delete=models.CASCADE, related_name="readings")
+    location = models.ForeignKey(Location, on_delete=models.PROTECT, related_name="+")
+    asset = models.ForeignKey(
+        Asset, on_delete=models.PROTECT, null=True, blank=True, related_name="count_readings"
+    )
+    accessory_model = models.ForeignKey(
+        "catalogs.AssetModel", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    container = models.ForeignKey(
+        Container, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    quantity = models.PositiveIntegerField(_("quantity"), default=1)
+    condition = models.CharField(
+        _("condition"),
+        max_length=10,
+        choices=AccessoryCondition.choices,
+        default=AccessoryCondition.GOOD,
+    )
+    counted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    counted_at = models.DateTimeField(_("counted at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("count reading")
+        verbose_name_plural = _("count readings")
+        ordering = ["counted_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(asset__isnull=False, accessory_model__isnull=True)
+                | models.Q(asset__isnull=True, accessory_model__isnull=False),
+                name="reading_asset_or_accessory",
+            ),
+            models.UniqueConstraint(
+                fields=["count", "asset"],
+                condition=models.Q(asset__isnull=False),
+                name="reading_asset_once_per_count",
+            ),
+        ]
+
+    def __str__(self):
+        return str(self.asset or f"{self.accessory_model} × {self.quantity}")
+
+
+class DivergenceKind(models.TextChoices):
+    NOT_FOUND = "not_found", _("Not Found")
+    OTHER_LOCATION = "other_location", _("Found at Another Location")
+    UNEXPECTED = "unexpected", _("Not Expected Here")
+    BALANCE = "balance", _("Balance Difference")
+
+
+class AdjustmentStatus(models.TextChoices):
+    PENDING = "pending", _("Pending")
+    APPROVED = "approved", _("Approved")
+    REJECTED = "rejected", _("Rejected")
+
+
+class CountDivergence(models.Model):
+    """A difference found when a count closes, and the adjustment it proposes: an asset not
+    found (written off as lost), found at another location or not expected here (moved to where
+    it was found), an accessory balance different from the count (set to it). Applied only
+    when a supervisor other than the counters approves it (RN-26), as INVENTORY_ADJUSTMENT
+    events."""
+
+    count = models.ForeignKey(InventoryCount, on_delete=models.CASCADE, related_name="divergences")
+    kind = models.CharField(_("kind"), max_length=20, choices=DivergenceKind.choices)
+    asset = models.ForeignKey(
+        Asset, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    accessory_model = models.ForeignKey(
+        "catalogs.AssetModel", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    condition = models.CharField(max_length=10, choices=AccessoryCondition.choices, blank=True)
+    container = models.ForeignKey(
+        Container, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    # Where the records say it is / where it was counted
+    expected_location = models.ForeignKey(
+        Location, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    found_location = models.ForeignKey(
+        Location, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    expected_quantity = models.IntegerField(_("expected quantity"), null=True, blank=True)
+    counted_quantity = models.IntegerField(_("counted quantity"), null=True, blank=True)
+    status = models.CharField(
+        _("status"),
+        max_length=10,
+        choices=AdjustmentStatus.choices,
+        default=AdjustmentStatus.PENDING,
+    )
+    reason = models.TextField(_("reason"), blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    decided_at = models.DateTimeField(_("decided at"), null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("count divergence")
+        verbose_name_plural = _("count divergences")
+        ordering = ["kind", "id"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} ({self.count})"

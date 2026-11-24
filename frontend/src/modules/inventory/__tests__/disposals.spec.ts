@@ -22,7 +22,12 @@ vi.mock('../api', async (importOriginal) => ({
 }))
 vi.mock('@/modules/warehouses/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/modules/warehouses/api')>()),
-  listWarehouses: vi.fn<() => Promise<unknown>>(async () => ({ count: 0, next: null, previous: null, results: [] })),
+  listWarehouses: vi.fn<() => Promise<unknown>>(async () => ({
+    count: 0,
+    next: null,
+    previous: null,
+    results: [],
+  })),
 }))
 
 const api = vi.mocked(inventoryApi)

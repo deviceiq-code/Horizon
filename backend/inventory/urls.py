@@ -17,7 +17,9 @@ from .views import (
     ErasureToolViewSet,
     GradeLevelViewSet,
     HolidayViewSet,
+    IndicatorsView,
     InspectionViewSet,
+    InventoryCountViewSet,
     LabelRangeViewSet,
     LocationViewSet,
     LookupView,
@@ -56,10 +58,12 @@ router.register("alerts", AlertViewSet, basename="alert")
 router.register("stock/assets", StockAssetViewSet, basename="stock-asset")
 router.register("disposals", DisposalViewSet, basename="disposal")
 router.register("transfers", TransferViewSet, basename="transfer")
+router.register("counts", InventoryCountViewSet, basename="count")
 
 urlpatterns = [
     path("lookup/", LookupView.as_view(), name="inventory-lookup"),
     path("deadline-check/", DeadlineCheckView.as_view(), name="inventory-deadline-check"),
     path("stock/", StockView.as_view(), name="inventory-stock"),
+    path("indicators/", IndicatorsView.as_view(), name="inventory-indicators"),
     *router.urls,
 ]

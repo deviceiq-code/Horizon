@@ -113,7 +113,29 @@ def resolve_code(text: str, *, field: str = "code"):
 # --- Events ----------------------------------------------------------------------------------
 
 
+# Events that change nothing physical (or are the count's own adjustments)
+NOT_BLOCKED_BY_COUNTS = (EventKind.LABEL_REPRINT, EventKind.INVENTORY_ADJUSTMENT)
+
+
+def check_not_counting(*locations) -> None:
+    """While a count is open, nothing moves in or out of its locations (decision)."""
+    from .models import CountStatus, InventoryCount
+
+    ids = {loc.pk for loc in locations if loc is not None}
+    if not ids:
+        return
+    count = InventoryCount.objects.filter(status=CountStatus.COUNTING, locations__in=ids).first()
+    if count is not None:
+        raise DomainError(
+            _("Location being counted (%(code)s): nothing moves there until the count closes.")
+            % {"code": count.code},
+            field="destination",
+        )
+
+
 def _record(kind, *, user, asset=None, container=None, **fields) -> MovementEvent:
+    if kind not in NOT_BLOCKED_BY_COUNTS:
+        check_not_counting(fields.get("from_location"), fields.get("to_location"))
     return MovementEvent.objects.create(
         kind=kind, user=user, asset=asset, container=container, **fields
     )
@@ -745,3 +767,103 @@ def place_container(
     container.current_location = location
     container.save(update_fields=["current_location", "updated_at"])
     return event
+
+
+# --- Inventory adjustments (Phase 7) ----------------------------------------------------------
+
+
+@transaction.atomic
+def adjust_lost(asset: Asset, *, user, document_ref: str, reason: str) -> MovementEvent:
+    """An asset not found in a count, its adjustment approved: written off as lost (outside
+    the transition table — an inventory adjustment)."""
+    asset = Asset.objects.select_for_update().get(pk=asset.pk)
+    event = _record(
+        EventKind.INVENTORY_ADJUSTMENT,
+        user=user,
+        asset=asset,
+        from_location=asset.current_location,
+        to_location=asset.current_location,
+        from_container=asset.current_container,
+        status_before=asset.status,
+        status_after=AssetStatus.WRITTEN_OFF,
+        reason=reason,
+        document_ref=document_ref,
+    )
+    asset.status = AssetStatus.WRITTEN_OFF
+    asset.current_container = None
+    asset.save(update_fields=["status", "current_container", "updated_at"])
+    return event
+
+
+@transaction.atomic
+def adjust_place(
+    asset: Asset,
+    *,
+    location: Location,
+    user,
+    document_ref: str,
+    reason: str,
+    status: str | None = None,
+) -> MovementEvent:
+    """An asset counted somewhere else than recorded: the records follow what was found (the
+    count is the truth; RN-02 is not applied). `status` brings back an asset written off as
+    lost by an earlier count."""
+    asset = Asset.objects.select_for_update().get(pk=asset.pk)
+    after = status or asset.status
+    event = _record(
+        EventKind.INVENTORY_ADJUSTMENT,
+        user=user,
+        asset=asset,
+        from_location=asset.current_location,
+        to_location=location,
+        from_container=asset.current_container,
+        status_before=asset.status,
+        status_after=after,
+        reason=reason,
+        document_ref=document_ref,
+    )
+    asset.status = after
+    asset.current_location = location
+    asset.current_container = None
+    asset.save(update_fields=["status", "current_location", "current_container", "updated_at"])
+    return event
+
+
+@transaction.atomic
+def adjust_balance(
+    asset_model,
+    *,
+    counted: int,
+    user,
+    document_ref: str,
+    reason: str,
+    condition: str,
+    container: Container | None = None,
+    location: Location | None = None,
+) -> MovementEvent | None:
+    """An accessory balance set to what was counted (the difference as one event)."""
+    balance = _balance(
+        asset_model,
+        container=container,
+        location=None if container else location,
+        condition=condition,
+    )
+    difference = counted - balance.quantity
+    if difference == 0:
+        return None
+    balance.quantity = counted
+    balance.save(update_fields=["quantity", "updated_at"])
+    place = balance.place
+    return _record(
+        EventKind.INVENTORY_ADJUSTMENT,
+        user=user,
+        accessory_model=asset_model,
+        quantity=abs(difference),
+        accessory_condition=condition,
+        from_location=None if difference > 0 else place,
+        to_location=place if difference > 0 else None,
+        from_container=None if difference > 0 else container,
+        to_container=container if difference > 0 else None,
+        reason=reason,
+        document_ref=document_ref,
+    )

@@ -88,6 +88,8 @@ export interface UiState {
   sideMenu?: { wide?: 'open' | 'collapsed'; narrow?: 'open' | 'collapsed' }
   /** Grids whose filter row is shown, by the grid's key */
   filters?: Record<string, boolean>
+  /** Movement reads the location where the object is first (RN-19) */
+  readOrigin?: boolean
 }
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']

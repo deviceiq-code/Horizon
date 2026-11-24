@@ -251,13 +251,21 @@ export function lookupCode(code: string) {
   return api<LookupResult>(`${BASE}/lookup/?code=${encodeURIComponent(code)}`)
 }
 
-export function moveByCodes(objectCode: string, destinationCode: string, reason = '') {
-  return api<MovementEvent>(`${BASE}/movements/`, {
+/** `originCode`: where the object was read (RN-19); a different recorded location comes back
+ * in `location_mismatch` (an occurrence was registered; the move still happened). */
+export function moveByCodes(
+  objectCode: string,
+  destinationCode: string,
+  reason = '',
+  originCode = '',
+) {
+  return api<MovementEvent & { location_mismatch?: string | null }>(`${BASE}/movements/`, {
     method: 'POST',
     body: JSON.stringify({
       object_code: objectCode,
       destination_code: destinationCode,
       reason,
+      ...(originCode ? { origin_code: originCode } : {}),
     }),
   })
 }
@@ -444,6 +452,8 @@ export interface Occurrence {
   /** Occurrences of transfers have no lot */
   transfer?: number | null
   transfer_code?: string | null
+  count?: number | null
+  count_code?: string | null
   asset: number | null
   asset_code: string | null
   asset_model: number | null
@@ -1714,4 +1724,202 @@ export function deleteTransferFile(id: number, fileId: number) {
 
 export function transferFileUrl(id: number, fileId: number) {
   return `/api${BASE}/transfers/${id}/files/${fileId}/file/`
+}
+
+// --- Phase 7: inventory counts and indicators --------------------------------------------------
+
+export type CountKind = 'cyclic' | 'general'
+export const COUNT_STATUSES = ['counting', 'closed', 'finished', 'cancelled'] as const
+export type CountStatus = (typeof COUNT_STATUSES)[number]
+export type DivergenceKind = 'not_found' | 'other_location' | 'unexpected' | 'balance'
+
+export interface InventoryCount {
+  id: number
+  code: string
+  warehouse: number
+  warehouse_code: string
+  warehouse_name: string
+  kind: CountKind
+  status: CountStatus
+  responsible: number
+  responsible_name: string
+  notes: string
+  locations_count: number
+  readings_count: number
+  divergences_count: number
+  pending_count: number
+  expected_assets: number
+  matched_assets: number
+  /** Found where expected ÷ expected, % (once closed) */
+  accuracy: string | null
+  created_by_name: string
+  created_at: string
+  closed_by_name: string | null
+  closed_at: string | null
+  finished_at: string | null
+  cancelled_at: string | null
+  cancel_reason: string
+}
+
+export interface InventoryCountDetail extends InventoryCount {
+  location_codes: string[]
+}
+
+export interface CountReading {
+  id: number
+  location: number
+  location_code: string
+  asset: number | null
+  asset_code: string | null
+  accessory_model: number | null
+  asset_model_label: string
+  container: number | null
+  container_code: string | null
+  quantity: number
+  condition: 'good' | 'scrap'
+  counted_by_name: string
+  counted_at: string
+}
+
+export interface CountDivergence {
+  id: number
+  kind: DivergenceKind
+  asset: number | null
+  asset_code: string | null
+  asset_status: AssetStatus | null
+  model_label: string | null
+  condition: string
+  container_code: string | null
+  expected_location_code: string | null
+  found_location_code: string | null
+  expected_quantity: number | null
+  counted_quantity: number | null
+  status: 'pending' | 'approved' | 'rejected'
+  reason: string
+  decided_by_name: string | null
+  decided_at: string | null
+}
+
+/** Filters: `status`, `warehouse`. */
+export function listCounts(params: ListParams) {
+  return api<Paginated<InventoryCount>>(`${BASE}/counts/` + listQuery(params))
+}
+
+export function getCount(id: number) {
+  return api<InventoryCountDetail>(`${BASE}/counts/${id}/`)
+}
+
+export function openCount(data: {
+  warehouse: number
+  kind: CountKind
+  locations: number[]
+  responsible: number | null
+  notes: string
+}) {
+  return api<InventoryCount>(`${BASE}/counts/`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function listCountReadings(id: number) {
+  return api<CountReading[]>(`${BASE}/counts/${id}/readings/`)
+}
+
+/** An asset's ID read at a location (`location`: the location's code). */
+export function readCountAsset(id: number, location: string, code: string) {
+  return api<CountReading[]>(`${BASE}/counts/${id}/readings/`, {
+    method: 'POST',
+    body: JSON.stringify({ location, code }),
+  })
+}
+
+export function readCountAccessories(
+  id: number,
+  data: {
+    location: string
+    accessory_model: number
+    quantity: number
+    container: string
+    condition: 'good' | 'scrap'
+  },
+) {
+  return api<CountReading[]>(`${BASE}/counts/${id}/readings/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteCountReading(id: number, readingId: number) {
+  return api<void>(`${BASE}/counts/${id}/readings/${readingId}/`, { method: 'DELETE' })
+}
+
+export function closeCount(id: number) {
+  return api<InventoryCount>(`${BASE}/counts/${id}/close/`, { method: 'POST', body: '{}' })
+}
+
+export function cancelCount(id: number, reason: string) {
+  return api<InventoryCount>(`${BASE}/counts/${id}/cancel/`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+
+export function listDivergences(id: number) {
+  return api<CountDivergence[]>(`${BASE}/counts/${id}/divergences/`)
+}
+
+/** RN-26: a supervisor who did not count approves or rejects, always with a reason. */
+export function decideDivergence(id: number, divergence: number, approve: boolean, reason: string) {
+  return api<CountDivergence[]>(`${BASE}/counts/${id}/divergences/${divergence}/decide/`, {
+    method: 'POST',
+    body: JSON.stringify({ approve, reason }),
+  })
+}
+
+/** A group's part of a whole (the percentage with 5 places, as a string; null without a whole) */
+export interface RatioRow {
+  label: string
+  part: number
+  total: number
+  percent: string | null
+}
+
+export interface Indicators {
+  lead_time: {
+    average_days: string | null
+    units: number
+    by_customer: { label: string; units: number; average_days: string | null }[]
+    by_asset_class: { label: string; units: number; average_days: string | null }[]
+  }
+  aging: { status: AssetStatus; total: number; bands: Record<string, number>; max_days: number }[]
+  location_accuracy: {
+    percent: string | null
+    counts: {
+      count: string
+      warehouse: string
+      closed_at: string
+      expected: number
+      matched: number
+      percent: string | null
+    }[]
+  }
+  divergences: { by_lot: RatioRow[]; by_customer: RatioRow[] }
+  without_serial: { percent: string | null; by_asset_class: RatioRow[]; by_customer: RatioRow[] }
+  grades: { asset_class: string; levels: Record<string, number>; total: number }[]
+  blocks_released: { released: number; closed: number; percent: string | null }
+  disputes_upheld: { upheld: number; decided: number; percent: string | null }
+  penalties: { found: string; chargeable: string; charged: string; cancelled: string }
+  scrap_rate: { percent: string | null; by_asset_class: RatioRow[]; by_customer: RatioRow[] }
+}
+
+export function getIndicators(filters: {
+  from?: string
+  to?: string
+  warehouse?: number | null
+  customer?: number | null
+}) {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null && value !== undefined && value !== '') query.set(key, String(value))
+  }
+  const text = query.toString()
+  return api<Indicators>(`${BASE}/indicators/` + (text ? `?${text}` : ''))
 }

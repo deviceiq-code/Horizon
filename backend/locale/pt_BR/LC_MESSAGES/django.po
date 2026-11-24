@@ -2893,3 +2893,133 @@ msgstr "Eventos de uma transferência são desfeitos pela transferência (cancel
 
 msgid "This asset is not in transit."
 msgstr "Este bem não está em trânsito."
+
+msgid "Choose the kind of count."
+msgstr "Escolha o tipo de inventário."
+
+msgid "Choose the locations to count."
+msgstr "Escolha os locais a contar."
+
+#, python-format
+msgid "Choose locations of warehouse %(code)s."
+msgstr "Escolha locais do armazém %(code)s."
+
+msgid "This warehouse has no locations to count."
+msgstr "Este armazém não tem locais a contar."
+
+#, python-format
+msgid "Some of these locations are already being counted (%(code)s)."
+msgstr "Alguns destes locais já estão em contagem (%(code)s)."
+
+#, python-format
+msgid "Not possible while the count is %(status)s."
+msgstr "Não é possível com o inventário %(status)s."
+
+#, python-format
+msgid "%(code)s is not one of the locations of this count."
+msgstr "%(code)s não é um dos locais deste inventário."
+
+msgid "Only models controlled by quantity are counted by quantity."
+msgstr "Só modelos controlados por quantidade são contados por quantidade."
+
+msgid "Enter a quantity of 0 or more."
+msgstr "Informe uma quantidade de 0 ou mais."
+
+#, python-format
+msgid "Container %(code)s is not at this location."
+msgstr "O contêiner %(code)s não está neste local."
+
+msgid "Say why the count is cancelled."
+msgstr "Informe por que o inventário é cancelado."
+
+#, python-format
+msgid "%(asset)s is in %(code)s: finish or cancel it first."
+msgstr "%(asset)s está em %(code)s: conclua ou cancele antes."
+
+msgid "This adjustment was already decided."
+msgstr "Este ajuste já foi decidido."
+
+msgid "Adjustments are approved by a supervisor who did not count (RN-26)."
+msgstr "Ajustes são aprovados por um supervisor que não contou (RN-26)."
+
+msgid "Give the reason for the decision."
+msgstr "Informe o motivo da decisão."
+
+#, python-format
+msgid "%(asset)s is no longer in stock: reject this adjustment."
+msgstr "%(asset)s não está mais no estoque: rejeite este ajuste."
+
+#, python-format
+msgid "%(asset)s left the stock (or is in transit): it cannot be brought back by a count — reject this adjustment and register an occurrence."
+msgstr "%(asset)s saiu do estoque (ou está em trânsito): não pode voltar por um inventário — rejeite este ajuste e registre uma ocorrência."
+
+#, python-format
+msgid "%(code)s was read at %(read)s; the records said %(recorded)s."
+msgstr "%(code)s foi lido em %(read)s; o registro dizia %(recorded)s."
+
+msgid "inventory count"
+msgstr "inventário"
+
+msgid "Cyclic"
+msgstr "Cíclico"
+
+msgid "Counting"
+msgstr "Em Contagem"
+
+msgid "Finished"
+msgstr "Concluído"
+
+msgid "expected assets"
+msgstr "bens esperados"
+
+msgid "assets found where expected"
+msgstr "bens encontrados no local esperado"
+
+msgid "inventory counts"
+msgstr "inventários"
+
+msgid "counted at"
+msgstr "contado em"
+
+msgid "count reading"
+msgstr "leitura de inventário"
+
+msgid "count readings"
+msgstr "leituras de inventário"
+
+msgid "Not Found"
+msgstr "Não Encontrado"
+
+msgid "Found at Another Location"
+msgstr "Em Outro Local"
+
+msgid "Not Expected Here"
+msgstr "Não Esperado Aqui"
+
+msgid "Balance Difference"
+msgstr "Diferença de Saldo"
+
+msgid "expected quantity"
+msgstr "quantidade esperada"
+
+msgid "counted quantity"
+msgstr "quantidade contada"
+
+msgid "count divergence"
+msgstr "divergência de inventário"
+
+msgid "count divergences"
+msgstr "divergências de inventário"
+
+msgid "Read the location where it is."
+msgstr "Leia o local onde está."
+
+msgid "Choose a warehouse."
+msgstr "Escolha um armazém."
+
+msgid "Read a container."
+msgstr "Leia um contêiner."
+
+#, python-format
+msgid "Location being counted (%(code)s): nothing moves there until the count closes."
+msgstr "Local em contagem (%(code)s): nada se movimenta ali até o inventário fechar."

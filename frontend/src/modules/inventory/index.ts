@@ -213,6 +213,55 @@ export const transfers: AppModule = {
   ],
 }
 
+export const counts: AppModule = {
+  name: 'inventory-counts',
+  icon: 'mdi-clipboard-list-outline',
+  titleKey: 'inventory.counts.title',
+  app: 'remarketing',
+  section: INVENTORY_SECTION,
+  routes: [
+    {
+      // The menu links here; the list and a count are its pages
+      path: 'inventory/counts',
+      name: 'inventory-counts',
+      component: RouterView,
+      redirect: { name: 'inventory-counts-index' },
+      children: [
+        {
+          path: '',
+          name: 'inventory-counts-index',
+          component: () => import('./CountsView.vue'),
+        },
+        {
+          path: ':id(\\d+)',
+          name: 'inventory-count',
+          meta: { titleKey: 'inventory.counts.count' },
+          component: () => import('./CountView.vue'),
+          props: (route) => ({ id: Number(route.params.id) }),
+        },
+      ],
+    },
+  ],
+}
+
+export const occurrences = page(
+  'inventory-occurrences',
+  'occurrences',
+  'mdi-alert-circle-outline',
+  'inventory.occurrencesPage',
+  () => import('./OccurrencesView.vue'),
+  false,
+)
+
+export const indicators = page(
+  'inventory-indicators',
+  'indicators',
+  'mdi-chart-box-outline',
+  'inventory.indicators',
+  () => import('./IndicatorsView.vue'),
+  false,
+)
+
 export const accessories = page(
   'inventory-accessories',
   'accessories',
@@ -301,6 +350,9 @@ export default [
   stock,
   disposals,
   transfers,
+  counts,
+  occurrences,
+  indicators,
   movement,
   assets,
   accessories,
