@@ -95,6 +95,9 @@ def start_inspection(asset: Asset, *, bench: Location, user) -> InspectionReport
         raise DomainError(
             _("Only assets awaiting inspection (or blocked) can be inspected."), field="asset"
         )
+    from .transfers import check_not_in_transfer
+
+    check_not_in_transfer(asset)
     if asset.held_for_dispute:
         raise DomainError(_("This asset is held for a dispute."), field="asset")
     if bench.area_type != AreaType.BENCH or not bench.is_active:

@@ -183,6 +183,9 @@ def add_asset(disposal: Disposal, asset: Asset, *, user, unit_value: Decimal | N
         raise DomainError(
             _("%(asset)s is at another warehouse.") % {"asset": asset.horizon_id}, field="asset"
         )
+    from .transfers import check_not_in_transfer
+
+    check_not_in_transfer(asset)
     other = open_disposal_of(asset)
     if other is not None:
         raise DomainError(

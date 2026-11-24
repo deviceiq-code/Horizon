@@ -34,5 +34,9 @@ export function useInventoryRoles() {
     canDispose: computed(() => has(COMMERCIAL, ANALYST, SUPERVISOR)),
     /** Disposals: pick (read each ID) and ship */
     canPick: computed(() => has(STOREKEEPER, SUPERVISOR)),
+    /** Transfers: request, change items, cancel (supervisors approve) */
+    canRequestTransfer: computed(() => has(ANALYST, SUPERVISOR)),
+    /** Transfers: pick and send at the origin, receive at the destination */
+    canHandleTransfer: computed(() => has(STOREKEEPER, RECEIVER, SUPERVISOR)),
   }
 }

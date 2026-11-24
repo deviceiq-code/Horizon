@@ -286,6 +286,8 @@ def move_container(
     container = Container.objects.select_for_update().get(pk=container.pk)
     if not container.is_active:
         raise DomainError(_("This container is inactive."), field="object")
+    if container.current_location.is_virtual:
+        raise DomainError(_("This container is in transit between warehouses."), field="object")
     _check_place(to_location)
     if to_location == container.current_location:
         raise DomainError(_("The container is already there."), field="destination")
@@ -392,6 +394,11 @@ def reverse_event(event: MovementEvent, *, user, reason: str) -> MovementEvent:
         raise DomainError(_("Only an asset's own events can be reversed."), field="event")
     if event.kind in (EventKind.ENTRY, EventKind.REVERSAL, EventKind.LABEL_REPRINT):
         raise DomainError(_("This event cannot be reversed."), field="event")
+    if event.document_ref.startswith("transfer:"):
+        raise DomainError(
+            _("Events of a transfer are undone by the transfer (cancel it before sending)."),
+            field="event",
+        )
     if event.document_ref.startswith("disposal:"):
         raise DomainError(
             _("Events of a disposal are undone by the disposal (remove the item or cancel it)."),
@@ -629,3 +636,112 @@ def register_child(
         document_ref=document_ref,
     )
     return child
+
+
+# --- Transfers between warehouses (Phase 6) ------------------------------------------------
+
+
+@transaction.atomic
+def transfer_out(
+    asset: Asset, *, user, document_ref: str, reason: str = "", container: Container | None = None
+) -> MovementEvent:
+    """The asset leaves its warehouse: IN_TRANSIT at the virtual location, keeping the status
+    it comes back to (and the container it travels in, if any)."""
+    asset = Asset.objects.select_for_update().get(pk=asset.pk)
+    check_transition(asset.status, AssetStatus.IN_TRANSIT)
+    transit = Location.transit()
+    event = _record(
+        EventKind.TRANSFER_OUT,
+        user=user,
+        asset=asset,
+        from_location=asset.current_location,
+        to_location=transit,
+        from_container=asset.current_container,
+        to_container=container,
+        status_before=asset.status,
+        status_after=AssetStatus.IN_TRANSIT,
+        reason=reason,
+        document_ref=document_ref,
+    )
+    asset.status_before_transit = asset.status
+    asset.status = AssetStatus.IN_TRANSIT
+    asset.current_location = transit
+    asset.current_container = container
+    asset.save(
+        update_fields=[
+            "status",
+            "status_before_transit",
+            "current_location",
+            "current_container",
+            "updated_at",
+        ]
+    )
+    return event
+
+
+@transaction.atomic
+def transfer_in(
+    asset: Asset,
+    *,
+    user,
+    location: Location,
+    document_ref: str,
+    reason: str = "",
+    container: Container | None = None,
+) -> MovementEvent:
+    """The asset arrives: back to the status it left in, at `location` (or in `container`,
+    there) — the area must take that status (RN-02)."""
+    asset = Asset.objects.select_for_update().get(pk=asset.pk)
+    if asset.status != AssetStatus.IN_TRANSIT:
+        raise DomainError(_("This asset is not in transit."), field="code")
+    back = asset.status_before_transit
+    check_transition(asset.status, back, status_before_transit=back)
+    _check_place(location)
+    check_area(location.area_type, back, held_for_dispute=asset.held_for_dispute)
+    event = _record(
+        EventKind.TRANSFER_IN,
+        user=user,
+        asset=asset,
+        from_location=asset.current_location,
+        to_location=location,
+        from_container=asset.current_container,
+        to_container=container,
+        status_before=AssetStatus.IN_TRANSIT,
+        status_after=back,
+        reason=reason,
+        document_ref=document_ref,
+    )
+    asset.status = back
+    asset.status_before_transit = ""
+    asset.current_location = location
+    asset.current_container = container
+    asset.save(
+        update_fields=[
+            "status",
+            "status_before_transit",
+            "current_location",
+            "current_container",
+            "updated_at",
+        ]
+    )
+    return event
+
+
+@transaction.atomic
+def place_container(
+    container: Container, *, location: Location, user, kind: str, document_ref: str = ""
+) -> MovementEvent:
+    """A container travelling between warehouses (to the virtual location and back to a real
+    one); its assets are moved by transfer_out / transfer_in."""
+    container = Container.objects.select_for_update().get(pk=container.pk)
+    event = _record(
+        kind,
+        user=user,
+        container=container,
+        from_location=container.current_location,
+        to_location=location,
+        document_ref=document_ref,
+    )
+    container.current_location = location
+    container.save(update_fields=["current_location", "updated_at"])
+    return event

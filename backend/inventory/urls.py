@@ -27,6 +27,7 @@ from .views import (
     ReceivingLotViewSet,
     StockAssetViewSet,
     StockView,
+    TransferViewSet,
     WarehouseViewSet,
 )
 
@@ -54,6 +55,7 @@ router.register("charges", ChargeViewSet, basename="charge")
 router.register("alerts", AlertViewSet, basename="alert")
 router.register("stock/assets", StockAssetViewSet, basename="stock-asset")
 router.register("disposals", DisposalViewSet, basename="disposal")
+router.register("transfers", TransferViewSet, basename="transfer")
 
 urlpatterns = [
     path("lookup/", LookupView.as_view(), name="inventory-lookup"),

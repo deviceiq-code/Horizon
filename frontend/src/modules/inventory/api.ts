@@ -441,6 +441,9 @@ export interface Occurrence {
   kind: OccurrenceKind
   lot: number
   lot_code: string
+  /** Occurrences of transfers have no lot */
+  transfer?: number | null
+  transfer_code?: string | null
   asset: number | null
   asset_code: string | null
   asset_model: number | null
@@ -1510,4 +1513,205 @@ export function deleteDisposalFile(id: number, fileId: number) {
 
 export function disposalFileUrl(id: number, fileId: number) {
   return `/api${BASE}/disposals/${id}/files/${fileId}/file/`
+}
+
+// --- Phase 6: transfers between warehouses -----------------------------------------------------
+
+export const TRANSFER_STATUSES = [
+  'requested',
+  'approved',
+  'picking',
+  'in_transit',
+  'received',
+  'received_with_discrepancy',
+  'cancelled',
+] as const
+export type TransferStatus = (typeof TRANSFER_STATUSES)[number]
+export const BEFORE_SENDING: TransferStatus[] = ['requested', 'approved', 'picking']
+export const RECEIVING: TransferStatus[] = ['in_transit', 'received_with_discrepancy']
+export type TransferFileKind = 'fiscal_document' | 'other'
+
+export interface Transfer {
+  id: number
+  code: string
+  origin: number
+  origin_code: string
+  origin_name: string
+  destination: number
+  destination_code: string
+  destination_name: string
+  reason: string
+  status: TransferStatus
+  fiscal_document_number: string
+  transit_days: number
+  notes: string
+  keywords: string[]
+  items_count: number | null
+  picked_count: number | null
+  received_count: number | null
+  requested_by_name: string
+  requested_at: string
+  approved_by_name: string | null
+  approved_at: string | null
+  sent_by_name: string | null
+  sent_at: string | null
+  received_by_name: string | null
+  received_at: string | null
+  cancelled_by_name: string | null
+  cancelled_at: string | null
+  cancel_reason: string
+  /** Days beyond the transit days while in transit (RN-25) */
+  days_late: number
+  updated_at: string
+}
+
+export interface TransferItem {
+  id: number
+  asset: number | null
+  asset_detail:
+    | (AssetSummary & {
+        asset_class: string
+        grade: string
+        held_for_dispute: boolean
+        container: string | null
+      })
+    | null
+  accessory_model: number | null
+  accessory_model_label: string | null
+  quantity: number
+  condition: 'good' | 'scrap'
+  status_before: AssetStatus | ''
+  container: number | null
+  container_code: string | null
+  picked_quantity: number
+  picked: boolean
+  picked_at: string | null
+  received_quantity: number
+  received: boolean
+  received_at: string | null
+  received_location_code: string | null
+}
+
+export interface TransferFile {
+  id: number
+  kind: TransferFileKind
+  name: string
+  size: number
+  content_type: string
+  uploaded_at: string
+  uploaded_by_name: string
+}
+
+export interface TransferDetail extends Transfer {
+  items: TransferItem[]
+  files: TransferFile[]
+  occurrences: Occurrence[]
+  /** What still keeps it from being sent (translated) */
+  problems: string[]
+}
+
+export interface TransferInput {
+  origin?: number
+  destination?: number
+  reason?: string
+  transit_days?: number
+  fiscal_document_number?: string
+  notes?: string
+  keywords?: string[]
+}
+
+/** Filters: `status` (also `open`), `origin`, `destination`, `warehouse` (either). */
+export function listTransfers(params: ListParams) {
+  return api<Paginated<Transfer>>(`${BASE}/transfers/` + listQuery(params))
+}
+
+export function getTransfer(id: number) {
+  return api<TransferDetail>(`${BASE}/transfers/${id}/`)
+}
+
+export function createTransfer(data: TransferInput) {
+  return api<TransferDetail>(`${BASE}/transfers/`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updateTransfer(id: number, data: TransferInput) {
+  return api<TransferDetail>(`${BASE}/transfers/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+function transferPost(id: number, path: string, data: object = {}) {
+  return api<TransferDetail>(`${BASE}/transfers/${id}/${path}/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+/** An asset or a container (all its assets) read or typed. */
+export function addTransferItem(id: number, code: string) {
+  return transferPost(id, 'items', { code })
+}
+
+export function addTransferAccessory(
+  id: number,
+  data: { accessory_model: number; quantity: number; condition: 'good' | 'scrap' },
+) {
+  return transferPost(id, 'items', data)
+}
+
+export function removeTransferItem(id: number, itemId: number) {
+  return api<TransferDetail>(`${BASE}/transfers/${id}/items/${itemId}/`, { method: 'DELETE' })
+}
+
+export function approveTransfer(id: number) {
+  return transferPost(id, 'approve')
+}
+
+/** An asset or a container read at the origin, against the list (RN-24). */
+export function pickTransfer(id: number, code: string) {
+  return transferPost(id, 'pick', { code })
+}
+
+/** Units of an accessory line taken from a container or location (`code`). */
+export function pickTransferAccessory(id: number, item: number, code: string, quantity: number) {
+  return transferPost(id, 'pick', { item, code, quantity })
+}
+
+export function sendTransfer(id: number) {
+  return transferPost(id, 'send')
+}
+
+/** An asset or a container read at the destination, at `location` (read before). */
+export function receiveTransfer(
+  id: number,
+  data: { location: string; code: string; damaged?: boolean; note?: string },
+) {
+  return transferPost(id, 'receive', data)
+}
+
+export function receiveTransferAccessory(id: number, item: number, code: string, quantity: number) {
+  return transferPost(id, 'receive', { item, code, quantity })
+}
+
+export function finishTransfer(id: number) {
+  return transferPost(id, 'finish')
+}
+
+export function cancelTransfer(id: number, reason: string) {
+  return transferPost(id, 'cancel', { reason })
+}
+
+export function uploadTransferFile(id: number, kind: TransferFileKind, file: File) {
+  const body = new FormData()
+  body.append('kind', kind)
+  body.append('file', file)
+  return api<TransferFile[]>(`${BASE}/transfers/${id}/files/`, { method: 'POST', body })
+}
+
+export function deleteTransferFile(id: number, fileId: number) {
+  return api<void>(`${BASE}/transfers/${id}/files/${fileId}/`, { method: 'DELETE' })
+}
+
+export function transferFileUrl(id: number, fileId: number) {
+  return `/api${BASE}/transfers/${id}/files/${fileId}/file/`
 }

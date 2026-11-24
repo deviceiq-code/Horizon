@@ -143,11 +143,13 @@ async function logout() {
     :permanent="mdAndUp"
     data-testid="side-menu"
   >
-    <!-- The brand: back to the suite's home -->
-    <router-link :to="{ name: 'home' }" class="brand" data-testid="brand">
-      <span class="brand-mark">H</span>
-      <span class="brand-name">Horizon</span>
-    </router-link>
+    <!-- The brand (fixed at the top, as Settings at the bottom): back to the suite's home -->
+    <template #prepend>
+      <router-link :to="{ name: 'home' }" class="brand" data-testid="brand">
+        <span class="brand-mark">H</span>
+        <span class="brand-name">Horizon</span>
+      </router-link>
+    </template>
 
     <v-list nav density="comfortable" class="menu-list">
       <v-list-item
@@ -350,6 +352,24 @@ async function logout() {
 /* --- Side menu ------------------------------------------------------------------------------- */
 .side-menu {
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+/* The menu scrolls (wheel, touch, keyboard) without showing scrollbars; the brand (the drawer's
+   `prepend`) stays fixed at the top and Settings (`append`) at the bottom */
+.side-menu :deep(.v-navigation-drawer__prepend) {
+  flex: 0 0 auto;
+}
+.side-menu :deep(.v-navigation-drawer__content) {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.side-menu :deep(.v-navigation-drawer__content::-webkit-scrollbar) {
+  display: none;
+}
+.side-menu :deep(.v-navigation-drawer__append) {
+  flex: 0 0 auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .brand {
   display: flex;

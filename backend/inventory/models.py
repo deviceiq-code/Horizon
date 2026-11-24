@@ -819,6 +819,15 @@ class Occurrence(models.Model):
         related_name="occurrences",
         verbose_name=_("lot"),
     )
+    # Or of a transfer between warehouses (shortage, surplus, damage at the arrival)
+    transfer = models.ForeignKey(
+        "Transfer",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="occurrences",
+        verbose_name=_("transfer"),
+    )
     asset = models.ForeignKey(
         Asset, on_delete=models.PROTECT, null=True, blank=True, related_name="occurrences"
     )
@@ -854,7 +863,7 @@ class Occurrence(models.Model):
         ordering = ["created_at", "id"]
 
     def __str__(self):
-        return f"{self.get_kind_display()} ({self.lot})"
+        return f"{self.get_kind_display()} ({self.lot or self.transfer})"
 
 
 # --- Phase 3: inspection -------------------------------------------------------------------
@@ -1688,6 +1697,219 @@ class DisposalFile(models.Model):
     class Meta:
         verbose_name = _("disposal file")
         verbose_name_plural = _("disposal files")
+        ordering = ["uploaded_at", "id"]
+
+    def __str__(self):
+        return self.name
+
+    def delete(self, *args, **kwargs):
+        storage, path = self.file.storage, self.file.name
+        result = super().delete(*args, **kwargs)
+        transaction.on_commit(lambda: storage.delete(path))
+        return result
+
+
+# --- Phase 6: transfers between warehouses ---------------------------------------------------
+
+
+class TransferStatus(models.TextChoices):
+    REQUESTED = "requested", _("Requested")
+    APPROVED = "approved", _("Approved")
+    PICKING = "picking", _("Picking")
+    IN_TRANSIT = "in_transit", _("In Transit")
+    RECEIVED = "received", _("Received")
+    RECEIVED_WITH_DISCREPANCY = "received_with_discrepancy", _("Received with Discrepancy")
+    CANCELLED = "cancelled", _("Cancelled")
+
+
+# Before sending: items may still change (requested) or be picked
+BEFORE_SENDING = (TransferStatus.REQUESTED, TransferStatus.APPROVED, TransferStatus.PICKING)
+# Holding its assets (they go nowhere else meanwhile)
+OPEN_TRANSFER = (*BEFORE_SENDING, TransferStatus.IN_TRANSIT)
+
+# Statuses an asset may travel in (decision): never in triage, in inspection or reserved
+TRANSFERABLE = (
+    AssetStatus.AVAILABLE,
+    AssetStatus.SCRAP,
+    AssetStatus.BLOCKED,
+    AssetStatus.AWAITING_INSPECTION,
+)
+
+
+class Transfer(models.Model):
+    """Assets (and accessories) sent from one warehouse to another: requested, approved by a
+    supervisor, picked by reading each ID against the list (RN-24), sent with the fiscal
+    document (in transit at the virtual location), received at the destination by reading
+    each ID (back to the status they had — RN-02 applies there). Only inventory.transfers
+    changes it."""
+
+    year = models.PositiveSmallIntegerField(_("year"))
+    sequence = models.PositiveIntegerField(_("sequence"))
+    origin = models.ForeignKey(
+        Warehouse, on_delete=models.PROTECT, related_name="transfers_out", verbose_name=_("origin")
+    )
+    destination = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="transfers_in",
+        verbose_name=_("destination"),
+    )
+    reason = models.TextField(_("reason"))
+    status = models.CharField(
+        _("status"),
+        max_length=30,
+        choices=TransferStatus.choices,
+        default=TransferStatus.REQUESTED,
+    )
+    fiscal_document_number = models.CharField(
+        _("fiscal document number"), max_length=60, blank=True
+    )
+    # Days it may take on the road; later → an alert (RN-25)
+    transit_days = models.PositiveSmallIntegerField(_("transit days"), default=5)
+    notes = models.TextField(_("notes"), blank=True)
+    keywords = keywords_field()
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    requested_at = models.DateTimeField(_("requested at"), auto_now_add=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    approved_at = models.DateTimeField(_("approved at"), null=True, blank=True)
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    sent_at = models.DateTimeField(_("sent at"), null=True, blank=True)
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    received_at = models.DateTimeField(_("received at"), null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    cancelled_at = models.DateTimeField(_("cancelled at"), null=True, blank=True)
+    cancel_reason = models.CharField(_("reason for cancelling"), max_length=300, blank=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("transfer")
+        verbose_name_plural = _("transfers")
+        ordering = ["-requested_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["year", "sequence"], name="transfer_unique_code"),
+            models.CheckConstraint(
+                condition=~models.Q(origin=models.F("destination")),
+                name="transfer_between_two_warehouses",
+            ),
+        ]
+
+    def __str__(self):
+        return self.code
+
+    @property
+    def code(self) -> str:
+        return yearly_code("TRF", self.year, self.sequence)
+
+    @property
+    def ref(self) -> str:
+        """The movement events' `document_ref`."""
+        return f"transfer:{self.pk}"
+
+
+class TransferItem(models.Model):
+    """An asset (with the status it travels in) or a quantity of an accessory model; checked at
+    the origin (picked) and at the destination (received)."""
+
+    transfer = models.ForeignKey(Transfer, on_delete=models.CASCADE, related_name="items")
+    asset = models.ForeignKey(
+        Asset, on_delete=models.PROTECT, null=True, blank=True, related_name="transfer_items"
+    )
+    accessory_model = models.ForeignKey(
+        "catalogs.AssetModel", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    quantity = models.PositiveIntegerField(_("quantity"), default=1)
+    condition = models.CharField(
+        _("condition"),
+        max_length=10,
+        choices=AccessoryCondition.choices,
+        default=AccessoryCondition.GOOD,
+    )
+    # The status the asset had when it left (it comes back to it at the destination)
+    status_before = models.CharField(max_length=20, choices=AssetStatus.choices, blank=True)
+    # The container it travels in, when it was read with it
+    container = models.ForeignKey(
+        Container, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    picked_quantity = models.PositiveIntegerField(_("picked quantity"), default=0)
+    picked_at = models.DateTimeField(_("picked at"), null=True, blank=True)
+    picked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    received_quantity = models.PositiveIntegerField(_("received quantity"), default=0)
+    received_at = models.DateTimeField(_("received at"), null=True, blank=True)
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    received_location = models.ForeignKey(
+        Location, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+
+    class Meta:
+        verbose_name = _("transfer item")
+        verbose_name_plural = _("transfer items")
+        ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(asset__isnull=False, accessory_model__isnull=True, quantity=1)
+                | models.Q(asset__isnull=True, accessory_model__isnull=False, quantity__gt=0),
+                name="transfer_item_asset_or_accessory",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(picked_quantity__lte=models.F("quantity"))
+                & models.Q(received_quantity__lte=models.F("picked_quantity")),
+                name="transfer_item_quantities",
+            ),
+        ]
+
+    def __str__(self):
+        return str(self.asset or f"{self.accessory_model} × {self.quantity}")
+
+    @property
+    def picked(self) -> bool:
+        return self.picked_quantity >= self.quantity
+
+    @property
+    def received(self) -> bool:
+        return self.received_quantity >= self.quantity
+
+
+class TransferFileKind(models.TextChoices):
+    FISCAL_DOCUMENT = "fiscal_document", _("Fiscal Document")
+    OTHER = "other", _("Other")
+
+
+def _transfer_file_path(instance, filename: str) -> str:
+    ext = posixpath.splitext(filename)[1].lower()
+    return f"inventory/transfers/{uuid.uuid4().hex}{ext}"
+
+
+class TransferFile(models.Model):
+    """The fiscal document of a transfer (required to send it) or another file."""
+
+    transfer = models.ForeignKey(Transfer, on_delete=models.CASCADE, related_name="files")
+    kind = models.CharField(_("kind"), max_length=20, choices=TransferFileKind.choices)
+    file = models.FileField(_("file"), upload_to=_transfer_file_path, max_length=255)
+    name = models.CharField(_("name"), max_length=255)
+    size = models.PositiveBigIntegerField(_("size (bytes)"))
+    content_type = models.CharField(_("content type"), max_length=100)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    uploaded_at = models.DateTimeField(_("uploaded at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("transfer file")
+        verbose_name_plural = _("transfer files")
         ordering = ["uploaded_at", "id"]
 
     def __str__(self):

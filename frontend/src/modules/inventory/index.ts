@@ -182,6 +182,37 @@ export const disposals: AppModule = {
   ],
 }
 
+export const transfers: AppModule = {
+  name: 'inventory-transfers',
+  icon: 'mdi-swap-horizontal',
+  titleKey: 'inventory.transfers.title',
+  app: 'remarketing',
+  section: INVENTORY_SECTION,
+  routes: [
+    {
+      // The menu links here; the list and a transfer are its pages
+      path: 'inventory/transfers',
+      name: 'inventory-transfers',
+      component: RouterView,
+      redirect: { name: 'inventory-transfers-index' },
+      children: [
+        {
+          path: '',
+          name: 'inventory-transfers-index',
+          component: () => import('./TransfersView.vue'),
+        },
+        {
+          path: ':id(\\d+)',
+          name: 'inventory-transfer',
+          meta: { titleKey: 'inventory.transfers.transfer' },
+          component: () => import('./TransferView.vue'),
+          props: (route) => ({ id: Number(route.params.id) }),
+        },
+      ],
+    },
+  ],
+}
+
 export const accessories = page(
   'inventory-accessories',
   'accessories',
@@ -269,6 +300,7 @@ export default [
   disputes,
   stock,
   disposals,
+  transfers,
   movement,
   assets,
   accessories,

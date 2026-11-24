@@ -2725,3 +2725,171 @@ msgstr "Ingrese un valor válido."
 
 msgid "Events of a disposal are undone by the disposal (remove the item or cancel it)."
 msgstr "Los eventos de una destinación se deshacen por la destinación (quite el ítem o cancélela)."
+
+#, python-format
+msgid "Enter from 1 to %(max)d days."
+msgstr "Ingrese de 1 a %(max)d días."
+
+msgid "Choose both warehouses."
+msgstr "Elija los dos almacenes."
+
+msgid "Choose another warehouse as the destination."
+msgstr "Elija otro almacén como destino."
+
+msgid "Both warehouses must be active."
+msgstr "Los dos almacenes deben estar activos."
+
+msgid "Say why the assets are transferred."
+msgstr "Indique por qué se transfieren los bienes."
+
+#, python-format
+msgid "Not possible while the transfer is %(status)s."
+msgstr "No es posible con la transferencia %(status)s."
+
+#, python-format
+msgid "This asset is in transfer %(code)s."
+msgstr "Este bien está en la transferencia %(code)s."
+
+#, python-format
+msgid "%(asset)s is held for a dispute and cannot be transferred."
+msgstr "%(asset)s está retenido por una impugnación y no puede transferirse."
+
+#, python-format
+msgid "%(asset)s is %(status)s: it cannot be transferred."
+msgstr "%(asset)s está %(status)s: no puede transferirse."
+
+#, python-format
+msgid "%(asset)s is not at warehouse %(code)s."
+msgstr "%(asset)s no está en el almacén %(code)s."
+
+#, python-format
+msgid "%(asset)s is already in transfer %(code)s."
+msgstr "%(asset)s ya está en la transferencia %(code)s."
+
+#, python-format
+msgid "%(asset)s is in disposal %(code)s."
+msgstr "%(asset)s está en la destinación %(code)s."
+
+msgid "This container is empty."
+msgstr "Este contenedor está vacío."
+
+msgid "Choose the condition."
+msgstr "Elija la condición."
+
+msgid "Add the assets or accessories to transfer."
+msgstr "Agregue los bienes o accesorios a transferir."
+
+#, python-format
+msgid "%(asset)s is not in this transfer."
+msgstr "%(asset)s no está en esta transferencia."
+
+msgid "This transfer was cancelled."
+msgstr "Esta transferencia fue cancelada."
+
+msgid "The fiscal document of a sent transfer is kept."
+msgstr "El documento fiscal de una transferencia enviada se conserva."
+
+msgid "A supervisor must approve the transfer."
+msgstr "Un supervisor debe aprobar la transferencia."
+
+#, python-format
+msgid "%(asset)s left container %(container)s: pick it again."
+msgstr "%(asset)s salió del contenedor %(container)s: sepárelo de nuevo."
+
+msgid "Enter the fiscal document's number."
+msgstr "Ingrese el número del documento fiscal."
+
+msgid "Attach the fiscal document."
+msgstr "Adjunte el documento fiscal."
+
+#, python-format
+msgid "Read a location of warehouse %(code)s."
+msgstr "Lea una ubicación del almacén %(code)s."
+
+msgid "Arrived later."
+msgstr "Llegó después."
+
+#, python-format
+msgid "Container %(code)s has nothing of this transfer to receive."
+msgstr "El contenedor %(code)s no tiene nada de esta transferencia por recibir."
+
+#, python-format
+msgid "%(asset)s was already received."
+msgstr "%(asset)s ya fue recibido."
+
+#, python-format
+msgid "%(asset)s is not in this transfer: recorded as a surplus."
+msgstr "%(asset)s no está en esta transferencia: registrado como sobrante."
+
+#, python-format
+msgid "Only %(left)d left to receive."
+msgstr "Solo quedan %(left)d por recibir."
+
+msgid "Say why the transfer is cancelled."
+msgstr "Indique por qué se cancela la transferencia."
+
+msgid "transfer"
+msgstr "transferencia"
+
+msgid "Requested"
+msgstr "Solicitada"
+
+msgid "Received"
+msgstr "Recibida"
+
+msgid "Received with Discrepancy"
+msgstr "Recibida con Discrepancia"
+
+msgid "origin"
+msgstr "origen"
+
+msgid "destination"
+msgstr "destino"
+
+msgid "transit days"
+msgstr "días de tránsito"
+
+msgid "requested at"
+msgstr "solicitada el"
+
+msgid "sent at"
+msgstr "enviada el"
+
+msgid "received at"
+msgstr "recibida el"
+
+msgid "transfers"
+msgstr "transferencias"
+
+msgid "received quantity"
+msgstr "cantidad recibida"
+
+msgid "transfer item"
+msgstr "ítem de transferencia"
+
+msgid "transfer items"
+msgstr "ítems de transferencia"
+
+msgid "transfer file"
+msgstr "archivo de transferencia"
+
+msgid "transfer files"
+msgstr "archivos de transferencia"
+
+msgid "Read the ID of an asset or a container."
+msgstr "Lea el ID de un bien o contenedor."
+
+msgid "Read the container or location of the accessories."
+msgstr "Lea el contenedor o ubicación de los accesorios."
+
+msgid "Read the location first."
+msgstr "Lea primero la ubicación."
+
+msgid "This container is in transit between warehouses."
+msgstr "Este contenedor está en tránsito entre almacenes."
+
+msgid "Events of a transfer are undone by the transfer (cancel it before sending)."
+msgstr "Los eventos de una transferencia se deshacen por la transferencia (cancélela antes de enviar)."
+
+msgid "This asset is not in transit."
+msgstr "Este bien no está en tránsito."

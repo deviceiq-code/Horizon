@@ -53,6 +53,9 @@ from .models import (
     ReceivingLot,
     ReportPhoto,
     ReportStatus,
+    Transfer,
+    TransferFile,
+    TransferItem,
     Warehouse,
 )
 from .states import AreaType, accepted_statuses
@@ -751,6 +754,7 @@ class OccurrenceSerializer(serializers.ModelSerializer):
     asset_code = serializers.CharField(source="asset.horizon_id", read_only=True, default=None)
     asset_model_label = serializers.SerializerMethodField()
     lot_code = serializers.SerializerMethodField()
+    transfer_code = serializers.SerializerMethodField()
     responsible_name = serializers.SerializerMethodField()
     resolved_by_name = serializers.SerializerMethodField()
     attachments_count = serializers.IntegerField(read_only=True, default=0)
@@ -762,6 +766,8 @@ class OccurrenceSerializer(serializers.ModelSerializer):
             "kind",
             "lot",
             "lot_code",
+            "transfer",
+            "transfer_code",
             "asset",
             "asset_code",
             "asset_model",
@@ -790,6 +796,7 @@ class OccurrenceSerializer(serializers.ModelSerializer):
             "created_at",
             "expected_serial",
             "received_serial",
+            "transfer",
         ]
         extra_kwargs = {"lot": {"required": True, "allow_null": False}}
 
@@ -798,6 +805,9 @@ class OccurrenceSerializer(serializers.ModelSerializer):
 
     def get_lot_code(self, obj) -> str | None:
         return obj.lot.code if obj.lot else None
+
+    def get_transfer_code(self, obj) -> str | None:
+        return obj.transfer.code if obj.transfer_id else None
 
     def get_responsible_name(self, obj) -> str | None:
         return display_name_in(self.context, obj.responsible) if obj.responsible else None
@@ -1679,3 +1689,158 @@ class DisposalSerializer(serializers.ModelSerializer):
 
     def get_cancelled_by_name(self, obj):
         return display_name_in(self.context, obj.cancelled_by) if obj.cancelled_by else None
+
+
+# --- Phase 6: transfers ----------------------------------------------------------------------
+
+
+class TransferFileSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TransferFile
+        fields = ["id", "kind", "name", "size", "content_type", "uploaded_at", "uploaded_by_name"]
+        read_only_fields = fields
+
+    def get_uploaded_by_name(self, obj):
+        return display_name_in(self.context, obj.uploaded_by)
+
+
+class TransferItemSerializer(serializers.ModelSerializer):
+    asset_detail = serializers.SerializerMethodField()
+    accessory_model_label = serializers.SerializerMethodField()
+    container_code = serializers.CharField(source="container.code", read_only=True, default=None)
+    received_location_code = serializers.CharField(
+        source="received_location.code", read_only=True, default=None
+    )
+    picked = serializers.BooleanField(read_only=True)
+    received = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = TransferItem
+        fields = [
+            "id",
+            "asset",
+            "asset_detail",
+            "accessory_model",
+            "accessory_model_label",
+            "quantity",
+            "condition",
+            "status_before",
+            "container",
+            "container_code",
+            "picked_quantity",
+            "picked",
+            "picked_at",
+            "received_quantity",
+            "received",
+            "received_at",
+            "received_location_code",
+        ]
+        read_only_fields = fields
+
+    def get_asset_detail(self, obj):
+        if obj.asset is None:
+            return None
+        asset = obj.asset
+        return {
+            **_asset_summary(asset),
+            "asset_class": asset_class_name(asset.asset_model.asset_class),
+            "grade": asset.condition_grade,
+            "held_for_dispute": asset.held_for_dispute,
+            "container": asset.current_container.code if asset.current_container_id else None,
+        }
+
+    def get_accessory_model_label(self, obj):
+        return _model_label(obj.accessory_model) if obj.accessory_model_id else None
+
+
+class TransferSerializer(serializers.ModelSerializer):
+    """Header of a transfer. Origin and destination only on creation. The detail adds
+    `items`, `files`, `occurrences`, `problems` (what keeps it from being sent) and
+    `days_late`."""
+
+    code = serializers.CharField(read_only=True)
+    origin_code = serializers.CharField(source="origin.code", read_only=True)
+    origin_name = serializers.CharField(source="origin.name", read_only=True)
+    destination_code = serializers.CharField(source="destination.code", read_only=True)
+    destination_name = serializers.CharField(source="destination.name", read_only=True)
+    items_count = serializers.IntegerField(read_only=True, default=None)
+    picked_count = serializers.IntegerField(read_only=True, default=None)
+    received_count = serializers.IntegerField(read_only=True, default=None)
+    requested_by_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+    sent_by_name = serializers.SerializerMethodField()
+    received_by_name = serializers.SerializerMethodField()
+    cancelled_by_name = serializers.SerializerMethodField()
+    days_late = serializers.SerializerMethodField()
+    keywords = KeywordsField(required=False)
+
+    class Meta:
+        model = Transfer
+        fields = [
+            "id",
+            "code",
+            "origin",
+            "origin_code",
+            "origin_name",
+            "destination",
+            "destination_code",
+            "destination_name",
+            "reason",
+            "status",
+            "fiscal_document_number",
+            "transit_days",
+            "notes",
+            "keywords",
+            "items_count",
+            "picked_count",
+            "received_count",
+            "requested_by_name",
+            "requested_at",
+            "approved_by_name",
+            "approved_at",
+            "sent_by_name",
+            "sent_at",
+            "received_by_name",
+            "received_at",
+            "cancelled_by_name",
+            "cancelled_at",
+            "cancel_reason",
+            "days_late",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "status",
+            "requested_at",
+            "approved_at",
+            "sent_at",
+            "received_at",
+            "cancelled_at",
+            "cancel_reason",
+            "updated_at",
+        ]
+
+    def _name(self, user):
+        return display_name_in(self.context, user) if user else None
+
+    def get_requested_by_name(self, obj):
+        return self._name(obj.requested_by)
+
+    def get_approved_by_name(self, obj):
+        return self._name(obj.approved_by)
+
+    def get_sent_by_name(self, obj):
+        return self._name(obj.sent_by)
+
+    def get_received_by_name(self, obj):
+        return self._name(obj.received_by)
+
+    def get_cancelled_by_name(self, obj):
+        return self._name(obj.cancelled_by)
+
+    def get_days_late(self, obj):
+        from .transfers import days_late
+
+        return days_late(obj, timezone.localdate())

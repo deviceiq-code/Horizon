@@ -23,9 +23,10 @@ from pricing.documents import content_type_for, opens_inline
 from users.models import INVENTORY_SUPERVISOR
 from users.permissions import is_administrator
 
-from . import disposals, followups, inspection, receiving, services
+from . import disposals, followups, inspection, receiving, services, transfers
 from .expected import model_key, parse_pasted
 from .models import (
+    BEFORE_SENDING,
     OPEN_DISPOSAL,
     AccessoryBalance,
     AccessoryCondition,
@@ -67,6 +68,8 @@ from .models import (
     PenaltyRate,
     ReceivingLot,
     ReportStatus,
+    Transfer,
+    TransferStatus,
     Warehouse,
 )
 from .permissions import (
@@ -81,6 +84,8 @@ from .permissions import (
     SCHEDULERS,
     SENDERS,
     SUPERVISORS,
+    TRANSFER_HANDLERS,
+    TRANSFER_REQUESTERS,
     has_role,
     role_permission,
 )
@@ -118,6 +123,9 @@ from .serializers import (
     ReceivingLotSerializer,
     ReportPhotoSerializer,
     StockAssetSerializer,
+    TransferFileSerializer,
+    TransferItemSerializer,
+    TransferSerializer,
     WarehouseSerializer,
     asset_class_name,
 )
@@ -1007,7 +1015,7 @@ class OccurrenceViewSet(
     resolve them; only supervisors accept them (POST <id>/accept/ {resolution})."""
 
     queryset = Occurrence.objects.select_related(
-        "lot", "asset", "asset_model__manufacturer", "responsible", "resolved_by"
+        "lot", "transfer", "asset", "asset_model__manufacturer", "responsible", "resolved_by"
     ).annotate(attachments_count=Count("attachments"))
     serializer_class = OccurrenceSerializer
     permission_classes = [role_permission(*RECEIVERS)]
@@ -1017,6 +1025,8 @@ class OccurrenceViewSet(
         params = self.request.query_params
         if params.get("lot", "").isdigit():
             queryset = queryset.filter(lot_id=int(params["lot"]))
+        if params.get("transfer", "").isdigit():
+            queryset = queryset.filter(transfer_id=int(params["transfer"]))
         if params.get("status") in OccurrenceStatus.values:
             queryset = queryset.filter(status=params["status"])
         if params.get("kind") in OccurrenceKind.values:
@@ -2258,3 +2268,351 @@ def _money(value) -> Decimal | None:
     if not amount.is_finite():
         raise DomainError(_("Enter a valid value."), field="unit_value")
     return amount.quantize(Decimal("0.01"))
+
+
+# --- Phase 6: transfers --------------------------------------------------------------------------
+
+
+class TransferViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Transfers between warehouses. List: ?status= (also `open`), ?origin=, ?destination=,
+    ?warehouse= (either), ?search= (code "TRF-2026-0001", reason, fiscal document, keywords).
+    Never deleted (cancel before sending). Analysts and supervisors request (POST), change the
+    header, add/remove items (items/: {code} — an asset or a container — or {accessory_model,
+    quantity, condition}; items/<id>/ DELETE) and cancel ({reason}); supervisors approve.
+    Storekeepers, receivers and supervisors pick (pick/: {code} or {item, code, quantity}),
+    send, receive (receive/: {location, code, damaged, note} or {item, code, quantity}) and
+    finish. files/ (GET, POST multipart kind + file), files/<id>/ DELETE, files/<id>/file GET.
+    """
+
+    queryset = Transfer.objects.select_related(
+        "origin",
+        "destination",
+        "requested_by",
+        "approved_by",
+        "sent_by",
+        "received_by",
+        "cancelled_by",
+    ).annotate(
+        items_count=Count("items", distinct=True),
+        picked_count=Count(
+            "items", filter=Q(items__picked_quantity__gte=F("items__quantity")), distinct=True
+        ),
+        received_count=Count(
+            "items", filter=Q(items__received_quantity__gte=F("items__quantity")), distinct=True
+        ),
+    )
+    serializer_class = TransferSerializer
+    permission_classes = [role_permission(*TRANSFER_REQUESTERS)]
+    filter_backends = [KeywordSearchFilter, NullsLastOrderingFilter]
+    search_fields = ["reason", "fiscal_document_number", "origin__code", "destination__code"]
+    ordering_fields = ["requested_at", "status", "sent_at", "received_at"]
+    ordering = ["-requested_at"]
+
+    def get_permissions(self):
+        if self.action in ("pick", "send", "receive", "finish"):
+            return [role_permission(*TRANSFER_HANDLERS)()]
+        if self.action == "approve":
+            return [role_permission(*SUPERVISORS)()]
+        if self.action in ("files", "file_delete"):
+            return [role_permission(*TRANSFER_REQUESTERS, *TRANSFER_HANDLERS)()]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+        if params.get("status") == "open":
+            queryset = queryset.filter(status__in=[*BEFORE_SENDING, TransferStatus.IN_TRANSIT])
+        elif params.get("status") in TransferStatus.values:
+            queryset = queryset.filter(status=params["status"])
+        for param in ("origin", "destination"):
+            if params.get(param, "").isdigit():
+                queryset = queryset.filter(**{f"{param}_id": int(params[param])})
+        if params.get("warehouse", "").isdigit():
+            pk = int(params["warehouse"])
+            queryset = queryset.filter(Q(origin_id=pk) | Q(destination_id=pk))
+        return queryset
+
+    def filter_queryset(self, queryset):
+        match = re.fullmatch(
+            r"\s*TRF-(\d{4})-(\d+)\s*", self.request.query_params.get("search", ""), re.I
+        )
+        if match:
+            return queryset.filter(year=int(match[1]), sequence=int(match[2])).order_by("id")
+        return super().filter_queryset(queryset)
+
+    def _detail(self, transfer, code=200):
+        transfer = self.get_queryset().get(pk=transfer.pk)
+        context = self.get_serializer_context()
+        data = self.get_serializer(transfer).data
+        items = transfer.items.select_related(
+            "asset__asset_model__manufacturer",
+            "asset__asset_model__asset_class",
+            "asset__customer",
+            "asset__lot",
+            "asset__current_location",
+            "asset__current_container",
+            "accessory_model__manufacturer",
+            "container",
+            "received_location",
+        )
+        data["items"] = TransferItemSerializer(items, many=True, context=context).data
+        data["files"] = TransferFileSerializer(
+            transfer.files.select_related("uploaded_by"), many=True, context=context
+        ).data
+        data["occurrences"] = OccurrenceSerializer(
+            transfer.occurrences.select_related(
+                "lot",
+                "transfer",
+                "asset",
+                "asset_model__manufacturer",
+                "responsible",
+                "resolved_by",
+            ).annotate(attachments_count=Count("attachments")),
+            many=True,
+            context=context,
+        ).data
+        data["problems"] = (
+            [str(p) for p in transfers.problems(transfer)]
+            if transfer.status in BEFORE_SENDING
+            else []
+        )
+        return Response(data, status=code)
+
+    def retrieve(self, request, *args, **kwargs):
+        return self._detail(self.get_object())
+
+    def _values(self, data, *, partial):
+        serializer = self.get_serializer(data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        return serializer.validated_data
+
+    def create(self, request, *args, **kwargs):
+        values = self._values(request.data, partial=False)
+        try:
+            transfer = transfers.create(
+                origin=values.get("origin"),
+                destination=values.get("destination"),
+                reason=values.get("reason", ""),
+                user=request.user,
+                transit_days=values.get("transit_days", 5),
+                notes=values.get("notes", ""),
+                keywords=values.get("keywords"),
+            )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer, 201)
+
+    def update(self, request, *args, **kwargs):
+        transfer = self.get_object()
+        values = self._values(request.data, partial=True)
+        allowed = {"reason", "transit_days", "notes", "keywords", "fiscal_document_number"}
+        try:
+            transfers.update_header(transfer, **{k: v for k, v in values.items() if k in allowed})
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["post"])
+    def items(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            if request.data.get("accessory_model"):
+                model = AssetModel.objects.filter(pk=request.data["accessory_model"]).first()
+                if model is None:
+                    raise DomainError(_("Choose a valid model."), field="accessory_model")
+                transfers.add_accessory(
+                    transfer,
+                    model,
+                    int(request.data.get("quantity") or 0),
+                    condition=request.data.get("condition") or AccessoryCondition.GOOD,
+                )
+            else:
+                target = _read(
+                    request.data.get("code"),
+                    (Asset, Container),
+                    "code",
+                    _("Read the ID of an asset or a container."),
+                )
+                if isinstance(target, Container):
+                    transfers.add_container(transfer, target)
+                else:
+                    transfers.add_asset(transfer, target)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["delete"], url_path=r"items/(?P<item_id>\d+)")
+    def item(self, request, pk=None, item_id=None):
+        transfer = self.get_object()
+        item = transfer.items.filter(pk=item_id).first()
+        if item is None:
+            raise Http404
+        try:
+            transfers.remove_item(item)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            transfers.approve(transfer, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    def _accessory_place(self, code):
+        place = _read(
+            code,
+            (Container, Location),
+            "code",
+            _("Read the container or location of the accessories."),
+        )
+        return (
+            place if isinstance(place, Container) else None,
+            place if isinstance(place, Location) else None,
+        )
+
+    @action(detail=True, methods=["post"])
+    def pick(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            if request.data.get("item"):
+                item = transfer.items.filter(pk=request.data["item"]).first()
+                if item is None:
+                    raise DomainError(_("Choose an item of the list."), field="item")
+                container, location = self._accessory_place(request.data.get("code"))
+                transfers.pick_accessory(
+                    transfer,
+                    item,
+                    int(request.data.get("quantity") or 0),
+                    user=request.user,
+                    container=container,
+                    location=location,
+                )
+            else:
+                target = _read(
+                    request.data.get("code"),
+                    (Asset, Container),
+                    "code",
+                    _("Read the ID of an asset or a container."),
+                )
+                transfers.pick(transfer, target, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["post"])
+    def send(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            transfers.send(transfer, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["post"])
+    def receive(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            if request.data.get("item"):
+                item = transfer.items.filter(pk=request.data["item"]).first()
+                if item is None:
+                    raise DomainError(_("Choose an item of the list."), field="item")
+                container, location = self._accessory_place(request.data.get("code"))
+                transfers.receive_accessory(
+                    transfer,
+                    item,
+                    int(request.data.get("quantity") or 0),
+                    user=request.user,
+                    container=container,
+                    location=location,
+                )
+            else:
+                location = _read(
+                    request.data.get("location"),
+                    Location,
+                    "location",
+                    _("Read the location first."),
+                )
+                target = _read(
+                    request.data.get("code"),
+                    (Asset, Container),
+                    "code",
+                    _("Read the ID of an asset or a container."),
+                )
+                transfers.receive(
+                    transfer,
+                    target,
+                    location=location,
+                    user=request.user,
+                    damaged=bool(request.data.get("damaged")),
+                    note=str(request.data.get("note") or ""),
+                )
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["post"])
+    def finish(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            transfers.finish(transfer, user=request.user)
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            transfers.cancel(transfer, user=request.user, reason=request.data.get("reason", ""))
+        except DomainError as exc:
+            return domain_error(exc)
+        return self._detail(transfer)
+
+    @action(detail=True, methods=["get", "post"])
+    def files(self, request, pk=None):
+        transfer = self.get_object()
+        if request.method == "POST":
+            try:
+                transfers.add_file(
+                    transfer,
+                    kind=request.data.get("kind", ""),
+                    upload=_upload(request),
+                    user=request.user,
+                )
+            except DomainError as exc:
+                return domain_error(exc)
+        return Response(
+            TransferFileSerializer(
+                transfer.files.select_related("uploaded_by"),
+                many=True,
+                context=self.get_serializer_context(),
+            ).data
+        )
+
+    @action(detail=True, methods=["delete"], url_path=r"files/(?P<file_id>\d+)")
+    def file_delete(self, request, pk=None, file_id=None):
+        item = self.get_object().files.filter(pk=file_id).first()
+        if item is None:
+            raise Http404
+        try:
+            transfers.remove_file(item)
+        except DomainError as exc:
+            return domain_error(exc)
+        return Response(status=204)
+
+    @action(detail=True, methods=["get"], url_path=r"files/(?P<file_id>\d+)/file")
+    def file_download(self, request, pk=None, file_id=None):
+        item = self.get_object().files.filter(pk=file_id).first()
+        if item is None:
+            raise Http404
+        return _file_response(item.file, item.name, item.content_type, inline=True)

@@ -443,6 +443,26 @@ def check_deadlines(today=None) -> dict:
                 days=left,
             )
 
+    # RN-25: transfers in transit longer than their transit days
+    from .models import Transfer, TransferStatus
+    from .transfers import days_late
+
+    for transfer in Transfer.objects.filter(status=TransferStatus.IN_TRANSIT).select_related(
+        "origin", "destination"
+    ):
+        late = days_late(transfer, today)
+        if late:
+            counts["alerts"] += alert(
+                f"transfer_late:{transfer.pk}",
+                "transfer_late",
+                ref=f"transfer:{transfer.pk}",
+                role_key=INVENTORY_SUPERVISOR,
+                transfer=transfer.code,
+                origin=transfer.origin.code,
+                destination=transfer.destination.code,
+                days=late,
+            )
+
     # Aging: assets longer than allowed in their status (since their last status change)
     limits = {a.status: a.days for a in AgingLimit.objects.exclude(days__isnull=True)}
     if limits:

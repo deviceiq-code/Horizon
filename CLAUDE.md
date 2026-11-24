@@ -77,7 +77,16 @@ Multi-user web system for **operating lease residual value pricing**
     SCRAP), pick (read the shipping area, then each ID against the list → moved there),
     ship (all picked, document; discard: certificate — RN-23 → WRITTEN_OFF), cancel (all
     back); stock query `GET /stock/` + `/stock/assets/` (current report's data for pricing).
-    Pages Stock and Disposals (`StockView.vue`, `DisposalsView.vue`, `DisposalView.vue`). **Blind count**: expected
+    Pages Stock and Disposals (`StockView.vue`, `DisposalsView.vue`, `DisposalView.vue`). Phase 6: `transfers.py`
+    — `Transfer` (`TRF-…`; requested → approved by a supervisor → picking → in_transit →
+    received | received_with_discrepancy, or cancelled before sending; `transit_days`, late →
+    `transfer_late` alert, RN-25), `TransferItem` (asset with `status_before`, or accessory
+    quantity; `container` it travels in), `TransferFile` (fiscal document required to send);
+    eligible: available, scrap, blocked, awaiting inspection — never held; a container read =
+    all its assets (they travel in it); RN-24 picking against the list; `services.transfer_out`
+    / `transfer_in` (IN_TRANSIT at VIRTUAL-TRANSIT and back to the previous status where the
+    receiver reads — RN-02); damage only an occurrence; surplus recorded; finish → shortages
+    (`Occurrence.transfer`). Pages `TransfersView.vue`, `TransferView.vue`. **Blind count**: expected
     lists never reach receivers (`EXPECTED_READERS`). Roles: `users.models` receiver,
     inspection_technician, storekeeper, inventory_supervisor, commercial_finance,
     remarketing_analyst (`inventory/permissions.py`; frontend `inventory/roles.ts`). API
@@ -308,8 +317,9 @@ Multi-user web system for **operating lease residual value pricing**
     or they shrink with the zoom.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — the frame of authenticated pages (a clean dashboard look):
-    dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`)
-    with the Horizon brand, Home, a section named after the current app with its modules, a
+    dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`;
+    the brand fixed on top and Settings fixed at the bottom, the menu between them scrolls
+    without scrollbars) with the Horizon brand, Home, a section named after the current app with its modules, a
     section "Apps" with the other apps, Settings at the bottom; open from 1440 px, collapsed to
     icons below (they expand on hover); the top bar's button opens/collapses it and the choice
     is remembered with the account (preferences' `ui_state.sideMenu.wide|narrow`). Phones: a drawer.

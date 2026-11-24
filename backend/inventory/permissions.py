@@ -37,6 +37,10 @@ SENDERS = (COMMERCIAL_FINANCE, INVENTORY_SUPERVISOR)
 DISPOSERS = (COMMERCIAL_FINANCE, REMARKETING_ANALYST, INVENTORY_SUPERVISOR)
 # Disposals: picking (reading each ID) and shipping
 PICKERS = (STOREKEEPER, INVENTORY_SUPERVISOR)
+# Transfers: requesting (supervisors approve)
+TRANSFER_REQUESTERS = (REMARKETING_ANALYST, INVENTORY_SUPERVISOR)
+# Transfers: picking and sending at the origin, receiving at the destination
+TRANSFER_HANDLERS = (STOREKEEPER, RECEIVER, INVENTORY_SUPERVISOR)
 
 
 def has_role(user, *keys: str) -> bool:

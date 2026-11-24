@@ -11,7 +11,7 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | 3. Inspection | Versioned reports, grade code, photos, checklists, findings, penalty table, data erasure tools and certificates (+ the lot's tools per asset class), approval, printable report, part harvesting | **Done** |
 | 4. Blocks and disputes | Block follow-ups, disputes, charges, deadline parameters, holidays, aging limits, daily routine, alerts | **Done** |
 | 5. Disposal | Stock query, disposals, reservation, picking, shipping, write-off | **Done** |
-| 6. Transfers | Transfers between warehouses, virtual transit location, receiving with discrepancies | To do |
+| 6. Transfers | Transfers between warehouses, virtual transit location, receiving with discrepancies | **Done** |
 | 7. Cycle counts and indicators | Counts, adjustments with approval, indicators panel | To do |
 
 ## Decisions
@@ -210,6 +210,42 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
   set values and cancel (`DISPOSERS`); storekeepers and supervisors pick and ship (`PICKERS`);
   both attach files.
 
+### Phase 6 (transfers)
+
+- **Transfers** (`Transfer`, code `TRF-<year>-<NNNN>`; only `inventory/transfers.py` writes
+  them): origin and destination warehouses (different, active), reason, **transit days**
+  (default 5, 1–90; beyond them → alert, RN-25), fiscal document (number + file, required to
+  send). Status requested → approved → picking → in transit → received | received with
+  discrepancy, or cancelled (before sending).
+- **Who**: remarketing analysts and supervisors request (items change only while requested);
+  **supervisors approve**; storekeepers, receivers and supervisors pick, send, receive and
+  finish (`TRANSFER_REQUESTERS`, `TRANSFER_HANDLERS`).
+- **What may travel** (decision): available, scrap, blocked and awaiting inspection — never in
+  triage, in inspection or reserved; **never held for a dispute** (checked again when picking
+  and sending); not in another open transfer or disposal. While in an open transfer an asset
+  is not reserved for a disposal nor inspected.
+- **Containers** (decision): reading a container stands for all its assets — added together
+  (all eligible, or none), picked together (every asset in it must be on the list) and they
+  travel in it; the container goes to the virtual location with them and arrives where it is
+  read. A container in transit is not moved by hand.
+- **Picking (RN-24)**: each ID or container read against the list; a divergence (anything not
+  picked, an asset that left its container or is no longer eligible) blocks the sending.
+  Accessories are taken from their container or location by quantity (PICKING events).
+- **Sending**: assets → IN_TRANSIT at `VIRTUAL-TRANSIT`, keeping the status they left in
+  (`Asset.status_before_transit`, `TransferItem.status_before`; TRANSFER_OUT events).
+- **Receiving in one step** (decision): read the destination location, then each ID or
+  container — back to the status it left in, **there** (RN-02: an available asset goes to a
+  stock area, a scrap one to a scrap area; TRANSFER_IN events). Accessories by quantity into a
+  container or location of the destination. **Damage is only an occurrence** (decision): the
+  asset is received normally and the supervisor decides (e.g. a new report version).
+  An asset read that is not on the list is refused and **recorded as a surplus**.
+- **Finishing** the receipt: what did not arrive becomes a **shortage** (assets stay in transit
+  until found; received later, the shortage is resolved by itself); any occurrence → received
+  with discrepancy. Occurrences belong to the transfer (`Occurrence.transfer`) and are
+  resolved or accepted as a lot's.
+- **RN-25**: the daily routine alerts supervisors once per late transfer (`transfer_late`).
+- Events of a transfer are never reversed by hand.
+
 ## Business rules → tests
 
 | Rule | Where | Tests |
@@ -243,6 +279,11 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
 | Held asset not reservable | `disposals.add_asset` | `test_a_held_asset_is_never_reserved`, `test_a_dispute_after_reserving_blocks_the_shipping` |
 | Picking against the list; divergence blocks shipping | `disposals.pick_asset`, `ship` | `test_pick_against_the_list_and_ship`, `disposals.spec.ts` |
 | Cancelling gives everything back | `disposals.cancel` | `test_cancel_gives_everything_back` |
+| RN-24 picking against the list; divergence blocks sending | `transfers.pick`, `problems`, `send` | `test_full_flow_back_to_the_status_rn24`, `test_container_with_an_asset_not_on_the_list_is_refused`, `transfers.spec.ts` |
+| RN-25 late transfer alert | `followups.check_deadlines`, `transfers.days_late` | `test_late_transfer_alert_rn25` |
+| Back to the previous status at the destination (RN-02) | `services.transfer_in` | `test_full_flow_back_to_the_status_rn24`, `test_containers_travel_with_their_assets` |
+| Held asset not transferable | `transfers._check_eligible` | `test_eligible_assets`, `test_a_dispute_before_sending_blocks_it` |
+| Shortage, surplus, damage | `transfers.receive`, `finish` | `test_shortage_surplus_and_late_arrival` |
 | Business days | `inventory/deadlines.py` | `test_business_days_skip_weekends_and_holidays`, `test_dispute_deadline_counts_business_days` |
 
 ## API (`/api/inventory/`)
@@ -261,7 +302,9 @@ draft PATCH; `serial/`, `specs/`, `photos/`, `findings/`, `certificates/`, `subm
 `decide/`, `evidence/`), `charges/` (`charged/`), `alerts/` (`count/`, `read/`, `read-all/`),
 `stock/`, `stock/assets/`, `disposals/` (POST creates; PATCH header; `items/`,
 `items/<id>/` PATCH/DELETE, `pick/`, `ship/`, `cancel/`, `files/`, `files/<id>/`,
-`files/<id>/file/`).
+`files/<id>/file/`), `transfers/` (POST requests; PATCH header; `items/`, `items/<id>/`
+DELETE, `approve/`, `pick/`, `send/`, `receive/`, `finish/`, `cancel/`, `files/`), occurrences
+`?transfer=`.
 Business rule refusals answer 400 `{"detail": "<translated reason>", "field": "<field>"}`.
 Asset models: `/api/catalogs/asset-models/`.
 
@@ -272,7 +315,9 @@ Triage, Received, Occurrences, Files, Data Erasure, Expected List), Inspection (
 progress, awaiting approval, approved; report page = step-by-step inspection for a draft, the
 printable report otherwise), Blocks (notify, print the notice, release, decide), Disputes and
 Charges, Stock (groups → units with their report), Disposals (list; disposal page: Items,
-Picking — scan the shipping area, then each ID —, Documents; Ship, Cancel), Movement (scan the object, then the
+Picking — scan the shipping area, then each ID —, Documents; Ship, Cancel), Transfers (list;
+transfer page: Items, Picking, Receiving — scan the location, then each ID or container —,
+Occurrences, Documents; Approve, Send, Finish Receipt, Cancel), Movement (scan the object, then the
 destination), Assets (grid, detail with history), Accessories (balances), Locations (tree per
 warehouse, labels), Containers (label printed on creation), Labels (reserve and print ranges,
 print again by code), Warehouses. Inventory Catalogs: Grades, Penalty Table, Erasure Tools, Deadlines and Holidays. Top bar:
