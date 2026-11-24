@@ -106,3 +106,12 @@ def test_services_count_in_the_lo_but_not_in_the_efmv():
     )
     # 8,000 of 22,000: lower than the 40% without the service
     assert totals.efmv_percent == D("36.36364")
+
+
+def test_split_attachments():
+    from efmv.calculations import split_attachments
+
+    assert split_attachments(D("100"), [(D("10"), True), (D("5"), False)]) == D("90")
+    assert split_attachments(D("100"), [(D("60"), True), (D("40"), True)]) is None
+    assert split_attachments(D("100"), [(D("101"), False)]) is None
+    assert split_attachments(D("100"), []) == D("100")

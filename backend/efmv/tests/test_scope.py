@@ -61,3 +61,17 @@ def test_each_language_has_its_word_order():
 def test_without_assets():
     assert scope_summary([], "en") == ""
     assert scope_summary([G("Dell", "Laptops", 0)], "en") == ""
+
+
+def test_software_and_services_are_noted():
+    from efmv.scope import ScopeGroup, scope_summary
+
+    groups = [ScopeGroup("Dell", "Laptops", 10)]
+    assert scope_summary(groups, "en", services=True) == "Dell Laptops (+Service)"
+    assert scope_summary(groups, "en", software=True) == "Dell Laptops (+Software)"
+    assert (
+        scope_summary(groups, "pt-br", services=True, software=True)
+        == "Laptops Dell (+Serviço e Software)"
+    )
+    # Only software and services: the note alone
+    assert scope_summary([], "es", services=True, software=True) == "(+Servicio y Software)"

@@ -161,6 +161,21 @@ const en = {
     },
   },
   efmv: {
+    software: {
+      defaultName: 'Software',
+      name: 'Software Name',
+      value: 'Software Value',
+      efmvHint:
+        'Software left at the end of the term: a value or a percentage of its value (e.g. 10%); empty: nothing.',
+    },
+    kinds: {
+      hw: 'Hardware',
+      sw: 'Software',
+      sv: 'Service',
+      hwShort: 'HW',
+      swShort: 'SW',
+      svShort: 'SV',
+    },
     list: {
       createdOn: 'Created on {date}',
       scenario: 'Scenario',
@@ -183,6 +198,13 @@ const en = {
       remove: 'Remove Service',
     },
     selection: {
+      attach: 'Attach',
+      attachHint: 'Software or a service under the selected hardware (one of each).',
+      attach_software: 'Attach Software',
+      attach_service: 'Attach Service',
+      add_hw: 'Add Hardware',
+      add_sw: 'Add Software',
+      add_sv: 'Add Service',
       addRow: 'Add Row',
       addService: 'Add Service',
       addServiceHint: 'A service row under the selected asset (one per asset).',
@@ -254,7 +276,6 @@ const en = {
       createdAt: 'Created',
     },
     scenario: {
-      scopeAutoHint: 'Empty: the text in gray, written from the assets (Smart Tools), counts.',
       scopeWrite: 'Use the Text from the Assets',
       addShort: 'Add New',
       duplicateShort: 'Duplicate',
@@ -276,8 +297,8 @@ const en = {
       scope: 'Scope',
       scopeHint: 'A brief explanation of the assets of this scenario.',
       assets: 'Assets',
-      noAssets: 'No assets yet. Use “+ Row” to add one.',
-      addRow: 'Row',
+      noAssets: 'No assets yet. Use “Add” to add one.',
+      addRow: 'Add',
       chooseAsset: 'Search Average Prices',
       quantityRule: 'At least 1.',
       duplicate: 'Duplicate Scenario',
@@ -287,6 +308,7 @@ const en = {
       removeConfirm: 'Remove the scenario "{name}"? It is only gone after saving.',
     },
     item: {
+      description: 'Description',
       outOfScope: "Not in the analysis's vertical; remove it.",
       unitValueHint: 'Leave empty to use the value of Average Prices (shown in gray).',
       unitValueRule: 'Enter a value greater than zero.',

@@ -247,7 +247,7 @@ async function save() {
         <v-btn
           color="primary"
           type="submit"
-          prepend-icon="mdi-content-save-outline"
+          prepend-icon="mdi-cloud-upload-outline"
           :loading="saving"
           data-testid="save"
         >

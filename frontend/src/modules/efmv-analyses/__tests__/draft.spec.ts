@@ -132,4 +132,62 @@ describe('eFMV analysis draft', () => {
     expect(copy.name).toBe('Base (copy)')
     expect(copy.key).not.toBe(scenario.key)
   })
+
+  it('software and services: of their own, or attached to hardware', () => {
+    const s = blankScenario('Base')
+    s.items = [
+      {
+        key: 1,
+        average_price: 7,
+        quantity: 2,
+        unit_value: '100,000.00',
+        efmv_value: '',
+        software: { name: '', value: '10%', mode: 'deduct', efmv: '30%' },
+        service: { name: 'Warranty', value: '500', mode: 'add' },
+      },
+      {
+        key: 2,
+        kind: 'sv',
+        description: '',
+        average_price: null,
+        quantity: 1,
+        unit_value: '3,000',
+        efmv_value: '',
+      },
+      {
+        key: 3,
+        kind: 'sw',
+        description: 'ERP',
+        average_price: null,
+        quantity: 4,
+        unit_value: '1,000',
+        efmv_value: '10%',
+      },
+    ]
+    const input = scenarioInput(s, 'en', 'Service', 'Software')
+    expect(input.items[0]).toEqual({
+      average_price: 7,
+      quantity: 2,
+      unit_value: '100000.00',
+      efmv_value: null,
+      service: { name: 'Warranty', mode: 'add', value: '500' },
+      software: {
+        name: 'Software',
+        mode: 'deduct',
+        percent: '10',
+        efmv_value: null,
+        efmv_percent: '30',
+      },
+    })
+    expect(input.items[1]).toEqual({
+      kind: 'sv',
+      description: '',
+      quantity: 1,
+      unit_value: '3000',
+      efmv_value: null,
+    })
+    expect(input.items[2]).toMatchObject({ kind: 'sw', description: 'ERP', efmv_percent: '10' })
+    // Units by kind: SW and SV of their own plus those attached (the hardware's quantity)
+    expect(assetCounts(s.items)).toEqual({ hw: 2, sw: 6, sv: 3 })
+  })
 })

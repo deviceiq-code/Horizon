@@ -184,6 +184,18 @@ async function mountView(props: { id: number } = { id: 3 }, roles = ['Account Ma
   return { wrapper, replace }
 }
 
+/** "+ Row" is a menu: Hardware / Software / Service */
+async function addRow(kind: 'hw' | 'sw' | 'sv' = 'hw') {
+  await click('add-row')
+  await click(`add-row-${kind}`)
+}
+
+/** "Attach" is a menu: Software / Service (for the selected hardware) */
+async function attach(key: 'software' | 'service') {
+  await click('attach')
+  await click(`attach-${key}`)
+}
+
 describe('EfmvAnalysisView', () => {
   beforeEach(() => {
     setLanguage('en')
@@ -270,8 +282,8 @@ describe('EfmvAnalysisView', () => {
     expect(inBody('[data-testid="scenario-vertical"]')!.textContent).toContain(
       'Industry / Yellow line',
     )
-    // "+ Row" adds an empty row; the asset is chosen in it
-    await click('add-row')
+    // "+ Row › Hardware" adds an empty row; the asset is chosen in it
+    await addRow()
     expect(inBody('[data-testid="quantity"] input')!.hasAttribute('disabled')).toBe(true)
     await openDropdown('add-asset')
     expect(dropdownSubtitles()).toEqual(['Caterpillar · Excavators'])
@@ -646,7 +658,7 @@ describe('EfmvAnalysisView', () => {
     efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView()
     // Nothing selected: nothing to act on
-    expect(inBody('[data-testid="add-service"]')!.hasAttribute('disabled')).toBe(true)
+    expect(inBody('[data-testid="attach"]')!.hasAttribute('disabled')).toBe(true)
     expect(inBody('[data-testid="remove-selected"]')!.hasAttribute('disabled')).toBe(true)
     // A click selects the row (one at a time)
     await click('asset-row')
@@ -668,7 +680,7 @@ describe('EfmvAnalysisView', () => {
       totals: TOTALS,
       has_expired: false,
     })
-    await click('add-service')
+    await attach('service')
     // The service row: no name yet ("Service" shown), zero, added to the asset; only its
     // asset, value and total (no number, quantity nor eFMV)
     expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
@@ -685,8 +697,14 @@ describe('EfmvAnalysisView', () => {
     const count = (kind: string) =>
       inBody(`[data-testid="asset-count-${kind}"]`)!.textContent!.replace(/\s+/g, ' ').trim()
     expect([count('hw'), count('sw'), count('sv')]).toEqual(['HW 2', 'SW 0', 'SV 2'])
-    // One service per asset: no second one
-    expect(inBody('[data-testid="add-service"]')!.hasAttribute('disabled')).toBe(true)
+    // One service per asset: no second one (software still can be attached)
+    await click('attach')
+    expect(inBody('[data-testid="attach-service"]')!.className).toContain('v-list-item--disabled')
+    expect(inBody('[data-testid="attach-software"]')!.className).not.toContain(
+      'v-list-item--disabled',
+    )
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await settle()
 
     // 8% deducted from the asset: the API resolves it
     await typeInto('service-value', '8%')
@@ -780,11 +798,11 @@ describe('EfmvAnalysisView', () => {
     await settle()
     expect(rows()[1]!.className).toContain('row-selected')
     const menu = inBody('[data-testid="row-menu-list"]')!
-    expect(menu.textContent).toContain('Add Row')
-    expect(menu.textContent).toContain('Add Service')
+    expect(menu.textContent).toContain('Add Hardware')
+    expect(menu.textContent).toContain('Attach Service')
     expect(menu.textContent).toContain('Remove')
-    // Add a service to that asset from the menu
-    await click('menu-add-service')
+    // Attach a service to that asset from the menu
+    await click('menu-attach-service')
     expect(document.querySelectorAll('[data-testid="service-row"]')).toHaveLength(1)
     // Remove the first asset from its menu
     rows()[0]!.dispatchEvent(
@@ -809,9 +827,8 @@ describe('EfmvAnalysisView', () => {
     // Empty: the text from the assets, in gray (nothing written in the field)
     expect(scope().value).toBe('')
     expect(scope().placeholder).toBe('Caterpillar Excavators')
-    expect(inBody('[data-testid="scenario-scope"]')!.textContent).toContain(
-      'Empty: the text in gray',
-    )
+    // No hint under the field (removed)
+    expect(inBody('[data-testid="scenario-scope"]')!.textContent).not.toContain('Empty:')
     // It follows the assets
     efmv.previewScenario.mockResolvedValue({
       items: [EXCAVATOR],
@@ -856,7 +873,7 @@ describe('EfmvAnalysisView', () => {
     efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
     efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
     const { wrapper } = await mountView({ id: 3 })
-    await click('add-row')
+    await addRow()
     expect(document.querySelectorAll('[data-testid="asset-row"]')).toHaveLength(2)
     await click('save')
     expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
@@ -937,6 +954,63 @@ describe('EfmvAnalysisView', () => {
     await debounce()
     expect(inBody('[data-testid="out-of-curve"]')!.textContent).toContain('48 months')
     expect(inBody('[data-testid="total-hw"]')!.textContent).toContain('—')
+    wrapper.unmount()
+  })
+
+  it('adds software and a service of their own and attaches software to hardware', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.updateEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    const { wrapper } = await mountView({ id: 3 })
+    await addRow('sv')
+    await addRow('sw')
+    const descriptions = document.querySelectorAll<HTMLInputElement>(
+      '[data-testid="description"] input',
+    )
+    // Not described: the placeholder says what it is
+    expect([...descriptions].map((d) => d.placeholder)).toEqual(['Service', 'Software'])
+    // The new lines (found by their description cell)
+    const lines = () =>
+      [...document.querySelectorAll<HTMLElement>('[data-testid="description"]')].map((cell) =>
+        cell.closest('tr')!,
+      )
+    for (const [index, text] of [
+      [0, '2,000'],
+      [1, '500'],
+    ] as const) {
+      const input = lines()[index]!.querySelector<HTMLInputElement>(
+        '[data-testid="unit-value"] input',
+      )!
+      input.value = text
+      input.dispatchEvent(new Event('input'))
+      await settle()
+    }
+    // A service is not resold: its eFMV cannot be typed; software's can
+    const efmvOf = (row: HTMLElement) =>
+      row.querySelector<HTMLInputElement>('[data-testid="efmv-value"] input')!
+    expect(efmvOf(lines()[0]!).disabled).toBe(true)
+    expect(efmvOf(lines()[1]!).disabled).toBe(false)
+    // Software attached to the excavator
+    await click('asset-row')
+    await attach('software')
+    expect(document.querySelectorAll('[data-testid="software-row"]')).toHaveLength(1)
+    expect((inBody('[data-testid="software-name"] input') as HTMLInputElement).placeholder).toBe(
+      'Software',
+    )
+    await click('save')
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, {
+      scenarios: [
+        expect.objectContaining({
+          items: [
+            expect.objectContaining({
+              average_price: 7,
+              software: expect.objectContaining({ name: 'Software', mode: 'add', value: '0.00' }),
+            }),
+            expect.objectContaining({ kind: 'sv', description: '', unit_value: '2000' }),
+            expect.objectContaining({ kind: 'sw', description: '', unit_value: '500' }),
+          ],
+        }),
+      ],
+    })
     wrapper.unmount()
   })
 })

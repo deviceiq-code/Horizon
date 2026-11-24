@@ -4,15 +4,17 @@ Per scenario:
 - LO (Leasing Origination): the total value of its items, quantity × unit value (typed by the
   analyst; Average Prices only position it, see pricing/positioning.py).
 - HW / SW / SV: the share of hardware, software and services in the LO (5 decimal places).
-  Assets from Average Prices are hardware; software and services come later.
+  Average prices are hardware; software and services are lines of their own or attached to a
+  hardware line.
 - eFMV at the end of the lease (EOL): the eFMV of the items weighted over the LO —
   Σ quantity × eFMV value (one unit at the end of the term) / LO, as a percentage with 2
   decimal places.
 - Weight of an item: its total (quantity × unit value) as a percentage of the LO, 5 places.
-- Services (SV) of an item: per unit, the item's quantity; added on top of the asset's value or
-  deducted from it (the asset is then worth the rest: `split_service`); never worth more than
-  the asset. Their eFMV is 0, so
-  they lower the eFMV at EOL.
+- Software (SW) and services (SV) attached to a hardware line (at most one of each): per unit,
+  the hardware's quantity; added on top of its value or deducted from it (the hardware is then
+  worth the rest: `split_attachments`); never worth more than the hardware nor, deducted,
+  leaving it with nothing. Services are worth nothing at the end of the term (eFMV 0), so they
+  lower the eFMV at EOL; software counts with the eFMV typed (0 when not).
 """
 
 from collections.abc import Iterable, Sequence
@@ -105,15 +107,24 @@ def percent_of_value(value: Decimal, percent: Decimal) -> Decimal:
 def split_service(
     unit_value: Decimal, service_value: Decimal, deduct: bool
 ) -> tuple[Decimal, Decimal] | None:
-    """(asset's unit value, service's unit value) of an item with a service. Deducted, the
-    service comes out of the value typed for the asset. None when the service is worth more
-    than the asset or, deducted, when it would leave the asset with nothing."""
-    if service_value > unit_value:
+    """(asset's unit value, service's unit value) of an item with one attachment (see
+    `split_attachments`)."""
+    rest = split_attachments(unit_value, [(service_value, deduct)])
+    return None if rest is None else (rest, service_value)
+
+
+def split_attachments(
+    unit_value: Decimal, attachments: Sequence[tuple[Decimal, bool]]
+) -> Decimal | None:
+    """The hardware's own unit value once its attachments ((value, deducted) per unit) are
+    taken out of it. None when one is worth more than the hardware or, deducted, they would
+    leave it with nothing."""
+    if any(value > unit_value for value, _deduct in attachments):
         return None
-    if not deduct:
-        return unit_value, service_value
-    rest = unit_value - service_value
-    return (rest, service_value) if rest >= CENTS else None
+    rest = unit_value - sum((value for value, deduct in attachments if deduct), Decimal(0))
+    if any(deduct for _value, deduct in attachments) and rest < CENTS:
+        return None
+    return rest
 
 
 def covers_term(anchor_terms: Sequence[int], term_months: int) -> bool:

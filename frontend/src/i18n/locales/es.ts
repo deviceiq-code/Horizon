@@ -161,6 +161,21 @@ const es: Messages = {
     },
   },
   efmv: {
+    software: {
+      defaultName: 'Software',
+      name: 'Nombre del Software',
+      value: 'Valor del Software',
+      efmvHint:
+        'Lo que queda del software al final del plazo: un valor o un porcentaje de su valor (ej.: 10%); vacío: nada.',
+    },
+    kinds: {
+      hw: 'Hardware',
+      sw: 'Software',
+      sv: 'Servicio',
+      hwShort: 'HW',
+      swShort: 'SW',
+      svShort: 'SV',
+    },
     list: {
       createdOn: 'Creado el {date}',
       scenario: 'Escenario',
@@ -184,6 +199,13 @@ const es: Messages = {
       remove: 'Quitar Servicio',
     },
     selection: {
+      attach: 'Acoplar',
+      attachHint: 'Software o un servicio bajo el hardware seleccionado (uno de cada).',
+      attach_software: 'Acoplar Software',
+      attach_service: 'Acoplar Servicio',
+      add_hw: 'Agregar Hardware',
+      add_sw: 'Agregar Software',
+      add_sv: 'Agregar Servicio',
       addRow: 'Agregar Fila',
       addService: 'Agregar Servicio',
       addServiceHint: 'Una fila de servicio bajo el bien seleccionado (una por bien).',
@@ -255,7 +277,6 @@ const es: Messages = {
       createdAt: 'Creado',
     },
     scenario: {
-      scopeAutoHint: 'Vacío: vale el texto en gris, escrito a partir de los bienes (Smart Tools).',
       scopeWrite: 'Usar el Texto de los Bienes',
       addShort: 'Agregar Nuevo',
       duplicateShort: 'Duplicar',
@@ -277,8 +298,8 @@ const es: Messages = {
       scope: 'Alcance',
       scopeHint: 'Una breve explicación sobre los bienes de este escenario.',
       assets: 'Bienes',
-      noAssets: 'Aún no hay bienes. Use “+ Fila” para agregar uno.',
-      addRow: 'Fila',
+      noAssets: 'Aún no hay bienes. Use “Agregar” para agregar uno.',
+      addRow: 'Agregar',
       chooseAsset: 'Buscar en Precios Promedio',
       quantityRule: 'Al menos 1.',
       duplicate: 'Duplicar Escenario',
@@ -288,6 +309,7 @@ const es: Messages = {
       removeConfirm: '¿Quitar el escenario "{name}"? Solo deja de existir al guardar.',
     },
     item: {
+      description: 'Descripción',
       outOfScope: 'No es de la vertical del análisis; quítelo.',
       unitValueHint: 'Deje vacío para usar el valor de los precios promedio (mostrado en gris).',
       unitValueRule: 'Ingrese un valor mayor que cero.',

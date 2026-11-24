@@ -23,6 +23,8 @@ import {
   type EfmvAnalysis,
 } from './api'
 import {
+  ATTACHMENTS,
+  isStandalone,
   blankScenario,
   copyName,
   copyScenario,
@@ -200,15 +202,24 @@ function hasIssues(index: number): boolean {
     !!scenario.preview?.items.some((i) => i.out_of_scope) ||
     scenario.items.some(
       (i) =>
-        i.average_price !== null &&
+        (isStandalone(i) || i.average_price !== null) &&
         (!Number.isInteger(i.quantity) ||
           i.quantity < 1 ||
-          (!!i.unit_value.trim() && parseUnitValue(i.unit_value, locale.value) === null) ||
+          // Software / services of their own need a value; hardware may leave it empty
+          (isStandalone(i)
+            ? parseUnitValue(i.unit_value, locale.value) === null
+            : !!i.unit_value.trim() && parseUnitValue(i.unit_value, locale.value) === null) ||
           !isEfmvInput(i.efmv_value, locale.value) ||
-          (!!i.service &&
-            (!i.service.name.trim() || parseServiceInput(i.service.value, locale.value) === null))),
+          ATTACHMENTS.some(
+            (key) =>
+              !!i[key] &&
+              (parseServiceInput(i[key]!.value, locale.value) === null ||
+                !isEfmvInput(i[key]!.efmv ?? '', locale.value)),
+          )),
     ) ||
-    !!scenario.preview?.items.some((i) => i.out_of_curve || i.service?.too_high)
+    !!scenario.preview?.items.some(
+      (i) => i.out_of_curve || i.service?.too_high || i.software?.too_high,
+    )
   )
 }
 
@@ -262,7 +273,7 @@ async function save() {
   for (const scenario of scenarios.value) {
     const kept = scenario.items
       .map((item, i) => [item, scenario.preview?.items[i]] as const)
-      .filter(([item]) => item.average_price !== null)
+      .filter(([item]) => isStandalone(item) || item.average_price !== null)
     scenario.items = kept.map(([item]) => item)
     if (scenario.preview) {
       scenario.preview.items = kept.map(([, detail]) => detail!).filter(Boolean)
@@ -273,7 +284,12 @@ async function save() {
     // Only the scenarios: the premises do not change
     const saved = await updateEfmvAnalysis(props.id, {
       scenarios: scenarios.value.map((s) =>
-        scenarioInput(s, locale.value, t('efmv.service.defaultName')),
+        scenarioInput(
+          s,
+          locale.value,
+          t('efmv.service.defaultName'),
+          t('efmv.software.defaultName'),
+        ),
       ),
     })
     notifications.notify(t('efmv.updated', { code: saved.code }))
@@ -411,7 +427,7 @@ async function save() {
           <div class="d-flex align-center ga-2 header-actions">
             <v-btn
               color="primary"
-              prepend-icon="mdi-content-save-outline"
+              prepend-icon="mdi-cloud-upload-outline"
               :loading="saving"
               data-testid="save"
               @click="save"

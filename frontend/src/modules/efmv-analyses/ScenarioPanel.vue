@@ -17,9 +17,12 @@ import { currencySymbol, toInputMoney } from '@/utils/money'
 import AssetCounts from './AssetCounts.vue'
 import AveragePricePicker from './AveragePricePicker.vue'
 import ScenarioTotalsBar from './ScenarioTotalsBar.vue'
-import { previewScenario, type PricePosition, type ScenarioItem } from './api'
+import { previewScenario, type ItemKind, type PricePosition, type ScenarioItem } from './api'
 import {
+  ATTACHMENTS,
   assetCounts,
+  isDeleted,
+  isStandalone,
   MAX_TERM,
   newKey,
   isEfmvInput,
@@ -30,6 +33,7 @@ import {
   parseUnitValue,
   scenarioInput,
   titleKey,
+  type AttachmentKey,
   type ItemDraft,
   type ScenarioDraft,
   type ScenarioErrors,
@@ -91,7 +95,12 @@ function detail(index: number): ScenarioItem | null {
 async function refresh() {
   const term = parseTerm(scenario.value.term)
   if (term === null) return
-  const input = scenarioInput(scenario.value, locale.value, t('efmv.service.defaultName'))
+  const input = scenarioInput(
+    scenario.value,
+    locale.value,
+    t('efmv.service.defaultName'),
+    t('efmv.software.defaultName'),
+  )
   const current = ++request
   pending.value = true
   try {
@@ -111,7 +120,7 @@ async function refresh() {
       has_expired: preview.has_expired,
       scope_suggestion: preview.scope_suggestion,
       items: scenario.value.items.map((item, i) =>
-        item.average_price === null
+        !isStandalone(item) && item.average_price === null
           ? (old[i] ?? deletedItem(item.quantity))
           : (sent.shift() ?? deletedItem(item.quantity)),
       ),
@@ -142,11 +151,14 @@ const watched = computed(() =>
     scenario.value.term,
     props.scope,
     scenario.value.items.map((i) => [
+      i.kind,
+      i.description,
       i.average_price,
       i.quantity,
       i.unit_value,
       i.efmv_value,
       i.service,
+      i.software,
     ]),
   ]),
 )
@@ -175,17 +187,27 @@ function writeScope() {
 
 // The same asset may be in several rows (e.g. a different value per delivery state)
 
-/** A new empty row: the asset is chosen in it (Asset column). */
-function addRow() {
+/**
+ * A new row: hardware — the asset is chosen in it (Asset column) — or software / a service of
+ * its own (a description; empty: "Software" / "Service").
+ */
+function addRow(kind: ItemKind = 'hw') {
+  const standalone = kind !== 'hw'
   scenario.value.items.push({
     key: newKey(),
+    kind,
+    description: '',
     average_price: null,
     quantity: 1,
     unit_value: '',
     efmv_value: '',
-    pending: true,
+    pending: !standalone,
   })
-  scenario.value.preview?.items.push({ ...deletedItem(1), available: true })
+  scenario.value.preview?.items.push({ ...deletedItem(1), kind, available: true })
+  if (standalone) {
+    const index = scenario.value.items.length - 1
+    nextTick(() => focusCell(index, 'description'))
+  }
 }
 
 function chooseAsset(index: number, id: number) {
@@ -218,7 +240,7 @@ function focusCell(row: number, column: string) {
 function onGridKeydown(event: KeyboardEvent) {
   const cell = (event.target as HTMLElement).closest<HTMLElement>('td[data-col]')
   const column = cell?.dataset.col
-  if (!cell || !column || column === 'asset') return
+  if (!cell || !column || column === 'asset' || !cell.closest('tr')?.dataset.row) return
   const row = Number(cell.closest<HTMLElement>('tr')?.dataset.row)
   let step = 0
   if (event.key === 'Enter') step = event.shiftKey ? -1 : 1
@@ -239,14 +261,11 @@ function onGridKeydown(event: KeyboardEvent) {
  */
 const editingUnit = ref<number | null>(null)
 function netShown(item: ItemDraft, index: number): boolean {
-  const service = detail(index)?.service
-  return (
-    item.service?.mode === 'deduct' &&
-    !!service &&
-    !service.too_high &&
-    !!detail(index)?.net_unit_value &&
-    editingUnit.value !== item.key
+  const deducted = ATTACHMENTS.some(
+    (key) =>
+      item[key]?.mode === 'deduct' && !!detail(index)?.[key] && !detail(index)![key]!.too_high,
   )
+  return deducted && !!detail(index)?.net_unit_value && editingUnit.value !== item.key
 }
 function unitShown(item: ItemDraft, index: number): string {
   return netShown(item, index)
@@ -291,45 +310,67 @@ function removeAsset(index: number) {
   if (removed) unselect(removed.key)
 }
 
-// --- Services (SV): at most one per asset, as a row under it ------------------------------------
+// --- Attached software (SW) and service (SV): at most one of each per hardware line ---------
 
-function addService(item: ItemDraft) {
-  if (item.service || item.average_price === null) return
-  // Zero to start with, added to the asset; no name: "Service" (the placeholder) is used
-  item.service = {
+function attach(item: ItemDraft, key: AttachmentKey) {
+  if (item[key] || isStandalone(item) || item.average_price === null) return
+  // Zero to start with, added to the asset; no name: the placeholder ("Service" / "Software")
+  item[key] = {
     name: '',
     value: toInputMoney('0', locale.value),
     mode: 'add',
+    ...(key === 'software' && { efmv: '' }),
   }
 }
 
-/** Removing a service: deducted, its value goes back to the asset (the API recomputes it) */
-function removeService(item: ItemDraft) {
-  item.service = null
-  if (selected.value === serviceRowId(item.key)) selected.value = assetRowId(item.key)
+/** Removing an attachment: deducted, its value goes back to the asset (the API recomputes it) */
+function detach(item: ItemDraft, key: AttachmentKey) {
+  item[key] = null
+  if (selected.value === attachmentRowId(key, item.key)) selected.value = assetRowId(item.key)
 }
 
-function toggleServiceMode(item: ItemDraft) {
-  if (item.service) item.service.mode = item.service.mode === 'add' ? 'deduct' : 'add'
+function toggleMode(item: ItemDraft, key: AttachmentKey) {
+  const attachment = item[key]
+  if (attachment) attachment.mode = attachment.mode === 'add' ? 'deduct' : 'add'
 }
 
-/** Leaving the service's value: money shown as money; "8%" turned into its value (by the API) */
-async function tidyServiceValue(item: ItemDraft) {
-  const service = item.service
-  if (!service) return
-  const parsed = parseServiceInput(service.value, locale.value)
+/** Leaving an attachment's value: money shown as money; "8%" turned into its value (by the API) */
+async function tidyAttachmentValue(item: ItemDraft, key: AttachmentKey) {
+  const attachment = item[key]
+  if (!attachment) return
+  const parsed = parseServiceInput(attachment.value, locale.value)
   if (parsed && 'value' in parsed) {
-    service.value = toInputMoney(parsed.value, locale.value)
+    attachment.value = toInputMoney(parsed.value, locale.value)
     return
   }
   if (!parsed) return
-  const typed = service.value
+  const typed = attachment.value
   clearTimeout(timer)
   await refresh()
   const index = scenario.value.items.indexOf(item)
-  const resolved = index >= 0 ? detail(index)?.service?.value : null
-  if (resolved && item.service?.value === typed) {
-    item.service.value = toInputMoney(resolved, locale.value)
+  const resolved = index >= 0 ? detail(index)?.[key]?.value : null
+  if (resolved && item[key]?.value === typed) {
+    item[key]!.value = toInputMoney(resolved, locale.value)
+  }
+}
+
+/** Leaving the attached software's eFMV: as the eFMV cells ("10%" → its value, by the API) */
+async function tidySoftwareEfmv(item: ItemDraft) {
+  const software = item.software
+  if (!software) return
+  const value = parseEfmvValue(software.efmv ?? '', locale.value)
+  if (value !== null) {
+    software.efmv = toInputMoney(value, locale.value)
+    return
+  }
+  const typed = software.efmv ?? ''
+  if (parseEfmvPercent(typed, locale.value) === null) return
+  clearTimeout(timer)
+  await refresh()
+  const index = scenario.value.items.indexOf(item)
+  const resolved = index >= 0 ? detail(index)?.software?.efmv_value : null
+  if (resolved && item.software?.efmv === typed) {
+    item.software.efmv = toInputMoney(resolved, locale.value)
   }
 }
 
@@ -339,43 +380,51 @@ const serviceValueRules = [
 
 // --- Selection: one row at a time (click it; right-click opens its menu) ---------------------
 
-/** The selected row: an asset ("a:<key>") or its service ("s:<key>") */
+/** The selected row: a line ("a:<key>"), its service ("s:<key>") or its software ("w:<key>") */
 const selected = ref<string | null>(null)
 const assetRowId = (key: number) => `a:${key}`
-const serviceRowId = (key: number) => `s:${key}`
+const ROW_PREFIX: Record<AttachmentKey, string> = { service: 's', software: 'w' }
+const attachmentRowId = (attachment: AttachmentKey, key: number) =>
+  `${ROW_PREFIX[attachment]}:${key}`
 
 function unselect(key: number) {
-  if (selected.value === assetRowId(key) || selected.value === serviceRowId(key)) {
-    selected.value = null
-  }
+  if (selected.value?.endsWith(`:${key}`)) selected.value = null
 }
 
-/** The selected row's item, and whether the row is the item's service */
+/** The selected row's item, and which attachment the row is (null: the line itself) */
 const selection = computed(() => {
   if (!selected.value) return null
-  const [kind, key] = selected.value.split(':')
+  const [prefix, key] = selected.value.split(':')
   const index = scenario.value.items.findIndex((i) => i.key === Number(key))
   if (index < 0) return null
-  return { index, item: scenario.value.items[index]!, isService: kind === 's' }
+  const attachment = (Object.keys(ROW_PREFIX) as AttachmentKey[]).find(
+    (k) => ROW_PREFIX[k] === prefix,
+  )
+  return { index, item: scenario.value.items[index]!, attachment: attachment ?? null }
 })
 
-/** The selected asset can get a service (it has an asset and no service yet) */
-const canAddService = computed(() => {
+/** The selected hardware line can get this attachment (it has none of that kind yet) */
+function canAttach(key: AttachmentKey) {
   const current = selection.value
   return (
-    !!current && !current.isService && !current.item.service && current.item.average_price !== null
+    !!current &&
+    !current.attachment &&
+    !isStandalone(current.item) &&
+    current.item.average_price !== null &&
+    !current.item[key]
   )
-})
+}
+const canAttachAny = computed(() => canAttach('software') || canAttach('service'))
 
-function addServiceToSelected() {
-  if (canAddService.value) addService(selection.value!.item)
+function attachToSelected(key: AttachmentKey) {
+  if (canAttach(key)) attach(selection.value!.item, key)
 }
 
-/** Remove the selected row: an asset (with its service) or only a service */
+/** Remove the selected row: a line (with what is attached to it) or only an attachment */
 function removeSelected() {
   const current = selection.value
   if (!current) return
-  if (current.isService) removeService(current.item)
+  if (current.attachment) detach(current.item, current.attachment)
   else removeAsset(current.index)
   selected.value = null
 }
@@ -387,9 +436,9 @@ function openMenu(event: MouseEvent, rowId: string) {
   menu.value = { open: true, x: event.clientX, y: event.clientY }
 }
 
-/** The errors of an item's service, whatever their shape */
-function serviceErrors(index: number): string[] {
-  const errors = props.errors?.items?.[String(index)]?.service
+/** The errors of an item's attachment, whatever their shape */
+function attachmentErrors(index: number, key: AttachmentKey): string[] {
+  const errors = props.errors?.items?.[String(index)]?.[key]
   if (!errors) return []
   return Array.isArray(errors) ? errors : Object.values(errors).flat()
 }
@@ -410,6 +459,10 @@ const itemError = (index: number) => {
   ]
 }
 
+// Software / services of their own: a value is required
+const requiredValueRules = [
+  (v: string) => parseUnitValue(v ?? '', locale.value) !== null || t('efmv.item.unitValueRule'),
+]
 // Empty: the average price's value counts (shown as the placeholder)
 const unitValueRules = [
   (v: string) =>
@@ -445,6 +498,16 @@ function signedPercent(value: string): string {
 const specsOf = (index: number) => specSummary(detail(index)?.specs ?? [], t, n)
 
 const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
+
+/** Icons and colors of the kinds (as the HW / SW / SV panel) */
+const KIND_LOOK: Record<ItemKind, { icon: string; color: string }> = {
+  hw: { icon: 'mdi-desktop-tower-monitor', color: 'primary' },
+  sw: { icon: 'mdi-application-brackets-outline', color: 'info' },
+  sv: { icon: 'mdi-wrench-outline', color: 'warning' },
+}
+const ATTACHMENT_KIND: Record<AttachmentKey, ItemKind> = { software: 'sw', service: 'sv' }
+const defaultName = (kind: ItemKind) =>
+  kind === 'sw' ? t('efmv.software.defaultName') : t('efmv.service.defaultName')
 </script>
 
 <template>
@@ -491,16 +554,11 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           :placeholder="scopeSuggestion || $t('efmv.scenario.scopeHint')"
           persistent-placeholder
           :error-messages="errors?.scope"
-          :hint="
-            scopeSuggestion && !scenario.scope.trim()
-              ? $t('efmv.scenario.scopeAutoHint')
-              : undefined
-          "
-          persistent-hint
           rows="2"
           no-resize
           density="compact"
           hide-details="auto"
+          class="head-scope"
           data-testid="scenario-scope"
         >
           <!-- Smart Tools: write it from the assets -->
@@ -548,17 +606,34 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           </v-chip>
         </div>
         <!-- On the selected row (click a row to select it; right click: the same options) -->
-        <v-btn
-          variant="tonal"
-          prepend-icon="mdi-wrench-outline"
-          class="text-none"
-          :disabled="!canAddService"
-          :title="$t('efmv.selection.addServiceHint')"
-          data-testid="add-service"
-          @click="addServiceToSelected"
-        >
-          {{ $t('efmv.selection.addService') }}
-        </v-btn>
+        <!-- Attach software or a service to the selected hardware line -->
+        <v-menu location="bottom end">
+          <template #activator="{ props: activator }">
+            <v-btn
+              v-bind="activator"
+              variant="tonal"
+              prepend-icon="mdi-link-variant"
+              append-icon="mdi-menu-down"
+              class="text-none"
+              :disabled="!canAttachAny"
+              :title="$t('efmv.selection.attachHint')"
+              data-testid="attach"
+            >
+              {{ $t('efmv.selection.attach') }}
+            </v-btn>
+          </template>
+          <v-list density="compact" min-width="200">
+            <v-list-item
+              v-for="key in ATTACHMENTS"
+              :key="key"
+              :prepend-icon="KIND_LOOK[ATTACHMENT_KIND[key]].icon"
+              :title="$t(`efmv.selection.attach_${key}`)"
+              :disabled="!canAttach(key)"
+              :data-testid="`attach-${key}`"
+              @click="attachToSelected(key)"
+            />
+          </v-list>
+        </v-menu>
         <v-btn
           variant="tonal"
           color="error"
@@ -571,16 +646,31 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
         >
           {{ $t('efmv.selection.remove') }}
         </v-btn>
-        <v-btn
-          variant="tonal"
-          color="primary"
-          prepend-icon="mdi-plus"
-          class="text-none"
-          data-testid="add-row"
-          @click="addRow"
-        >
-          {{ $t('efmv.scenario.addRow') }}
-        </v-btn>
+        <!-- A new line: hardware, software or a service -->
+        <v-menu location="bottom end">
+          <template #activator="{ props: activator }">
+            <v-btn
+              v-bind="activator"
+              variant="tonal"
+              color="primary"
+              append-icon="mdi-menu-down"
+              class="text-none"
+              data-testid="add-row"
+            >
+              {{ $t('efmv.scenario.addRow') }}
+            </v-btn>
+          </template>
+          <v-list density="compact" min-width="200">
+            <v-list-item
+              v-for="kind in ['hw', 'sw', 'sv'] as const"
+              :key="kind"
+              :prepend-icon="KIND_LOOK[kind].icon"
+              :title="$t(`efmv.kinds.${kind}`)"
+              :data-testid="`add-row-${kind}`"
+              @click="addRow(kind)"
+            />
+          </v-list>
+        </v-menu>
       </div>
     </div>
 
@@ -631,8 +721,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
           <tr
             :data-row="i"
             :class="{
-              'row-off':
-                detail(i)?.out_of_curve || detail(i)?.out_of_scope || item.average_price === null,
+              'row-off': detail(i)?.out_of_curve || detail(i)?.out_of_scope || isDeleted(item),
               'row-selected': selected === assetRowId(item.key),
             }"
             :aria-selected="selected === assetRowId(item.key)"
@@ -649,14 +738,44 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 density="compact"
                 hide-details
                 class="text-end-input"
-                :rules="item.average_price === null ? [] : quantityRules"
-                :disabled="item.average_price === null"
+                :rules="isDeleted(item) || item.pending ? [] : quantityRules"
+                :disabled="isDeleted(item) || !!item.pending"
                 :aria-label="$t('efmv.item.quantity')"
                 :title="$t('efmv.scenario.quantityRule')"
                 data-testid="quantity"
               />
             </td>
-            <td :class="item.pending ? 'cell-input' : 'cell-text'" data-col="asset">
+            <!-- Software / a service of its own: what it is (empty: the placeholder) -->
+            <td v-if="isStandalone(item)" class="cell-input" data-col="description">
+              <v-text-field
+                v-model="item.description"
+                variant="plain"
+                density="compact"
+                hide-details
+                maxlength="100"
+                :placeholder="defaultName(item.kind!)"
+                :aria-label="$t('efmv.item.description')"
+                data-testid="description"
+              >
+                <template #prepend-inner>
+                  <v-chip
+                    size="x-small"
+                    label
+                    :color="KIND_LOOK[item.kind!].color"
+                    variant="tonal"
+                    :prepend-icon="KIND_LOOK[item.kind!].icon"
+                    class="mr-1"
+                    data-testid="kind-chip"
+                  >
+                    {{ $t(`efmv.kinds.${item.kind}Short`) }}
+                  </v-chip>
+                </template>
+              </v-text-field>
+              <div v-for="message in itemError(i)" :key="message" class="text-caption text-error">
+                {{ message }}
+              </div>
+            </td>
+            <td v-else :class="item.pending ? 'cell-input' : 'cell-text'" data-col="asset">
               <AveragePricePicker
                 v-if="item.pending"
                 label=""
@@ -716,10 +835,7 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                   </div>
                 </div>
               </div>
-              <div
-                v-else-if="item.average_price === null"
-                class="text-medium-emphasis text-caption"
-              >
+              <div v-else-if="isDeleted(item)" class="text-medium-emphasis text-caption">
                 <v-icon icon="mdi-alert-outline" color="warning" size="small" class="mr-1" />
                 {{ $t('efmv.item.deleted') }}
               </div>
@@ -757,11 +873,17 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 hide-details
                 class="text-end-input"
                 :class="{ 'net-shown': netShown(item, i) }"
-                :rules="item.average_price === null ? [] : unitValueRules"
-                :disabled="item.average_price === null"
+                :rules="
+                  isStandalone(item)
+                    ? requiredValueRules
+                    : isDeleted(item) || item.pending
+                      ? []
+                      : unitValueRules
+                "
+                :disabled="isDeleted(item) || !!item.pending"
                 :aria-label="$t('efmv.item.unitValue')"
                 :title="
-                  item.service?.mode === 'deduct' && detail(i)?.net_unit_value
+                  netShown(item, i)
                     ? $t('efmv.service.netHint', {
                         value: `${symbol} ${toInputMoney(detail(i)!.net_unit_value!, locale)}`,
                       })
@@ -800,16 +922,26 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
                 v-model="item.efmv_value"
                 inputmode="decimal"
                 :placeholder="
-                  detail(i)?.curve_value ? toInputMoney(detail(i)!.curve_value!, locale) : ''
+                  isStandalone(item)
+                    ? toInputMoney('0', locale)
+                    : detail(i)?.curve_value
+                      ? toInputMoney(detail(i)!.curve_value!, locale)
+                      : ''
                 "
                 variant="plain"
                 density="compact"
                 hide-details
                 class="text-end-input"
-                :rules="item.average_price === null ? [] : efmvValueRules"
-                :disabled="item.average_price === null"
+                :rules="isDeleted(item) || item.pending ? [] : efmvValueRules"
+                :disabled="isDeleted(item) || !!item.pending || item.kind === 'sv'"
                 :aria-label="$t('efmv.item.efmvValue')"
-                :title="$t('efmv.item.efmvValueHint', { term: scenario.term })"
+                :title="
+                  item.kind === 'sv'
+                    ? $t('efmv.service.efmvHint')
+                    : item.kind === 'sw'
+                      ? $t('efmv.software.efmvHint')
+                      : $t('efmv.item.efmvValueHint', { term: scenario.term })
+                "
                 data-testid="efmv-value"
                 @blur="tidyEfmvValue(item)"
               >
@@ -868,117 +1000,162 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
               </div>
             </td>
           </tr>
-          <!-- Its service (SV): per unit, the asset's quantity; eFMV 0 -->
-          <tr
-            v-if="item.service"
-            class="service-row"
-            :class="{
-              'row-off': detail(i)?.service?.too_high,
-              'row-selected': selected === serviceRowId(item.key),
-            }"
-            :aria-selected="selected === serviceRowId(item.key)"
-            data-testid="service-row"
-            @click="selected = serviceRowId(item.key)"
-            @contextmenu.prevent="openMenu($event, serviceRowId(item.key))"
-          >
-            <!-- No number nor quantity: the service follows its asset's -->
-            <td class="row-number" />
-            <td class="cell-text" />
-            <td class="cell-input" data-col="service-name">
-              <v-text-field
-                v-model="item.service.name"
-                variant="plain"
-                density="compact"
-                hide-details
-                maxlength="100"
-                :placeholder="$t('efmv.service.defaultName')"
-                :aria-label="$t('efmv.service.name')"
-                data-testid="service-name"
-              >
-                <template #prepend-inner>
-                  <v-chip size="x-small" label color="secondary" variant="tonal" class="mr-1">
-                    {{ $t('efmv.service.sv') }}
+          <!-- What is attached to it — software (SW), then service (SV): per unit, the asset's
+               quantity; a service's eFMV is 0, software's is typed (empty: 0) -->
+          <template v-for="key in ATTACHMENTS" :key="`${key}-${item.key}`">
+            <tr
+              v-if="item[key]"
+              class="service-row"
+              :class="{
+                'row-off': detail(i)?.[key]?.too_high,
+                'row-selected': selected === attachmentRowId(key, item.key),
+              }"
+              :aria-selected="selected === attachmentRowId(key, item.key)"
+              :data-testid="`${key}-row`"
+              @click="selected = attachmentRowId(key, item.key)"
+              @contextmenu.prevent="openMenu($event, attachmentRowId(key, item.key))"
+            >
+              <!-- No number nor quantity: it follows its asset's -->
+              <td class="row-number" />
+              <td class="cell-text" />
+              <td class="cell-input" :data-col="`${key}-name`">
+                <v-text-field
+                  v-model="item[key]!.name"
+                  variant="plain"
+                  density="compact"
+                  hide-details
+                  maxlength="100"
+                  :placeholder="defaultName(ATTACHMENT_KIND[key])"
+                  :aria-label="$t(`efmv.${key}.name`)"
+                  :data-testid="`${key}-name`"
+                >
+                  <template #prepend-inner>
+                    <v-chip
+                      size="x-small"
+                      label
+                      :color="KIND_LOOK[ATTACHMENT_KIND[key]].color"
+                      variant="tonal"
+                      class="mr-1"
+                    >
+                      {{ $t(`efmv.kinds.${ATTACHMENT_KIND[key]}Short`) }}
+                    </v-chip>
+                  </template>
+                </v-text-field>
+                <div
+                  v-for="message in [
+                    ...(detail(i)?.[key]?.too_high && !attachmentErrors(i, key).length
+                      ? [$t('efmv.service.tooHigh')]
+                      : []),
+                    ...attachmentErrors(i, key),
+                  ]"
+                  :key="message"
+                  class="text-caption text-error px-3 pb-1"
+                  :data-testid="`${key}-error`"
+                >
+                  {{ message }}
+                </div>
+              </td>
+              <!-- Its value (money or "8%") and whether it is added to the asset or deducted -->
+              <td class="cell-input money-cell" :data-col="`${key}-value`">
+                <v-text-field
+                  v-model="item[key]!.value"
+                  inputmode="decimal"
+                  variant="plain"
+                  density="compact"
+                  hide-details
+                  class="text-end-input"
+                  :rules="serviceValueRules"
+                  :aria-label="$t(`efmv.${key}.value`)"
+                  :title="$t('efmv.service.valueHint')"
+                  :data-testid="`${key}-value`"
+                  @blur="tidyAttachmentValue(item, key)"
+                >
+                  <template #prepend-inner
+                    ><span class="symbol">{{ symbol }}</span></template
+                  >
+                </v-text-field>
+                <div class="chip-line">
+                  <v-chip
+                    class="cell-chip"
+                    size="x-small"
+                    variant="tonal"
+                    label
+                    :color="item[key]!.mode === 'deduct' ? 'warning' : 'primary'"
+                    :prepend-icon="item[key]!.mode === 'deduct' ? 'mdi-minus' : 'mdi-plus'"
+                    :title="$t('efmv.service.modeHint')"
+                    :data-testid="`${key}-mode`"
+                    @click="toggleMode(item, key)"
+                  >
+                    {{ $t(`efmv.service.${item[key]!.mode}`) }}
                   </v-chip>
-                </template>
-              </v-text-field>
-              <div
-                v-for="message in [
-                  ...(detail(i)?.service?.too_high && !serviceErrors(i).length
-                    ? [$t('efmv.service.tooHigh')]
-                    : []),
-                  ...serviceErrors(i),
-                ]"
-                :key="message"
-                class="text-caption text-error px-3 pb-1"
-                data-testid="service-error"
-              >
-                {{ message }}
-              </div>
-            </td>
-            <!-- Its value (money or "8%") and whether it is added to the asset or deducted -->
-            <td class="cell-input money-cell" data-col="service-value">
-              <v-text-field
-                v-model="item.service.value"
-                inputmode="decimal"
-                variant="plain"
-                density="compact"
-                hide-details
-                class="text-end-input"
-                :rules="serviceValueRules"
-                :aria-label="$t('efmv.service.value')"
-                :title="$t('efmv.service.valueHint')"
-                data-testid="service-value"
-                @blur="tidyServiceValue(item)"
-              >
-                <template #prepend-inner
-                  ><span class="symbol">{{ symbol }}</span></template
+                </div>
+              </td>
+              <!-- Software: its eFMV (empty: 0); services are not resold (nothing shown) -->
+              <td v-if="key === 'software'" class="cell-input money-cell" data-col="software-efmv">
+                <v-text-field
+                  v-model="item.software!.efmv"
+                  inputmode="decimal"
+                  :placeholder="toInputMoney('0', locale)"
+                  variant="plain"
+                  density="compact"
+                  hide-details
+                  class="text-end-input"
+                  :rules="efmvValueRules"
+                  :aria-label="$t('efmv.item.efmvValue')"
+                  :title="$t('efmv.software.efmvHint')"
+                  data-testid="software-efmv"
+                  @blur="tidySoftwareEfmv(item)"
                 >
-              </v-text-field>
-              <div class="chip-line">
-                <v-chip
-                  class="cell-chip"
-                  size="x-small"
-                  variant="tonal"
-                  label
-                  :color="item.service.mode === 'deduct' ? 'warning' : 'primary'"
-                  :prepend-icon="item.service.mode === 'deduct' ? 'mdi-minus' : 'mdi-plus'"
-                  :title="$t('efmv.service.modeHint')"
-                  data-testid="service-mode"
-                  @click="toggleServiceMode(item)"
-                >
-                  {{ $t(`efmv.service.${item.service.mode}`) }}
-                </v-chip>
-              </div>
-            </td>
-            <!-- Services are not resold (no eFMV): nothing shown -->
-            <td class="cell-text" :title="$t('efmv.service.efmvHint')" />
-            <td class="money-cell text-no-wrap numeric font-weight-medium">
-              <div v-if="detail(i)?.service && !detail(i)!.service!.too_high" class="money">
-                <span class="symbol font-weight-regular">{{ symbol }}</span>
-                <span data-testid="service-total">{{
-                  toInputMoney(detail(i)!.service!.line_total, locale)
-                }}</span>
-              </div>
-              <div v-else class="money justify-end">—</div>
-              <div class="chip-line">
-                <v-chip
-                  v-if="detail(i)?.service?.weight_percent"
-                  size="x-small"
-                  variant="tonal"
-                  label
-                  class="cell-chip numeric font-weight-regular"
-                  :title="$t('efmv.item.weightHint')"
-                  data-testid="service-weight"
-                >
-                  {{
-                    $t('efmv.item.weightPercent', {
-                      percent: $n(Number(detail(i)!.service!.weight_percent), 'percentValue'),
-                    })
-                  }}
-                </v-chip>
-              </div>
-            </td>
-          </tr>
+                  <template #prepend-inner
+                    ><span class="symbol">{{ symbol }}</span></template
+                  >
+                </v-text-field>
+                <div class="chip-line">
+                  <v-chip
+                    v-if="detail(i)?.software?.efmv_percent"
+                    size="x-small"
+                    variant="tonal"
+                    label
+                    class="cell-chip numeric"
+                    :title="$t('efmv.item.efmvPercentHint')"
+                  >
+                    {{
+                      $t('efmv.item.efmvPercent', {
+                        percent: $n(Number(detail(i)!.software!.efmv_percent), 'percentValue'),
+                      })
+                    }}
+                  </v-chip>
+                </div>
+              </td>
+              <td v-else class="cell-text" :title="$t('efmv.service.efmvHint')" />
+              <td class="money-cell text-no-wrap numeric font-weight-medium">
+                <div v-if="detail(i)?.[key] && !detail(i)![key]!.too_high" class="money">
+                  <span class="symbol font-weight-regular">{{ symbol }}</span>
+                  <span :data-testid="`${key}-total`">{{
+                    toInputMoney(detail(i)![key]!.line_total, locale)
+                  }}</span>
+                </div>
+                <div v-else class="money justify-end">—</div>
+                <div class="chip-line">
+                  <v-chip
+                    v-if="detail(i)?.[key]?.weight_percent"
+                    size="x-small"
+                    variant="tonal"
+                    label
+                    class="cell-chip numeric font-weight-regular"
+                    :title="$t('efmv.item.weightHint')"
+                    :data-testid="`${key}-weight`"
+                  >
+                    {{
+                      $t('efmv.item.weightPercent', {
+                        percent: $n(Number(detail(i)![key]!.weight_percent), 'percentValue'),
+                      })
+                    }}
+                  </v-chip>
+                </div>
+              </td>
+            </tr>
+          </template>
         </template>
       </tbody>
     </v-table>
@@ -992,17 +1169,22 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
     >
       <v-list density="compact" min-width="220" data-testid="row-menu-list">
         <v-list-item
-          prepend-icon="mdi-plus"
-          :title="$t('efmv.selection.addRow')"
-          data-testid="menu-add-row"
-          @click="addRow"
+          v-for="kind in ['hw', 'sw', 'sv'] as const"
+          :key="kind"
+          :prepend-icon="KIND_LOOK[kind].icon"
+          :title="$t(`efmv.selection.add_${kind}`)"
+          :data-testid="`menu-add-${kind}`"
+          @click="addRow(kind)"
         />
+        <v-divider class="my-1" />
         <v-list-item
-          prepend-icon="mdi-wrench-outline"
-          :title="$t('efmv.selection.addService')"
-          :disabled="!canAddService"
-          data-testid="menu-add-service"
-          @click="addServiceToSelected"
+          v-for="key in ATTACHMENTS"
+          :key="key"
+          prepend-icon="mdi-link-variant"
+          :title="$t(`efmv.selection.attach_${key}`)"
+          :disabled="!canAttach(key)"
+          :data-testid="`menu-attach-${key}`"
+          @click="attachToSelected(key)"
         />
         <v-divider class="my-1" />
         <v-list-item
@@ -1029,8 +1211,14 @@ const shortDate = (iso: string) => d(new Date(`${iso}T00:00:00`), 'short')
     grid-template-columns: 1fr 1fr;
     align-items: start;
   }
+  /* The scope and the HW / SW / SV panel share their line: same top, same height */
+  .head-scope,
   .head-shares {
     align-self: stretch;
+  }
+  .head-scope :deep(.v-input__control),
+  .head-scope :deep(.v-field) {
+    height: 100%;
   }
 }
 .scenario-panel {

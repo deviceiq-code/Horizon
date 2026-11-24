@@ -6,7 +6,8 @@ than `threshold` % of the units are left out (negligible). What is left is writt
 largest: a manufacturer's classes together ("Dell Laptops and Desktops"), manufacturers with
 the same classes together ("Dell and Lenovo Laptops"), at most three such parts ("…, and other
 assets"). Each language has its word order: "Dell Laptops" in English, "Laptops Dell" in
-Portuguese and Spanish. Services are not part of it.
+Portuguese and Spanish. Software and services are not described, only noted at the end:
+"(+Service)", "(+Software)" or "(+Service and Software)".
 """
 
 from collections.abc import Iterable
@@ -24,13 +25,25 @@ class Wording(NamedTuple):
     conjunction: str
     others: str
     manufacturer_first: bool
+    service: str = "Service"
+    software: str = "Software"
 
 
 WORDINGS = {
     "en": Wording("and", "other assets", manufacturer_first=True),
-    "pt-br": Wording("e", "outros bens", manufacturer_first=False),
-    "es": Wording("y", "otros bienes", manufacturer_first=False),
+    "pt-br": Wording("e", "outros bens", manufacturer_first=False, service="Serviço"),
+    "es": Wording("y", "otros bienes", manufacturer_first=False, service="Servicio"),
 }
+
+
+def extras_note(wording: Wording, *, services: bool, software: bool) -> str:
+    """ "(+Service and Software)", "(+Service)", "(+Software)" or nothing."""
+    words = [
+        w for w, present in ((wording.service, services), (wording.software, software)) if present
+    ]
+    return f"(+{join(words, wording.conjunction)})" if words else ""
+
+
 MAX_PARTS = 3
 
 
@@ -42,10 +55,22 @@ def join(words: list[str], conjunction: str) -> str:
 
 
 def scope_summary(
-    groups: Iterable[ScopeGroup], language: str, threshold: Decimal = Decimal("5")
+    groups: Iterable[ScopeGroup],
+    language: str,
+    threshold: Decimal = Decimal("5"),
+    *,
+    services: bool = False,
+    software: bool = False,
 ) -> str:
-    """The scope written from the assets (empty without any)."""
+    """The scope written from the assets (empty without any), with a note of the software and
+    services there are."""
     wording = WORDINGS.get((language or "en").lower(), WORDINGS["en"])
+    note = extras_note(wording, services=services, software=software)
+    text = _describe(groups, wording, threshold)
+    return " ".join(part for part in (text, note) if part)
+
+
+def _describe(groups: Iterable[ScopeGroup], wording: Wording, threshold: Decimal) -> str:
     units: dict[tuple[str, str], int] = {}
     for group in groups:
         if group.quantity > 0:

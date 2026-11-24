@@ -822,3 +822,112 @@ def test_keywords_change_after_creation(logged_client, managers, customers, pric
     assert r.json()["keywords"] == ["renewal q3"]
     found = logged_client.get(URL, {"search": "q3"}).json()["results"]
     assert [a["id"] for a in found] == [analysis["id"]]
+
+
+# --- Software and services of their own, and software attached -------------------------------
+
+
+def test_software_and_services_of_their_own(logged_client, prices):
+    # 2 excavators at 100,000 (curve at 24 months: 55,000), a service of its own (no eFMV) and
+    # software of its own with 10% left at the end
+    data = _preview(
+        logged_client,
+        [
+            {"average_price": prices["excavator"], "quantity": 2, "unit_value": "100000"},
+            {"kind": "sv", "description": "", "quantity": 1, "unit_value": "20000"},
+            {
+                "kind": "sw",
+                "description": "ERP licenses",
+                "quantity": 4,
+                "unit_value": "5000",
+                "efmv_percent": "10",
+            },
+        ],
+    )
+    hw, sv, sw = data["items"]
+    assert (sv["kind"], sv["description"], sv["efmv_value"]) == ("sv", "", "0.00")
+    assert (sw["kind"], sw["efmv_value"], sw["line_total"]) == ("sw", "500.00", "20000.00")
+    totals = data["totals"]
+    # LO = 200,000 + 20,000 + 20,000
+    assert totals["lo"] == "240000.00"
+    assert (totals["hw_total"], totals["sw_total"], totals["sv_total"]) == (
+        "200000.00",
+        "20000.00",
+        "20000.00",
+    )
+    # eFMV = 2 × 55,000 + 4 × 500 = 112,000
+    assert totals["efmv_total"] == "112000.00"
+    assert sw["weight_percent"] == "8.33333"
+    # The scope notes them
+    assert data["scope_suggestion"] == "Caterpillar Excavators (+Service and Software)"
+
+
+def test_software_and_service_attached_to_hardware(logged_client, prices):
+    data = _preview(
+        logged_client,
+        [
+            {
+                "average_price": prices["excavator"],
+                "quantity": 2,
+                "unit_value": "100000",
+                # OS license inside the price (deducted), 30% left at the end
+                "software": {
+                    "name": "OS",
+                    "value": "10000",
+                    "mode": "deduct",
+                    "efmv_percent": "30",
+                },
+                # Warranty on top
+                "service": {"name": "", "percent": "5", "mode": "add"},
+            }
+        ],
+    )
+    (item,) = data["items"]
+    assert item["net_unit_value"] == "90000.00"
+    assert item["software"]["efmv_value"] == "3000.00"
+    assert (item["service"]["value"], item["service"]["name"]) == ("5000.00", "")
+    totals = data["totals"]
+    # LO = 2 × (90,000 + 10,000 + 5,000)
+    assert totals["lo"] == "210000.00"
+    assert (totals["sw_total"], totals["sv_total"]) == ("20000.00", "10000.00")
+    assert data["scope_suggestion"].endswith("(+Service and Software)")
+
+
+def test_attachments_worth_too_much_are_refused(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["items"][0]["software"] = {"value": "60000", "mode": "deduct"}
+    data["scenarios"][0]["items"][0]["service"] = {"value": "40000", "mode": "deduct"}
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert "service" in r.json()["scenarios"]["0"]["items"]["0"]
+
+
+def test_lines_of_their_own_are_saved_and_read_back(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["items"] += [
+        {"kind": "sv", "description": "Installation", "quantity": 1, "unit_value": "3000"},
+        {"kind": "sw", "quantity": 2, "unit_value": "1500", "efmv_value": "100"},
+    ]
+    data["scenarios"][0]["items"][0]["software"] = {"name": "OS", "value": "2000"}
+    r = post(logged_client, data)
+    assert r.status_code == 201, r.json()
+    items = logged_client.get(f"{URL}{r.json()['id']}/").json()["scenarios"][0]["items"]
+    assert [i["kind"] for i in items] == ["hw", "hw", "sv", "sw"]
+    assert (
+        items[0]["software"]["value"] == "2000.00" and items[0]["software"]["efmv_value"] == "0.00"
+    )
+    assert (items[2]["description"], items[2]["unit_value"]) == ("Installation", "3000.00")
+    assert items[3]["efmv_value"] == "100.00"
+    from efmv.models import EfmvScenarioItem
+
+    # Stored as lines: the attached software points to its hardware
+    attached = EfmvScenarioItem.objects.get(kind="sw", attached_to__isnull=False)
+    assert attached.quantity == 2 and attached.attached_to.kind == "hw"
+
+
+def test_lines_of_their_own_need_a_value(logged_client, managers, customers, prices):
+    data = body(managers, customers, prices)
+    data["scenarios"][0]["items"].append({"kind": "sw", "quantity": 1})
+    r = post(logged_client, data)
+    assert r.status_code == 400
+    assert "unit_value" in str(r.json())

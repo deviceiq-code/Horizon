@@ -43,13 +43,19 @@ export type PricePosition = 'below' | 'slightly_below' | 'compatible' | 'slightl
  */
 export interface ScenarioItem {
   id: number | null
+  /** Hardware (an average price), or software / a service of its own (absent: hardware) */
+  kind?: ItemKind
+  /** Software / service of its own: what it is ("": "Software" / "Service") */
+  description?: string
   quantity: number
   /** The value that counts: typed by the analyst or, when not typed, the average price's */
   unit_value: string | null
   /** The asset's own value: without its service when the service was deducted from it */
   net_unit_value?: string | null
-  /** Its service (SV): eFMV 0; per unit, the item's quantity */
+  /** Its service (SV) attached: eFMV 0; per unit, the item's quantity */
   service?: ItemService | null
+  /** Its software (SW) attached: per unit, the item's quantity; with its eFMV */
+  software?: (ItemService & { efmv_value: string | null; efmv_percent: string | null }) | null
   /** Not typed: the average price's value counts (stored with the analysis when saved) */
   value_from_price?: boolean
   /** quantity × unit value; null without a value */
@@ -157,9 +163,16 @@ export interface EfmvAnalysisRow {
   updated_by_name: string | null
 }
 
+/** Hardware (an average price), software or a service */
+export type ItemKind = 'hw' | 'sw' | 'sv'
+
 export interface ScenarioItemInput {
-  /** Any version of the average price (its current version is used) */
-  average_price: number
+  /** Absent: hardware */
+  kind?: ItemKind
+  /** Hardware: any version of the average price (its current version is used) */
+  average_price?: number | null
+  /** Software / service of its own: what it is (empty: "Software" / "Service") */
+  description?: string
   quantity: number
   /** Canonical decimal string; null = not typed (the average price's value counts) */
   unit_value: string | null
@@ -167,8 +180,17 @@ export interface ScenarioItemInput {
   efmv_value: string | null
   /** Or typed as a percentage of the unit value ("25" = 25%); the API turns it into a value */
   efmv_percent?: string
-  /** Its service: a value per unit or a percentage of the asset's value */
+  /** Hardware: its service attached — a value per unit or a percentage of the asset's value */
   service?: { name: string; mode: 'add' | 'deduct'; value?: string; percent?: string }
+  /** Hardware: its software attached — also its eFMV (value or % of its own value; empty: 0) */
+  software?: {
+    name: string
+    mode: 'add' | 'deduct'
+    value?: string
+    percent?: string
+    efmv_value?: string | null
+    efmv_percent?: string
+  }
 }
 
 export interface ScenarioInput {

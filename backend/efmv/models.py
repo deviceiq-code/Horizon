@@ -155,33 +155,61 @@ def in_scope(vertical_id, sub_vertical_id, sub_vertical) -> bool:
 
 
 class ServiceMode(models.TextChoices):
-    """How a service's value relates to its asset's: on top of it, or part of it."""
+    """How an attached item's value relates to its hardware's: on top of it, or part of it."""
 
     ADD = "add", _("Added to the asset")
     DEDUCT = "deduct", _("Deducted from the asset")
 
 
+class ItemKind(models.TextChoices):
+    """Hardware (an average price), software or a service."""
+
+    HW = "hw", _("Hardware")
+    SW = "sw", _("Software")
+    SV = "sv", _("Service")
+
+
 class EfmvScenarioItem(models.Model):
-    """An asset of a scenario: an average price (any of its versions; the current one counts)
-    and how many. The same asset may be in several rows of a scenario (e.g. its value differs
-    by the state where it is delivered: freight and taxes)."""
+    """A line of a scenario: hardware (an average price — any of its versions; the current one
+    counts — and how many), or software / a service on its own (a description, how many, a
+    value). Software and services may also be attached to a hardware line (at most one of each),
+    shown under it: per unit of the hardware (its quantity), added to its value or deducted from
+    it. The same asset may be in several lines (e.g. its value differs by the state where it is
+    delivered: freight and taxes). Services are worth nothing at the end of the term (eFMV 0);
+    software starts at 0 and may be typed."""
 
     scenario = models.ForeignKey(
         EfmvScenario, on_delete=models.CASCADE, related_name="items", verbose_name=_("scenario")
     )
-    # AveragePrice.lineage: the current version is always used
-    price_lineage = models.UUIDField(_("average price"), db_index=True)
+    kind = models.CharField(_("kind"), max_length=2, choices=ItemKind, default=ItemKind.HW)
+    # Hardware: AveragePrice.lineage (the current version is always used); none otherwise
+    price_lineage = models.UUIDField(_("average price"), db_index=True, null=True, blank=True)
+    # Software / service: what it is (empty: shown as "Software" / "Service")
+    description = models.CharField(_("description"), max_length=100, blank=True)
+    # Attached to a hardware line of the same scenario (software or service), or on its own
+    attached_to = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
+        verbose_name=_("attached to"),
+    )
+    # Attached only: added to the hardware's value or deducted from it
+    mode = models.CharField(_("mode"), max_length=10, choices=ServiceMode, default=ServiceMode.ADD)
     quantity = models.PositiveIntegerField(_("quantity"), validators=[MinValueValidator(1)])
-    # Typed by the analyst (never taken from Average Prices, only compared with it)
+    # Typed by the analyst (hardware: never taken from Average Prices, only compared with it);
+    # attached: per unit of the hardware
     unit_value = models.DecimalField(
         _("unit value"),
         max_digits=14,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal("0.01"))],
+        validators=[MinValueValidator(Decimal("0"))],
     )
     # Value of one unit at the end of the term, typed by the analyst — negative when disposing
-    # of it costs more than it is worth; null = the average
-    # price's curve at the scenario's term (follows the term and the price's current version)
+    # of it costs more than it is worth. Hardware: null = the average price's curve at the
+    # scenario's term (follows the term and the price's current version). Software: null = 0.
+    # Services: always 0.
     efmv_value = models.DecimalField(
         _("eFMV value"),
         max_digits=14,
@@ -189,27 +217,25 @@ class EfmvScenarioItem(models.Model):
         null=True,
         blank=True,
     )
-    # Its service (SV), at most one, shown as a row under it: e.g. a warranty. Per unit (the
-    # item's quantity); added to the asset's value or deducted from it (the asset is then worth
-    # less, and positioned so); eFMV 0 (services are not resold). No name = no service.
-    service_name = models.CharField(_("service"), max_length=100, blank=True)
-    service_value = models.DecimalField(
-        _("service value"),
-        max_digits=14,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(Decimal("0"))],
-    )
-    service_mode = models.CharField(
-        _("service mode"), max_length=10, choices=ServiceMode, default=ServiceMode.ADD
-    )
     position = models.PositiveSmallIntegerField(_("position"), default=0)
 
     class Meta:
         verbose_name = _("scenario asset")
         verbose_name_plural = _("scenario assets")
         ordering = ["position", "id"]
+        constraints = [
+            # A hardware line has at most one software and one service attached
+            models.UniqueConstraint(
+                fields=["attached_to", "kind"],
+                condition=models.Q(attached_to__isnull=False),
+                name="efmv_item_one_attachment_per_kind",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(kind="hw", price_lineage__isnull=False)
+                | (~models.Q(kind="hw") & models.Q(price_lineage__isnull=True)),
+                name="efmv_item_price_only_for_hardware",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.scenario} × {self.quantity}"

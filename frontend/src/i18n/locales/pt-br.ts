@@ -160,6 +160,21 @@ const ptBR: Messages = {
     },
   },
   efmv: {
+    software: {
+      defaultName: 'Software',
+      name: 'Nome do Software',
+      value: 'Valor do Software',
+      efmvHint:
+        'O que resta do software no fim do prazo: um valor ou um percentual do seu valor (ex.: 10%); vazio: nada.',
+    },
+    kinds: {
+      hw: 'Hardware',
+      sw: 'Software',
+      sv: 'Serviço',
+      hwShort: 'HW',
+      swShort: 'SW',
+      svShort: 'SV',
+    },
     list: {
       createdOn: 'Criada em {date}',
       scenario: 'Cenário',
@@ -183,6 +198,13 @@ const ptBR: Messages = {
       remove: 'Remover Serviço',
     },
     selection: {
+      attach: 'Acoplar',
+      attachHint: 'Software ou serviço sob o hardware selecionado (um de cada).',
+      attach_software: 'Acoplar Software',
+      attach_service: 'Acoplar Serviço',
+      add_hw: 'Adicionar Hardware',
+      add_sw: 'Adicionar Software',
+      add_sv: 'Adicionar Serviço',
       addRow: 'Adicionar Linha',
       addService: 'Adicionar Serviço',
       addServiceHint: 'Uma linha de serviço sob o bem selecionado (uma por bem).',
@@ -255,7 +277,6 @@ const ptBR: Messages = {
       createdAt: 'Criada em',
     },
     scenario: {
-      scopeAutoHint: 'Vazio: vale o texto em cinza, escrito a partir dos bens (Smart Tools).',
       scopeWrite: 'Usar o Texto dos Bens',
       addShort: 'Adicionar Novo',
       duplicateShort: 'Duplicar',
@@ -277,8 +298,8 @@ const ptBR: Messages = {
       scope: 'Escopo',
       scopeHint: 'Uma breve explicação sobre os bens deste cenário.',
       assets: 'Bens',
-      noAssets: 'Nenhum bem ainda. Use “+ Linha” para adicionar.',
-      addRow: 'Linha',
+      noAssets: 'Nenhum bem ainda. Use “Adicionar” para adicionar.',
+      addRow: 'Adicionar',
       chooseAsset: 'Pesquisar em Average Prices',
       quantityRule: 'No mínimo 1.',
       duplicate: 'Duplicar Cenário',
@@ -288,6 +309,7 @@ const ptBR: Messages = {
       removeConfirm: 'Remover o cenário "{name}"? Ele só deixa de existir ao salvar.',
     },
     item: {
+      description: 'Descrição',
       outOfScope: 'Não é da vertical da análise; remova-o.',
       unitValueHint: 'Deixe vazio para usar o valor do Average Prices (mostrado em cinza).',
       unitValueRule: 'Informe um valor maior que zero.',

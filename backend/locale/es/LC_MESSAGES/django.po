@@ -3023,3 +3023,36 @@ msgstr "Lea un contenedor."
 #, python-format
 msgid "Location being counted (%(code)s): nothing moves there until the count closes."
 msgstr "Ubicación en conteo (%(code)s): nada se mueve allí hasta que cierre el inventario."
+
+msgid "Send the value or a percentage, not both."
+msgstr "Envíe el valor o un porcentaje, no ambos."
+
+msgid "Choose the asset (average price)."
+msgstr "Elija el bien (precio promedio)."
+
+msgid "Enter the unit value."
+msgstr "Ingrese el valor unitario."
+
+msgid "Software and services cannot be worth more than the asset nor, deducted, leave it with nothing."
+msgstr "El software y los servicios no pueden valer más que el bien ni, deducidos, dejarlo sin nada."
+
+msgid "Added to the asset"
+msgstr "Sumado al bien"
+
+msgid "Deducted from the asset"
+msgstr "Deducido del bien"
+
+msgid "Hardware"
+msgstr "Hardware"
+
+msgid "Software"
+msgstr "Software"
+
+msgid "Service"
+msgstr "Servicio"
+
+msgid "attached to"
+msgstr "acoplado a"
+
+msgid "mode"
+msgstr "modo"

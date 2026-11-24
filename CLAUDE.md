@@ -193,13 +193,20 @@ Multi-user web system for **operating lease residual value pricing**
     a quantity and a `unit_value` typed by the analyst — when not typed, the current average
     price's value counts (`value_from_price` in previews) and is stored on save; the same
     price may repeat in several rows — e.g. another value per delivery state; and an optional `efmv_value` — one unit at the end of the term, typed; negative allowed (a
-    disposal cost; also as a negative %); and at most one service (SV: `service_name` — empty =
-    none —, `service_value` per unit, ≥ 0, typed as money or `percent` of the asset's value as
-    typed, `service_mode` add | deduct; never worth more than the asset nor, deducted, all of
-    it — `calculations.split_service`): added, it adds to the LO; deducted, the asset is worth
-    the rest (`net_unit_value`: positioned, totalled, its eFMV % is of it); its eFMV is 0 so the
-    eFMV at EOL goes down; the item's quantity; API `service` {name, mode, value, line_total,
-    weight_percent, too_high} or null; null = the
+    disposal cost; also as a negative %); and attached to it at most one software (SW) and one service
+    (SV) — lines `EfmvScenarioItem` with `kind` hw | sw | sv and `attached_to` (a hardware line;
+    services migrated from the former `service_*` fields): a name (empty: "Software" /
+    "Service"), a value per unit of the hardware (≥ 0, money or `percent` of its value as typed),
+    `mode` add | deduct (never worth more than the asset nor, deducted, all of it —
+    `calculations.split_attachments`): added, it adds to the LO; deducted, the asset is worth
+    the rest (`net_unit_value`: positioned, totalled, its eFMV % is of it); a service's eFMV is
+    0, software's typed (value or % of its value; empty 0); API `service` / `software` {name,
+    mode, value, line_total, weight_percent, too_high (+ efmv_value, efmv_percent)} or null.
+    **Software / services of their own**: lines `kind` sw | sv without an average price —
+    `description` (empty: the placeholder), quantity, `unit_value` required, eFMV (SV always 0,
+    SW typed, empty 0); no positioning, curve or vertical check. HW / SW / SV shares come from
+    the kinds; the automatic scope ends with "(+Service and Software)" (translated) when there
+    are any. hardware eFMV null = the
     price's curve at the scenario's term, `pricing/curves.py::value_at`, returned as
     `curve_value` and followed when the term or the price changes, `efmv_from_curve`; or
     `efmv_percent` in the input — a % of the unit value, `calculations.percent_of_value`,
@@ -449,7 +456,7 @@ Multi-user web system for **operating lease residual value pricing**
     with the premises as labels and the creation date (saving PATCHes only `scenarios`) and one
     tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
     open one — (`ScenarioPanel.vue`: name, term, scope and
-    `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the LO's mix (`part="shares"`: a grey borderless panel with one bar, a segment per share in the list's colors, then HW / SW / SV with icon, percentage and value — the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "+ Row" adds an empty row whose
+    `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the LO's mix (`part="shares"`: a grey borderless panel with one bar, a segment per share in the list's colors, then HW / SW / SV with icon, percentage and value — the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "Add" (a menu: Hardware / Software / Service; "Attach" — Software / Service — under the selected hardware) adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
     class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
     number (assets counted by kind beside "Assets" — `AssetCounts.vue`, `draft.ts::assetCounts`:
