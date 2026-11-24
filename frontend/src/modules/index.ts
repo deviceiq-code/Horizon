@@ -43,8 +43,9 @@ export function visibleModules(isAdmin: boolean): AppModule[] {
 }
 
 export const MODULES: AppModule[] = [
-  averagePrices,
+  // Pricing: eFMV Analyses first
   efmvAnalyses,
+  averagePrices,
   pricingSettings,
   // Remarketing: Inventory
   ...inventory,

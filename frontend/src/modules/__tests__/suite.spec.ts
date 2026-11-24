@@ -63,8 +63,8 @@ describe('suite apps and routes', () => {
       'Administração',
     ])
     expect(appModules('pricing', false).map((m) => m.name)).toEqual([
-      'average-prices',
       'efmv-analyses',
+      'average-prices',
     ])
     expect(appModules('remarketing', false).map((m) => m.name)).toEqual([
       'inventory-appointments',
@@ -173,7 +173,8 @@ describe('AppBreadcrumbs', () => {
   it('Horizon › Pricing › Average Prices', async () => {
     const { wrapper, titles, links } = await crumbsAt('/pricing/average-prices')
     expect(titles).toEqual(['Horizon', 'Pricing', 'Average Prices'])
-    expect(links).toEqual(['/', '/pricing/average-prices', null]) // the page itself is no link
+    // The app links to its first page (eFMV Analyses); the page itself is no link
+    expect(links).toEqual(['/', '/pricing/efmv-analyses', null])
     wrapper.unmount()
   })
 

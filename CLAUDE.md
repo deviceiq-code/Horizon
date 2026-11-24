@@ -345,7 +345,7 @@ Multi-user web system for **operating lease residual value pricing**
     (`.v-data-table` in `.v-main`) stick under the top bar while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
-    (`SUITE_APPS`): "Pricing" (`/pricing/…`), "Remarketing" and "Partners and Alliances"
+    (`SUITE_APPS`): "Pricing" (`/pricing/…`; menu: eFMV Analyses first — the app opens it —, Average Prices, Control Panel), "Remarketing" and "Partners and Alliances"
     (partnerships, incentive programs, discounts, fees) — both coming soon — and
     "Administração" (`/admin/…`, two side menu sections: Management — Users and Roles,
     administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
