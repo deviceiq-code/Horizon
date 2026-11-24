@@ -1,6 +1,6 @@
 /**
- * Services, Partners and Alliances (an app of the suite): the services and software Horizon
- * offers, partners, incentive programs, discounts and fees. A skeleton for now: each module is
+ * Services and Partnerships (an app of the suite): the services Horizon offers, partners,
+ * incentive programs, discounts and fees. A skeleton for now: each module is
  * a page saying what it will hold (`UnderConstruction.vue`) while the business rules are
  * defined; the backend app is `partners/` (no models yet).
  */

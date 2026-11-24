@@ -62,10 +62,9 @@ const ptBR: Messages = {
     planned: 'Previsto',
     services: {
       title: 'Serviços',
-      subtitle:
-        'Os serviços e softwares que a Horizon oferece, para escolher nas análises de eFMV.',
+      subtitle: 'Os serviços que a Horizon oferece, para escolher nas análises de eFMV.',
       planned: [
-        'Catálogo de serviços e software (nome, tipo, prestador, valor sugerido)',
+        'Catálogo de serviços (nome, tipo, prestador, valor sugerido)',
         'Escolha nas análises de eFMV em vez de digitar a descrição',
         'Histórico dos valores usados',
       ],
@@ -108,7 +107,7 @@ const ptBR: Messages = {
       description: 'Gestão de ativos e estoque, relatórios de vistoria e venda de bens usados.',
     },
     partners: {
-      description: 'Serviços e software, parceiros, programas de incentivo, descontos e taxas.',
+      description: 'Serviços, parceiros, programas de incentivo, descontos e taxas.',
     },
     admin: {
       title: 'Administração',

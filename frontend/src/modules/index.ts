@@ -51,7 +51,7 @@ export const MODULES: AppModule[] = [
   // Remarketing: Inventory
   ...inventory,
   warehouses,
-  // Services, Partners and Alliances (a skeleton for now)
+  // Services and Partnerships (a skeleton for now)
   ...partners,
   // Administration: Management, then Catalogs (customers and service providers first)
   users,

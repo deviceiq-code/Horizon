@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * A page of the "Services, Partners and Alliances" app not built yet: what it is for and
+ * A page of the "Services and Partnerships" app not built yet: what it is for and
  * what is planned (texts under `partners.<page>`). The skeleton of the app: its modules exist
  * in the menu and the router while their business rules are defined.
  */

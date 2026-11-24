@@ -17,8 +17,8 @@ Multi-user web system for **operating lease residual value pricing**
   - `accounts/` — session authentication and user preferences (`UserPreferences`: language and
     theme), endpoints under `/api/auth/` (`login/`, `logout/`, `me/`, `preferences/`).
   - `assets/` — domain app (no models yet; business rules to be defined).
-  - `partners/` — Services, Partners and Alliances (no models yet; planned: a catalog of
-    services and software for eFMV analyses, partners, incentive programs, discounts, fees).
+  - `partners/` — Services and Partnerships (no models yet; planned: a catalog of
+    services for eFMV analyses, partners, incentive programs, discounts, fees).
   - **Account managers are users** with the system role "Account Manager" (`users`,
     `ACCOUNT_MANAGER`); administrators manage them in Users (no separate screen; the former
     address opens Users filtered by that role). The business verticals they work in are on the
@@ -354,7 +354,7 @@ Multi-user web system for **operating lease residual value pricing**
     (`.v-data-table` in `.v-main`) stick under the top bar while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
-    (`SUITE_APPS`): "Pricing" (`/pricing/…`; menu: eFMV Analyses first — the app opens it —, Average Prices, Control Panel), "Remarketing", "Services, Partners and Alliances"
+    (`SUITE_APPS`): "Pricing" (`/pricing/…`; menu: eFMV Analyses first — the app opens it —, Average Prices, Control Panel), "Remarketing", "Services and Partnerships"
     (`/partners/…`; a skeleton: modules Services, Partners, Incentive Programs, Discounts and
     Fees, each `partners/UnderConstruction.vue` — purpose and what is planned, texts in
     `partners.<page>`; backend app `partners/` without models yet) and

@@ -5,7 +5,7 @@ import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
 import UnderConstruction from '../UnderConstruction.vue'
 
-describe('Services, Partners and Alliances (skeleton)', () => {
+describe('Services and Partnerships (skeleton)', () => {
   it('a page says what it is for and what is planned', () => {
     setLanguage('pt-br')
     const wrapper = mount(UnderConstruction, {

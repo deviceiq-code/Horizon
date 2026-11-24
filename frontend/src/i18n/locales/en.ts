@@ -65,9 +65,9 @@ const en = {
     planned: 'Planned',
     services: {
       title: 'Services',
-      subtitle: 'The services and software Horizon offers, to choose in eFMV analyses.',
+      subtitle: 'The services Horizon offers, to choose in eFMV analyses.',
       planned: [
-        'Catalog of services and software (name, kind, provider, suggested value)',
+        'Catalog of services (name, kind, provider, suggested value)',
         'Picking them in eFMV analyses instead of typing the description',
         'History of the values used',
       ],
@@ -109,7 +109,7 @@ const en = {
       description: 'Asset and inventory management, inspection reports and sale of used assets.',
     },
     partners: {
-      description: 'Services and software, partners, incentive programs, discounts and fees.',
+      description: 'Services, partners, incentive programs, discounts and fees.',
     },
     admin: {
       title: 'Administration',

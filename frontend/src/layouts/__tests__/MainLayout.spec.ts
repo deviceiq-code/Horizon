@@ -191,7 +191,7 @@ describe('MainLayout', () => {
     await click('app-launcher')
     const menu = inBody('[data-testid="app-launcher-menu"]')!
     expect(menu.textContent).toContain('Pricing')
-    expect(menu.textContent).toContain('Services, Partners and Alliances')
+    expect(menu.textContent).toContain('Services and Partnerships')
     expect(inBody('[data-testid="launcher-partners"]')!.className).not.toContain(
       'v-list-item--disabled',
     )
