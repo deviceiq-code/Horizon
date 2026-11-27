@@ -94,6 +94,21 @@ const en = {
       planned: ['Discount policies', 'Fees per operation', 'Approvals'],
     },
   },
+  search: {
+    title: 'Search',
+    resultsTitle: 'Search Results',
+    subtitle: 'One search over every module: pages, analyses, prices, customers, assets and more.',
+    placeholder: 'Search pages, analyses, prices, customers, assets…',
+    shortcut: 'Ctrl K',
+    found: 'No results found for ‘{q}’ | 1 result found for ‘{q}’ | {n} results found for ‘{q}’',
+    all: 'All',
+    pages: 'Pages',
+    viewAll: 'View All ({n})',
+    startTitle: 'Search Everything',
+    startHint: 'Type at least two letters: names, codes, models, keywords…',
+    noneTitle: 'No results found',
+    noneHint: 'Try other words, or check the spelling.',
+  },
   notifications: {
     subtitle: 'Stay up to date with what needs your attention.',
     viewAll: 'View All Notifications',
@@ -113,6 +128,8 @@ const en = {
       system: 'System',
     },
     titles: {
+      login_failed: 'Failed Sign-In',
+      environment_denied: 'Environment Access Denied',
       block_expired: 'Access Block Expired',
       block_due: 'Access Block Deadline',
       dispute_escalated: 'Dispute Escalated',
@@ -977,6 +994,9 @@ const en = {
     },
     alerts: {
       kinds: {
+        login_failed: 'Failed sign-in as {username} in {environment} (from {address}).',
+        environment_denied:
+          '{username} tried to sign in to {environment}, which is not available to them.',
         block_expired: 'Access block of {asset} expired: decide its destination.',
         dispute_escalated: 'Dispute of {asset} escalated: the analysis deadline passed.',
         transfer_late:
@@ -2034,6 +2054,9 @@ const en = {
     },
   },
   users: {
+    environmentsRequired: 'Choose at least one environment.',
+    environmentsHint:
+      'Where the user may sign in. Users are the same in every environment (kept in Live).',
     title: 'Users',
     subtitle: 'People who use the system. Only administrators can manage them.',
     rolesSubtitle: 'What users can do in the system. System roles cannot be changed.',
@@ -2066,6 +2089,7 @@ const en = {
       all: 'All',
     },
     fields: {
+      environments: 'Environments',
       idDocumentType: 'Document Type',
       idDocumentNumber: 'Document Number',
       nationality: 'Nationality',

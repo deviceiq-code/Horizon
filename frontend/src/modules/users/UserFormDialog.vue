@@ -17,6 +17,7 @@ import RemoteAutocomplete, { type RemoteOption } from '@/components/RemoteAutoco
 import VerticalPicker from '@/modules/catalogs/verticals/VerticalPicker.vue'
 import { countryOptions } from '@/utils/countries'
 import { useValidationRules } from '@/composables/useValidationRules'
+import { fetchEnvironments } from '@/environment'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import {
@@ -55,6 +56,7 @@ const TAB_OF: Record<string, Tab> = {
   roles: 'account',
   password: 'account',
   is_active: 'account',
+  environments: 'account',
   keywords: 'account',
   id_document_type: 'personal',
   id_document_number: 'personal',
@@ -79,6 +81,8 @@ const emptyForm = () => ({
   email: '',
   is_active: true,
   roles: [] as number[],
+  // A new user: Live only
+  environments: ['live'] as string[],
   password: '',
   confirm: '',
   id_document_type: '' as UserInput['id_document_type'],
@@ -109,6 +113,23 @@ const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null
 
 const isEdit = computed(() => props.user !== null)
 const isMe = computed(() => props.user !== null && props.user.id === auth.user?.id)
+
+// The server's environments (Live, Development…): the ones a user may be given
+const environmentChoices = ref<string[]>([])
+fetchEnvironments()
+  .then((data) => (environmentChoices.value = data.environments))
+  .catch(() => (environmentChoices.value = []))
+/** The one being worked in: nobody takes it from themselves */
+const currentEnvironment = computed(() => auth.user?.environment ?? 'live')
+const environmentItems = computed(() =>
+  environmentChoices.value.map((name) => ({
+    value: name,
+    title: t(`environments.${name}`),
+    props: { disabled: isMe.value && name === currentEnvironment.value },
+  })),
+)
+const atLeastOneEnvironment = (value: string[]) =>
+  value.length > 0 || t('users.environmentsRequired')
 const currentPhoto = computed(() =>
   props.user?.photo_version ? userPhotoUrl(props.user.id, props.user.photo_version) : null,
 )
@@ -162,6 +183,7 @@ watch(open, async (isOpen) => {
         email: user.email,
         is_active: user.is_active,
         roles: [...user.roles],
+        environments: [...(user.environments ?? ['live'])],
         id_document_type: user.id_document_type,
         id_document_number: user.id_document_number,
         employee_number: user.employee_number,
@@ -239,6 +261,7 @@ async function submit() {
     email: f.email.trim(),
     is_active: f.is_active,
     roles: f.roles,
+    environments: f.environments,
     id_document_type: f.id_document_type ?? '',
     id_document_number: f.id_document_number.trim(),
     employee_number: f.employee_number.trim(),
@@ -367,6 +390,23 @@ async function submit() {
           chips
           closable-chips
           data-testid="roles"
+        />
+        <!-- Where the user may sign in (only when the server has more than one environment);
+             at least one; nobody takes the current one from themselves -->
+        <v-select
+          v-if="environmentChoices.length > 1"
+          v-model="form.environments"
+          :items="environmentItems"
+          :label="$t('users.fields.environments')"
+          :hint="$t('users.environmentsHint')"
+          :rules="[atLeastOneEnvironment]"
+          :error-messages="fieldErrors.environments"
+          persistent-hint
+          multiple
+          chips
+          closable-chips
+          class="mb-2"
+          data-testid="environments"
         />
         <v-switch
           v-model="form.is_active"

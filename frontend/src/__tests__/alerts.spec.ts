@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { alertLook, alertTarget, groupByDay, relativeTime } from '@/alerts'
+import { alertLook, alertTarget, alertText, groupByDay, relativeTime } from '@/alerts'
+import { i18n, setLanguage } from '@/i18n'
 
 const NOW = new Date(2026, 10, 26, 15, 0) // 26 Nov 2026, 15:00 local
 const at = (day: number, hour = 9, minute = 0) =>
@@ -44,6 +45,10 @@ describe('alerts', () => {
       name: 'inventory-transfer',
       params: { id: '7' },
     })
+    expect(alertTarget({ ref: 'user:4', params: { username: 'bia' } })).toEqual({
+      name: 'users',
+      query: { search: 'bia' },
+    })
     expect(alertTarget({ ref: '' })).toBeNull()
   })
 
@@ -54,5 +59,19 @@ describe('alerts', () => {
     expect(alertLook('success')).toEqual({ icon: 'mdi-check-circle-outline', color: 'success' })
     // Unknown (e.g. a newer server): information
     expect(alertLook('other')).toEqual(alertLook('info'))
+  })
+
+  it('sign-ins that failed: the environment named in the UI language', () => {
+    setLanguage('en')
+    const t = (key: string, params?: Record<string, unknown>) => i18n.global.t(key, params ?? {})
+    expect(
+      alertText(
+        {
+          kind: 'login_failed',
+          params: { username: 'dora', environment: 'development', address: '10.0.0.7' },
+        },
+        t,
+      ),
+    ).toBe('Failed sign-in as dora in Development (Test) (from 10.0.0.7).')
   })
 })

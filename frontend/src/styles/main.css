@@ -136,3 +136,14 @@ input:autofill {
   box-shadow: 0 0 0 1000px rgb(var(--v-theme-surface)) inset;
   -webkit-text-fill-color: rgb(var(--v-theme-on-surface));
 }
+
+/* A count on an icon button (e.g. Asset Classes' specification fields) sits on its corner: a
+   button clips what goes past its edges, so one with a badge does not (its hover/ripple layer
+   keeps its own rounded corners). */
+.v-btn:has(.v-badge__badge) {
+  overflow: visible;
+}
+.v-btn .v-badge__badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+}

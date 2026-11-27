@@ -12,7 +12,7 @@
  *   notifications (alerts), light/dark mode, language, the app launcher and the user's menu
  *   (who they are and their roles; Profile and Help to come; Settings; Sign out).
  */
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
@@ -34,6 +34,19 @@ import { usePreferencesStore, type Theme } from '@/stores/preferences'
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+// Ctrl+K (⌘K on a Mac): the search, from any page (on it: back to its field)
+function searchShortcut(event: KeyboardEvent) {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k') return
+  event.preventDefault()
+  if (route.name === 'search') {
+    document.querySelector<HTMLInputElement>('[data-testid="search-input"] input')?.focus()
+  } else {
+    router.push({ name: 'search' })
+  }
+}
+onMounted(() => window.addEventListener('keydown', searchShortcut))
+onBeforeUnmount(() => window.removeEventListener('keydown', searchShortcut))
 const { mdAndUp, width } = useDisplay()
 /** From this window width the side menu starts open (narrower: collapsed to icons) */
 const WIDE_MENU = 1440
@@ -182,6 +195,12 @@ async function logout() {
       <!-- The suite's own pages (in every app) -->
       <div class="section" data-testid="section-pages">{{ $t('menu.sections.pages') }}</div>
       <v-list-item
+        :to="{ name: 'search' }"
+        prepend-icon="mdi-magnify"
+        :title="$t('menu.search')"
+        data-testid="menu-search"
+      />
+      <v-list-item
         :to="{ name: 'notifications' }"
         prepend-icon="mdi-bell-outline"
         :title="$t('menu.notifications')"
@@ -247,7 +266,7 @@ async function logout() {
         {{ $t(`environments.${auth.user.environment}`) }}
       </v-chip>
       <div class="d-flex align-center ga-1 mr-1">
-        <!-- Search and documentation: to come; notifications: the inventory's alerts -->
+        <!-- Search (also Ctrl+K); documentation: to come; notifications: the user's alerts -->
         <v-btn
           icon="mdi-magnify"
           variant="text"
@@ -256,7 +275,7 @@ async function logout() {
           :title="$t('menu.search')"
           :aria-label="$t('menu.search')"
           data-testid="search"
-          @click="comingSoon('menu.search')"
+          @click="router.push({ name: 'search' })"
         />
         <v-btn
           icon="mdi-book-open-outline"

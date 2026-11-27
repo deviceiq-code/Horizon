@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { ApiError } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import HorizonLogo from '@/components/HorizonLogo.vue'
@@ -16,6 +17,8 @@ const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
+/** error: wrong user or password; warning: an environment not given to the user */
+const errorKind = ref<'error' | 'warning'>('error')
 const loading = ref(false)
 
 // Live or Development (Test): offered only when the server has more than one
@@ -45,8 +48,14 @@ async function login() {
     await auth.login(username.value, password.value)
     const target = typeof route.query.next === 'string' ? route.query.next : '/'
     await router.push(target)
-  } catch {
-    error.value = t('login.invalidCredentials')
+  } catch (failure) {
+    // An environment not given to this user (the administrators were warned): the server says
+    const denied =
+      failure instanceof ApiError &&
+      failure.status === 403 &&
+      (failure.data as { code?: string } | null)?.code === 'environment_denied'
+    errorKind.value = denied ? 'warning' : 'error'
+    error.value = denied ? failure.message : t('login.invalidCredentials')
   } finally {
     loading.value = false
   }
@@ -111,7 +120,14 @@ async function login() {
             </v-btn-toggle>
           </div>
 
-          <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mb-4">
+          <v-alert
+            v-if="error"
+            :type="errorKind"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+            data-testid="login-error"
+          >
             {{ error }}
           </v-alert>
 

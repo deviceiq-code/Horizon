@@ -1,7 +1,7 @@
 """Session authentication and user preferences for the Vue frontend."""
 
-from django.contrib.auth import authenticate, login, logout
-from django.utils import translation
+from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -10,11 +10,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from config import environments
+from config.environments import LIVE
 from system.messages import web_error_message
 from system.web import WebError, search_images
 from users.display import display_name
-from users.models import user_photo_version
+from users.models import UserProfile, user_photo_version
 from users.permissions import is_administrator
+from users.sync import sync_preferences, sync_users
 
 from .models import UserPreferences
 from .serializers import UserPreferencesSerializer
@@ -59,18 +61,83 @@ def environments_view(request):
     return Response({"environments": environments.available(), "current": environments.current()})
 
 
+def _warn_administrators(kind: str, *, severity, user_id=None, **params) -> None:
+    """Tell the administrators (in Live, where users are kept) about a sign-in that failed: a
+    notification each attempt (they open Users searching for the user)."""
+    from inventory.followups import alert
+    from users.models import ADMINISTRATOR
+
+    with environments.activate(LIVE):
+        alert(
+            f"{kind}:{params.get('username', '')}:{timezone.now().isoformat()}"[:120],
+            kind,
+            ref=f"user:{user_id}" if user_id else "",
+            role_key=ADMINISTRATOR,
+            severity=severity,
+            **params,
+        )
+
+
+def _client_address(request) -> str:
+    """Where the attempt came from (behind the proxy: the first address it forwarded)."""
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    return (forwarded.split(",")[0].strip() or request.META.get("REMOTE_ADDR", ""))[:45]
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login_view(request):
-    user = authenticate(
-        request,
-        username=request.data.get("username", ""),
-        password=request.data.get("password", ""),
-    )
+    from inventory.models import AlertSeverity
+
+    """Users are kept in Live (users/sync.py): checked there, whatever the environment; the
+    environment must be one of theirs (else refused and the administrators warned)."""
+    environment = environments.current()
+    username = str(request.data.get("username", ""))[:150]
+    with environments.activate(LIVE):
+        user = authenticate(request, username=username, password=request.data.get("password", ""))
+        allowed = UserProfile.for_user(user).environments if user is not None else []
+        known = (
+            get_user_model().objects.filter(username=username).values_list("pk", flat=True).first()
+            if user is None
+            else user.pk
+        )
     if user is None:
+        # Every failed attempt is told to the administrators
+        _warn_administrators(
+            "login_failed",
+            severity=AlertSeverity.ERROR,
+            user_id=known,
+            username=username,
+            environment=environment,
+            address=_client_address(request),
+        )
         return Response(
             {"detail": _("Invalid username or password.")}, status=status.HTTP_400_BAD_REQUEST
         )
+    if environment not in allowed:
+        _warn_administrators(
+            "environment_denied",
+            severity=AlertSeverity.WARNING,
+            user_id=user.pk,
+            username=user.username,
+            environment=environment,
+            address=_client_address(request),
+        )
+        return Response(
+            {
+                "detail": _(
+                    "The %(environment)s environment is not available to you. The "
+                    "administrators were told about this attempt."
+                )
+                % {"environment": environments.label(environment)},
+                "code": "environment_denied",
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    if environment != LIVE:
+        # This environment's copy of the users, up to date, then its own user
+        sync_users()
+        user = get_user_model().objects.get(pk=user.pk)
     login(request, user)
     return Response(_user_data(user))
 
@@ -93,13 +160,19 @@ def preferences(request):
     if request.method == "GET":
         return Response(UserPreferencesSerializer(obj).data)
 
-    serializer = UserPreferencesSerializer(obj, data=request.data, partial=True)
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    # Kept in Live with the user (users/sync.py), copied to the other environments
+    request.user.is_authenticated  # noqa: B018 (the session read here first)
+    with environments.activate(LIVE):
+        obj = UserPreferences.for_user(request.user)
+        serializer = UserPreferencesSerializer(obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        data = serializer.data
+    sync_preferences(request.user.pk)
     # The response itself is already in the newly chosen language
     translation.activate(obj.language)
     request.LANGUAGE_CODE = obj.language
-    return Response(serializer.data)
+    return Response(data)
 
 
 @api_view(["POST"])

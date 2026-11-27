@@ -7,9 +7,11 @@ from django.utils.translation import gettext as _
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 
+from config import environments
+from config.environments import LIVE
 from config.filters import NullsLastOrderingFilter
 from config.keywords import KeywordSearchFilter
 from config.photos import photo_response
@@ -17,6 +19,7 @@ from config.photos import photo_response
 from .models import ACCOUNT_MANAGER, ADMINISTRATOR, Role, UserProfile, is_account_manager
 from .permissions import IsAdministrator, is_administrator
 from .serializers import AccountManagerSerializer, RoleSerializer, UserSerializer
+from .sync import sync_users
 
 User = get_user_model()
 
@@ -34,7 +37,21 @@ def _administrators():
     )
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class LiveUsersMixin:
+    """Users and roles are kept in Live (users/sync.py): read and changed there from any
+    environment; a change is copied to the others right away."""
+
+    def dispatch(self, request, *args, **kwargs):
+        # Who is asking: from this environment's session, before reading Live
+        request.user.is_authenticated  # noqa: B018
+        with environments.activate(LIVE):
+            response = super().dispatch(request, *args, **kwargs)
+        if request.method not in SAFE_METHODS and response.status_code < 400:
+            sync_users()
+        return response
+
+
+class UserViewSet(LiveUsersMixin, viewsets.ModelViewSet):
     """Users of the system. ?search= (username, names, email, role), ?is_active=true|false,
     ?ordering= (username, first_name, last_name, email, last_login, date_joined). Nobody can
     delete or deactivate themselves or take the Administrator role from themselves, and at
@@ -188,7 +205,7 @@ class _Refused(Exception):
         self.message = message
 
 
-class RoleViewSet(viewsets.ModelViewSet):
+class RoleViewSet(LiveUsersMixin, viewsets.ModelViewSet):
     """Roles users can have. ?search= (name, description), ?ordering= (name, users_count).
     System roles (Administrator, Account Manager) cannot be changed or deleted; roles with
     users cannot be deleted."""

@@ -75,6 +75,8 @@ const {
   load,
   reloadAfterDelete,
 } = useServerTable(props.fetchPage, {
+  // Opened from the centralized search (?search= in the address): already searching for it
+  initialSearch: new URLSearchParams(window.location.search).get('search') ?? '',
   sortBy: props.sortBy,
   orderingFields: props.orderingFields,
   filters: props.filters ? () => props.filters ?? {} : undefined,

@@ -3056,3 +3056,55 @@ msgstr "acoplado a"
 
 msgid "mode"
 msgstr "modo"
+
+msgid "Active"
+msgstr "Ativo"
+
+msgid "Inactive"
+msgstr "Inativo"
+
+msgid "Enabled"
+msgstr "Habilitado"
+
+msgid "Disabled"
+msgstr "Desabilitado"
+
+msgid "Live"
+msgstr "Live"
+
+msgid "Development (Test)"
+msgstr "Desenvolvimento (Teste)"
+
+#, python-format
+msgid "The %(environment)s environment is not available to you. The administrators were told about this attempt."
+msgstr "O ambiente %(environment)s não está disponível para você. Os administradores foram avisados desta tentativa."
+
+msgid "You cannot remove the environment you are working in from yourself."
+msgstr "Você não pode remover de si mesmo o ambiente em que está trabalhando."
+
+msgid "environments"
+msgstr "ambientes"
+
+msgid "Information"
+msgstr "Informação"
+
+msgid "Warning"
+msgstr "Alerta"
+
+msgid "Error"
+msgstr "Erro"
+
+msgid "Completion"
+msgstr "Conclusão"
+
+msgid "User"
+msgstr "Usuário"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "severity"
+msgstr "gravidade"
+
+msgid "read at"
+msgstr "lida em"

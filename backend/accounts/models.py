@@ -118,7 +118,8 @@ class UserPreferences(models.Model):
         choices=settings.LANGUAGES,
         default=settings.LANGUAGE_CODE,
     )
-    theme = models.CharField(_("theme"), max_length=10, choices=Theme, default=Theme.SYSTEM)
+    # Light by default (Emerald Slate in light mode)
+    theme = models.CharField(_("theme"), max_length=10, choices=Theme, default=Theme.LIGHT)
     color_theme = models.CharField(
         _("color theme"),
         max_length=40,

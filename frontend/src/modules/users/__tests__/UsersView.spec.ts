@@ -4,11 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import { ApiError } from '@/api'
+import * as environment from '@/environment'
 import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { click, inBody, settle, typeInto, typeKeywords } from '@/test-utils'
+import { click, inBody, pickOption, settle, typeInto, typeKeywords } from '@/test-utils'
 import * as usersApi from '../api'
 import type { Component } from 'vue'
 import RolesView from '../RolesView.vue'
@@ -65,6 +66,7 @@ const ANALYST: usersApi.Role = {
 const FERNANDO: usersApi.User = {
   id: 10,
   keywords: [],
+  environments: ['live'],
   username: 'fernando',
   first_name: 'Fernando',
   last_name: 'Almeida',
@@ -280,6 +282,49 @@ describe('UsersView', () => {
     expect(sent[1]).not.toHaveProperty('password')
     expect(inBody('[data-testid="general-error"]')!.textContent).toContain(
       'You cannot remove the Administrator role from yourself.',
+    )
+    wrapper.unmount()
+  })
+
+  it('gives each user their environments in a selector as Roles: at least one', async () => {
+    vi.spyOn(environment, 'fetchEnvironments').mockResolvedValue({
+      environments: ['live', 'development'],
+      current: 'live',
+    })
+    api.updateUser.mockResolvedValue(FERNANDO)
+    const { wrapper } = await mountView()
+    // Another user (not oneself)
+    document.body
+      .querySelectorAll<HTMLElement>('tbody tr')[0]!
+      .querySelector<HTMLElement>('[data-testid="edit"]')!
+      .click()
+    await settle()
+    expect(inBody('[data-testid="environments"]')!.textContent).toContain('Live')
+    await pickOption('environments', 'Development (Test)')
+    await click('save')
+    expect(api.updateUser.mock.calls[0]![1]).toMatchObject({
+      environments: ['live', 'development'],
+    })
+    wrapper.unmount()
+  })
+
+  it('a user without any environment cannot be saved', async () => {
+    vi.spyOn(environment, 'fetchEnvironments').mockResolvedValue({
+      environments: ['live', 'development'],
+      current: 'live',
+    })
+    const { wrapper } = await mountView()
+    document.body
+      .querySelectorAll<HTMLElement>('tbody tr')[0]!
+      .querySelector<HTMLElement>('[data-testid="edit"]')!
+      .click()
+    await settle()
+    // Live off: nothing left
+    await pickOption('environments', 'Live')
+    await click('save')
+    expect(api.updateUser).not.toHaveBeenCalled()
+    expect(inBody('[data-testid="environments"]')!.textContent).toContain(
+      'Choose at least one environment.',
     )
     wrapper.unmount()
   })

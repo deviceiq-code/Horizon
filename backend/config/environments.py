@@ -17,17 +17,25 @@ from contextlib import contextmanager
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.db import DEFAULT_DB_ALIAS, connections
+from django.utils.translation import gettext_lazy as _
 
 LIVE = "live"
 DEVELOPMENT = "development"
 # In the order offered on the login page
 KNOWN = (LIVE, DEVELOPMENT)
 
+# Their names (the frontend has its own: environments.<key>)
+NAMES = {LIVE: _("Live"), DEVELOPMENT: _("Development (Test)")}
+
 COOKIE_NAME = "horizon_environment"
 
 _current: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "horizon_environment", default=None
 )
+
+
+def label(name: str) -> str:
+    return str(NAMES.get(name, name))
 
 
 def process_environment() -> str:
@@ -70,26 +78,45 @@ def _clear_caches() -> None:
     ContentType.objects.clear_cache()
 
 
+# While another environment is served: this process's own "default" connection (to come back
+# to it, e.g. Live's users read from a request in Development)
+_own_connection: contextvars.ContextVar = contextvars.ContextVar(
+    "horizon_own_connection", default=None
+)
+
+
+def connection_of(name: str):
+    """An environment's own connection, whatever "default" serves now (e.g. Live's from a
+    request in Development)."""
+    if alias(name) == DEFAULT_DB_ALIAS:
+        return _own_connection.get() or connections[DEFAULT_DB_ALIAS]
+    return connections[name]
+
+
 @contextmanager
 def activate(name: str):
-    """Serve `name` within the block: its database as "default", its files as media."""
+    """Serve `name` within the block: its database as "default", its files as media. Nests: a
+    request in Development may activate Live for a moment (users live there)."""
     if name not in available():
         raise ValueError(f"Unknown environment: {name}")
     token = _current.set(name)
-    target = alias(name)
-    if target == DEFAULT_DB_ALIAS:
+    showing = connections[DEFAULT_DB_ALIAS]
+    own = _own_connection.get()
+    wanted = own if alias(name) == DEFAULT_DB_ALIAS else connections[name]
+    if wanted is None or wanted is showing:
         try:
             yield
         finally:
             _current.reset(token)
         return
-    own = connections[DEFAULT_DB_ALIAS]
-    connections[DEFAULT_DB_ALIAS] = connections[target]
+    own_token = _own_connection.set(own or showing)
+    connections[DEFAULT_DB_ALIAS] = wanted
     _clear_caches()
     try:
         yield
     finally:
-        connections[DEFAULT_DB_ALIAS] = own
+        connections[DEFAULT_DB_ALIAS] = showing
+        _own_connection.reset(own_token)
         _current.reset(token)
         _clear_caches()
 

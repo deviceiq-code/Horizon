@@ -5,6 +5,7 @@ import { h } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { VApp } from 'vuetify/components'
 
+import { ApiError } from '@/api'
 import * as environment from '@/environment'
 import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
@@ -27,10 +28,13 @@ async function mountLogin(environments: string[], current = 'live') {
   })
   await router.push('/login')
   // v-main needs the app's layout
-  const wrapper = mount({ render: () => h(VApp, () => h(LoginView)) }, {
-    attachTo: document.body,
-    global: { plugins: [vuetify, i18n, pinia, router] },
-  })
+  const wrapper = mount(
+    { render: () => h(VApp, () => h(LoginView)) },
+    {
+      attachTo: document.body,
+      global: { plugins: [vuetify, i18n, pinia, router] },
+    },
+  )
   await settle()
   return { wrapper, router }
 }
@@ -63,9 +67,7 @@ describe('LoginView', () => {
 
     await click('environment-development')
     expect(environment.chosenEnvironment()).toBe('development')
-    expect(inBody('[data-testid="environment-development"]')!.className).toContain(
-      'v-btn--active',
-    )
+    expect(inBody('[data-testid="environment-development"]')!.className).toContain('v-btn--active')
 
     const login = vi.spyOn(useAuthStore(), 'login').mockResolvedValue()
     await wrapper.find('form').trigger('submit')
@@ -77,9 +79,24 @@ describe('LoginView', () => {
 
   it('opens on the environment the server is using (the last one chosen)', async () => {
     const { wrapper } = await mountLogin(['live', 'development'], 'development')
-    expect(inBody('[data-testid="environment-development"]')!.className).toContain(
-      'v-btn--active',
+    expect(inBody('[data-testid="environment-development"]')!.className).toContain('v-btn--active')
+    wrapper.unmount()
+  })
+
+  it('an environment not given to the user: a warning with the reason (not "invalid")', async () => {
+    const { wrapper } = await mountLogin(['live', 'development'], 'development')
+    vi.spyOn(useAuthStore(), 'login').mockRejectedValue(
+      new ApiError(
+        403,
+        'The Development (Test) environment is not available to you. The administrators were told about this attempt.',
+        { code: 'environment_denied' },
+      ),
     )
+    await wrapper.find('form').trigger('submit')
+    await settle()
+    const alert = inBody('[data-testid="login-error"]')!
+    expect(alert.textContent).toContain('is not available to you')
+    expect(alert.querySelector('.v-alert')!.className).toContain('text-warning')
     wrapper.unmount()
   })
 })

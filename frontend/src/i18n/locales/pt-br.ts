@@ -91,6 +91,22 @@ const ptBR: Messages = {
       planned: ['Políticas de desconto', 'Taxas por operação', 'Aprovações'],
     },
   },
+  search: {
+    title: 'Pesquisa',
+    resultsTitle: 'Resultados da Pesquisa',
+    subtitle:
+      'Uma pesquisa em todos os módulos: páginas, análises, preços, clientes, ativos e mais.',
+    placeholder: 'Pesquise páginas, análises, preços, clientes, ativos…',
+    shortcut: 'Ctrl K',
+    found: 'Nenhum resultado para ‘{q}’ | 1 resultado para ‘{q}’ | {n} resultados para ‘{q}’',
+    all: 'Todos',
+    pages: 'Páginas',
+    viewAll: 'Ver Todos ({n})',
+    startTitle: 'Pesquise Tudo',
+    startHint: 'Digite ao menos duas letras: nomes, códigos, modelos, palavras-chave…',
+    noneTitle: 'Nenhum resultado encontrado',
+    noneHint: 'Tente outras palavras ou confira a grafia.',
+  },
   notifications: {
     subtitle: 'Fique em dia com o que precisa da sua atenção.',
     viewAll: 'Ver Todas as Notificações',
@@ -111,6 +127,8 @@ const ptBR: Messages = {
       system: 'Sistema',
     },
     titles: {
+      login_failed: 'Entrada Malsucedida',
+      environment_denied: 'Acesso ao Ambiente Negado',
       block_expired: 'Bloqueio de Acesso Vencido',
       block_due: 'Prazo do Bloqueio de Acesso',
       dispute_escalated: 'Contestação Escalada',
@@ -980,6 +998,10 @@ const ptBR: Messages = {
     },
     alerts: {
       kinds: {
+        login_failed:
+          'Tentativa de entrada malsucedida como {username} no ambiente {environment} (de {address}).',
+        environment_denied:
+          '{username} tentou entrar no ambiente {environment}, que não está disponível para ele(a).',
         block_expired: 'O bloqueio de acesso de {asset} venceu: decida o destino.',
         dispute_escalated: 'A contestação de {asset} foi escalada: o prazo de análise passou.',
         transfer_late:
@@ -2036,6 +2058,9 @@ const ptBR: Messages = {
     },
   },
   users: {
+    environmentsRequired: 'Escolha ao menos um ambiente.',
+    environmentsHint:
+      'Onde o usuário pode entrar. Os usuários são os mesmos em todos os ambientes (mantidos no Live).',
     title: 'Usuários',
     subtitle: 'Pessoas que usam o sistema. Só administradores podem gerenciá-las.',
     rolesSubtitle:
@@ -2069,6 +2094,7 @@ const ptBR: Messages = {
       all: 'Todos',
     },
     fields: {
+      environments: 'Ambientes',
       idDocumentType: 'Tipo de Documento',
       idDocumentNumber: 'Número do Documento',
       nationality: 'Nacionalidade',

@@ -78,8 +78,7 @@ photo uploaded on one machine answers 404 on the others (initials instead of the
 
 ## Environments: Live and Development (Test)
 The same system over two databases, chosen on the login page (Live is the default; the choice is
-remembered in the browser). Each environment is complete on its own: users, passwords,
-preferences and data, and its own folder of uploaded files (`MEDIA_ROOT`,
+remembered in the browser). Each environment has its own data and its own folder of uploaded files (`MEDIA_ROOT`,
 `MEDIA_ROOT_DEVELOPMENT`). While working in Development the top bar shows a
 "Development (Test)" chip. Without `DATABASE_URL_DEVELOPMENT` in `.env` there is no choice.
 
@@ -94,6 +93,10 @@ preferences and data, and its own folder of uploaded files (`MEDIA_ROOT`,
   pg_restore --no-owner -d "$DEV_URL" live.dump
   rsync -a --delete backend/media/ backend/media-development/
   ```
+- **Users are the same in every environment**: kept in Live, copied to Development by
+  themselves (every change, every sign-in there). Each user's environments are set in Users
+  (Account tab); signing in to another is refused and the administrators are notified. After
+  refreshing Development from Live, run `uv run python manage.py sync_users`.
 - One browser works in one environment at a time: signing in to the other one in another tab
   ends the first tab's session there (sign in again to come back).
 

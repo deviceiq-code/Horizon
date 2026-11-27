@@ -12,6 +12,8 @@ export interface ServerTableOptions {
   /** Column key → API ordering field, when they differ (e.g. a related object's name) */
   orderingFields?: Record<string, string>
   pageSize?: number
+  /** Search the grid opens with (e.g. ?search= from the centralized search) */
+  initialSearch?: string
   /** Wait this long after the user stops typing before searching */
   searchDelayMs?: number
   /**
@@ -49,8 +51,9 @@ export function useServerTable<T>(
   const itemsPerPage = ref(options.pageSize ?? 25)
   const sortBy = ref<SortItem[]>(options.sortBy)
 
-  const searchInput = ref<string | null>('')
-  const search = ref('') // debounced copy of searchInput, bound to the table
+  const searchInput = ref<string | null>(options.initialSearch ?? '')
+  // debounced copy of searchInput, bound to the table
+  const search = ref((options.initialSearch ?? '').trim())
   let searchTimer: ReturnType<typeof setTimeout> | undefined
   watch(searchInput, (value) => {
     clearTimeout(searchTimer)

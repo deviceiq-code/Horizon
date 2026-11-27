@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "efmv",
     "service_providers",
     "inventory",
+    "search",
 ]
 
 MIDDLEWARE = [

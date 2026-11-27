@@ -153,7 +153,8 @@ function readStoredTheme(): Theme {
   } catch {
     /* storage unavailable */
   }
-  return 'system'
+  // Light by default (Emerald Slate in light mode)
+  return 'light'
 }
 
 function store(key: string, value: string) {

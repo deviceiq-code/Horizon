@@ -42,6 +42,8 @@ export interface User {
   photo_version: string | null
   /** False for users without a password yet (e.g. former account managers): cannot sign in */
   has_password: boolean
+  /** Environments the user may sign in to ("live", "development"; src/environment.ts) */
+  environments: string[]
   // Employee data
   id_document_type: IdDocumentType | ''
   /** Letters and digits only (e.g. CPF "52998224725") */
@@ -99,6 +101,7 @@ export type UserInput = Pick<
   | 'email'
   | 'is_active'
   | 'roles'
+  | 'environments'
   | (typeof EMPLOYEE_FIELDS)[number]
 > & {
   /** Required when creating; when editing, empty keeps the current password */

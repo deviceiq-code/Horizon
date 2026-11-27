@@ -91,6 +91,22 @@ const es: Messages = {
       planned: ['Políticas de descuento', 'Tarifas por operación', 'Aprobaciones'],
     },
   },
+  search: {
+    title: 'Búsqueda',
+    resultsTitle: 'Resultados de la Búsqueda',
+    subtitle:
+      'Una búsqueda en todos los módulos: páginas, análisis, precios, clientes, activos y más.',
+    placeholder: 'Busque páginas, análisis, precios, clientes, activos…',
+    shortcut: 'Ctrl K',
+    found: 'Ningún resultado para ‘{q}’ | 1 resultado para ‘{q}’ | {n} resultados para ‘{q}’',
+    all: 'Todos',
+    pages: 'Páginas',
+    viewAll: 'Ver Todos ({n})',
+    startTitle: 'Busque Todo',
+    startHint: 'Escriba al menos dos letras: nombres, códigos, modelos, palabras clave…',
+    noneTitle: 'No se encontraron resultados',
+    noneHint: 'Pruebe otras palabras o revise la ortografía.',
+  },
   notifications: {
     subtitle: 'Manténgase al día con lo que requiere su atención.',
     viewAll: 'Ver Todas las Notificaciones',
@@ -111,6 +127,8 @@ const es: Messages = {
       system: 'Sistema',
     },
     titles: {
+      login_failed: 'Entrada Fallida',
+      environment_denied: 'Acceso al Entorno Denegado',
       block_expired: 'Bloqueo de Acceso Vencido',
       block_due: 'Plazo del Bloqueo de Acceso',
       dispute_escalated: 'Impugnación Escalada',
@@ -987,6 +1005,10 @@ const es: Messages = {
     },
     alerts: {
       kinds: {
+        login_failed:
+          'Intento de entrada fallido como {username} en el entorno {environment} (desde {address}).',
+        environment_denied:
+          '{username} intentó entrar en el entorno {environment}, que no está disponible para él/ella.',
         block_expired: 'El bloqueo de acceso de {asset} venció: decida su destino.',
         dispute_escalated: 'La impugnación de {asset} se escaló: pasó el plazo de análisis.',
         transfer_late:
@@ -2049,6 +2071,9 @@ const es: Messages = {
     },
   },
   users: {
+    environmentsRequired: 'Elija al menos un entorno.',
+    environmentsHint:
+      'Dónde puede entrar el usuario. Los usuarios son los mismos en todos los entornos (se mantienen en Live).',
     title: 'Usuarios',
     subtitle: 'Personas que usan el sistema. Solo los administradores pueden gestionarlas.',
     rolesSubtitle:
@@ -2083,6 +2108,7 @@ const es: Messages = {
       all: 'Todos',
     },
     fields: {
+      environments: 'Entornos',
       idDocumentType: 'Tipo de Documento',
       idDocumentNumber: 'Número de Documento',
       nationality: 'Nacionalidad',

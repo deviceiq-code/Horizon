@@ -8,6 +8,8 @@ from rest_framework import serializers
 
 from accounts.models import UserNameDisplay
 from catalogs.models import Vertical
+from config.environments import KNOWN as ENVIRONMENTS
+from config.environments import current as current_environment
 from config.keywords import KeywordsField
 from customers.tax_ids import is_valid_cpf, normalize_tax_id
 
@@ -77,6 +79,7 @@ class RoleSerializer(serializers.ModelSerializer):
 
 
 PROFILE_FIELDS = [
+    "environments",
     "id_document_type",
     "id_document_number",
     "employee_number",
@@ -149,6 +152,13 @@ class UserSerializer(serializers.ModelSerializer):
     )
     mobile_phone = serializers.CharField(
         source="profile.mobile_phone", max_length=30, required=False, allow_blank=True
+    )
+    # Environments the user may sign in to (Live, Development…; at least one)
+    environments = serializers.ListField(
+        source="profile.environments",
+        child=serializers.ChoiceField(choices=ENVIRONMENTS),
+        required=False,
+        allow_empty=False,
     )
     verticals = serializers.PrimaryKeyRelatedField(
         source="profile.verticals", queryset=Vertical.objects.all(), many=True, required=False
@@ -299,6 +309,21 @@ class UserSerializer(serializers.ModelSerializer):
         manager = data.get("manager")
         if manager is not None and self.instance is not None and manager.pk == self.instance.pk:
             errors["manager"] = [_("A user cannot be their own manager.")]
+
+        if "environments" in data:
+            # In the order they are offered, each once
+            data["environments"] = [e for e in ENVIRONMENTS if e in data["environments"]]
+            request = self.context.get("request")
+            working_in = current_environment()
+            if (
+                request is not None
+                and self.instance is not None
+                and self.instance.pk == request.user.pk
+                and working_in not in data["environments"]
+            ):
+                errors["environments"] = [
+                    _("You cannot remove the environment you are working in from yourself.")
+                ]
 
         if errors:
             raise serializers.ValidationError(errors)

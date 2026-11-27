@@ -7,6 +7,7 @@ import posixpath
 import uuid
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models.functions import Lower
 from django.db.models.signals import post_delete, post_save
@@ -116,6 +117,11 @@ class IdDocumentType(models.TextChoices):
     OTHER = "other", _("Other")
 
 
+def default_environments() -> list[str]:
+    """A new user: Live only (Development is given by an administrator)."""
+    return ["live"]
+
+
 class UserProfile(PhotoMixin, models.Model):
     """What the app keeps about a user besides Django's user: photo (square, shown in a circle),
     employee data and, for account managers, the business verticals they work in. Every user
@@ -155,6 +161,15 @@ class UserProfile(PhotoMixin, models.Model):
     phone = models.CharField(_("phone"), max_length=30, blank=True)
     mobile_phone = models.CharField(_("mobile phone"), max_length=30, blank=True)
     keywords = keywords_field()
+
+    # Environments the user may sign in to (config/environments.py; users live in Live, the
+    # others get a copy — users/sync.py)
+    environments = ArrayField(
+        models.CharField(max_length=20),
+        default=default_environments,
+        blank=True,
+        verbose_name=_("environments"),
+    )
 
     # Account managers: the business verticals they work in (all their sub-verticals)
     verticals = models.ManyToManyField(

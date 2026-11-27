@@ -9,7 +9,6 @@ import { i18n, setLanguage } from '@/i18n'
 import vuetify from '@/plugins/vuetify'
 import { moduleRoutes } from '@/modules'
 import { useAuthStore, type User } from '@/stores/auth'
-import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore, type UiState } from '@/stores/preferences'
 import { click, inBody, settle } from '@/test-utils'
 import MainLayout from '../MainLayout.vue'
@@ -62,6 +61,7 @@ async function mountLayout(path = '/', uiState: UiState = {}) {
       { path: '/login', name: 'login', component: Blank },
       { path: '/settings', name: 'settings', component: Blank },
       { path: '/notifications', name: 'notifications', component: Blank },
+      { path: '/search', name: 'search', component: Blank },
       { path: '/', component: Blank, children: moduleRoutes() },
     ],
   })
@@ -142,10 +142,14 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('search is coming soon; notifications open the alerts', async () => {
-    const { wrapper } = await mountLayout()
+  it('search opens the Search page (also Ctrl+K); notifications open the alerts', async () => {
+    const { wrapper, router } = await mountLayout('/pricing/average-prices')
     await click('search')
-    expect(useNotificationsStore().text).toBe('Search: coming soon.')
+    expect(router.currentRoute.value.name).toBe('search')
+    await router.push('/pricing/average-prices')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
+    await settle()
+    expect(router.currentRoute.value.name).toBe('search')
     await click('notifications')
     const menu = inBody('[data-testid="alerts-menu"]')!
     expect(menu.textContent).toContain('No notifications to show')
@@ -154,9 +158,10 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('the side menu has Pages, with Notifications, in every app', async () => {
+  it('the side menu has Pages, with Search and Notifications, in every app', async () => {
     const { wrapper } = await mountLayout('/pricing/average-prices')
     expect(inBody('[data-testid="section-pages"]')!.textContent).toContain('Pages')
+    expect(inBody('[data-testid="menu-search"]')!.getAttribute('href')).toBe('/search')
     const item = inBody('[data-testid="menu-notifications"]')!
     expect(item.textContent).toContain('Notifications')
     expect(item.getAttribute('href')).toBe('/notifications')

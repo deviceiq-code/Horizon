@@ -53,7 +53,8 @@ describe('preferences store', () => {
     const store = usePreferencesStore()
     await expect(store.save({ language: 'pt-br', theme: 'dark' })).rejects.toThrow('server failure')
     expect(store.language).toBe('en')
-    expect(store.theme).toBe('system')
+    // Back to the default: light mode
+    expect(store.theme).toBe('light')
     expect(currentLanguage()).toBe('en')
   })
 })

@@ -32,6 +32,9 @@ type Translate = (key: string, params?: Record<string, unknown>) => string
 export function alertText(alert: Pick<Alert, 'kind' | 'params'>, t: Translate): string {
   const params: Record<string, unknown> = { ...alert.params }
   if (typeof params.status === 'string') params.status = t(`inventory.statuses.${params.status}`)
+  if (typeof params.environment === 'string') {
+    params.environment = t(`environments.${params.environment}`)
+  }
   return t(`inventory.alerts.kinds.${alert.kind}`, params)
 }
 
@@ -46,9 +49,14 @@ export const alertLook = (severity: string | undefined): AlertLook =>
   LOOKS[severity as AlertSeverity] ?? LOOKS.info
 
 /** The page an alert is about (its `ref`: "block:12", "transfer:3"…), null when none. */
-export function alertTarget(alert: Pick<Alert, 'ref'>): RouteLocationRaw | null {
+export function alertTarget(
+  alert: Pick<Alert, 'ref'> & Partial<Pick<Alert, 'params'>>,
+): RouteLocationRaw | null {
   const [kind, id] = alert.ref.split(':')
   switch (kind) {
+    // A user (e.g. who tried an environment not theirs): the users' grid searching for them
+    case 'user':
+      return { name: 'users', query: { search: String(alert.params?.username ?? '') } }
     case 'block':
       return { name: 'inventory-blocks' }
     case 'dispute':

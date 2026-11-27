@@ -83,7 +83,9 @@ Multi-user web system for **operating lease residual value pricing**
     time ago; unread tinted + dot —, "View All Notifications") and the page
     `views/NotificationsView.vue` (`/notifications`: All / Unread (N), Today / Yesterday /
     Earlier, Mark All as Read, Load More); kinds' look, target page, grouping and time ago in
-    `src/alerts.ts`; the unread count in `stores/alerts.ts`; `DeadlineSetting`, `Holiday`,
+    `src/alerts.ts`; the unread count in `stores/alerts.ts` — checked every 15 s and when the
+    window comes back into view; a new one pops up top right (`AlertsMenu`'s snackbar, click
+    opens it; those already there when the page opened do not); `DeadlineSetting`, `Holiday`,
     `AgingLimit`; pure `deadlines.py` (business days). Phase 5: `disposals.py` — `Disposal` (`DSP-…`;
     relocation | lessee_sale | third_party_sale — buyer = a customer — | discard — a provider
     offering disposal — | parts — recorded by `inspection.disassemble`), `DisposalItem` (asset
@@ -122,7 +124,7 @@ Multi-user web system for **operating lease residual value pricing**
     least one; only enabled ones can be added), contact on site, address, active, notes,
     keywords. `/api/inventory/warehouses/` (`?ownership=&vertical=&service_provider=`).
   - **Environments** (`config/environments.py`): Live and Development (Test), the same system
-    over two databases — each complete (users, sessions, preferences, data) with its own files
+    over two databases — each with its own data and sessions (users shared, below) and its own files
     folder (`MEDIA_ROOT` / `MEDIA_ROOT_DEVELOPMENT`; storage `EnvironmentStorage`). `.env`:
     `DATABASE_URL` (live) and optional `DATABASE_URL_DEVELOPMENT`. Chosen on the login page
     (cookie `horizon_environment`, `src/environment.ts`; `GET /api/auth/environments/`
@@ -133,6 +135,32 @@ Multi-user web system for **operating lease residual value pricing**
     commands run there (`HORIZON_ENVIRONMENT=development uv run python manage.py migrate`).
     In tests the other alias mirrors the test database (tests touching it:
     `django_db(transaction=True, databases=[...])`).
+    **Users are one and the same in every environment**: kept in Live; the others keep a copy
+    with the same ids (their records point to users) — `users/sync.py::sync_users` (roles,
+    users, memberships, profiles with verticals that exist there and photo files, preferences;
+    gone from Live → deleted, or inactive when records point to them). Users and Roles
+    (`LiveUsersMixin`) and the preferences are read and written in Live from any environment
+    and copied right after; signing in checks Live and copies before entering another
+    environment; `manage.py sync_users` by hand. `activate()` nests (Live for a moment inside a
+    Development request). Each user's environments: `UserProfile.environments` (new users:
+    Live; the Users form's Account tab, a multiple select as Roles, at least one; nobody takes
+    the current one from themselves). Signing in to one not given: 403 `{code: "environment_denied"}` (a warning on
+    the login page) and a Warning notification to the administrators (kind
+    `environment_denied`, ref `user:<id>` → Users searching for them).
+    **Every failed sign-in** (wrong user or password) is an Error notification to the
+    administrators too (kind `login_failed`: username typed, environment, address — the first
+    X-Forwarded-For behind the proxy; ref `user:<id>` when the user exists), in Live.
+  - **Centralized search** (`search/`): `GET /api/search/?q=&category=` — `registry.py`
+    `PROVIDERS`: each category is a module's own list ViewSet (its queryset, permissions and
+    `?search=`: a word finds what that grid finds) + how a record shows (uniform result: id,
+    title, subtitle, meta, badge {text, color}, search — what to type in the grid —, amount,
+    photo_version / icon). All: count + 5 of each; one category: up to 50; < 2 letters:
+    nothing. A new searchable module = one Provider. Frontend `src/search.ts` (a category is a
+    module: its icon/title from MODULES; a result opens its own page or the module's grid with
+    `?search=` — `ServerCrudTable` opens already searching for it; pages searched in the
+    browser by their translated names; `highlight`) and `views/SearchView.vue` (`/search?q=&
+    category=`: Haze's look — count, tabs with counts, groups, View All; side menu › Pages;
+    top bar's magnifier; Ctrl+K / ⌘K anywhere).
   - `config/parties.py` — shared input rules of customers, service providers and warehouses:
     `CompanyFieldsMixin` (name, trade name, tax ID: CPF/CNPJ in Brazil, unique per country —
     `tax_id_errors`), `AddressFieldsMixin` (country, email, phone, CEP/state in Brazil —
@@ -370,7 +398,7 @@ Multi-user web system for **operating lease residual value pricing**
     dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`;
     the brand fixed on top and Settings fixed at the bottom, the menu between them scrolls
     without scrollbars) with the Horizon brand, Home, a section named after the current app with its modules, a
-    section "Pages" (in every app: Notifications, with the unread count), a section "Apps" with
+    section "Pages" (in every app: Search, Notifications with the unread count), a section "Apps" with
     the other apps, Settings at the bottom; open from 1440 px, collapsed to
     icons below (they expand on hover); the top bar's button opens/collapses it and the choice
     is remembered with the account (preferences' `ui_state.sideMenu.wide|narrow`). Phones: a drawer.
@@ -384,7 +412,8 @@ Multi-user web system for **operating lease residual value pricing**
     Module pages use `<v-container fluid class="module-page">` (full width, 24 px margin;
     `src/styles/main.css`, which also sets the shared look: cards 16 px corners + soft shadow
     `--v-card-shadow`, buttons/fields 10 px corners, page titles `h1` 24 px semibold, normal
-    letter spacing; fields the browser auto-fills keep the theme's look — no yellow). On screens ≥ 960 px the column titles of every grid in a page
+    letter spacing; fields the browser auto-fills keep the theme's look — no yellow; an icon button with a
+    badge shows it whole — buttons clip, so one with a badge does not). On screens ≥ 960 px the column titles of every grid in a page
     (`.v-data-table` in `.v-main`) stick under the top bar while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
@@ -621,7 +650,7 @@ Multi-user web system for **operating lease residual value pricing**
     `frontend/src/i18n/locales/<code>.ts` + entry in `LANGUAGES`/`messages` in `src/i18n/index.ts`.
   - **Themes** (`src/themes.ts`): each theme has colors and a font, in a light and a dark
     version (Vuetify themes "<id>-light"/"<id>-dark"); the user's mode (light/dark/system)
-    picks the version (App.vue). User preference `color_theme` (backend
+    picks the version (App.vue; light by default). User preference `color_theme` (backend
     `accounts.models.ColorTheme`). Themes, in Settings' order (`COLOR_THEMES`): "Emerald
     Slate" (default; #1C252E, #00926F, #00A883, #CBEEE0, #F9FAFB; emerald over slate, the
     dashboard look's reference palette) uses Public Sans; "Metallic Foundations" (#3D52A0,

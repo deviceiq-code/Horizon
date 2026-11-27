@@ -32,7 +32,7 @@ def test_login_and_user_data(client, user):
     data = client.get("/api/auth/me/").json()
     assert data["username"] == "tester"
     assert data["preferences"]["language"] == "en"
-    assert data["preferences"]["theme"] == "system"
+    assert data["preferences"]["theme"] == "light"
 
 
 def test_login_with_wrong_password(client, user):
@@ -59,7 +59,7 @@ def test_preferences_are_created_with_defaults(logged_client, user):
     r = logged_client.get("/api/auth/preferences/")
     assert r.status_code == 200
     assert r.json()["language"] == "en"
-    assert r.json()["theme"] == "system"
+    assert r.json()["theme"] == "light"
     assert UserPreferences.objects.filter(user=user).count() == 1
 
 
@@ -82,7 +82,7 @@ def test_partial_update_keeps_other_fields(logged_client, user):
 def test_invalid_values_are_rejected(logged_client, user, data):
     assert _patch(logged_client, data).status_code == 400
     preferences = UserPreferences.for_user(user)
-    assert (preferences.language, preferences.theme) == ("en", "system")
+    assert (preferences.language, preferences.theme) == ("en", "light")
 
 
 # --- API response language -------------------------------------------------------------------
@@ -200,3 +200,34 @@ def test_number_format_currency_and_interface_state(logged_client, user):
     assert _patch(logged_client, {"number_format": "x"}).status_code == 400
     assert _patch(logged_client, {"ui_state": ["not", "an", "object"]}).status_code == 400
     assert _patch(logged_client, {"ui_state": {"big": "x" * 30_000}}).status_code == 400
+
+
+@pytest.mark.django_db
+def test_every_failed_sign_in_is_told_to_the_administrators():
+    from django.contrib.auth import get_user_model
+    from rest_framework.test import APIClient
+
+    from inventory.models import Alert
+    from users.models import Role
+
+    User = get_user_model()
+    boss = User.objects.create_user("boss", password="Boss-password-2026")
+    Role.administrator().users.add(boss)
+    dora = User.objects.create_user("dora", password="Dora-password-2026")
+    client = APIClient()
+    wrong = {"username": "dora", "password": "nope"}
+    assert client.post("/api/auth/login/", wrong, format="json").status_code == 400
+    alert = Alert.objects.get(kind="login_failed")
+    # An error (red), each attempt
+    assert (alert.user, alert.severity, alert.ref) == (boss, "error", f"user:{dora.pk}")
+    assert (alert.params["username"], alert.params["environment"]) == ("dora", "live")
+    assert alert.params["address"] == "127.0.0.1"
+    # An unknown user too (nothing to open); each attempt its own
+    client.post("/api/auth/login/", {"username": "ghost", "password": "x"}, format="json")
+    client.post("/api/auth/login/", wrong, format="json")
+    assert Alert.objects.filter(kind="login_failed").count() == 3
+    assert Alert.objects.get(kind="login_failed", params__username="ghost").ref == ""
+    # Signing in well: nobody warned
+    ok = {"username": "dora", "password": "Dora-password-2026"}
+    assert client.post("/api/auth/login/", ok, format="json").status_code == 200
+    assert Alert.objects.filter(kind="login_failed").count() == 3

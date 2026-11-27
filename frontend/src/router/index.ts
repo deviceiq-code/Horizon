@@ -40,6 +40,13 @@ const router = createRouter({
               : undefined,
         },
         {
+          // One search over every module (src/search.ts; side menu › Pages; Ctrl+K)
+          path: 'search',
+          name: 'search',
+          component: () => import('@/views/SearchView.vue'),
+          meta: { titleKey: 'menu.search' },
+        },
+        {
           // The user's own notifications (the top bar's bell; side menu › Pages)
           path: 'notifications',
           name: 'notifications',
