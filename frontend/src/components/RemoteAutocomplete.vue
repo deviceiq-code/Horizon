@@ -7,6 +7,8 @@
  *
  * Multiple mode: each chip has its own X and there is no "clear all" button (too easy to hit
  * by mistake next to the chips); the typed text is cleared after each pick.
+ *
+ * Slot `append-item`: fixed content after the options (shown also when nothing is found).
  */
 import { computed, onMounted, ref } from 'vue'
 import { showInDropdown } from './remoteFilter'
@@ -119,5 +121,10 @@ onMounted(() => fetchOptions(''))
     :clearable="!multiple"
     :clear-on-select="multiple"
     @update:search="onSearch"
-  />
+  >
+    <!-- Fixed content after the options (also when nothing is found), e.g. "New …" -->
+    <template v-if="$slots['append-item']" #append-item>
+      <slot name="append-item" />
+    </template>
+  </v-autocomplete>
 </template>

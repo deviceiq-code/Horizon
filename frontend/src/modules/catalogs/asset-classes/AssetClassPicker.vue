@@ -15,8 +15,17 @@ const props = withDefaults(
     initialOption?: AssetClass | null
     rules?: ((value: unknown) => true | string)[]
     errorMessages?: string[]
+    /** Only asset classes of this vertical / sub-vertical */
+    vertical?: number | null
+    subVertical?: number | null
   }>(),
-  { initialOption: null, rules: () => [], errorMessages: undefined },
+  {
+    initialOption: null,
+    rules: () => [],
+    errorMessages: undefined,
+    vertical: null,
+    subVertical: null,
+  },
 )
 const emit = defineEmits<{ selected: [assetClass: AssetClass | null] }>()
 
@@ -36,7 +45,11 @@ async function search(term: string) {
     pageSize: 50,
     search: term,
     ordering: 'name',
-    filters: { is_enabled: true },
+    filters: {
+      is_enabled: true,
+      ...(props.vertical ? { vertical: props.vertical } : {}),
+      ...(props.subVertical ? { sub_vertical: props.subVertical } : {}),
+    },
   })
   data.results.forEach((a) => known.set(a.id, a))
   return data.results.map(toOption)

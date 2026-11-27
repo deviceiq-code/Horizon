@@ -526,7 +526,11 @@ Multi-user web system for **operating lease residual value pricing**
     open one — (`ScenarioPanel.vue`: name, term, scope and
     `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the LO's mix (`part="shares"`: a grey borderless panel with one bar, a segment per share in the list's colors, then HW / SW / SV with icon, percentage and value — the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "Add" (a menu: Hardware / Software / Service; "Attach" — Software / Service — under the selected hardware) adds an empty row whose
     Asset cell is `AveragePricePicker.vue` (options "Model (spec values)", manufacturer · asset
-    class as subtitle; empty rows are dropped when saving); spreadsheet-like grid: row
+    class as subtitle; "New Average Price" always ends the list — `RemoteAutocomplete`'s
+    `append-item` slot — and opens `AveragePriceFormDialog` with the text typed as its model
+    (`initialModel`) and only the analysis's vertical / sub-vertical's asset classes
+    (`scopeVertical`/`scopeSubVertical`); saved, the new price fills the row; empty rows are
+    dropped when saving); spreadsheet-like grid: row
     number (assets counted by kind beside "Assets" — `AssetCounts.vue`, `draft.ts::assetCounts`:
     units by quantity: HW assets, SW, SV services —; the analysis's vertical, shown as a chip beside "Assets", filters the asset
     picker), Quantity, asset (class · specifications · price date or expired flag), Unit Value

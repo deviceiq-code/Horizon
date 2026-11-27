@@ -40,7 +40,17 @@ import {
 
 const CURRENCY = 'BRL' // only currency for now; the API already stores it per row
 
-const props = defineProps<{ source: AveragePrice | null }>()
+const props = withDefaults(
+  defineProps<{
+    source: AveragePrice | null
+    /** A new price's model to start with (e.g. what was searched for and not found) */
+    initialModel?: string
+    /** Only asset classes of this vertical / sub-vertical (e.g. an eFMV analysis's scope) */
+    scopeVertical?: number | null
+    scopeSubVertical?: number | null
+  }>(),
+  { initialModel: '', scopeVertical: null, scopeSubVertical: null },
+)
 const open = defineModel<boolean>({ required: true })
 // `saved`: a new price, a new version, or only its photo and documents (no version; row null)
 const emit = defineEmits<{ saved: [row: AveragePriceDetail | null, outcome: SaveOutcome] }>()
@@ -127,7 +137,7 @@ watch(open, async (isOpen) => {
   assetClass.value = null
   manufacturerId.value = s?.manufacturer.id ?? null
   manufacturerName.value = s?.manufacturer.name ?? ''
-  model.value = s?.model ?? ''
+  model.value = s?.model ?? props.initialModel.trim()
   description.value = s?.description ?? ''
   // A new version starts with the previous one's keywords
   keywords.value = [...(s?.keywords ?? [])]
@@ -438,6 +448,8 @@ async function submit() {
               :key="`asset-${openCount}-${loadingSource}`"
               v-model="assetClassId"
               :initial-option="assetClass"
+              :vertical="scopeVertical"
+              :sub-vertical="scopeSubVertical"
               :label="$t('averagePrices.fields.assetClass')"
               :rules="required"
               :error-messages="fieldErrors.asset_class"
