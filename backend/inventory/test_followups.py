@@ -8,7 +8,7 @@ import pytest
 from django.utils import timezone
 
 from . import followups, inspection
-from .conftest import client_for
+from .conftest import client_for, user_with_roles
 from .deadlines import add_days, days_left, is_business_day
 from .models import (
     Alert,
@@ -159,7 +159,8 @@ def test_block_reminders(technician, supervisor, commercial, setup, places, rate
     followup.refresh_from_db()
     followups.check_deadlines(today=followup.due_date - timedelta(days=3))
     alert = Alert.objects.get(kind="block_due")
-    assert (alert.role_key, alert.params["days"]) == ("commercial_finance", 3)
+    # The role's user gets it as their own
+    assert (alert.user, alert.params["days"]) == (commercial, 3)
 
 
 # --- Disputes (RN-14, RN-21, RN-22) ------------------------------------------------------------
@@ -320,18 +321,49 @@ def test_charges(client, supervisor, commercial, technician, setup, places, rate
     assert client.get(f"{API}/charges/").json()["results"] == []
 
 
-def test_alerts_by_role(client, supervisor, receiver):
-    followups.alert(
+def test_alerts_are_each_users_own(client, supervisor, receiver, admin):
+    other = user_with_roles("supervisor2", "inventory_supervisor")
+    assert followups.alert(
         "x:1", "aging", role_key="inventory_supervisor", asset="H1", status="blocked", days=9
     )
-    client_for(client, receiver)
-    assert client.get(f"{API}/alerts/count/").json() == {"unread": 0}
+    # Once per event and user: running again creates nothing
+    assert not followups.alert(
+        "x:1", "aging", role_key="inventory_supervisor", asset="H1", status="blocked", days=9
+    )
+    assert sorted(Alert.objects.values_list("user__username", flat=True)) == [
+        "supervisor",
+        "supervisor2",
+    ]
+    # Not the role's: nothing (administrators included — they are not everyone's inbox)
+    for outsider in (receiver, admin):
+        client_for(client, outsider)
+        assert client.get(f"{API}/alerts/count/").json() == {"unread": 0}
     client_for(client, supervisor)
     assert client.get(f"{API}/alerts/count/").json() == {"unread": 1}
     alert = client.get(f"{API}/alerts/").json()["results"][0]
-    assert (alert["kind"], alert["params"]["days"]) == ("aging", 9)
+    assert (alert["kind"], alert["params"]["days"], alert["read"]) == ("aging", 9, False)
     _post(client, f"{API}/alerts/{alert['id']}/read/", {})
     assert client.get(f"{API}/alerts/count/").json() == {"unread": 0}
+    assert client.get(f"{API}/alerts/").json()["results"][0]["read"] is True
+    # Read by one, still unread for the other
+    client_for(client, other)
+    assert client.get(f"{API}/alerts/count/").json() == {"unread": 1}
+    assert client.get(f"{API}/alerts/?unread=true").json()["count"] == 1
+    _post(client, f"{API}/alerts/read-all/", {})
+    assert client.get(f"{API}/alerts/count/").json() == {"unread": 0}
+    # Someone else's alert cannot be read
+    mine = Alert.objects.get(user=supervisor)
+    assert client.post(f"{API}/alerts/{mine.pk}/read/", {}).status_code == 404
+
+
+def test_an_event_for_a_role_nobody_has_goes_to_the_administrators(admin, receiver):
+    followups.alert("y:1", "block_due", role_key="commercial_finance", asset="H2", days=3)
+    assert list(Alert.objects.values_list("user__username", flat=True)) == ["admin"]
+
+
+def test_an_alert_for_one_user(supervisor, receiver):
+    followups.alert("z:1", "aging", user=receiver, asset="H3", status="blocked", days=2)
+    assert list(Alert.objects.values_list("user", flat=True)) == [receiver.pk]
 
 
 def test_run_now_is_for_supervisors(client, supervisor, receiver):
@@ -357,3 +389,35 @@ def test_deadline_settings(client, supervisor):
     ).json()
     assert (data["days"], data["reminder_days"]) == (7, [3, 1])
     assert Dispute.objects.count() == 0
+
+
+def test_each_alert_has_a_severity_by_its_kind_or_given(supervisor):
+    followups.alert("s:1", "block_expired", role_key="inventory_supervisor", asset="H1")
+    followups.alert("s:2", "aging", role_key="inventory_supervisor", asset="H1")
+    followups.alert("s:3", "count_closed", user=supervisor, severity="success", count="INV-1")
+    followups.alert("s:4", "something_new", user=supervisor)
+    assert dict(Alert.objects.values_list("key", "severity")) == {
+        "s:1": "error",
+        "s:2": "warning",
+        "s:3": "success",
+        "s:4": "info",
+    }
+    assert set(Alert.objects.values_list("scope", flat=True)) == {"user"}
+
+
+def test_a_system_notification_reaches_every_active_user_once(client, supervisor, receiver):
+    receiver_off = user_with_roles("gone", "receiver")
+    receiver_off.is_active = False
+    receiver_off.save()
+    assert followups.notify_everyone("maintenance:1", "maintenance", severity="info", day="Sunday")
+    assert not followups.notify_everyone("maintenance:1", "maintenance", severity="info")
+    alerts = Alert.objects.filter(key="maintenance:1")
+    assert sorted(a.user.username for a in alerts) == ["receiver", "supervisor"]
+    assert {(a.scope, a.severity) for a in alerts} == {("system", "info")}
+    # Each reads their own
+    client_for(client, receiver)
+    row = client.get(f"{API}/alerts/").json()["results"][0]
+    assert (row["scope"], row["severity"], row["params"]) == ("system", "info", {"day": "Sunday"})
+    _post(client, f"{API}/alerts/{row['id']}/read/", {})
+    client_for(client, supervisor)
+    assert client.get(f"{API}/alerts/count/").json() == {"unread": 1}

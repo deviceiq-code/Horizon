@@ -72,7 +72,7 @@ export function queryString(params: Record<string, string | number | null | unde
   return qs ? `?${qs}` : ''
 }
 
-function readCookie(name: string): string | null {
+export function readCookie(name: string): string | null {
   const m = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'))
   return m && m[2] ? decodeURIComponent(m[2]) : null
 }

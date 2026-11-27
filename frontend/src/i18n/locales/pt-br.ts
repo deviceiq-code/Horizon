@@ -3,7 +3,8 @@ import type { Messages } from './en'
 const ptBR: Messages = {
   app: {
     name: 'Horizon',
-    description: 'Precificação de residuais de leasing operacional',
+    // The brand's slogan: as written, in every language (as the apps' names)
+    slogan: 'One Step Ahead',
   },
   photo: {
     add: 'Adicionar Foto',
@@ -53,6 +54,7 @@ const ptBR: Messages = {
     decimalRange: 'Informe um número de {min} a {max} com até {places} casa(s) decimal(is).',
   },
   language: {
+    label: 'Idioma',
     select: 'Selecionar idioma',
   },
   partners: {
@@ -88,6 +90,42 @@ const ptBR: Messages = {
       subtitle: 'Descontos concedidos e taxas cobradas nas operações.',
       planned: ['Políticas de desconto', 'Taxas por operação', 'Aprovações'],
     },
+  },
+  notifications: {
+    subtitle: 'Fique em dia com o que precisa da sua atenção.',
+    viewAll: 'Ver Todas as Notificações',
+    unreadCount:
+      'Nenhuma mensagem não lida | Você tem 1 mensagem não lida | Você tem {n} mensagens não lidas',
+    markAllRead: 'Marcar Todas como Lidas',
+    all: 'Todas',
+    unread: 'Não Lidas ({n})',
+    groups: {
+      today: 'Hoje',
+      yesterday: 'Ontem',
+      earlier: 'Anteriores',
+    },
+    empty: 'Nenhuma notificação para mostrar',
+    emptyHint: 'Você está em dia.',
+    loadMore: 'Carregar Mais',
+    scopes: {
+      system: 'Sistema',
+    },
+    titles: {
+      block_expired: 'Bloqueio de Acesso Vencido',
+      block_due: 'Prazo do Bloqueio de Acesso',
+      dispute_escalated: 'Contestação Escalada',
+      dispute_due: 'Prazo da Contestação',
+      transfer_late: 'Transferência Atrasada',
+      location_mismatch: 'Divergência de Local',
+      aging: 'Ativo Parado',
+      other: 'Notificação',
+    },
+  },
+  environments: {
+    label: 'Ambiente',
+    live: 'Live',
+    development: 'Desenvolvimento (Teste)',
+    notLive: 'Você está no ambiente de teste: os dados não são os do ambiente Live.',
   },
   login: {
     username: 'Usuário',
@@ -125,6 +163,7 @@ const ptBR: Messages = {
     help: 'Ajuda e Suporte',
     comingSoon: '{feature}: em breve.',
     sections: {
+      pages: 'Páginas',
       management: 'Gestão',
       catalogs: 'Cadastros',
       inventory: 'Estoque',
@@ -940,8 +979,6 @@ const ptBR: Messages = {
       empty: 'Nada aqui.',
     },
     alerts: {
-      readAll: 'Marcar Todas como Lidas',
-      empty: 'Nenhuma notificação.',
       kinds: {
         block_expired: 'O bloqueio de acesso de {asset} venceu: decida o destino.',
         dispute_escalated: 'A contestação de {asset} foi escalada: o prazo de análise passou.',

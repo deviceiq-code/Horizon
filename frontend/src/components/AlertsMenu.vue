@@ -1,41 +1,28 @@
 <script setup lang="ts">
 /**
- * The top bar's notifications: alerts for the user or their roles (deadlines near or past,
- * disputes escalated, assets aging in a status…), created by the inventory's daily routine.
- * The bell shows how many are unread (checked every few minutes); opening one goes to its page.
+ * The top bar's notifications (the user's own alerts: deadlines near or past, disputes
+ * escalated, assets aging in a status…, created by the inventory's daily routine).
+ * The bell shows how many are unread (checked every few minutes); opening one goes to its page;
+ * "View All Notifications" opens the Notifications page.
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useDateFormat } from '@/composables/useDateFormat'
-import {
-  alertCount,
-  listAlerts,
-  readAlert,
-  readAllAlerts,
-  type Alert,
-} from '@/modules/inventory/api'
+import { alertTarget } from '@/alerts'
+import NotificationItem from '@/components/NotificationItem.vue'
+import NotificationsEmpty from '@/components/NotificationsEmpty.vue'
+import { listAlerts, type Alert } from '@/modules/inventory/api'
+import { useAlertsStore } from '@/stores/alerts'
 
-const { t } = useI18n()
-const { d } = useDateFormat()
 const router = useRouter()
+const store = useAlertsStore()
 
-const unread = ref(0)
 const alerts = ref<Alert[]>([])
 const open = ref(false)
 let timer: ReturnType<typeof setInterval> | undefined
 
-async function refreshCount() {
-  try {
-    unread.value = (await alertCount()).unread
-  } catch {
-    unread.value = 0
-  }
-}
-
 onMounted(() => {
-  refreshCount()
-  timer = setInterval(refreshCount, 3 * 60_000)
+  store.refreshCount()
+  timer = setInterval(store.refreshCount, 3 * 60_000)
 })
 onBeforeUnmount(() => clearInterval(timer))
 
@@ -47,31 +34,21 @@ async function load() {
   }
 }
 
-function text(alert: Alert): string {
-  const params = { ...alert.params }
-  if (typeof params.status === 'string') params.status = t(`inventory.statuses.${params.status}`)
-  return t(`inventory.alerts.kinds.${alert.kind}`, params)
-}
-
-const TARGETS: Record<string, string> = {
-  block: 'inventory-blocks',
-  dispute: 'inventory-disputes',
-  asset: 'inventory-assets',
-}
-
 async function openAlert(alert: Alert) {
-  if (!alert.read) {
-    await readAlert(alert.id).catch(() => undefined)
-    await refreshCount()
-  }
+  if (!alert.read) await store.markRead(alert.id)
   open.value = false
-  const target = TARGETS[alert.ref.split(':')[0] ?? '']
-  if (target) router.push({ name: target })
+  const target = alertTarget(alert)
+  if (target) router.push(target)
 }
 
 async function readAll() {
-  await readAllAlerts().catch(() => undefined)
-  await Promise.all([load(), refreshCount()])
+  await store.markAllRead()
+  await load()
+}
+
+function viewAll() {
+  open.value = false
+  router.push({ name: 'notifications' })
 }
 </script>
 
@@ -79,6 +56,7 @@ async function readAll() {
   <v-menu
     v-model="open"
     location="bottom end"
+    offset="8"
     :close-on-content-click="false"
     @update:model-value="$event && load()"
   >
@@ -93,43 +71,60 @@ async function readAll() {
         :aria-label="$t('menu.notifications')"
         data-testid="notifications"
       >
-        <v-badge :content="unread" :model-value="unread > 0" color="error" floating>
+        <v-badge :content="store.unread" :model-value="store.unread > 0" color="error" floating>
           <v-icon icon="mdi-bell-outline" />
         </v-badge>
       </v-btn>
     </template>
-    <v-card min-width="360" max-width="420" data-testid="alerts-menu">
-      <div class="d-flex align-center px-4 pt-3">
-        <div class="text-subtitle-1 font-weight-medium flex-grow-1">
-          {{ $t('menu.notifications') }}
+    <v-card width="400" max-width="calc(100vw - 24px)" data-testid="alerts-menu">
+      <!-- Title, how many are unread; mark them all read -->
+      <div class="d-flex align-center pl-6 pr-4 py-4">
+        <div class="flex-grow-1">
+          <div class="text-h6 font-weight-bold">{{ $t('menu.notifications') }}</div>
+          <div class="text-body-2 text-medium-emphasis" data-testid="unread-summary">
+            {{ $t('notifications.unreadCount', store.unread) }}
+          </div>
         </div>
-        <v-btn v-if="unread" size="small" variant="text" @click="readAll">{{
-          $t('inventory.alerts.readAll')
-        }}</v-btn>
+        <v-btn
+          icon="mdi-check-all"
+          variant="text"
+          size="small"
+          :disabled="!store.unread"
+          :title="$t('notifications.markAllRead')"
+          :aria-label="$t('notifications.markAllRead')"
+          data-testid="read-all"
+          @click="readAll"
+        />
       </div>
-      <v-list density="compact" max-height="420" class="overflow-y-auto">
-        <v-list-item
+      <v-divider />
+      <div class="menu-list">
+        <NotificationItem
           v-for="alert in alerts"
           :key="alert.id"
-          :class="{ 'font-weight-medium': !alert.read }"
-          data-testid="alert"
-          @click="openAlert(alert)"
-        >
-          <template #prepend>
-            <v-icon
-              :icon="alert.read ? 'mdi-bell-outline' : 'mdi-bell-ring-outline'"
-              :color="alert.read ? undefined : 'primary'"
-            />
-          </template>
-          <v-list-item-title class="text-wrap">{{ text(alert) }}</v-list-item-title>
-          <v-list-item-subtitle>{{
-            d(new Date(alert.created_at), 'dateTime')
-          }}</v-list-item-subtitle>
-        </v-list-item>
-        <v-list-item v-if="!alerts.length" class="text-medium-emphasis">{{
-          $t('inventory.alerts.empty')
-        }}</v-list-item>
-      </v-list>
+          :alert="alert"
+          @open="openAlert(alert)"
+        />
+        <NotificationsEmpty v-if="!alerts.length" />
+      </div>
+      <v-divider />
+      <v-btn
+        block
+        variant="text"
+        size="large"
+        class="text-none font-weight-medium"
+        rounded="0"
+        data-testid="view-all"
+        @click="viewAll"
+      >
+        {{ $t('notifications.viewAll') }}
+      </v-btn>
     </v-card>
   </v-menu>
 </template>
+
+<style scoped>
+.menu-list {
+  max-height: 440px;
+  overflow-y: auto;
+}
+</style>

@@ -250,13 +250,13 @@ const emeraldSlate: ColorTheme = {
 }
 
 export const COLOR_THEMES: readonly ColorTheme[] = [
+  emeraldSlate,
   metallicFoundations,
   earthySerene,
   sleekFuturistic,
-  emeraldSlate,
 ]
 
-export const DEFAULT_COLOR_THEME = metallicFoundations.id
+export const DEFAULT_COLOR_THEME = emeraldSlate.id
 
 export function isColorTheme(id: string | null | undefined): boolean {
   return COLOR_THEMES.some((theme) => theme.id === id)

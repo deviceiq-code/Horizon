@@ -40,6 +40,13 @@ const router = createRouter({
               : undefined,
         },
         {
+          // The user's own notifications (the top bar's bell; side menu › Pages)
+          path: 'notifications',
+          name: 'notifications',
+          component: () => import('@/views/NotificationsView.vue'),
+          meta: { titleKey: 'menu.notifications' },
+        },
+        {
           path: 'admin/system-settings',
           redirect: { name: 'settings', query: { tab: 'smartTools' } },
         },

@@ -22,9 +22,11 @@ import AlertsMenu from '@/components/AlertsMenu.vue'
 import AppLauncher from '@/components/AppLauncher.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
+import { ENVIRONMENT_ICONS, LIVE } from '@/environment'
 import { appModules } from '@/modules'
 import { userPhotoUrl } from '@/modules/users/api'
 import { roleName } from '@/modules/users/roleText'
+import { useAlertsStore } from '@/stores/alerts'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore, type Theme } from '@/stores/preferences'
@@ -37,6 +39,8 @@ const { mdAndUp, width } = useDisplay()
 const WIDE_MENU = 1440
 const wide = computed(() => width.value >= WIDE_MENU)
 const { t } = useI18n()
+/** Unread notifications (also on the top bar's bell) */
+const alerts = useAlertsStore()
 
 // The app of the page (none on the suite's home and the user's settings)
 const currentApp = computed(() => suiteApp(route.meta.app as string | undefined))
@@ -146,7 +150,8 @@ async function logout() {
     <!-- The brand (fixed at the top, as Settings at the bottom): back to the suite's home -->
     <template #prepend>
       <router-link :to="{ name: 'home' }" class="brand" data-testid="brand">
-        <span class="brand-mark">H</span>
+        <!-- The browser icon (the logo's mark in white on emerald) -->
+        <img src="/favicon.svg" alt="" width="32" height="32" class="brand-mark" />
         <span class="brand-name">Horizon</span>
       </router-link>
     </template>
@@ -173,6 +178,21 @@ async function logout() {
           :data-testid="`menu-${module.name}`"
         />
       </template>
+
+      <!-- The suite's own pages (in every app) -->
+      <div class="section" data-testid="section-pages">{{ $t('menu.sections.pages') }}</div>
+      <v-list-item
+        :to="{ name: 'notifications' }"
+        prepend-icon="mdi-bell-outline"
+        :title="$t('menu.notifications')"
+        data-testid="menu-notifications"
+      >
+        <template v-if="alerts.unread" #append>
+          <v-chip size="x-small" color="error" variant="flat" class="font-weight-bold">
+            {{ alerts.unread }}
+          </v-chip>
+        </template>
+      </v-list-item>
 
       <!-- The other apps -->
       <template v-if="otherApps.length">
@@ -213,6 +233,19 @@ async function logout() {
     <!-- Where the page is: Horizon › Pricing › Average Prices -->
     <AppBreadcrumbs class="flex-grow-1" />
     <template #append>
+      <!-- Not the live data: always in sight while working in Development (Test) -->
+      <v-chip
+        v-if="auth.user?.environment && auth.user.environment !== LIVE"
+        color="warning"
+        variant="flat"
+        size="small"
+        :prepend-icon="ENVIRONMENT_ICONS[auth.user.environment]"
+        class="mr-2 font-weight-medium"
+        :title="$t('environments.notLive')"
+        data-testid="environment-chip"
+      >
+        {{ $t(`environments.${auth.user.environment}`) }}
+      </v-chip>
       <div class="d-flex align-center ga-1 mr-1">
         <!-- Search and documentation: to come; notifications: the inventory's alerts -->
         <v-btn
@@ -235,18 +268,6 @@ async function logout() {
           data-testid="docs"
           @click="comingSoon('menu.docs')"
         />
-        <!-- Light / dark, right away (saved to the account) -->
-        <v-btn
-          :icon="isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent'"
-          variant="text"
-          size="small"
-          class="bar-icon"
-          :title="$t(isDark ? 'menu.lightMode' : 'menu.darkMode')"
-          :aria-label="$t(isDark ? 'menu.lightMode' : 'menu.darkMode')"
-          data-testid="theme-switch"
-          @click="setTheme(isDark ? 'light' : 'dark')"
-        />
-        <LanguageSelector />
         <AlertsMenu />
         <AppLauncher />
       </div>
@@ -287,6 +308,32 @@ async function logout() {
               </v-chip>
             </div>
           </div>
+          <v-divider />
+          <!-- Dark mode and language, right away (saved to the account) -->
+          <v-list density="compact" class="py-1">
+            <v-list-item
+              prepend-icon="mdi-moon-waning-crescent"
+              :title="$t('menu.darkMode')"
+              data-testid="theme-switch"
+              @click.stop="setTheme(isDark ? 'light' : 'dark')"
+            >
+              <template #append>
+                <v-switch
+                  :model-value="isDark"
+                  color="primary"
+                  density="compact"
+                  hide-details
+                  inset
+                  class="ml-4"
+                  tabindex="-1"
+                  :aria-label="$t('menu.darkMode')"
+                  data-testid="dark-mode"
+                  @click.stop="setTheme(isDark ? 'light' : 'dark')"
+                />
+              </template>
+            </v-list-item>
+            <LanguageSelector item />
+          </v-list>
           <v-divider />
           <v-list density="compact" class="py-1">
             <v-list-item
@@ -385,14 +432,7 @@ async function logout() {
 }
 .brand-mark {
   flex: 0 0 32px;
-  height: 32px;
   border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 1rem;
-  color: rgb(var(--v-theme-on-primary));
-  background: rgb(var(--v-theme-sidebar-active));
 }
 .brand-name {
   font-size: 1.125rem;

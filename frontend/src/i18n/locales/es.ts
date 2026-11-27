@@ -3,7 +3,8 @@ import type { Messages } from './en'
 const es: Messages = {
   app: {
     name: 'Horizon',
-    description: 'Valoración de residuales de leasing operativo',
+    // The brand's slogan: as written, in every language (as the apps' names)
+    slogan: 'One Step Ahead',
   },
   photo: {
     add: 'Agregar Foto',
@@ -53,6 +54,7 @@ const es: Messages = {
     decimalRange: 'Introduzca un número de {min} a {max} con hasta {places} decimal(es).',
   },
   language: {
+    label: 'Idioma',
     select: 'Seleccionar idioma',
   },
   partners: {
@@ -88,6 +90,42 @@ const es: Messages = {
       subtitle: 'Descuentos concedidos y tarifas cobradas en las operaciones.',
       planned: ['Políticas de descuento', 'Tarifas por operación', 'Aprobaciones'],
     },
+  },
+  notifications: {
+    subtitle: 'Manténgase al día con lo que requiere su atención.',
+    viewAll: 'Ver Todas las Notificaciones',
+    unreadCount:
+      'No hay mensajes sin leer | Tiene 1 mensaje sin leer | Tiene {n} mensajes sin leer',
+    markAllRead: 'Marcar Todas como Leídas',
+    all: 'Todas',
+    unread: 'No Leídas ({n})',
+    groups: {
+      today: 'Hoy',
+      yesterday: 'Ayer',
+      earlier: 'Anteriores',
+    },
+    empty: 'No hay notificaciones para mostrar',
+    emptyHint: 'Está al día.',
+    loadMore: 'Cargar Más',
+    scopes: {
+      system: 'Sistema',
+    },
+    titles: {
+      block_expired: 'Bloqueo de Acceso Vencido',
+      block_due: 'Plazo del Bloqueo de Acceso',
+      dispute_escalated: 'Impugnación Escalada',
+      dispute_due: 'Plazo de la Impugnación',
+      transfer_late: 'Transferencia Atrasada',
+      location_mismatch: 'Discrepancia de Ubicación',
+      aging: 'Activo Detenido',
+      other: 'Notificación',
+    },
+  },
+  environments: {
+    label: 'Entorno',
+    live: 'Live',
+    development: 'Desarrollo (Prueba)',
+    notLive: 'Está en el entorno de prueba: los datos no son los del entorno Live.',
   },
   login: {
     username: 'Usuario',
@@ -126,6 +164,7 @@ const es: Messages = {
     help: 'Ayuda y Soporte',
     comingSoon: '{feature}: próximamente.',
     sections: {
+      pages: 'Páginas',
       management: 'Gestión',
       catalogs: 'Catálogos',
       inventory: 'Inventario',
@@ -947,8 +986,6 @@ const es: Messages = {
       empty: 'Nada aquí.',
     },
     alerts: {
-      readAll: 'Marcar Todas como Leídas',
-      empty: 'No hay notificaciones.',
       kinds: {
         block_expired: 'El bloqueo de acceso de {asset} venció: decida su destino.',
         dispute_escalated: 'La impugnación de {asset} se escaló: pasó el plazo de análisis.',

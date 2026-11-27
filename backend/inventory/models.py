@@ -1473,27 +1473,52 @@ class Evidence(models.Model):
         return result
 
 
-class Alert(models.Model):
-    """Something someone must look at (a deadline near or past, an asset aging in a status…).
-    For the users of a role, or one user. Created by the daily routine, once each (`key`)."""
+class AlertSeverity(models.TextChoices):
+    """What a notification is: it decides its icon and color."""
 
+    INFO = "info", _("Information")  # an event happened (no error, nothing to fix)
+    WARNING = "warning", _("Warning")  # an event that calls for attention
+    ERROR = "error", _("Error")  # something went wrong
+    SUCCESS = "success", _("Completion")  # a task or process finished well
+
+
+class AlertScope(models.TextChoices):
+    """Whom it concerns: the user (their work, their roles) or everyone (the system)."""
+
+    USER = "user", _("User")
+    SYSTEM = "system", _("System")
+
+
+class Alert(models.Model):
+    """A notification: something one user must look at (a deadline near or past, an asset aging
+    in a status…). Always one user's — an event for a role becomes one alert per user with it
+    (`followups.alert`). Created by the daily routine, once per event and user (`key`)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="alerts"
+    )
     kind = models.CharField(_("kind"), max_length=30)
+    severity = models.CharField(
+        _("severity"), max_length=10, choices=AlertSeverity, default=AlertSeverity.INFO
+    )
+    # System (global): every active user got their own copy
+    scope = models.CharField(_("scope"), max_length=10, choices=AlertScope, default=AlertScope.USER)
     # Values the message shows ({"asset": "H…", "days": 3, …}); the text is translated by the UI
     params = models.JSONField(default=dict, blank=True)
     # What it is about: "block:12", "dispute:3", "asset:40"…
     ref = models.CharField(max_length=40, blank=True)
-    role_key = models.CharField(max_length=50, blank=True)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
-    )
-    key = models.CharField(max_length=120, unique=True)
-    read_by = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="+")
+    # The event (the same for every user it reached)
+    key = models.CharField(max_length=120)
+    read_at = models.DateTimeField(_("read at"), null=True, blank=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
 
     class Meta:
         verbose_name = _("alert")
         verbose_name_plural = _("alerts")
         ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "key"], name="inventory_alert_once_per_user")
+        ]
 
     def __str__(self):
         return self.key

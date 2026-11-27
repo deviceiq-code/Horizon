@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +41,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Live or Development: the database of everything below, sessions included
+    "config.environments.EnvironmentMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     # Anonymous visitors: language from the Accept-Language header sent by the frontend
@@ -72,7 +75,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {"default": env.db("DATABASE_URL")}
+# Environments (config/environments.py): Live and, when configured, Development (Test) — each a
+# database of its own, chosen on the login page. "default" is this process's own environment
+# (HORIZON_ENVIRONMENT; management commands run there); the others get an alias of their name.
+HORIZON_DATABASES = {"live": env.db("DATABASE_URL")}
+if env("DATABASE_URL_DEVELOPMENT", default=""):
+    HORIZON_DATABASES["development"] = env.db("DATABASE_URL_DEVELOPMENT")
+HORIZON_ENVIRONMENT = env("HORIZON_ENVIRONMENT", default="live")
+if HORIZON_ENVIRONMENT not in HORIZON_DATABASES:
+    raise ImproperlyConfigured(
+        f"HORIZON_ENVIRONMENT={HORIZON_ENVIRONMENT!r} has no database "
+        "(DATABASE_URL for live, DATABASE_URL_DEVELOPMENT for development)."
+    )
+DATABASES = {"default": HORIZON_DATABASES[HORIZON_ENVIRONMENT]}
+for _name, _database in HORIZON_DATABASES.items():
+    if _name != HORIZON_ENVIRONMENT:
+        # In tests the other environments use the test database
+        DATABASES[_name] = {**_database, "TEST": {"MIRROR": "default"}}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -99,8 +118,17 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Uploaded files (e.g. average price documents). Not served publicly: downloads go through the
 # API, which requires login.
-MEDIA_ROOT = env.path("MEDIA_ROOT", default=str(BASE_DIR / "media"))
+# One folder per environment (config/environments.py); MEDIA_ROOT is this process's own.
+HORIZON_MEDIA_ROOTS = {
+    "live": env.path("MEDIA_ROOT", default=str(BASE_DIR / "media")),
+    "development": env.path("MEDIA_ROOT_DEVELOPMENT", default=str(BASE_DIR / "media-development")),
+}
+MEDIA_ROOT = HORIZON_MEDIA_ROOTS[HORIZON_ENVIRONMENT]
 MEDIA_URL = "media/"
+STORAGES = {
+    "default": {"BACKEND": "config.environments.EnvironmentStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 PRICE_DOCUMENT_MAX_MB = env.int("PRICE_DOCUMENT_MAX_MB", default=25)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

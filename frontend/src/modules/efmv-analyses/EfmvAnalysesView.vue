@@ -22,8 +22,13 @@ const headers = computed(() => [
   { title: t('efmv.fields.updatedAt'), key: 'updated_at', width: 190, nowrap: true },
 ])
 
-const open = (row: EfmvAnalysisRow) =>
-  router.push({ name: 'efmv-analysis', params: { id: row.id } })
+/** Open an analysis; with `scenario` (its id), on that scenario's tab */
+const open = (row: EfmvAnalysisRow, scenario?: number) =>
+  router.push({
+    name: 'efmv-analysis',
+    params: { id: row.id },
+    ...(scenario ? { query: { scenario } } : {}),
+  })
 </script>
 
 <template>
@@ -79,7 +84,7 @@ const open = (row: EfmvAnalysisRow) =>
       </template>
       <!-- Expanded: each scenario's figures (loaded on demand) -->
       <template #expanded-row="{ item }">
-        <AnalysisScenariosPanel :analysis-id="item.id" @open="open(item)" />
+        <AnalysisScenariosPanel :analysis-id="item.id" @open="(scenario) => open(item, scenario)" />
       </template>
       <template #[`item.updated_at`]="{ item }">
         <div

@@ -61,6 +61,7 @@ async function mountLayout(path = '/', uiState: UiState = {}) {
       { path: '/', name: 'home', component: Blank },
       { path: '/login', name: 'login', component: Blank },
       { path: '/settings', name: 'settings', component: Blank },
+      { path: '/notifications', name: 'notifications', component: Blank },
       { path: '/', component: Blank, children: moduleRoutes() },
     ],
   })
@@ -106,15 +107,21 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('the top bar switches light/dark and the language (saved to the account)', async () => {
+  it("the user's menu switches dark mode and the language (saved to the account)", async () => {
     const { wrapper } = await mountLayout()
     const preferences = usePreferencesStore()
     const save = vi.spyOn(preferences, 'save').mockResolvedValue()
-    // Light now: the button turns it dark
+    // Not on the top bar any more
+    expect(inBody('header [data-testid="language"]')).toBeNull()
+    await click('me')
+    const menu = inBody('[data-testid="user-menu"]')!
+    expect(menu.querySelector('[data-testid="theme-switch"]')!.textContent).toContain('Dark Mode')
+    // Light now: the row turns it dark (the menu stays open)
     await click('theme-switch')
     expect(save).toHaveBeenCalledWith({ theme: 'dark' })
-    // The language: its code on the bar; each language by its own name in the menu
-    expect(inBody('[data-testid="language"]')!.textContent).toContain('EN')
+    expect(inBody('[data-testid="user-menu"]')).not.toBeNull()
+    // The language: the current one by its name; each language by its own name beside it
+    expect(menu.querySelector('[data-testid="language"]')!.textContent).toContain('English')
     await click('language')
     expect(inBody('[data-testid="language-menu"]')!.textContent).toContain('Português (Brasil)')
     expect(inBody('[data-testid="language-en"]')!.className).toContain('v-list-item--active')
@@ -123,12 +130,36 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
+  it('Development (Test) is always shown on the top bar; Live shows nothing', async () => {
+    const { wrapper, auth } = await mountLayout()
+    expect(inBody('[data-testid="environment-chip"]')).toBeNull()
+    auth.user = { ...ME, environment: 'live' }
+    await settle()
+    expect(inBody('[data-testid="environment-chip"]')).toBeNull()
+    auth.user = { ...ME, environment: 'development' }
+    await settle()
+    expect(inBody('[data-testid="environment-chip"]')!.textContent).toContain('Development (Test)')
+    wrapper.unmount()
+  })
+
   it('search is coming soon; notifications open the alerts', async () => {
     const { wrapper } = await mountLayout()
     await click('search')
     expect(useNotificationsStore().text).toBe('Search: coming soon.')
     await click('notifications')
-    expect(inBody('[data-testid="alerts-menu"]')!.textContent).toContain('No notifications.')
+    const menu = inBody('[data-testid="alerts-menu"]')!
+    expect(menu.textContent).toContain('No notifications to show')
+    expect(menu.textContent).toContain('You are all caught up.')
+    expect(inBody('[data-testid="unread-summary"]')!.textContent).toContain('No unread messages')
+    wrapper.unmount()
+  })
+
+  it('the side menu has Pages, with Notifications, in every app', async () => {
+    const { wrapper } = await mountLayout('/pricing/average-prices')
+    expect(inBody('[data-testid="section-pages"]')!.textContent).toContain('Pages')
+    const item = inBody('[data-testid="menu-notifications"]')!
+    expect(item.textContent).toContain('Notifications')
+    expect(item.getAttribute('href')).toBe('/notifications')
     wrapper.unmount()
   })
 

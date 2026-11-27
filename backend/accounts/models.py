@@ -16,10 +16,10 @@ class ColorTheme(models.TextChoices):
     """Color schemes of the interface (each one has a light and a dark version, picked by
     `theme`). Names are proper names: not translated."""
 
+    EMERALD_SLATE = "emerald_slate", "Emerald Slate"
     METALLIC_FOUNDATIONS = "metallic_foundations", "Metallic Foundations"
     EARTHY_SERENE = "earthy_serene", "Earthy and Serene"
     SLEEK_FUTURISTIC = "sleek_futuristic", "Sleek and Futuristic"
-    EMERALD_SLATE = "emerald_slate", "Emerald Slate"
 
 
 class UiScale(models.TextChoices):
@@ -123,7 +123,7 @@ class UserPreferences(models.Model):
         _("color theme"),
         max_length=40,
         choices=ColorTheme,
-        default=ColorTheme.METALLIC_FOUNDATIONS,
+        default=ColorTheme.EMERALD_SLATE,
     )
     ui_scale = models.CharField(
         _("interface size"), max_length=10, choices=UiScale, default=UiScale.AUTO

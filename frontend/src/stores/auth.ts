@@ -17,6 +17,8 @@ export interface User {
   /** The roles for display (system ones show translated, users/roleText.ts) */
   role_refs?: { name: string; key: string; is_system: boolean }[]
   preferences: Preferences
+  /** Live or Development (src/environment.ts): the database in use */
+  environment?: string
 }
 
 export const useAuthStore = defineStore('auth', () => {

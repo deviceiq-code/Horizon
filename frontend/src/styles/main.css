@@ -117,3 +117,22 @@ button {
 .v-application__wrap {
   min-height: calc(100dvh / var(--ui-zoom, 1));
 }
+
+/* Fields the browser fills in (saved user and password…) keep the theme's look — no yellow.
+   Chrome/Edge: the autofill background never arrives (an endless transition) and the text keeps
+   the theme's color (dark mode too). Firefox forces its color (!important in the browser), so a
+   shadow inside the field in the surface's color covers it. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  transition:
+    background-color 600000s 0s,
+    color 600000s 0s;
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface));
+  caret-color: rgb(var(--v-theme-on-surface));
+}
+input:autofill {
+  box-shadow: 0 0 0 1000px rgb(var(--v-theme-surface)) inset;
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface));
+}

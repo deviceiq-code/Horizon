@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from config import environments
 from system.messages import web_error_message
 from system.web import WebError, search_images
 from users.display import display_name
@@ -38,6 +39,8 @@ def _user_data(user):
         # The user's photo (GET /api/users/<id>/photo/?v=<version>), null without one
         "photo_version": user_photo_version(user),
         "preferences": UserPreferencesSerializer(preferences).data,
+        # Live or Development (config/environments.py): the database being used
+        "environment": environments.current(),
     }
 
 
@@ -47,6 +50,13 @@ def _user_data(user):
 def csrf(request):
     """Make sure the browser receives the csrftoken cookie."""
     return Response({"detail": "ok"})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def environments_view(request):
+    """The environments the login page offers and the one in use (its cookie's)."""
+    return Response({"environments": environments.available(), "current": environments.current()})
 
 
 @api_view(["POST"])

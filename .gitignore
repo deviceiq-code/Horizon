@@ -9,6 +9,7 @@ __pycache__/
 .ruff_cache/
 backend/staticfiles/
 backend/media/
+backend/media-development/
 
 # Node / Vite
 node_modules/

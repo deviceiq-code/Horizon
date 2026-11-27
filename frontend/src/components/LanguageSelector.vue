@@ -2,12 +2,15 @@
 /**
  * Language switch: a globe and the current language's code ("EN"); the menu lists each
  * language by its own name with its code. Logged in, it saves to the account; on the login
- * page, only locally.
+ * page, only locally. `item`: a row of a menu (the user menu) — "Language" with the current
+ * one, the languages opening beside it.
  */
 import { computed } from 'vue'
 import { LANGUAGES, type Language } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { usePreferencesStore } from '@/stores/preferences'
+
+defineProps<{ item?: boolean }>()
 
 const auth = useAuthStore()
 const preferences = usePreferencesStore()
@@ -15,6 +18,9 @@ const preferences = usePreferencesStore()
 /** "pt-br" → "PT" */
 const code = (language: string) => language.split('-')[0]!.toUpperCase()
 const current = computed(() => code(preferences.language))
+const currentName = computed(
+  () => LANGUAGES.find((l) => l.code === preferences.language)?.name ?? current.value,
+)
 
 async function choose(language: Language) {
   if (auth.isAuthenticated) {
@@ -28,9 +34,24 @@ async function choose(language: Language) {
 </script>
 
 <template>
-  <v-menu location="bottom end">
+  <v-menu :location="item ? 'start' : 'bottom end'">
     <template #activator="{ props: activator }">
+      <!-- In a menu: a row; it must not close the menu it is in -->
+      <v-list-item
+        v-if="item"
+        v-bind="activator"
+        prepend-icon="mdi-web"
+        :title="$t('language.label')"
+        data-testid="language"
+        @click.stop
+      >
+        <template #append>
+          <span class="text-body-2 text-medium-emphasis mr-1">{{ currentName }}</span>
+          <v-icon icon="mdi-chevron-right" size="18" class="text-medium-emphasis" />
+        </template>
+      </v-list-item>
       <v-btn
+        v-else
         v-bind="activator"
         variant="text"
         prepend-icon="mdi-web"

@@ -13,7 +13,8 @@ import { getEfmvAnalysis, type EfmvAnalysis, type Scenario } from './api'
 import { assetCounts } from './draft'
 
 const props = defineProps<{ analysisId: number }>()
-const emit = defineEmits<{ open: [] }>()
+/** `open`: the analysis, on the clicked scenario (its id) */
+const emit = defineEmits<{ open: [scenario: number] }>()
 const { locale } = useI18n()
 const { n } = useNumberFormat()
 
@@ -77,7 +78,10 @@ const scenarios = computed(() => analysis.value?.scenarios ?? [])
       <tbody>
         <tr v-for="scenario in scenarios" :key="scenario.id" data-testid="analysis-scenario">
           <td class="font-weight-medium">
-            <a href="#" class="text-primary" @click.prevent="emit('open')">{{ scenario.title }}</a>
+            <a href="#" class="text-primary" @click.prevent="emit('open', scenario.id)"
+              data-testid="open-scenario"
+              >{{ scenario.title }}</a
+            >
             <!-- Empty: the scope written from the assets (Smart Tools) -->
             <div
               v-if="scenario.scope || scenario.scope_suggestion"

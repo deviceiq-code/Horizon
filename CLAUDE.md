@@ -70,7 +70,20 @@ Multi-user web system for **operating lease residual value pricing**
     new version + IN_INSPECTION; expired → chargeable + supervisor's decision), disputes
     (`Dispute`; asset `held_for_dispute`; analyst ≠ technician; upheld → new approved version),
     charges, `check_deadlines` (daily routine, idempotent; management command + cron, README)
-    and `Alert`s (top bar bell, `components/AlertsMenu.vue`); `DeadlineSetting`, `Holiday`,
+    and `Alert`s — **always one user's** (`user` required, `read_at`; unique per user + event
+    `key`): `followups.alert(role_key=…)` gives each active user with the role their own (nobody
+    with it → the administrators); the API lists only the signed-in user's. Four **severities**
+    (`AlertSeverity`; icon and color): info ("i" in a circle, blue), warning ("!" in a
+    triangle, orange), error ("!" in a circle, red), success — completion — (a check in a
+    circle, green); `followups.KIND_SEVERITY` gives each event's (or `severity=`). Two
+    **scopes** (`AlertScope`): user, or system — global: `followups.notify_everyone` gives every
+    active user their own copy, shown with a "System" chip. Empty: `NotificationsEmpty.vue`. Frontend: top bar
+    bell `components/AlertsMenu.vue` (Haze's look: title + "You have N unread messages",
+    mark-all icon, items `NotificationItem.vue` — the severity's icon and color, title, message,
+    time ago; unread tinted + dot —, "View All Notifications") and the page
+    `views/NotificationsView.vue` (`/notifications`: All / Unread (N), Today / Yesterday /
+    Earlier, Mark All as Read, Load More); kinds' look, target page, grouping and time ago in
+    `src/alerts.ts`; the unread count in `stores/alerts.ts`; `DeadlineSetting`, `Holiday`,
     `AgingLimit`; pure `deadlines.py` (business days). Phase 5: `disposals.py` — `Disposal` (`DSP-…`;
     relocation | lessee_sale | third_party_sale — buyer = a customer — | discard — a provider
     offering disposal — | parts — recorded by `inspection.disassemble`), `DisposalItem` (asset
@@ -108,6 +121,18 @@ Multi-user web system for **operating lease residual value pricing**
     serves (M2M through `WarehouseVertical`, PROTECT: a served vertical cannot be deleted; at
     least one; only enabled ones can be added), contact on site, address, active, notes,
     keywords. `/api/inventory/warehouses/` (`?ownership=&vertical=&service_provider=`).
+  - **Environments** (`config/environments.py`): Live and Development (Test), the same system
+    over two databases — each complete (users, sessions, preferences, data) with its own files
+    folder (`MEDIA_ROOT` / `MEDIA_ROOT_DEVELOPMENT`; storage `EnvironmentStorage`). `.env`:
+    `DATABASE_URL` (live) and optional `DATABASE_URL_DEVELOPMENT`. Chosen on the login page
+    (cookie `horizon_environment`, `src/environment.ts`; `GET /api/auth/environments/`
+    public; `/api/auth/me/` returns `environment`; a chip on the top bar outside Live).
+    `EnvironmentMiddleware` (first) swaps the thread's **"default" connection** for the
+    request — so never pass `using=`/aliases: `atomic`, `select_for_update` and raw cursors
+    follow. "default" is the process's own environment (`HORIZON_ENVIRONMENT`, live):
+    commands run there (`HORIZON_ENVIRONMENT=development uv run python manage.py migrate`).
+    In tests the other alias mirrors the test database (tests touching it:
+    `django_db(transaction=True, databases=[...])`).
   - `config/parties.py` — shared input rules of customers, service providers and warehouses:
     `CompanyFieldsMixin` (name, trade name, tax ID: CPF/CNPJ in Brazil, unique per country —
     `tax_id_errors`), `AddressFieldsMixin` (country, email, phone, CEP/state in Brazil —
@@ -333,24 +358,33 @@ Multi-user web system for **operating lease residual value pricing**
     1 → ≥2560 px 1.1) | small 0.88 | normal 1 | large 1.1; chosen in Settings. The zoom is also
     in `--ui-zoom`: heights tied to the window divide by it (`calc(100dvh / var(--ui-zoom, 1))`),
     or they shrink with the zoom.
+  - **Logo** (the sun rising over the horizon; name "Horizon", slogan "One Step Ahead" — the
+    brand's, the same in every language: `app.slogan`): `components/HorizonMark.vue` (the mark,
+    fixed brand colors: orange sun, emerald horizon #00926F) and
+    `HorizonLogo.vue` (mark + name + slogan in capitals, the theme's font; login page).
+    **Browser icon**: `public/favicon.svg` — the mark in white on emerald (#00926F), simplified
+    for small sizes —, with `favicon.ico` and `apple-touch-icon.png` made from it (cairosvg); the
+    side menu's brand is this icon + "Horizon" written plainly.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — the frame of authenticated pages (a clean dashboard look):
     dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`;
     the brand fixed on top and Settings fixed at the bottom, the menu between them scrolls
     without scrollbars) with the Horizon brand, Home, a section named after the current app with its modules, a
-    section "Apps" with the other apps, Settings at the bottom; open from 1440 px, collapsed to
+    section "Pages" (in every app: Notifications, with the unread count), a section "Apps" with
+    the other apps, Settings at the bottom; open from 1440 px, collapsed to
     icons below (they expand on hover); the top bar's button opens/collapses it and the choice
     is remembered with the account (preferences' `ui_state.sideMenu.wide|narrow`). Phones: a drawer.
     Light top bar: that button, the path (`AppBreadcrumbs.vue`); then Search, Documentation and
-    Notifications (coming soon: a notice), the light/dark switch, the language
-    (`LanguageSelector.vue`: globe + code, also on the login page), the app launcher and the
-    signed-in user (photo or initials + name; their menu: name, e-mail and roles — `/api/auth/me/`
-    `email`, `role_refs` —, Profile and Help & Support coming soon, Settings, Sign out).
+    Notifications (the user's alerts), the app launcher and the signed-in user (photo or
+    initials + name; their menu: name, e-mail and roles — `/api/auth/me/` `email`, `role_refs` —,
+    Dark Mode (a switch) and Language (`LanguageSelector.vue item`: the current one, the
+    languages beside it; on the login page it is a globe + code button), Profile and Help &
+    Support coming soon, Settings, Sign out).
     Settings also has language, mode, color theme and interface size.
     Module pages use `<v-container fluid class="module-page">` (full width, 24 px margin;
     `src/styles/main.css`, which also sets the shared look: cards 16 px corners + soft shadow
     `--v-card-shadow`, buttons/fields 10 px corners, page titles `h1` 24 px semibold, normal
-    letter spacing). On screens ≥ 960 px the column titles of every grid in a page
+    letter spacing; fields the browser auto-fills keep the theme's look — no yellow). On screens ≥ 960 px the column titles of every grid in a page
     (`.v-data-table` in `.v-main`) stick under the top bar while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
@@ -448,7 +482,8 @@ Multi-user web system for **operating lease residual value pricing**
     `updated_at` + `updated_by_name`; deleting is only there; a row expands
     to `AnalysisScenariosPanel.vue`: each scenario's assets by kind, LO, eFMV at EOL and HW/SW/SV
     bar, loaded
-    from the analysis's GET when expanded) and, as
+    from the analysis's GET when expanded; a scenario's name opens the analysis on its tab —
+    `?scenario=<id>`, used on the first load only) and, as
     child routes of a RouterView parent, `/pricing/efmv-analyses/new` — `EfmvWizardView.vue`,
     3 steps: Premises (account manager — the user by default when they have the role —,
     `CustomerPicker.vue` with that account manager's customers, `VerticalScopePicker.vue` with
@@ -533,8 +568,9 @@ Multi-user web system for **operating lease residual value pricing**
     browser's address exactly, with the proxy's public port (else every save is a 403 shown as
     "Could not save"); machines sharing the database must share `MEDIA_ROOT` (else photos 404).
     Diagnose with the status codes in `.run/backend.log`.
-- Database: PostgreSQL 17 on the homelab (`TrueNAS-1:5432`, database `horizon_dev`).
-  The test database (`test_horizon_dev`) is created/dropped by pytest-django.
+- Database: PostgreSQL 17 on the homelab (`TrueNAS-1:5432`): `horizon_live` (Live) and
+  `horizon_dev` (Development / Test). The test database (`test_horizon_live`) is
+  created/dropped by pytest-django.
 
 ## Commands
 - Dev servers (both, in background): `./dev.sh start|stop|restart|status|logs [backend|frontend]`
@@ -586,11 +622,12 @@ Multi-user web system for **operating lease residual value pricing**
   - **Themes** (`src/themes.ts`): each theme has colors and a font, in a light and a dark
     version (Vuetify themes "<id>-light"/"<id>-dark"); the user's mode (light/dark/system)
     picks the version (App.vue). User preference `color_theme` (backend
-    `accounts.models.ColorTheme`). Themes: "Metallic Foundations" (default; #3D52A0, #7091E6,
-    #8697C4, #ADBBDA, #EDE8F5), "Earthy and Serene" (#3E362E, #865D36, #93785B, #AC8968,
-    #A69080) and "Sleek and Futuristic" (#2C3531, #116466, #D9B08C, #FFCB9A, #D1E8E2) use the
-    Ubuntu font; "Emerald Slate" (#1C252E, #00926F, #00A883, #CBEEE0, #F9FAFB; emerald over
-    slate, the dashboard look's reference palette) uses Public Sans (`@fontsource/*`, imported
+    `accounts.models.ColorTheme`). Themes, in Settings' order (`COLOR_THEMES`): "Emerald
+    Slate" (default; #1C252E, #00926F, #00A883, #CBEEE0, #F9FAFB; emerald over slate, the
+    dashboard look's reference palette) uses Public Sans; "Metallic Foundations" (#3D52A0,
+    #7091E6, #8697C4, #ADBBDA, #EDE8F5), "Earthy and Serene" (#3E362E, #865D36, #93785B,
+    #AC8968, #A69080) and "Sleek and Futuristic" (#2C3531, #116466, #D9B08C, #FFCB9A, #D1E8E2)
+    use the Ubuntu font (fonts: `@fontsource/*`, imported
     in main.ts). New theme = entry in `COLOR_THEMES` (with the side menu colors) + choice in
     `ColorTheme`. Use theme colors (`primary`, `sidebar`…), never hard-coded ones.
   - UI: only open-source libraries without license keys (MIT/Apache/BSD). **Vuetify** components

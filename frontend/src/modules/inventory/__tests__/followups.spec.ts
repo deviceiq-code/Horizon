@@ -214,6 +214,8 @@ describe('alerts', () => {
         {
           id: 1,
           kind: 'aging',
+          severity: 'warning',
+          scope: 'user',
           params: { asset: 'H1', status: 'blocked', days: 9 },
           ref: 'asset:1',
           created_at: '2026-11-24T10:00:00Z',

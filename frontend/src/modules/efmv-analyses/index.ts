@@ -31,7 +31,11 @@ const efmvAnalyses: AppModule = {
           name: 'efmv-analysis',
           meta: { titleKey: 'efmv.analysis' },
           component: () => import('./EfmvAnalysisView.vue'),
-          props: (route) => ({ id: Number(route.params.id) }),
+          // ?scenario=<id>: opens on that scenario's tab (e.g. clicked on the list)
+          props: (route) => ({
+            id: Number(route.params.id),
+            scenario: route.query.scenario ? Number(route.query.scenario) : undefined,
+          }),
         },
       ],
     },

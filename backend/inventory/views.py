@@ -3,7 +3,7 @@ from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Count, Exists, F, Min, OuterRef, Prefetch, Q
+from django.db.models import Count, F, Min, Prefetch, Q
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -21,7 +21,6 @@ from config.keywords import KeywordSearchFilter
 from config.parties import column_filters
 from pricing.documents import content_type_for, opens_inline
 from users.models import INVENTORY_SUPERVISOR
-from users.permissions import is_administrator
 
 from . import counting, disposals, followups, indicators, inspection, receiving, services, transfers
 from .expected import model_key, parse_pasted
@@ -1839,40 +1838,33 @@ class ChargeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 
 class AlertViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    """The signed-in user's alerts (for them or one of their roles; administrators: all).
-    ?unread=true. POST <id>/read/, POST read-all/."""
+    """The signed-in user's own alerts (notifications are always one user's).
+    ?unread=true. POST <id>/read/, POST read-all/, GET count/."""
 
     serializer_class = AlertSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        queryset = Alert.objects.all()
-        if not is_administrator(user):
-            keys = list(user.roles.exclude(key="").values_list("key", flat=True))
-            queryset = queryset.filter(Q(user=user) | Q(role_key__in=keys, user__isnull=True))
-        queryset = queryset.annotate(
-            read=Exists(
-                Alert.read_by.through.objects.filter(alert_id=OuterRef("pk"), user_id=user.pk)
-            )
-        )
+        queryset = Alert.objects.filter(user=self.request.user)
         if self.request.query_params.get("unread") == "true":
-            queryset = queryset.filter(read=False)
+            queryset = queryset.filter(read_at__isnull=True)
         return queryset.order_by("-created_at", "-id")
 
     @action(detail=True, methods=["post"])
     def read(self, request, pk=None):
-        self.get_object().read_by.add(request.user)
+        alert = self.get_object()
+        if alert.read_at is None:
+            alert.read_at = timezone.now()
+            alert.save(update_fields=["read_at"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["post"], url_path="read-all")
     def read_all(self, request):
-        for alert in self.get_queryset().filter(read=False):
-            alert.read_by.add(request.user)
+        self.get_queryset().filter(read_at__isnull=True).update(read_at=timezone.now())
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"])
     def count(self, request):
-        return Response({"unread": self.get_queryset().filter(read=False).count()})
+        return Response({"unread": self.get_queryset().filter(read_at__isnull=True).count()})
 
 
 # --- Phase 5: stock query and disposals ------------------------------------------------------

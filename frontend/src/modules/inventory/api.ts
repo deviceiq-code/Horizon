@@ -1,4 +1,4 @@
-import { api, listQuery, type ListParams, type Paginated } from '@/api'
+import { api, listQuery, queryString, type ListParams, type Paginated } from '@/api'
 import type { SpecValue } from '@/modules/catalogs/asset-models/api'
 
 /** The asset's life in the warehouse (backend inventory/states.py). */
@@ -1135,6 +1135,10 @@ export interface ChargeFinding extends Finding {
 export interface Alert {
   id: number
   kind: string
+  /** Its icon and color (src/alerts.ts) */
+  severity: 'info' | 'warning' | 'error' | 'success'
+  /** user: about the user's work; system: a global notice (everyone got one) */
+  scope: 'user' | 'system'
   params: Record<string, string | number>
   ref: string
   created_at: string
@@ -1253,8 +1257,10 @@ export function markCharged(id: number) {
   return api<ChargeFinding>(`${BASE}/charges/${id}/charged/`, { method: 'POST', body: '{}' })
 }
 
-export function listAlerts(unread = false) {
-  return api<Paginated<Alert>>(`${BASE}/alerts/?page_size=30${unread ? '&unread=true' : ''}`)
+export function listAlerts(unread = false, page = 1) {
+  return api<Paginated<Alert>>(
+    `${BASE}/alerts/${queryString({ page_size: 30, page: page > 1 ? page : null, unread: unread ? 'true' : null })}`,
+  )
 }
 
 export function alertCount() {

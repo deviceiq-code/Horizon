@@ -107,8 +107,14 @@ preflight() {
 
 check_migrations() {
   if ! (cd "$ROOT/backend" && uv run python manage.py migrate --check >/dev/null 2>&1); then
-    warn "There are unapplied migrations (or the database is unreachable)."
+    warn "There are unapplied migrations in Live (or the database is unreachable)."
     warn "Run: cd backend && uv run python manage.py migrate"
+  fi
+  # Development (Test), when configured: a database of its own, migrated on its own
+  if grep -q '^DATABASE_URL_DEVELOPMENT=.' "$ROOT/.env" &&
+    ! (cd "$ROOT/backend" && HORIZON_ENVIRONMENT=development uv run python manage.py migrate --check >/dev/null 2>&1); then
+    warn "There are unapplied migrations in Development (or the database is unreachable)."
+    warn "Run: cd backend && HORIZON_ENVIRONMENT=development uv run python manage.py migrate"
   fi
 }
 

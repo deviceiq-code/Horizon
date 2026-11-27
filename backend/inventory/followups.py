@@ -4,7 +4,7 @@ refusals raise states.DomainError (translated)."""
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F, Max, OuterRef, Subquery
+from django.db.models import F, Max, OuterRef, Q, Subquery
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -17,6 +17,8 @@ from .inspection import _copy_from
 from .models import (
     AgingLimit,
     Alert,
+    AlertScope,
+    AlertSeverity,
     Asset,
     BlockFollowUp,
     BlockStatus,
@@ -351,13 +353,70 @@ def mark_charged(finding: Finding, *, user) -> Finding:
 # --- Alerts and the daily routine --------------------------------------------------------------
 
 
-def alert(key: str, kind: str, *, ref="", role_key="", user=None, **params) -> bool:
-    """Create the alert once (its key); True when it is new."""
-    _alert, created = Alert.objects.get_or_create(
-        key=key,
-        defaults={"kind": kind, "ref": ref, "role_key": role_key, "user": user, "params": params},
+def alert_recipients(role_key: str):
+    """Who receives an event for a role: its active users; nobody with it → the administrators
+    (so it is never lost)."""
+    from django.contrib.auth import get_user_model
+
+    from users.models import ADMINISTRATOR
+
+    users = get_user_model().objects.filter(is_active=True)
+    holders = users.filter(roles__key=role_key).distinct()
+    if holders.exists():
+        return holders
+    return users.filter(Q(is_superuser=True) | Q(roles__key=ADMINISTRATOR)).distinct()
+
+
+# What each event is (its icon and color): past a deadline = error; near it, late, a
+# divergence or an asset aging = warning
+KIND_SEVERITY = {
+    "block_expired": AlertSeverity.ERROR,
+    "dispute_escalated": AlertSeverity.ERROR,
+    "block_due": AlertSeverity.WARNING,
+    "dispute_due": AlertSeverity.WARNING,
+    "transfer_late": AlertSeverity.WARNING,
+    "location_mismatch": AlertSeverity.WARNING,
+    "aging": AlertSeverity.WARNING,
+}
+
+
+def _notify(recipients, key, kind, *, severity, scope, ref, params) -> bool:
+    created_any = False
+    for recipient in recipients:
+        _alert, created = Alert.objects.get_or_create(
+            key=key,
+            user=recipient,
+            defaults={
+                "kind": kind,
+                "severity": severity,
+                "scope": scope,
+                "ref": ref,
+                "params": params,
+            },
+        )
+        created_any |= created
+    return created_any
+
+
+def alert(key: str, kind: str, *, ref="", role_key="", user=None, severity=None, **params) -> bool:
+    """Notify the event once (its key): to `user`, or to each user of `role_key` — one alert
+    each, read on its own. Severity: given, else the kind's (KIND_SEVERITY, else info).
+    True when someone got it now."""
+    recipients = [user] if user is not None else list(alert_recipients(role_key))
+    severity = severity or KIND_SEVERITY.get(kind, AlertSeverity.INFO)
+    return _notify(
+        recipients, key, kind, severity=severity, scope=AlertScope.USER, ref=ref, params=params
     )
-    return created
+
+
+def notify_everyone(key: str, kind: str, *, severity, ref="", **params) -> bool:
+    """A system (global) notification: every active user gets their own copy, once (`key`)."""
+    from django.contrib.auth import get_user_model
+
+    recipients = get_user_model().objects.filter(is_active=True)
+    return _notify(
+        recipients, key, kind, severity=severity, scope=AlertScope.SYSTEM, ref=ref, params=params
+    )
 
 
 def check_deadlines(today=None) -> dict:

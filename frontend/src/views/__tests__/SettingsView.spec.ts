@@ -20,7 +20,7 @@ const user = (is_admin: boolean): User => ({
   preferences: {
     language: 'en',
     theme: 'system',
-    color_theme: 'metallic_foundations',
+    color_theme: 'emerald_slate',
     ui_scale: 'auto',
     date_format: 'auto',
     time_format: 'auto',
@@ -73,11 +73,14 @@ describe('SettingsView', () => {
     wrapper.unmount()
   })
 
-  it('offers the color themes, Metallic Foundations chosen by default', async () => {
+  it('offers the color themes, Emerald Slate first and chosen by default', async () => {
     const { wrapper } = await mountAt('/settings', false)
-    const card = inBody('[data-testid="color-theme-metallic_foundations"]')!
-    expect(card.textContent).toContain('Metallic Foundations')
+    const card = inBody('[data-testid="color-theme-emerald_slate"]')!
+    expect(card.textContent).toContain('Emerald Slate')
     expect(card.getAttribute('aria-pressed')).toBe('true')
+    expect(inBody('[data-testid^="color-theme-"]')!.getAttribute('data-testid')).toBe(
+      'color-theme-emerald_slate',
+    )
     // A row of its own: title and description, the themes below
     expect(inBody('[data-testid="color-themes"]')!.closest('.setting-row')!.textContent).toContain(
       'Color Theme',

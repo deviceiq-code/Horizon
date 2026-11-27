@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import HorizonLogo from '@/components/HorizonLogo.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
+import { chooseEnvironment, ENVIRONMENT_ICONS, fetchEnvironments } from '@/environment'
 import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
@@ -15,6 +17,26 @@ const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
 const loading = ref(false)
+
+// Live or Development (Test): offered only when the server has more than one
+const environments = ref<string[]>([])
+const environment = ref('')
+
+onMounted(async () => {
+  try {
+    const data = await fetchEnvironments()
+    environments.value = data.environments
+    environment.value = data.current
+  } catch {
+    environments.value = []
+  }
+})
+
+function selectEnvironment(name: string | null) {
+  if (!name) return
+  environment.value = name
+  chooseEnvironment(name)
+}
 
 async function login() {
   error.value = ''
@@ -38,14 +60,10 @@ async function login() {
     </div>
 
     <v-card width="400" max-width="100%" elevation="4" class="pa-2">
-      <v-card-item>
-        <template #prepend>
-          <!-- The brand's mark, as in the side menu -->
-          <v-avatar color="primary" rounded="lg" size="40" class="font-weight-bold">H</v-avatar>
-        </template>
-        <v-card-title class="text-h5 font-weight-bold">{{ $t('app.name') }}</v-card-title>
-        <v-card-subtitle>{{ $t('app.description') }}</v-card-subtitle>
-      </v-card-item>
+      <!-- The logo: the sun over the horizon, the name and the slogan -->
+      <div class="d-flex justify-center pt-6 pb-2">
+        <HorizonLogo :mark-height="80" />
+      </div>
 
       <v-card-text>
         <v-form @submit.prevent="login">
@@ -65,6 +83,33 @@ async function login() {
             autocomplete="current-password"
             @click:append-inner="showPassword = !showPassword"
           />
+
+          <div v-if="environments.length > 1" class="mb-4" data-testid="environment">
+            <div class="text-caption text-medium-emphasis mb-1">
+              {{ $t('environments.label') }}
+            </div>
+            <v-btn-toggle
+              :model-value="environment"
+              mandatory
+              divided
+              variant="outlined"
+              density="comfortable"
+              class="w-100"
+              :color="environment === 'live' ? 'primary' : 'warning'"
+              @update:model-value="selectEnvironment"
+            >
+              <v-btn
+                v-for="name in environments"
+                :key="name"
+                :value="name"
+                :prepend-icon="ENVIRONMENT_ICONS[name]"
+                class="flex-grow-1"
+                :data-testid="`environment-${name}`"
+              >
+                {{ $t(`environments.${name}`) }}
+              </v-btn>
+            </v-btn-toggle>
+          </div>
 
           <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mb-4">
             {{ error }}

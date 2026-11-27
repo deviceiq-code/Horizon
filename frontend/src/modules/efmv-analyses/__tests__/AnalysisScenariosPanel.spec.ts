@@ -78,6 +78,9 @@ describe('AnalysisScenariosPanel', () => {
     expect(segments.map((s) => s.style.width)).toEqual(['95.24%', '0%', '4.76%'])
     // A scenario without assets: dashes
     expect(rows[1]!.textContent).toContain('—')
+    // A scenario's name opens the analysis on it
+    rows[1]!.querySelector<HTMLElement>('[data-testid="open-scenario"]')!.click()
+    expect(wrapper.emitted('open')).toEqual([[2]])
     wrapper.unmount()
   })
 })

@@ -6,7 +6,8 @@
 const en = {
   app: {
     name: 'Horizon',
-    description: 'Operating lease residual value pricing',
+    // The brand's slogan: as written, in every language (as the apps' names)
+    slogan: 'One Step Ahead',
   },
   photo: {
     add: 'Add Photo',
@@ -56,6 +57,7 @@ const en = {
     decimalRange: 'Enter a number from {min} to {max} with up to {places} decimal place(s).',
   },
   language: {
+    label: 'Language',
     select: 'Select language',
   },
   partners: {
@@ -92,6 +94,41 @@ const en = {
       planned: ['Discount policies', 'Fees per operation', 'Approvals'],
     },
   },
+  notifications: {
+    subtitle: 'Stay up to date with what needs your attention.',
+    viewAll: 'View All Notifications',
+    unreadCount: 'No unread messages | You have 1 unread message | You have {n} unread messages',
+    markAllRead: 'Mark All as Read',
+    all: 'All',
+    unread: 'Unread ({n})',
+    groups: {
+      today: 'Today',
+      yesterday: 'Yesterday',
+      earlier: 'Earlier',
+    },
+    empty: 'No notifications to show',
+    emptyHint: 'You are all caught up.',
+    loadMore: 'Load More',
+    scopes: {
+      system: 'System',
+    },
+    titles: {
+      block_expired: 'Access Block Expired',
+      block_due: 'Access Block Deadline',
+      dispute_escalated: 'Dispute Escalated',
+      dispute_due: 'Dispute Deadline',
+      transfer_late: 'Late Transfer',
+      location_mismatch: 'Location Mismatch',
+      aging: 'Asset Aging',
+      other: 'Notification',
+    },
+  },
+  environments: {
+    label: 'Environment',
+    live: 'Live',
+    development: 'Development (Test)',
+    notLive: 'You are working in the test environment: its data is not the live data.',
+  },
   login: {
     username: 'Username',
     password: 'Password',
@@ -127,6 +164,7 @@ const en = {
     help: 'Help & Support',
     comingSoon: '{feature}: coming soon.',
     sections: {
+      pages: 'Pages',
       management: 'Management',
       catalogs: 'Catalogs',
       inventory: 'Inventory',
@@ -938,8 +976,6 @@ const en = {
       empty: 'Nothing here.',
     },
     alerts: {
-      readAll: 'Mark All as Read',
-      empty: 'No notifications.',
       kinds: {
         block_expired: 'Access block of {asset} expired: decide its destination.',
         dispute_escalated: 'Dispute of {asset} escalated: the analysis deadline passed.',

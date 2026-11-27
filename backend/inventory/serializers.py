@@ -1464,12 +1464,25 @@ class ChargeFindingSerializer(FindingSerializer):
 
 
 class AlertSerializer(serializers.ModelSerializer):
-    read = serializers.BooleanField(read_only=True, default=False)
+    read = serializers.SerializerMethodField()
 
     class Meta:
         model = Alert
-        fields = ["id", "kind", "params", "ref", "created_at", "read"]
+        fields = [
+            "id",
+            "kind",
+            "severity",
+            "scope",
+            "params",
+            "ref",
+            "created_at",
+            "read",
+            "read_at",
+        ]
         read_only_fields = fields
+
+    def get_read(self, alert) -> bool:
+        return alert.read_at is not None
 
 
 # --- Phase 5: stock and disposals ----------------------------------------------------------

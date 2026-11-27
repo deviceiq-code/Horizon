@@ -41,7 +41,8 @@ import {
   type ScenarioErrors,
 } from './draft'
 
-const props = defineProps<{ id: number }>()
+/** `scenario`: the id of the scenario to open first (else the first tab) */
+const props = defineProps<{ id: number; scenario?: number }>()
 
 const { t, locale } = useI18n()
 // Dates in the formats the user chose (Settings)
@@ -69,6 +70,9 @@ const scope = computed(() => ({
   sub_vertical: analysis.value?.sub_vertical ?? null,
 }))
 
+/** The first load is done (the scenario asked for was opened) */
+let opened = false
+
 function fill(data: EfmvAnalysis) {
   analysis.value = data
   // After saving, the scenarios keep their keys (found by their official name, unique; the API
@@ -79,8 +83,14 @@ function fill(data: EfmvAnalysis) {
     const draft = scenarioDraft(s, locale.value)
     return { ...draft, key: previous.get(titleKey(draft.term, draft.name)) ?? draft.key }
   })
-  // Stay on the same scenario after saving
-  const open = scenarios.value.find((s) => s.key === tab.value) ?? ordered.value[0]?.scenario
+  // Opening: the scenario asked for (the drafts follow the API's order); after saving, stay on
+  // the same one (saving replaces the scenarios, so their ids are only used once)
+  const asked = opened ? -1 : data.scenarios.findIndex((s) => s.id === props.scenario)
+  opened = true
+  const open =
+    scenarios.value[asked] ??
+    scenarios.value.find((s) => s.key === tab.value) ??
+    ordered.value[0]?.scenario
   tab.value = open?.key ?? null
 }
 

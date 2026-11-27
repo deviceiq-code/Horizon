@@ -132,7 +132,9 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
   updated_at: '2026-11-20T10:00:00Z',
 }
 
-async function mountView(props: { id: number } = { id: 3 }, roles = ['Account Manager']) {
+async function mountView(
+  props: { id: number; scenario?: number } = { id: 3 },   roles = ['Account Manager'],
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useAuthStore().user = {
@@ -340,6 +342,25 @@ describe('EfmvAnalysisView', () => {
       ],
     })
     wrapper.unmount()
+  })
+
+  it('opens on the scenario asked for (clicked on the list); else on the first tab', async () => {
+    const base = ANALYSIS.scenarios[0]!
+    efmv.getEfmvAnalysis.mockResolvedValue({
+      ...ANALYSIS,
+      scenarios: [
+        { ...base, id: 21, name: '', title: '36 Months' },
+        { ...base, id: 22, name: '', title: '60 Months', term_months: 60 },
+      ],
+    })
+    const { wrapper } = await mountView({ id: 3, scenario: 22 })
+    expect(inBody('[data-testid="tab-1"]')!.textContent!.trim()).toBe('60 Months')
+    expect(inBody('[data-testid="tab-1"]')!.className).toContain('v-tab--selected')
+    wrapper.unmount()
+
+    const { wrapper: first } = await mountView({ id: 3 })
+    expect(inBody('[data-testid="tab-0"]')!.className).toContain('v-tab--selected')
+    first.unmount()
   })
 
   it('opens an analysis with its figures and keeps at least one scenario', async () => {
