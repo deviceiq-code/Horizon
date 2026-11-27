@@ -272,6 +272,43 @@ class PriceDocument(models.Model):
         return result
 
 
+# The disclaimer of eFMV reports until an administrator changes it (Settings › App Settings ›
+# Pricing); "Restore Default" brings these back.
+DEFAULT_REPORT_DISCLAIMER = {
+    "en": (
+        "Please note:\n"
+        "1. No special conditions — such as non-return percentages, extended use or payment "
+        "grace periods — were considered: only the estimated sale value at the end of the "
+        "contract's original term.\n"
+        "2. When adding this opportunity to the CRM, put the analysis number in brackets at the "
+        "beginning of each asset's description — [{code}]. Without it, the eFMV figures in the "
+        "CRM may be inconsistent."
+    ),
+    "pt-br": (
+        "Atenção:\n"
+        "1. Nenhuma condição especial — como percentuais de não devolução, extensão de uso ou "
+        "carência de pagamentos — foi considerada: apenas a estimativa de valor de venda ao fim "
+        "do prazo original do contrato.\n"
+        "2. Ao incluir esta oportunidade no CRM, coloque o número da análise entre colchetes no "
+        "início da descrição de cada bem — [{code}]. Sem ele, os valores de eFMV no CRM podem "
+        "ficar inconsistentes."
+    ),
+    "es": (
+        "Atención:\n"
+        "1. No se consideró ninguna condición especial — como porcentajes de no devolución, "
+        "extensión de uso o períodos de gracia de pago —: solo la estimación del valor de venta "
+        "al final del plazo original del contrato.\n"
+        "2. Al incluir esta oportunidad en el CRM, ponga el número del análisis entre corchetes "
+        "al comienzo de la descripción de cada bien — [{code}]. Sin él, las cifras de eFMV en el "
+        "CRM pueden quedar inconsistentes."
+    ),
+}
+
+
+def default_report_disclaimer() -> dict:
+    return dict(DEFAULT_REPORT_DISCLAIMER)
+
+
 class PricingSettings(models.Model):
     """Pricing control panel (a single row, pk=1; read it with PricingSettings.current()).
 
@@ -307,6 +344,12 @@ class PricingSettings(models.Model):
         _("validity (months)"), default=12, validators=[MinValueValidator(1)]
     )
     accept_expired = models.BooleanField(_("accept expired prices"), default=True)
+    # The disclaimer at the end of an eFMV analysis's printed report, per language
+    # ({"en": "…", "pt-br": "…", "es": "…"}); may use {code}, {customer}, {account_manager} and
+    # {date}. Empty for a language: the English one.
+    report_disclaimer = models.JSONField(
+        _("report disclaimer"), default=default_report_disclaimer, blank=True
+    )
 
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
     updated_by = models.ForeignKey(

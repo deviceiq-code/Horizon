@@ -47,3 +47,27 @@ def test_limits_must_be_beyond_the_compatible_range(admin_client):
     assert set(r.json()) == {"below_percent", "above_percent"}
     r = admin_client.patch(URL, {"validity_months": 0}, content_type="application/json")
     assert r.status_code == 400
+
+
+def test_report_disclaimer_per_language(admin_client, logged_client):
+    data = logged_client.get(URL).json()
+    # Defaults in every language, and the texts "Restore Default" brings back
+    assert data["report_disclaimer"]["pt-br"].startswith("Atenção:")
+    assert "{code}" in data["report_disclaimer_defaults"]["en"]
+    # Changing one language keeps the others
+    r = admin_client.patch(
+        URL, {"report_disclaimer": {"es": "  Nota: {code}  "}}, content_type="application/json"
+    )
+    assert r.status_code == 200, r.json()
+    texts = r.json()["report_disclaimer"]
+    assert texts["es"] == "Nota: {code}"
+    assert texts["pt-br"].startswith("Atenção:")
+    # Only the system's languages
+    r = admin_client.patch(
+        URL, {"report_disclaimer": {"fr": "Attention"}}, content_type="application/json"
+    )
+    assert r.status_code == 400
+    r = admin_client.patch(
+        URL, {"report_disclaimer": {"en": "x" * 4001}}, content_type="application/json"
+    )
+    assert r.status_code == 400

@@ -3108,3 +3108,17 @@ msgstr "gravidade"
 
 msgid "read at"
 msgstr "lida em"
+
+msgid "report disclaimer"
+msgstr "disclaimer do relatório"
+
+#, python-format
+msgid "Give a text for each language (%(languages)s)."
+msgstr "Informe um texto para cada idioma (%(languages)s)."
+
+msgid "Each text must be text."
+msgstr "Cada texto precisa ser um texto."
+
+#, python-format
+msgid "Each text may have up to %(max)d characters."
+msgstr "Cada texto pode ter até %(max)d caracteres."

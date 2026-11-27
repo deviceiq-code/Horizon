@@ -20,6 +20,8 @@ const SETTINGS: settingsApi.PricingSettings = {
   above_percent: '10.00',
   validity_months: 12,
   accept_expired: true,
+  report_disclaimer: { en: 'Note: {code}', 'pt-br': 'Atenção: {code}', es: '' },
+  report_disclaimer_defaults: { en: 'Default note', 'pt-br': 'Atenção padrão', es: 'Nota' },
   updated_at: '2026-11-20T10:00:00Z',
   updated_by_name: 'Fernando Almeida',
 }
@@ -105,6 +107,34 @@ describe('PricingSettingsSection', () => {
     await typeAndLeave('below', '8')
     expect(inBody('[data-testid="below"]')!.textContent).toContain('(5%)')
     expect(useNotificationsStore().color).toBe('error')
+    wrapper.unmount()
+  })
+
+  it('the report disclaimer: one per language, saved when left; Restore Default', async () => {
+    api.updatePricingSettings.mockResolvedValue({
+      ...SETTINGS,
+      report_disclaimer: { ...SETTINGS.report_disclaimer, es: 'Nota: {code}' },
+    })
+    const wrapper = mountWithPlugins(PricingSettingsSection)
+    await settle()
+    const area = (code: string) =>
+      inBody(`[data-testid="disclaimer-${code}"] textarea`) as HTMLTextAreaElement
+    expect(area('pt-br').value).toBe('Atenção: {code}')
+    area('es').value = 'Nota: {code}'
+    area('es').dispatchEvent(new Event('input'))
+    await settle()
+    area('es').dispatchEvent(new Event('blur'))
+    await settle()
+    expect(api.updatePricingSettings).toHaveBeenLastCalledWith({
+      report_disclaimer: { es: 'Nota: {code}' },
+    })
+    // The variables are listed beside it
+    expect(inBody('[data-testid="pricing-report"]')!.textContent).toContain('{account_manager}')
+    ;(inBody('[data-testid="disclaimer-restore-en"]') as HTMLButtonElement).click()
+    await settle()
+    expect(api.updatePricingSettings).toHaveBeenLastCalledWith({
+      report_disclaimer: { en: 'Default note' },
+    })
     wrapper.unmount()
   })
 })

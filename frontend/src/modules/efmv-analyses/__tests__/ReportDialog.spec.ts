@@ -1,0 +1,91 @@
+import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { i18n, setLanguage } from '@/i18n'
+import * as settingsApi from '@/modules/pricing-settings/api'
+import vuetify from '@/plugins/vuetify'
+import { inBody, settle } from '@/test-utils'
+import * as efmvApi from '../api'
+import ReportDialog from '../ReportDialog.vue'
+
+vi.mock('../api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api')>()),
+  getEfmvAnalysis: vi.fn<typeof efmvApi.getEfmvAnalysis>(),
+}))
+vi.mock('@/modules/pricing-settings/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/modules/pricing-settings/api')>()),
+  getPricingSettings: vi.fn<typeof settingsApi.getPricingSettings>(),
+}))
+
+const TOTALS = {
+  lo: '1000.00',
+  efmv_total: '150.00',
+  efmv_percent: '15.00000',
+  hw_percent: '100.00000',
+  sw_percent: null,
+  sv_percent: null,
+  hw_total: '1000.00',
+  sw_total: '0.00',
+  sv_total: '0.00',
+}
+const scenario = (id: number, title: string) => ({
+  id,
+  name: '',
+  title,
+  term_months: 36,
+  scope: 'Fleet',
+  scope_suggestion: '',
+  items: [],
+  totals: TOTALS,
+  has_expired: false,
+})
+
+describe('printing an analysis', () => {
+  beforeEach(() => {
+    setLanguage('pt-br')
+    setActivePinia(createPinia())
+    vi.mocked(efmvApi).getEfmvAnalysis.mockResolvedValue({
+      id: 3,
+      code: 'EFMV-2026-0661',
+      account_manager_detail: { id: 1, full_name: 'Ana Lima' },
+      customer_detail: { id: 2, name: 'IHM Engenharia', trade_name: '', tax_id: '' },
+      vertical_label: 'TI',
+      scenarios: [scenario(10, '36 Meses'), scenario(11, '48 Meses')],
+    } as unknown as efmvApi.EfmvAnalysis)
+    vi.mocked(settingsApi).getPricingSettings.mockResolvedValue({
+      report_disclaimer: { en: 'Note', 'pt-br': 'Atenção: inclua [{code}].' },
+    } as unknown as settingsApi.PricingSettings)
+  })
+  afterEach(() => {
+    vi.clearAllMocks()
+    document.body.innerHTML = ''
+    setLanguage('en')
+  })
+
+  it('previews the scenarios chosen with the disclaimer in the user’s language', async () => {
+    const wrapper = mount(ReportDialog, {
+      props: { modelValue: false, analysisId: 3 },
+      attachTo: document.body,
+      global: { plugins: [vuetify, i18n] },
+    })
+    await wrapper.setProps({ modelValue: true })
+    await settle()
+    const preview = () => inBody('[data-testid="report-preview"]') as HTMLIFrameElement
+    expect(preview().srcdoc).toContain('36 Meses')
+    expect(preview().srcdoc).toContain('48 Meses')
+    expect(preview().srcdoc).toContain('Atenção: inclua [EFMV-2026-0661].')
+    // One scenario left out
+    ;(inBody('[data-testid="report-scenario-11"] input') as HTMLInputElement).click()
+    await settle()
+    expect(preview().srcdoc).not.toContain('48 Meses')
+    // Prints that same frame
+    const print = vi.fn<() => void>()
+    Object.defineProperty(preview(), 'contentWindow', {
+      value: { focus: vi.fn<() => void>(), print },
+    })
+    ;(inBody('[data-testid="report-print"]') as HTMLButtonElement).click()
+    expect(print).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+})

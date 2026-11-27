@@ -15,6 +15,7 @@ import KeywordsField from '@/components/KeywordsField.vue'
 import PersonAvatar from '@/components/PersonAvatar.vue'
 import { userPhotoUrl } from '@/modules/users/api'
 import { useNotificationsStore } from '@/stores/notifications'
+import ReportDialog from './ReportDialog.vue'
 import ScenarioPanel from './ScenarioPanel.vue'
 import {
   getAccountManagerSummary,
@@ -53,6 +54,8 @@ const loading = ref(false)
 const loadFailed = ref(false)
 const saving = ref(false)
 const analysis = ref<EfmvAnalysis | null>(null)
+// Print out: the report dialog (scenarios chosen there; nothing stored)
+const reportOpen = ref(false)
 
 /** The account manager's photo version (their photo on the header), loaded with the analysis */
 const managerPhoto = ref<string | null>(null)
@@ -436,6 +439,15 @@ async function save() {
           </div>
           <div class="d-flex align-center ga-2 header-actions">
             <v-btn
+              variant="tonal"
+              prepend-icon="mdi-printer-outline"
+              :title="$t('efmv.report.printHint')"
+              data-testid="print"
+              @click="reportOpen = true"
+            >
+              {{ $t('efmv.report.print') }}
+            </v-btn>
+            <v-btn
               color="primary"
               prepend-icon="mdi-cloud-upload-outline"
               :loading="saving"
@@ -608,6 +620,7 @@ async function save() {
         </v-btn>
       </template>
     </FormDialog>
+    <ReportDialog v-if="analysis" v-model="reportOpen" :analysis-id="analysis.id" />
   </v-container>
 </template>
 

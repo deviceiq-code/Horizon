@@ -78,6 +78,8 @@ describe('SettingsView', () => {
       above_percent: '10.00',
       validity_months: 12,
       accept_expired: true,
+      report_disclaimer: {},
+      report_disclaimer_defaults: {},
       updated_at: '2026-11-20T10:00:00Z',
       updated_by_name: null,
     })

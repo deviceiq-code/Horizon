@@ -284,7 +284,9 @@ Multi-user web system for **operating lease residual value pricing**
     everyone signed in, PATCH administrators): `compatible_percent` (5), `below_percent` /
     `above_percent` (10, each greater than the compatible range), `validity_months` (12, from
     the date of the price's current version) and `accept_expired` (true; false = analyses
-    refuse expired prices). Frontend: Settings › App Settings › Pricing
+    refuse expired prices). `report_disclaimer` ({language: text}; defaults `DEFAULT_REPORT_DISCLAIMER`, served as
+    `report_disclaimer_defaults` for "Restore Default"; PATCH with some languages changes only
+    those; variables {code} {customer} {account_manager} {date}). Frontend: Settings › App Settings › Pricing
     (`src/modules/pricing-settings/PricingSettingsSection.vue`; the former Control Panel —
     `/pricing/control-panel` redirects there).
   - `users/` — user and role management (administrators only): `Role` (name unique
@@ -528,7 +530,14 @@ Multi-user web system for **operating lease residual value pricing**
     photo, analyses, top 5 verticals by analyses, active customers as primary AM), Services and
     Partnerships and Alliances (coming soon); "Create Analysis" posts the premises and a first
     scenario ("36 Months") and opens it — and `/:id` (`EfmvAnalysisView.vue`): a compact header
-    with the premises as labels and the creation date (saving PATCHes only `scenarios`) and one
+    with the premises as labels and the creation date (saving PATCHes only `scenarios`);
+    **Print** (`ReportDialog.vue`): choose the scenarios and whether each one's list of assets
+    goes; `report.ts::reportHtml` makes a whole HTML document (customer, analysis, account
+    manager, vertical, date; per scenario its title, scope, LO, eFMV at EOL, HW / SW / SV, its
+    services and software — attached and of their own —, optionally the assets; at the end the
+    Pricing settings' disclaimer in the user's language, English when empty, its variables
+    filled — `fillDisclaimer`), previewed in an iframe (`srcdoc`) and that frame printed; made
+    from the analysis as last saved; never stored. And one
     tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
     open one — (`ScenarioPanel.vue`: name, term, scope and
     `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the LO's mix (`part="shares"`: a grey borderless panel with one bar, a segment per share in the list's colors, then HW / SW / SV with icon, percentage and value — the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "Add" (a menu: Hardware / Software / Service; "Attach" — Software / Service — under the selected hardware) adds an empty row whose

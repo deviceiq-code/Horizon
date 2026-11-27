@@ -3,6 +3,7 @@
  * read) and in text, with a title and a subtitle. One label per page of 50 × 30 mm — the usual
  * roll of a thermal label printer; the browser's print dialog picks the printer.
  */
+import { escapeHtml } from '@/utils/html'
 import { code128Bars } from '@/utils/code128'
 import { formatCode } from '@/utils/inventoryCodes'
 
@@ -12,7 +13,7 @@ export interface Label {
   subtitle?: string
 }
 
-const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+const escape = escapeHtml
 
 /** The barcode as SVG (quiet zones of 10 modules on each side). */
 export function barcodeSvg(code: string): string {
@@ -91,4 +92,4 @@ export function printLabels(labels: Label[], documentTitle: string): void {
   printDocument(labelsDocument(labels, documentTitle))
 }
 
-export { escape as escapeHtml }
+export { escapeHtml }

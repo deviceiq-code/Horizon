@@ -78,7 +78,10 @@ const scenarios = computed(() => analysis.value?.scenarios ?? [])
       <tbody>
         <tr v-for="scenario in scenarios" :key="scenario.id" data-testid="analysis-scenario">
           <td class="font-weight-medium">
-            <a href="#" class="text-primary" @click.prevent="emit('open', scenario.id)"
+            <a
+              href="#"
+              class="text-primary"
+              @click.prevent="emit('open', scenario.id)"
               data-testid="open-scenario"
               >{{ scenario.title }}</a
             >

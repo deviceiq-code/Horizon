@@ -133,7 +133,8 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
 }
 
 async function mountView(
-  props: { id: number; scenario?: number } = { id: 3 },   roles = ['Account Manager'],
+  props: { id: number; scenario?: number } = { id: 3 },
+  roles = ['Account Manager'],
 ) {
   const pinia = createPinia()
   setActivePinia(pinia)

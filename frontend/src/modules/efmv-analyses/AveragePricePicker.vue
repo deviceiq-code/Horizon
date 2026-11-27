@@ -110,7 +110,9 @@ function onCreated(row: AveragePriceDetail | null) {
       <v-list-item
         prepend-icon="mdi-plus"
         :title="$t('efmv.scenario.newPrice')"
-        :subtitle="typed.trim() ? $t('efmv.scenario.newPriceFor', { model: typed.trim() }) : undefined"
+        :subtitle="
+          typed.trim() ? $t('efmv.scenario.newPriceFor', { model: typed.trim() }) : undefined
+        "
         base-color="primary"
         data-testid="new-price"
         @click="createPrice"

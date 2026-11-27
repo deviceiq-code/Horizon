@@ -2,7 +2,8 @@
 /**
  * Pricing's app settings (Settings › App Settings, administrators): the limits that place a
  * value typed in an eFMV analysis against Average Prices, and how long an average price stays
- * current. Laid out as the rest of Settings (cards of SettingRows); as there, every change is
+ * current; and the disclaimer closing an analysis's printed report, in every language. Laid out
+ * as the rest of Settings (cards of SettingRows); as there, every change is
  * saved on its own: a field when it is left (or Enter), the switch at once.
  */
 import { computed, onMounted, ref } from 'vue'
@@ -13,7 +14,9 @@ import { useDateFormat } from '@/composables/useDateFormat'
 import { useNumberFormat } from '@/composables/useNumberFormat'
 import { useValidationRules } from '@/composables/useValidationRules'
 import { useNotificationsStore } from '@/stores/notifications'
+import { LANGUAGES } from '@/i18n'
 import { isDecimalInRange, normalizeDecimal } from '@/utils/decimal'
+import { DISCLAIMER_VARIABLES, MAX_DISCLAIMER } from '@/modules/efmv-analyses/report'
 import {
   getPricingSettings,
   updatePricingSettings,
@@ -38,6 +41,8 @@ const compatible = ref('')
 const below = ref('')
 const above = ref('')
 const months = ref('')
+/** The disclaimer as typed, per language */
+const disclaimers = ref<Record<string, string>>({})
 
 // Shown as typed in the UI language ("7,5" in pt-br)
 const toInput = (value: string) => n(Number(value), 'decimal')
@@ -48,6 +53,9 @@ function fill(data: PricingSettings) {
   below.value = toInput(data.below_percent)
   above.value = toInput(data.above_percent)
   months.value = String(data.validity_months)
+  disclaimers.value = Object.fromEntries(
+    LANGUAGES.map(({ code }) => [code, data.report_disclaimer[code] ?? '']),
+  )
 }
 
 async function load() {
@@ -125,6 +133,28 @@ function savePercent(field: PercentField) {
   const value = normalizeDecimal(text.value)
   if (number(value) !== Number(saved.value[field])) save({ [field]: value })
 }
+
+/** A language's disclaimer, when left: saved if changed */
+function saveDisclaimer(code: string) {
+  const text = (disclaimers.value[code] ?? '').trim()
+  if (!saved.value || text.length > MAX_DISCLAIMER) return
+  if (text !== (saved.value.report_disclaimer[code] ?? '')) {
+    save({ report_disclaimer: { [code]: text } })
+  }
+}
+
+function restoreDisclaimer(code: string) {
+  disclaimers.value[code] = saved.value?.report_disclaimer_defaults[code] ?? ''
+  saveDisclaimer(code)
+}
+
+/** "{code}": how a variable is written in the text */
+const asVariable = (name: string) => `{${name}}`
+
+const disclaimerRules = [
+  (v: string) =>
+    (v ?? '').length <= MAX_DISCLAIMER || t('validation.maxLength', { max: MAX_DISCLAIMER }),
+]
 
 function saveMonths() {
   if (!saved.value || monthRule(months.value) !== true) return
@@ -282,6 +312,59 @@ function saveMonths() {
           data-testid="accept-expired"
           @update:model-value="save({ accept_expired: !!$event })"
         />
+      </SettingRow>
+    </v-card>
+    <!-- The disclaimer closing an analysis's printed report, in every language -->
+    <div class="group-title">{{ $t('pricingSettings.report.title') }}</div>
+    <v-card class="mb-2" data-testid="pricing-report">
+      <SettingRow
+        v-for="language in LANGUAGES"
+        :key="language.code"
+        :title="$t('pricingSettings.report.disclaimer', { language: language.name })"
+        :description="$t('pricingSettings.report.disclaimerHint')"
+      >
+        <template #below>
+          <v-textarea
+            v-model="disclaimers[language.code]"
+            :rules="disclaimerRules"
+            :error-messages="errors.report_disclaimer"
+            :disabled="saving"
+            rows="4"
+            auto-grow
+            density="compact"
+            hide-details="auto"
+            :aria-label="$t('pricingSettings.report.disclaimer', { language: language.name })"
+            :data-testid="`disclaimer-${language.code}`"
+            @update:model-value="errors.report_disclaimer = []"
+            @blur="saveDisclaimer(language.code)"
+          />
+          <div class="d-flex flex-wrap align-center ga-2 mt-2">
+            <span class="text-caption text-medium-emphasis">{{
+              $t('pricingSettings.report.variables')
+            }}</span>
+            <v-chip
+              v-for="variable in DISCLAIMER_VARIABLES"
+              :key="variable"
+              size="x-small"
+              label
+              :title="$t(`pricingSettings.report.variable.${variable}`)"
+              >{{ asVariable(variable) }}</v-chip
+            >
+            <v-spacer />
+            <v-btn
+              variant="text"
+              size="small"
+              prepend-icon="mdi-restore"
+              :disabled="
+                saving ||
+                disclaimers[language.code] === saved.report_disclaimer_defaults[language.code]
+              "
+              :data-testid="`disclaimer-restore-${language.code}`"
+              @click="restoreDisclaimer(language.code)"
+              >{{ $t('pricingSettings.report.restore') }}</v-btn
+            >
+          </div>
+        </template>
       </SettingRow>
     </v-card>
     <div

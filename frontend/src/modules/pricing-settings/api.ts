@@ -13,11 +13,19 @@ export interface PricingSettings {
   validity_months: number
   /** Expired average prices can still be added to analyses (they are flagged) */
   accept_expired: boolean
+  /** The disclaimer closing an eFMV analysis's printed report, per language code; may use
+   * {code}, {customer}, {account_manager} and {date} */
+  report_disclaimer: Record<string, string>
+  /** The texts "Restore Default" brings back (read-only) */
+  report_disclaimer_defaults: Record<string, string>
   updated_at: string
   updated_by_name: string | null
 }
 
-export type PricingSettingsInput = Omit<PricingSettings, 'updated_at' | 'updated_by_name'>
+export type PricingSettingsInput = Omit<
+  PricingSettings,
+  'updated_at' | 'updated_by_name' | 'report_disclaimer_defaults'
+>
 
 const URL = '/pricing/settings/'
 
