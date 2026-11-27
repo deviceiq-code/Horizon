@@ -3,7 +3,7 @@
  * read) and in text, with a title and a subtitle. One label per page of 50 × 30 mm — the usual
  * roll of a thermal label printer; the browser's print dialog picks the printer.
  */
-import { escapeHtml } from '@/utils/html'
+import { escapeHtml, printDocument } from '@/utils/html'
 import { code128Bars } from '@/utils/code128'
 import { formatCode } from '@/utils/inventoryCodes'
 
@@ -64,32 +64,9 @@ export function rangeLabels(first: number, last: number): Label[] {
   return labels
 }
 
-/** Print a whole HTML document through a hidden frame (the page itself is left alone). */
-export function printDocument(html: string): void {
-  const frame = document.createElement('iframe')
-  frame.setAttribute('aria-hidden', 'true')
-  frame.style.position = 'fixed'
-  frame.style.width = '0'
-  frame.style.height = '0'
-  frame.style.border = '0'
-  document.body.appendChild(frame)
-  const doc = frame.contentDocument
-  if (!doc || !frame.contentWindow) {
-    frame.remove()
-    return
-  }
-  doc.open()
-  doc.write(html)
-  doc.close()
-  frame.contentWindow.focus()
-  frame.contentWindow.print()
-  // Removed once the print dialog has taken the document
-  setTimeout(() => frame.remove(), 60_000)
-}
-
 /** Print labels, one per page. */
 export function printLabels(labels: Label[], documentTitle: string): void {
   printDocument(labelsDocument(labels, documentTitle))
 }
 
-export { escapeHtml }
+export { escapeHtml, printDocument }

@@ -643,6 +643,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             "sub_vertical",
             "vertical_label",
             "keywords",
+            "external_reference",
             "scenarios",
             "created_at",
             "created_by_name",
@@ -663,6 +664,9 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
     def get_vertical_label(self, obj) -> str | None:
         """ "Industry" or "Industry / Yellow line" """
         return scope_label(obj.vertical, obj.sub_vertical)
+
+    def validate_external_reference(self, value):
+        return " ".join(value.split())
 
     def validate_account_manager(self, value):
         if not (value.is_active and is_account_manager(value)):
@@ -888,6 +892,7 @@ class EfmvAnalysisListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "code",
+            "external_reference",
             "account_manager_detail",
             "customer_detail",
             "scenario_names",

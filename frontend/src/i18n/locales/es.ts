@@ -231,6 +231,7 @@ const es: Messages = {
       variables: 'Variables:',
       restore: 'Restaurar Predeterminado',
       variable: {
+        external_reference: 'La referencia externa (p. ej., la oportunidad en el CRM)',
         code: 'El número del análisis (EFMV-2026-0012)',
         customer: 'El nombre del cliente',
         account_manager: 'El nombre del gerente de cuentas',
@@ -397,6 +398,10 @@ const es: Messages = {
       'Algunos precios promedio usados superaron su validez; el análisis puede estar desactualizado.',
     fixErrors: 'Corrija los campos marcados en rojo.',
     fields: {
+      externalReference: 'Referencia Externa',
+      externalReferenceHint: 'Opcional: p. ej., el número de la oportunidad en el CRM.',
+      externalReferenceEdit: 'Editar Referencia Externa',
+      externalReferenceSaved: 'Referencia externa guardada.',
       updatedAt: 'Última Actualización',
       vertical: 'Vertical',
       code: 'Código',

@@ -3122,3 +3122,6 @@ msgstr "Cada texto debe ser un texto."
 #, python-format
 msgid "Each text may have up to %(max)d characters."
 msgstr "Cada texto puede tener hasta %(max)d caracteres."
+
+msgid "external reference"
+msgstr "referencia externa"

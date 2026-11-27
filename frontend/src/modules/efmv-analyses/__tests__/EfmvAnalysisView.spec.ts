@@ -105,6 +105,7 @@ const TOTALS: efmvApi.ScenarioTotals = {
 const ANALYSIS: efmvApi.EfmvAnalysis = {
   id: 3,
   keywords: [],
+  external_reference: '',
   code: 'EFMV-2026-0003',
   account_manager: 10,
   account_manager_detail: { id: 10, full_name: 'Ana Lima' },
@@ -657,6 +658,20 @@ describe('EfmvAnalysisView', () => {
     // The unsaved scenario name stays
     const name = inBody('[data-testid="scenario-name"] input') as HTMLInputElement
     expect(name.value).toBe('Changed')
+    wrapper.unmount()
+  })
+
+  it('the external reference changes on its own, saved at once', async () => {
+    efmv.getEfmvAnalysis.mockResolvedValue(ANALYSIS)
+    efmv.updateEfmvAnalysis.mockResolvedValue({ ...ANALYSIS, external_reference: 'CRM-12345' })
+    const { wrapper } = await mountView({ id: 3 })
+    expect(inBody('[data-testid="premise-reference"]')!.textContent).toContain('—')
+    await click('edit-reference')
+    await typeInto('reference', ' CRM-12345 ')
+    await click('save-reference')
+    await settle()
+    expect(efmv.updateEfmvAnalysis).toHaveBeenCalledWith(3, { external_reference: 'CRM-12345' })
+    expect(inBody('[data-testid="reference-text"]')!.textContent).toContain('CRM-12345')
     wrapper.unmount()
   })
 

@@ -67,6 +67,7 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
     )
     filter_backends = [AnalysisSearchFilter, AnalysisOrderingFilter]
     search_fields = [
+        "external_reference",
         "customer__name",
         "customer__trade_name",
         "account_manager__first_name",

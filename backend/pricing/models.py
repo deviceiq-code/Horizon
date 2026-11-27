@@ -345,7 +345,8 @@ class PricingSettings(models.Model):
     )
     accept_expired = models.BooleanField(_("accept expired prices"), default=True)
     # The disclaimer at the end of an eFMV analysis's printed report, per language
-    # ({"en": "…", "pt-br": "…", "es": "…"}); may use {code}, {customer}, {account_manager} and
+    # ({"en": "…", "pt-br": "…", "es": "…"}); may use {code}, {external_reference}, {customer},
+    # {account_manager} and
     # {date}. Empty for a language: the English one.
     report_disclaimer = models.JSONField(
         _("report disclaimer"), default=default_report_disclaimer, blank=True

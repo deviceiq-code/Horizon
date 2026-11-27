@@ -238,7 +238,11 @@ Multi-user web system for **operating lease residual value pricing**
     optional `sub_vertical` of it (the assets its scenarios admit, by the average
     price's sub-vertical; `efmv.models.in_scope`; items outside are flagged `out_of_scope` in
     previews and refused on save; Vertical/SubVertical PROTECT; `vertical_label` in the API):
-    these premises are set on creation and cannot change (400); created by/at; ≥ 1
+    these premises are set on creation and cannot change (400); `external_reference` (optional,
+    100 chars — e.g. the opportunity's number in a CRM; not a premise: the wizard's Premises
+    step, then the header's pencil, saved at once with `PATCH {external_reference}`; searched;
+    under the code in the list; in the report and the disclaimer's `{external_reference}`);
+    created by/at; ≥ 1
     `EfmvScenario` (official name = `title`: "<term> Months - <name>", or "<term> Months" — the
     name is optional — `efmv.models.scenario_title`, translated; unique per analysis by term +
     name case-insensitively; the tab shows it (`draft.ts::scenarioTitle`) and the list's
@@ -537,7 +541,10 @@ Multi-user web system for **operating lease residual value pricing**
     services and software — attached and of their own —, optionally the assets; at the end the
     Pricing settings' disclaimer in the user's language, English when empty, its variables
     filled — `fillDisclaimer`), previewed in an iframe (`srcdoc`) and that frame printed; made
-    from the analysis as last saved; never stored. And one
+    from the analysis as last saved; never stored — also from the list's Actions (a printer
+    icon). While the project is private: **Shift + Print** prints it without the "Horizon"
+    name (`ReportOptions.unbranded`; not shown on screen; through `utils/html.ts::printDocument`,
+    a hidden frame — the preview keeps the name). And one
     tab per scenario — a toolbar beside the tabs adds one and duplicates/removes the
     open one — (`ScenarioPanel.vue`: name, term, scope and
     `ScenarioTotalsBar.vue` on top, in a grid lined up with the fields — name and term beside LO and eFMV at EOL (`part="main"`), the scope beside the LO's mix (`part="shares"`: a grey borderless panel with one bar, a segment per share in the list's colors, then HW / SW / SV with icon, percentage and value — the API's `hw_total`/`sw_total`/`sv_total`); assets grid below — "Add" (a menu: Hardware / Software / Service; "Attach" — Software / Service — under the selected hardware) adds an empty row whose

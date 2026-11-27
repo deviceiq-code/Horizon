@@ -10,7 +10,15 @@ import * as verticalsApi from '@/modules/catalogs/verticals/api'
 import * as customersApi from '@/modules/customers/api'
 import vuetify from '@/plugins/vuetify'
 import { useAuthStore } from '@/stores/auth'
-import { click, inBody, openDropdown, pickOption, settle, typeKeywords } from '@/test-utils'
+import {
+  click,
+  inBody,
+  openDropdown,
+  pickOption,
+  settle,
+  typeKeywords,
+  typeInto,
+} from '@/test-utils'
 import * as efmvApi from '../api'
 import EfmvWizardView from '../EfmvWizardView.vue'
 
@@ -173,6 +181,7 @@ describe('EfmvWizardView', () => {
     )
     await pickOption('vertical', 'Yellow line')
     await typeKeywords('Renovação')
+    await typeInto('external-reference', ' OPP-00661 ')
     await click('wizard-next')
     expect(currentStep()).toContain('Services')
     expect(inBody('[data-testid="step-services-content"]')!.textContent).toContain('Coming Soon')
@@ -191,6 +200,7 @@ describe('EfmvWizardView', () => {
       vertical: 1,
       sub_vertical: 11,
       keywords: ['renovação'],
+      external_reference: 'OPP-00661',
       // A first scenario, called by its term
       scenarios: [{ name: '', term_months: 36, scope: '', items: [] }],
     })

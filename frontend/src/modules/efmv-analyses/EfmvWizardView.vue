@@ -50,6 +50,8 @@ const customer = ref<number | null>(null)
 const customerKey = ref(0)
 const scope = ref<VerticalScope>({ vertical: null, sub_vertical: null })
 const keywords = ref<string[]>([])
+// E.g. the opportunity's number in a CRM (not a premise)
+const externalReference = ref('')
 const premisesForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const errors = ref<Record<string, string[]>>({})
 
@@ -142,6 +144,7 @@ async function create() {
       vertical: scope.value.vertical!,
       sub_vertical: scope.value.sub_vertical,
       keywords: keywords.value,
+      external_reference: externalReference.value.trim(),
       // A first scenario, called by its term ("36 Months"), to fill in
       scenarios: [scenarioInput(blankScenario(), locale.value)],
     })
@@ -266,7 +269,18 @@ async function create() {
                 :no-data-text="$t('efmv.wizard.noManagerVerticals')"
                 data-testid="vertical"
               />
-              <!-- Not a premise: they can change on the analysis -->
+              <!-- Not premises: they can change on the analysis -->
+              <v-text-field
+                v-model="externalReference"
+                :label="$t('efmv.fields.externalReference')"
+                :hint="$t('efmv.fields.externalReferenceHint')"
+                persistent-hint
+                maxlength="100"
+                :error-messages="errors.external_reference"
+                prepend-inner-icon="mdi-link-variant"
+                class="mt-2"
+                data-testid="external-reference"
+              />
               <KeywordsField
                 v-model="keywords"
                 :error-messages="errors.keywords"

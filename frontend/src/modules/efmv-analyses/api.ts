@@ -141,6 +141,8 @@ export interface EfmvAnalysis {
   vertical_label: string | null
   /** Not a premise: they can change after creation */
   keywords: string[]
+  /** Where it comes from elsewhere, e.g. the opportunity's number in a CRM (not a premise) */
+  external_reference: string
   scenarios: Scenario[]
   /** Some average price used is past its validity: the analysis may be out of date */
   is_outdated: boolean
@@ -152,6 +154,8 @@ export interface EfmvAnalysis {
 export interface EfmvAnalysisRow {
   id: number
   code: string
+  /** E.g. the opportunity's number in a CRM */
+  external_reference: string
   account_manager_detail: AccountManagerRef
   customer_detail: CustomerRef
   /** The scenarios' official names (term + name) */
@@ -207,6 +211,7 @@ export interface EfmvAnalysisInput {
   vertical: number
   sub_vertical: number | null
   keywords?: string[]
+  external_reference?: string
   /** At least one */
   scenarios: ScenarioInput[]
 }
@@ -257,7 +262,7 @@ export function createEfmvAnalysis(data: EfmvAnalysisInput) {
 /** The scenarios replace the analysis's (the premises do not change). */
 export function updateEfmvAnalysis(
   id: number,
-  data: { scenarios?: ScenarioInput[]; keywords?: string[] },
+  data: { scenarios?: ScenarioInput[]; keywords?: string[]; external_reference?: string },
 ) {
   return api<EfmvAnalysis>(`${BASE}${id}/`, { method: 'PATCH', body: JSON.stringify(data) })
 }

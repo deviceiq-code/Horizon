@@ -10,7 +10,13 @@ import { escapeHtml } from '@/utils/html'
 import type { EfmvAnalysis, ItemService, Scenario, ScenarioItem } from './api'
 
 /** What a disclaimer may use: filled in when the report is made */
-export const DISCLAIMER_VARIABLES = ['code', 'customer', 'account_manager', 'date'] as const
+export const DISCLAIMER_VARIABLES = [
+  'code',
+  'external_reference',
+  'customer',
+  'account_manager',
+  'date',
+] as const
 export type DisclaimerVariable = (typeof DISCLAIMER_VARIABLES)[number]
 export const MAX_DISCLAIMER = 4000
 
@@ -34,6 +40,8 @@ export interface ReportOptions {
   disclaimer: string
   /** When it is printed (ISO) */
   printedAt: string
+  /** Without the "Horizon" name (while the project is private: Shift + Print) */
+  unbranded?: boolean
 }
 
 /** How the report writes texts, money, percentages, dates and specifications. */
@@ -210,6 +218,7 @@ export function reportHtml(
   const printed = f.date(options.printedAt)
   const disclaimer = fillDisclaimer(options.disclaimer, {
     code: analysis.code,
+    external_reference: analysis.external_reference ?? '',
     customer,
     account_manager: analysis.account_manager_detail.full_name,
     date: printed,
@@ -220,7 +229,7 @@ export function reportHtml(
       customer,
       analysis.customer_detail.trade_name ? analysis.customer_detail.name : '',
     ],
-    [t('efmv.report.analysis'), analysis.code, ''],
+    [t('efmv.report.analysis'), analysis.code, analysis.external_reference ?? ''],
     [t('efmv.report.accountManager'), analysis.account_manager_detail.full_name, ''],
     [t('efmv.report.vertical'), analysis.vertical_label ?? '—', ''],
     [t('efmv.report.printedOn'), printed, ''],
@@ -264,7 +273,7 @@ export function reportHtml(
   .assets tr.sub td { color: #454f5b; font-size: 9pt; }
   .disclaimer { white-space: pre-line; border-top: 1px solid #dfe3e8; padding-top: 4mm; margin-top: 6mm; font-size: 9pt; }
 </style></head><body><div class="sheet">
-<header><div><div class="brand">Horizon</div><div class="doc-title">${escapeHtml(title)}</div></div><div class="muted">${escapeHtml(t('efmv.report.subtitle'))}</div></header>
+<header><div>${options.unbranded ? '' : '<div class="brand">Horizon</div>'}<div class="doc-title">${escapeHtml(title)}</div></div><div class="muted">${escapeHtml(t('efmv.report.subtitle'))}</div></header>
 <div class="meta">${meta}</div>
 ${chosen.map((s) => scenarioSection(s, options, f)).join('\n')}
 ${disclaimer ? `<div class="disclaimer">${escapeHtml(disclaimer)}</div>` : ''}

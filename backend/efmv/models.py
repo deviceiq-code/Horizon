@@ -55,8 +55,10 @@ class EfmvAnalysis(models.Model):
         related_name="efmv_analyses",
         verbose_name=_("sub-vertical"),
     )
-    # Not a premise: can change after creation
+    # Not premises: they can change after creation
     keywords = keywords_field()
+    # Where it comes from elsewhere — e.g. the opportunity's number in a CRM
+    external_reference = models.CharField(_("external reference"), max_length=100, blank=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

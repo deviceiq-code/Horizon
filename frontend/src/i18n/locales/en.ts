@@ -230,6 +230,7 @@ const en = {
       variables: 'Variables:',
       restore: 'Restore Default',
       variable: {
+        external_reference: 'The external reference (e.g. the CRM opportunity)',
         code: 'The analysis number (EFMV-2026-0012)',
         customer: "The customer's name",
         account_manager: "The account manager's name",
@@ -395,6 +396,10 @@ const en = {
       'Some average prices used are past their validity; the analysis may be out of date.',
     fixErrors: 'Please fix the fields marked in red.',
     fields: {
+      externalReference: 'External Reference',
+      externalReferenceHint: 'Optional: e.g. the opportunity’s number in the CRM.',
+      externalReferenceEdit: 'Edit External Reference',
+      externalReferenceSaved: 'External reference saved.',
       updatedAt: 'Last Update',
       vertical: 'Vertical',
       code: 'Code',

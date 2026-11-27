@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { i18n, setLanguage } from '@/i18n'
 import * as settingsApi from '@/modules/pricing-settings/api'
+import * as html from '@/utils/html'
 import vuetify from '@/plugins/vuetify'
 import { inBody, settle } from '@/test-utils'
 import * as efmvApi from '../api'
@@ -12,6 +13,10 @@ import ReportDialog from '../ReportDialog.vue'
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
   getEfmvAnalysis: vi.fn<typeof efmvApi.getEfmvAnalysis>(),
+}))
+vi.mock('@/utils/html', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/utils/html')>()),
+  printDocument: vi.fn<(html: string) => void>(),
 }))
 vi.mock('@/modules/pricing-settings/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/modules/pricing-settings/api')>()),
@@ -86,6 +91,26 @@ describe('printing an analysis', () => {
     })
     ;(inBody('[data-testid="report-print"]') as HTMLButtonElement).click()
     expect(print).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('Shift + Print: without the Horizon name (the preview keeps it)', async () => {
+    const wrapper = mount(ReportDialog, {
+      props: { modelValue: true, analysisId: 3 },
+      attachTo: document.body,
+      global: { plugins: [vuetify, i18n] },
+    })
+    await settle()
+    const preview = inBody('[data-testid="report-preview"]') as HTMLIFrameElement
+    expect(preview.srcdoc).toContain('class="brand">Horizon<')
+    inBody('[data-testid="report-print"]')!.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true }),
+    )
+    await settle()
+    const printed = vi.mocked(html.printDocument).mock.calls[0]![0]
+    expect(printed).not.toContain('Horizon')
+    expect(printed).toContain('EFMV-2026-0661')
+    expect(preview.srcdoc).toContain('class="brand">Horizon<')
     wrapper.unmount()
   })
 })

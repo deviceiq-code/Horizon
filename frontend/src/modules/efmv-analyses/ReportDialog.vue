@@ -3,7 +3,9 @@
  * Print an eFMV analysis: choose its scenarios (all at first) and whether each one's list of
  * assets goes too; the report (`report.ts`) is previewed in a frame and that same frame is
  * printed (or saved as PDF by the browser). Made from the analysis as last saved and the
- * disclaimer of the Pricing settings in the user's language; nothing is stored.
+ * disclaimer of the Pricing settings in the user's language; nothing is stored. While the
+ * project is private, Print with Shift held prints it without the "Horizon" name (not shown
+ * anywhere on screen; through a hidden frame, so the preview stays as it is).
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,6 +13,7 @@ import { useDateFormat } from '@/composables/useDateFormat'
 import { useNumberFormat } from '@/composables/useNumberFormat'
 import { specSummary } from '@/modules/average-prices/specText'
 import { getPricingSettings } from '@/modules/pricing-settings/api'
+import { printDocument } from '@/utils/html'
 import { formatMoney } from '@/utils/money'
 import { getEfmvAnalysis, type EfmvAnalysis } from './api'
 import { disclaimerFor, reportHtml } from './report'
@@ -31,8 +34,16 @@ const failed = ref(false)
 const printedAt = ref(new Date().toISOString())
 const frame = ref<HTMLIFrameElement | null>(null)
 
-watch(open, async (isOpen) => {
-  if (!isOpen) return
+// Also when it is created already open (the grid creates it on the first click)
+watch(
+  [open, () => props.analysisId],
+  async ([isOpen]) => {
+    if (isOpen) await load()
+  },
+  { immediate: true },
+)
+
+async function load() {
   loading.value = true
   failed.value = false
   printedAt.value = new Date().toISOString()
@@ -49,9 +60,9 @@ watch(open, async (isOpen) => {
   } finally {
     loading.value = false
   }
-})
+}
 
-const html = computed(() => {
+function makeReport(unbranded: boolean): string {
   if (!analysis.value) return ''
   return reportHtml(
     analysis.value,
@@ -60,6 +71,7 @@ const html = computed(() => {
       assets: withAssets.value,
       disclaimer: disclaimerFor(disclaimers.value, locale.value),
       printedAt: printedAt.value,
+      unbranded,
     },
     {
       t: (key, values) => (values ? t(key, values) : t(key)),
@@ -69,9 +81,16 @@ const html = computed(() => {
       specs: (item) => specSummary(item.specs ?? [], t, n),
     },
   )
-})
+}
 
-function print() {
+const html = computed(() => makeReport(false))
+
+function print(event?: MouseEvent | KeyboardEvent) {
+  // Shift held: without the "Horizon" name
+  if (event?.shiftKey) {
+    printDocument(makeReport(true))
+    return
+  }
   const win = frame.value?.contentWindow
   if (!win) return
   win.focus()
@@ -141,7 +160,7 @@ function print() {
           prepend-icon="mdi-printer-outline"
           :disabled="!analysis || !chosen.length"
           data-testid="report-print"
-          @click="print"
+          @click="print($event)"
           >{{ $t('efmv.report.print') }}</v-btn
         >
       </v-card-actions>

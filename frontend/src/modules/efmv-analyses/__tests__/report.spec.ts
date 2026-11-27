@@ -60,6 +60,7 @@ const LAPTOP = {
 const ANALYSIS = {
   id: 3,
   code: 'EFMV-2026-0661',
+  external_reference: 'OPP-00661',
   account_manager_detail: { id: 1, full_name: 'Ana Lima' },
   customer_detail: { id: 2, name: 'IHM Engenharia Ltda', trade_name: 'Stefanini/IHM', tax_id: '' },
   vertical_label: 'IT',
@@ -79,6 +80,7 @@ describe('eFMV report', () => {
     expect(
       fillDisclaimer('Put [{code}] — {customer}, {unknown}', {
         code: 'EFMV-1',
+        external_reference: 'OPP-1',
         customer: 'Acme',
         account_manager: 'Ana',
         date: 'today',
@@ -94,7 +96,7 @@ describe('eFMV report', () => {
       {
         scenarioIds: [10],
         assets: false,
-        disclaimer: 'Add [{code}] to each asset.',
+        disclaimer: 'Add [{code}] to each asset ({external_reference}).',
         printedAt: '2026-11-27T10:00:00Z',
       },
       F,
@@ -107,7 +109,7 @@ describe('eFMV report', () => {
     // The scope: written from the assets when not typed
     expect(html).toContain('Dell Laptops and Monitors')
     expect(html).toContain('efmv.report.noServices')
-    expect(html).toContain('Add [EFMV-2026-0661] to each asset.')
+    expect(html).toContain('Add [EFMV-2026-0661] to each asset (OPP-00661).')
     expect(html).not.toContain('efmv.report.assets')
   })
 

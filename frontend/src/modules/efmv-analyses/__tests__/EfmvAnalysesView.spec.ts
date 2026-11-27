@@ -19,6 +19,7 @@ const efmv = vi.mocked(efmvApi)
 const ROW: efmvApi.EfmvAnalysisRow = {
   id: 3,
   code: 'EFMV-2026-0003',
+  external_reference: 'OPP-661',
   account_manager_detail: { id: 10, full_name: 'Ana Lima' },
   customer_detail: { id: 20, name: 'Acme Ltda', trade_name: '', tax_id: '' },
   scenario_names: ['36 Months'],
@@ -68,6 +69,16 @@ describe('EfmvAnalysesView', () => {
     expect(cell.textContent).toMatch(/11\/22\/2026/)
     expect(cell.closest('td')!.textContent).toContain('Bruno Reis')
     expect(cell.getAttribute('title')).toMatch(/Created on 11\/20\/2026/)
+    // The external reference under the code
+    expect(inBody('[data-testid="external-reference"]')!.textContent).toContain('OPP-661')
+    // The external reference under the code
+    expect(inBody('[data-testid="external-reference"]')!.textContent).toContain('OPP-661')
+    // Actions: the report of the row's analysis
+    efmv.getEfmvAnalysis.mockReturnValue(new Promise(() => {}))
+    ;(inBody('[data-testid="print"]') as HTMLButtonElement).click()
+    await settle()
+    expect(inBody('[data-testid="report-dialog"]')).not.toBeNull()
+    expect(efmv.getEfmvAnalysis).toHaveBeenCalledWith(3)
     wrapper.unmount()
   })
 })

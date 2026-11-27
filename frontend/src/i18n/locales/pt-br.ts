@@ -230,6 +230,7 @@ const ptBR: Messages = {
       variables: 'Variáveis:',
       restore: 'Restaurar Padrão',
       variable: {
+        external_reference: 'A referência externa (ex.: a oportunidade no CRM)',
         code: 'O número da análise (EFMV-2026-0012)',
         customer: 'O nome do cliente',
         account_manager: 'O nome do gerente de contas',
@@ -397,6 +398,10 @@ const ptBR: Messages = {
       'Alguns preços médios usados passaram da validade; a análise pode estar desatualizada.',
     fixErrors: 'Corrija os campos marcados em vermelho.',
     fields: {
+      externalReference: 'Referência Externa',
+      externalReferenceHint: 'Opcional: ex.: o número da oportunidade no CRM.',
+      externalReferenceEdit: 'Editar Referência Externa',
+      externalReferenceSaved: 'Referência externa salva.',
       updatedAt: 'Última Atualização',
       vertical: 'Vertical',
       code: 'Código',

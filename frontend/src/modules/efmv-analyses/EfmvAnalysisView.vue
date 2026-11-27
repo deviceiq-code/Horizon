@@ -243,6 +243,38 @@ function openFirstWithIssues() {
 
 // --- Keywords (not premises: they change on their own, saved at once) -------------------------
 
+// --- External reference (not a premise: its own small form, saved at once) -------------------
+
+const referenceOpen = ref(false)
+const referenceDraft = ref('')
+const referenceErrors = ref<string[]>([])
+const referenceSaving = ref(false)
+
+function editReference() {
+  referenceDraft.value = analysis.value?.external_reference ?? ''
+  referenceErrors.value = []
+  referenceOpen.value = true
+}
+
+async function saveReference() {
+  referenceSaving.value = true
+  referenceErrors.value = []
+  try {
+    const saved = await updateEfmvAnalysis(props.id, {
+      external_reference: referenceDraft.value.trim(),
+    })
+    if (analysis.value) analysis.value.external_reference = saved.external_reference
+    notifications.notify(t('efmv.fields.externalReferenceSaved'))
+    referenceOpen.value = false
+  } catch (error) {
+    const data = error instanceof ApiError && error.status === 400 ? error.data : null
+    const errors = (data as Record<string, unknown> | null)?.external_reference
+    referenceErrors.value = Array.isArray(errors) ? errors : [t('common.saveError')]
+  } finally {
+    referenceSaving.value = false
+  }
+}
+
 const keywordsOpen = ref(false)
 const keywordsDraft = ref<string[]>([])
 const keywordsErrors = ref<string[]>([])
@@ -409,6 +441,30 @@ async function save() {
                   class="mr-2 text-medium-emphasis"
                 />
                 {{ d(new Date(analysis.created_at), 'short') }}
+              </div>
+            </div>
+            <div class="premise" data-testid="premise-reference">
+              <div class="premise-label">{{ $t('efmv.fields.externalReference') }}</div>
+              <div class="premise-value">
+                <v-icon icon="mdi-link-variant" size="small" class="mr-2 text-medium-emphasis" />
+                <span
+                  v-if="analysis.external_reference"
+                  class="text-truncate"
+                  :title="analysis.external_reference"
+                  data-testid="reference-text"
+                  >{{ analysis.external_reference }}</span
+                >
+                <span v-else class="text-medium-emphasis">—</span>
+                <v-btn
+                  icon="mdi-pencil-outline"
+                  variant="text"
+                  size="x-small"
+                  class="ml-1"
+                  :title="$t('efmv.fields.externalReferenceEdit')"
+                  :aria-label="$t('efmv.fields.externalReferenceEdit')"
+                  data-testid="edit-reference"
+                  @click="editReference"
+                />
               </div>
             </div>
             <div class="premise" data-testid="premise-keywords">
@@ -588,6 +644,43 @@ async function save() {
       @update:model-value="!$event && (removing = null)"
       @confirm="removeScenario"
     />
+
+    <!-- External reference: its own small form (saved at once) -->
+    <FormDialog
+      v-model="referenceOpen"
+      :title="$t('efmv.fields.externalReferenceEdit')"
+      :subtitle="analysis?.code ?? null"
+      icon="mdi-link-variant"
+      max-width="520"
+      :persistent="referenceSaving"
+      @submit="saveReference"
+    >
+      <v-text-field
+        v-model="referenceDraft"
+        :label="$t('efmv.fields.externalReference')"
+        :hint="$t('efmv.fields.externalReferenceHint')"
+        persistent-hint
+        maxlength="100"
+        autofocus
+        :error-messages="referenceErrors"
+        data-testid="reference"
+        @update:model-value="referenceErrors = []"
+      />
+      <template #actions>
+        <v-btn variant="text" :disabled="referenceSaving" @click="referenceOpen = false">
+          {{ $t('common.cancel') }}
+        </v-btn>
+        <v-btn
+          type="submit"
+          color="primary"
+          variant="flat"
+          :loading="referenceSaving"
+          data-testid="save-reference"
+        >
+          {{ $t('common.save') }}
+        </v-btn>
+      </template>
+    </FormDialog>
 
     <!-- Keywords: their own small form (saved at once) -->
     <FormDialog

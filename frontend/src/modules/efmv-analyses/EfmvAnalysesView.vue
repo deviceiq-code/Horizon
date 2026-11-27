@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ServerCrudTable from '@/components/ServerCrudTable.vue'
 import AnalysisScenariosPanel from './AnalysisScenariosPanel.vue'
+import ReportDialog from './ReportDialog.vue'
 import { deleteEfmvAnalysis, listEfmvAnalyses, type EfmvAnalysisRow } from './api'
 
 const { t } = useI18n()
@@ -21,6 +22,14 @@ const headers = computed(() => [
   // The latest updated first (the list's default order)
   { title: t('efmv.fields.updatedAt'), key: 'updated_at', width: 190, nowrap: true },
 ])
+
+// Print out from the grid: the same report as on the analysis's page
+const reportOpen = ref(false)
+const reportOf = ref<number | null>(null)
+function printReport(row: EfmvAnalysisRow) {
+  reportOf.value = row.id
+  reportOpen.value = true
+}
 
 /** Open an analysis; with `scenario` (its id), on that scenario's tab */
 const open = (row: EfmvAnalysisRow, scenario?: number) =>
@@ -57,6 +66,17 @@ const open = (row: EfmvAnalysisRow, scenario?: number) =>
       @create="router.push({ name: 'efmv-analysis-new' })"
       @edit="open"
     >
+      <template #row-actions="{ item }">
+        <v-btn
+          icon="mdi-printer-outline"
+          variant="text"
+          size="small"
+          :aria-label="$t('efmv.report.print')"
+          :title="$t('efmv.report.printHint')"
+          data-testid="print"
+          @click="printReport(item)"
+        />
+      </template>
       <template #[`item.code`]="{ item }">
         <router-link
           :to="{ name: 'efmv-analysis', params: { id: item.id } }"
@@ -65,6 +85,14 @@ const open = (row: EfmvAnalysisRow, scenario?: number) =>
         >
           {{ item.code }}
         </router-link>
+        <div
+          v-if="item.external_reference"
+          class="text-caption text-medium-emphasis text-truncate"
+          :title="$t('efmv.fields.externalReference')"
+          data-testid="external-reference"
+        >
+          {{ item.external_reference }}
+        </div>
       </template>
       <template #[`item.customer`]="{ item }">
         <div>{{ item.customer_detail.name }}</div>
@@ -99,5 +127,6 @@ const open = (row: EfmvAnalysisRow, scenario?: number) =>
         </div>
       </template>
     </ServerCrudTable>
+    <ReportDialog v-if="reportOf !== null" v-model="reportOpen" :analysis-id="reportOf" />
   </v-container>
 </template>

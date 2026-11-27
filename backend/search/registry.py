@@ -69,7 +69,8 @@ def _analysis(obj, request) -> Result:
     return _result(
         obj,
         obj.code,
-        subtitle=customer,
+        # With its external reference (e.g. the CRM opportunity), which the search also finds
+        subtitle=" · ".join(part for part in (customer, obj.external_reference) if part),
         meta=display_name(obj.account_manager, viewer=request.user),
         badge={"text": obj.vertical.name, "color": "primary"} if obj.vertical_id else None,
     )

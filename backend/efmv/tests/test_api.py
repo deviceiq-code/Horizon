@@ -931,3 +931,20 @@ def test_lines_of_their_own_need_a_value(logged_client, managers, customers, pri
     r = post(logged_client, data)
     assert r.status_code == 400
     assert "unit_value" in str(r.json())
+
+
+def test_external_reference(logged_client, managers, customers, prices):
+    analysis = post(
+        logged_client,
+        {**body(managers, customers, prices), "external_reference": "  OPP  00661 "},
+    ).json()
+    assert analysis["external_reference"] == "OPP 00661"
+    # Not a premise: it changes after creation, and the list finds it
+    r = logged_client.patch(
+        f"{URL}{analysis['id']}/",
+        {"external_reference": "CRM-12345"},
+        content_type="application/json",
+    )
+    assert r.status_code == 200 and r.json()["external_reference"] == "CRM-12345"
+    rows = logged_client.get(URL, {"search": "crm-123"}).json()["results"]
+    assert [(a["id"], a["external_reference"]) for a in rows] == [(analysis["id"], "CRM-12345")]
