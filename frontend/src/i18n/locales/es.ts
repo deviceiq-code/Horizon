@@ -223,12 +223,9 @@ const es: Messages = {
     deleteConfirm: '¿Eliminar "{name}"? Esta acción no se puede deshacer.',
   },
   pricingSettings: {
-    title: 'Panel de Control',
-    subtitle:
-      'Límites que usan los análisis de eFMV para comparar los valores ingresados con los precios promedio.',
-    saved: 'Configuración de Pricing guardada.',
     lastChange: 'Último cambio el {date} por {name}',
     beyondCompatible: 'Debe ser mayor que el rango compatible.',
+    withinLimits: 'Debe ser menor que los límites inferior y superior.',
     monthsRange: 'Ingrese un número entero de meses de 1 a 120.',
     positioning: {
       title: 'Posicionamiento Frente a los Precios Promedio',
@@ -240,6 +237,7 @@ const es: Messages = {
       compatibleHint: 'Como máximo esta diferencia, hacia arriba o abajo',
       above: 'Por Encima del Histórico Desde',
       aboveHint: 'Esta diferencia hacia arriba o más',
+      scale: 'Rangos Resultantes',
     },
     validity: {
       title: 'Validez de los Precios Promedio',
@@ -2289,7 +2287,17 @@ const es: Messages = {
     dateFormats: { auto: 'Por el Idioma', dmy: 'DD/MM/AAAA', mdy: 'MM/DD/AAAA', ymd: 'AAAA-MM-DD' },
     timeFormats: { auto: 'Por el Idioma', '24h': '24 Horas', '12h': '12 Horas (AM/PM)' },
     dateTimeExample: 'Ahora: {example}',
-    sections: { region: 'Idioma y Región', appearance: 'Apariencia', smartTools: 'Smart Tools' },
+    sections: {
+      region: 'Idioma y Región',
+      appearance: 'Apariencia',
+      smartTools: 'Smart Tools',
+      appSettings: 'Configuración de las Apps',
+    },
+    appSettings: {
+      hint: 'Configuración de cada app, la misma para todos. Solo los administradores la ven y la cambian.',
+      noneTitle: 'Sin Configuración Aún',
+      none: 'Esta app aún no tiene configuración propia.',
+    },
     numbers: 'Números y Moneda',
     numbersDescription:
       'Cómo se escriben los números y cómo se muestra la moneda de los valores. Los valores mantienen su moneda.',

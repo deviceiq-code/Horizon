@@ -222,12 +222,9 @@ const ptBR: Messages = {
     deleteConfirm: 'Excluir "{name}"? Esta ação não pode ser desfeita.',
   },
   pricingSettings: {
-    title: 'Painel de Controle',
-    subtitle:
-      'Limites usados pelas análises de eFMV para checar os valores digitados contra o Average Prices.',
-    saved: 'Configurações do Pricing salvas.',
     lastChange: 'Última alteração em {date} por {name}',
     beyondCompatible: 'Deve ser maior que a faixa compatível.',
+    withinLimits: 'Deve ser menor que os limites abaixo e acima.',
     monthsRange: 'Informe um número inteiro de meses de 1 a 120.',
     positioning: {
       title: 'Posicionamento Frente ao Average Prices',
@@ -239,6 +236,7 @@ const ptBR: Messages = {
       compatibleHint: 'No máximo esta diferença, para mais ou para menos',
       above: 'Acima do Histórico a Partir de',
       aboveHint: 'Esta diferença para mais, ou maior',
+      scale: 'Faixas Resultantes',
     },
     validity: {
       title: 'Validade dos Preços Médios',
@@ -2273,7 +2271,17 @@ const ptBR: Messages = {
     dateFormats: { auto: 'Pelo Idioma', dmy: 'DD/MM/AAAA', mdy: 'MM/DD/AAAA', ymd: 'AAAA-MM-DD' },
     timeFormats: { auto: 'Pelo Idioma', '24h': '24 Horas', '12h': '12 Horas (AM/PM)' },
     dateTimeExample: 'Agora: {example}',
-    sections: { region: 'Idioma e Região', appearance: 'Aparência', smartTools: 'Smart Tools' },
+    sections: {
+      region: 'Idioma e Região',
+      appearance: 'Aparência',
+      smartTools: 'Smart Tools',
+      appSettings: 'Configurações dos Apps',
+    },
+    appSettings: {
+      hint: 'Configurações de cada app, as mesmas para todos. Só administradores as veem e alteram.',
+      noneTitle: 'Nenhuma Configuração Ainda',
+      none: 'Este app ainda não tem configurações próprias.',
+    },
     numbers: 'Números e Moeda',
     numbersDescription:
       'Como os números são escritos e como a moeda dos valores é mostrada. Os valores mantêm a sua moeda.',

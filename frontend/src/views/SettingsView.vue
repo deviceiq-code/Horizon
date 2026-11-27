@@ -1,10 +1,12 @@
 <script setup lang="ts">
 /**
- * The user's own settings, in tabs — Language and Region (language, date and time, numbers and
+ * Settings, in tabs — the user's own: Language and Region (language, date and time, numbers and
  * currency), Appearance (mode, color theme, interface size) and Smart Tools —, saved to their
- * account (the database), so they follow the user to any computer. Laid out as Haze's settings:
- * full width, cards of rows, each with its title and description on the left and the control
- * on the right (SettingRow). Global settings are in Administration → System Settings.
+ * account (the database), so they follow the user to any computer; and, for administrators,
+ * App Settings: each app's settings, the same for everyone (views/settings/AppSettingsTab.vue).
+ * Laid out as Haze's settings: full width, cards of rows, each with its title and description
+ * on the left and the control on the right (SettingRow); the captions and control widths are
+ * in main.css (`.settings-page`), shared with the app sections.
  */
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -30,6 +32,7 @@ import {
 } from '@/numberFormat'
 import { useDateFormat } from '@/composables/useDateFormat'
 import SettingRow from '@/components/SettingRow.vue'
+import AppSettingsTab from './settings/AppSettingsTab.vue'
 import { WEB_SEARCH_ENGINES, type WebSearchEngine } from '@/webSearch'
 
 /** The search engines offered for "Search the Internet" */
@@ -54,14 +57,21 @@ const saving = ref(false)
 const THEMES = THEME_OPTIONS
 
 // Tabs: the open one is kept in the address (?tab=), so a link can open it
-type Tab = 'region' | 'appearance' | 'smartTools'
-const TABS: readonly Tab[] = ['region', 'appearance', 'smartTools']
+type Tab = 'region' | 'appearance' | 'smartTools' | 'appSettings'
+const isAdmin = computed(() => !!auth.user?.is_admin)
+// App Settings: administrators only
+const tabs = computed<readonly Tab[]>(() => [
+  'region',
+  'appearance',
+  'smartTools',
+  ...(isAdmin.value ? (['appSettings'] as const) : []),
+])
 const route = useRoute()
 const router = useRouter()
 const tab = computed<Tab>({
   get: () => {
     const value = route.query.tab
-    return (TABS as readonly unknown[]).includes(value) ? (value as Tab) : 'region'
+    return (tabs.value as readonly unknown[]).includes(value) ? (value as Tab) : 'region'
   },
   set: (value) => void router.replace({ query: { ...route.query, tab: value } }),
 })
@@ -198,6 +208,14 @@ async function save(changes: PreferencesUpdate) {
       </v-tab>
       <v-tab value="smartTools" prepend-icon="mdi-auto-fix" data-testid="tab-smart-tools">
         {{ $t('settings.sections.smartTools') }}
+      </v-tab>
+      <v-tab
+        v-if="isAdmin"
+        value="appSettings"
+        prepend-icon="mdi-apps"
+        data-testid="tab-app-settings"
+      >
+        {{ $t('settings.sections.appSettings') }}
       </v-tab>
     </v-tabs>
 
@@ -704,27 +722,21 @@ async function save(changes: PreferencesUpdate) {
           </SettingRow>
         </v-card>
       </v-window-item>
+
+      <!-- App Settings (administrators): each app's, the same for everyone; loaded when opened -->
+      <v-window-item
+        v-if="isAdmin"
+        value="appSettings"
+        :transition="false"
+        :reverse-transition="false"
+      >
+        <AppSettingsTab />
+      </v-window-item>
     </v-window>
   </v-container>
 </template>
 
 <style scoped>
-/* A small caption over each card (the group of settings) */
-.group-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-  margin: 0 0 8px 4px;
-}
-.control-wide {
-  width: 300px;
-  max-width: 100%;
-}
-.control-narrow {
-  width: 140px;
-}
 .color-theme {
   cursor: pointer;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));

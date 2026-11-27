@@ -147,3 +147,21 @@ input:autofill {
   font-size: 0.6875rem;
   font-weight: 700;
 }
+
+/* Settings (views/SettingsView.vue and the app sections of App Settings): a small caption over
+   each card (the group of settings) and the widths of the controls on the rows' right. */
+.settings-page .group-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  margin: 0 0 8px 4px;
+}
+.settings-page .control-wide {
+  width: 300px;
+  max-width: 100%;
+}
+.settings-page .control-narrow {
+  width: 140px;
+}

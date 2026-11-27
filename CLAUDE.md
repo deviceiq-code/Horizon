@@ -279,13 +279,14 @@ Multi-user web system for **operating lease residual value pricing**
     being edited; deleted prices and items out of the curve are flagged and left out of them.
     `?search=` also finds a code. Customers: `?account_manager=<user id>` (primary or
     secondary) and `?is_active=`.
-  - **Pricing control panel** (`PricingSettings` singleton in `pricing/models.py`,
+  - **Pricing settings** (`PricingSettings` singleton in `pricing/models.py`,
     `PricingSettings.current()`), `/api/pricing/settings/` (`pricing/control_panel.py`; GET
     everyone signed in, PATCH administrators): `compatible_percent` (5), `below_percent` /
     `above_percent` (10, each greater than the compatible range), `validity_months` (12, from
     the date of the price's current version) and `accept_expired` (true; false = analyses
-    refuse expired prices). Frontend: `src/modules/pricing-settings/` ("Control Panel" in the
-    Pricing app, administrators only).
+    refuse expired prices). Frontend: Settings › App Settings › Pricing
+    (`src/modules/pricing-settings/PricingSettingsSection.vue`; the former Control Panel —
+    `/pricing/control-panel` redirects there).
   - `users/` — user and role management (administrators only): `Role` (name unique
     case-insensitive, description, `is_system`, `users` M2M → `user.roles`); users can have many
     roles. System role "Administrator" (`key="administrator"`, created by a migration) cannot be
@@ -308,8 +309,8 @@ Multi-user web system for **operating lease residual value pricing**
     `user_name_display` (username | first_name | full_name) and `full_name_order`
     (first_last "First Last" | last_first "Last, First"), read once per serializer tree from
     the request's user.
-  - **There are no system settings**: every setting is the user's own (`UserPreferences`,
-    Settings). `system/` only keeps the internet helpers and their messages
+  - **Settings are the user's own** (`UserPreferences`, Settings), except each app's App
+    Settings (administrators; e.g. `PricingSettings`). `system/` only keeps the internet helpers and their messages
     (`system/messages.py::web_error_message`). Photo search (Average Prices) is part of the
     user's Internet Search Smart Tool: on (`web_search`) with a SearXNG address
     (`searxng_url`; `POST /api/auth/preferences/test-searxng/` tries one). `system/web.py`: SearXNG image search
@@ -367,8 +368,14 @@ Multi-user web system for **operating lease residual value pricing**
     computer; the browser only keeps a copy for the login page. The interface's own state
     (side menu open/collapsed per window size, each grid's filter row) is `ui_state` (JSON,
     `preferences.saveUiState`), not localStorage.
-  - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools (`?tab=`),
-    laid out as Haze's settings: full width, a small caption per group, cards of rows —
+  - **Settings** (`/settings`) in tabs: Language and Region, Appearance, Smart Tools and — for
+    administrators only (tab hidden, `?tab=appSettings` ignored) — App Settings
+    (`views/settings/AppSettingsTab.vue`: a section per app of `SUITE_APPS`, each app's
+    settings its component in `APP_SETTINGS` — Pricing: `PricingSettingsSection.vue`; the others
+    "no settings yet"; the same for everyone; every change saved on its own, fields when left,
+    switches at once) (`?tab=`),
+    laid out as Haze's settings: full width, a small caption per group (`.group-title`, with
+    `.control-wide`/`.control-narrow` in main.css under `.settings-page`), cards of rows —
     `src/components/SettingRow.vue` (title and description on the left, the control on the
     right; `below` slot for wide content; `child`: a setting that depends on the one above —
     indented, no separator).
@@ -417,7 +424,7 @@ Multi-user web system for **operating lease residual value pricing**
     (`.v-data-table` in `.v-main`) stick under the top bar while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
-    (`SUITE_APPS`): "Pricing" (`/pricing/…`; menu: eFMV Analyses first — the app opens it —, Average Prices, Control Panel), "Remarketing", "Services and Partnerships"
+    (`SUITE_APPS`): "Pricing" (`/pricing/…`; menu: eFMV Analyses first — the app opens it —, Average Prices), "Remarketing", "Services and Partnerships"
     (`/partners/…`; a skeleton: modules Services, Partners, Incentive Programs, Discounts and
     Fees, each `partners/UnderConstruction.vue` — purpose and what is planned, texts in
     `partners.<page>`; backend app `partners/` without models yet) and
@@ -577,7 +584,7 @@ Multi-user web system for **operating lease residual value pricing**
   - Vuetify comboboxes/autocompletes with chips behave differently in jsdom and real browsers;
     when changing them, check in a real browser too. A combobox renders an
     `<input type="hidden">` before the visible one (`typeInto` skips it).
-  - Settings: `src/views/SettingsView.vue` — the user's own; there are no global settings
+  - Settings: `src/views/SettingsView.vue` — the user's own, plus App Settings (administrators)
     (the former `/admin/system-settings` opens Settings → Smart Tools). A child setting
     (`SettingRow child`) stays shown when its parent is off, only disabled (`disabled`).
   - `src/stores/notifications.ts` — global snackbar (`notify(text, 'success' | 'error')`).

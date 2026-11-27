@@ -57,6 +57,11 @@ const router = createRouter({
           path: 'admin/system-settings',
           redirect: { name: 'settings', query: { tab: 'smartTools' } },
         },
+        // Pricing's former Control Panel: Settings › App Settings › Pricing (administrators)
+        ...['pricing/control-panel', 'control-panel'].map((path) => ({
+          path,
+          redirect: { name: 'settings', query: { tab: 'appSettings' } },
+        })),
       ],
     },
   ],

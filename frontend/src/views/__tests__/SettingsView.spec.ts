@@ -8,7 +8,14 @@ import vuetify from '@/plugins/vuetify'
 import { useAuthStore, type User } from '@/stores/auth'
 import { usePreferencesStore } from '@/stores/preferences'
 import { click, inBody, pickOption, settle, typeInto } from '@/test-utils'
+import * as pricingSettingsApi from '@/modules/pricing-settings/api'
 import SettingsView from '../SettingsView.vue'
+
+vi.mock('@/modules/pricing-settings/api', () => ({
+  getPricingSettings: vi.fn<typeof pricingSettingsApi.getPricingSettings>(),
+  updatePricingSettings: vi.fn<typeof pricingSettingsApi.updatePricingSettings>(),
+}))
+const pricingSettings = vi.mocked(pricingSettingsApi)
 
 const user = (is_admin: boolean): User => ({
   id: 1,
@@ -62,6 +69,41 @@ describe('SettingsView', () => {
   beforeEach(() => setLanguage('en'))
   afterEach(() => {
     document.body.innerHTML = ''
+  })
+
+  it('App Settings: administrators only, a section per app (Pricing has its settings)', async () => {
+    pricingSettings.getPricingSettings.mockResolvedValue({
+      compatible_percent: '5.00',
+      below_percent: '10.00',
+      above_percent: '10.00',
+      validity_months: 12,
+      accept_expired: true,
+      updated_at: '2026-11-20T10:00:00Z',
+      updated_by_name: null,
+    })
+    // Not offered to others, not even by its address
+    const other = await mountAt('/settings?tab=appSettings', false)
+    expect(inBody('[data-testid="tab-app-settings"]')).toBeNull()
+    expect(inBody('[data-testid="language-select"]')).not.toBeNull()
+    expect(pricingSettings.getPricingSettings).not.toHaveBeenCalled()
+    other.wrapper.unmount()
+    document.body.innerHTML = ''
+
+    const { wrapper, router } = await mountAt('/settings', true)
+    // Loaded only when opened
+    expect(pricingSettings.getPricingSettings).not.toHaveBeenCalled()
+    await click('tab-app-settings')
+    await settle()
+    expect(router.currentRoute.value.query.tab).toBe('appSettings')
+    const sections = [...document.querySelectorAll('[data-testid^="app-settings-"] h2')].map(
+      (h) => h.textContent?.trim(),
+    )
+    expect(sections).toEqual(['Pricing', 'Remarketing', 'Services and Partnerships', 'Administration'])
+    expect(inBody('[data-testid="app-settings-pricing"] [data-testid="compatible"]')).not.toBeNull()
+    expect(inBody('[data-testid="app-settings-remarketing"]')!.textContent).toContain(
+      'no settings of its own yet',
+    )
+    wrapper.unmount()
   })
 
   it("has only the user's own settings (global ones are in Administration)", async () => {

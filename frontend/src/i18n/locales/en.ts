@@ -222,11 +222,9 @@ const en = {
     deleteConfirm: 'Delete "{name}"? This cannot be undone.',
   },
   pricingSettings: {
-    title: 'Control Panel',
-    subtitle: 'Limits the eFMV analyses use to check the values typed against Average Prices.',
-    saved: 'Pricing settings saved.',
     lastChange: 'Last changed on {date} by {name}',
     beyondCompatible: 'Must be greater than the compatible range.',
+    withinLimits: 'Must be less than the below and above limits.',
     monthsRange: 'Enter a whole number of months from 1 to 120.',
     positioning: {
       title: 'Positioning Against Average Prices',
@@ -238,6 +236,7 @@ const en = {
       compatibleHint: 'This much lower or higher at most',
       above: 'Above Historical From',
       aboveHint: 'This much higher or more',
+      scale: 'Resulting Ranges',
     },
     validity: {
       title: 'Validity of Average Prices',
@@ -2277,6 +2276,12 @@ const en = {
       region: 'Language and Region',
       appearance: 'Appearance',
       smartTools: 'Smart Tools',
+      appSettings: 'App Settings',
+    },
+    appSettings: {
+      hint: 'Settings of each app, the same for everyone. Only administrators see and change them.',
+      noneTitle: 'No Settings Yet',
+      none: 'This app has no settings of its own yet.',
     },
     numbers: 'Numbers and Currency',
     numbersDescription:

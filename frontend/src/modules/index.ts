@@ -13,7 +13,6 @@ import customers from './customers'
 import efmvAnalyses from './efmv-analyses'
 import inventory from './inventory'
 import partners from './partners'
-import pricingSettings from './pricing-settings'
 import serviceProviders from './service-providers'
 import { roles, users } from './users'
 import warehouses from './warehouses'
@@ -47,7 +46,6 @@ export const MODULES: AppModule[] = [
   // Pricing: eFMV Analyses first
   efmvAnalyses,
   averagePrices,
-  pricingSettings,
   // Remarketing: Inventory
   ...inventory,
   warehouses,
