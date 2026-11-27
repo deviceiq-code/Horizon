@@ -1948,6 +1948,9 @@ const en = {
     newVersion: 'New Version',
     newVersionHint: 'The current row is kept in the history; this one replaces it.',
     saveNewVersion: 'Save New Version',
+    createCopy: 'Create Copy',
+    copyOf: 'Copy of {name}',
+    copied: 'Copy created.',
     view: 'View Details',
     sections: {
       asset: 'Asset',

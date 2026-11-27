@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
  * Create an average price, or a new version of an existing one (`source`): rows are never
- * edited. The asset class decides the terms (its sub-vertical's allowed terms) and the
+ * edited. With `copy`, `source` only fills the form: a new, separate price (not a version)
+ * starting with its asset, specifications, values, keywords and photo — the documents stay with
+ * the original. The asset class decides the terms (its sub-vertical's allowed terms) and the
  * specification fields (its sub-vertical's template). Values typed are resolved by the API
  * preview (value ↔ % and warnings), never computed here.
  */
@@ -31,6 +33,7 @@ import PriceMediaTab from './PriceMediaTab.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import {
   createAveragePrice,
+  pricePhotoUrl,
   previewAveragePrice,
   type AveragePrice,
   type AveragePriceDetail,
@@ -43,13 +46,15 @@ const CURRENCY = 'BRL' // only currency for now; the API already stores it per r
 const props = withDefaults(
   defineProps<{
     source: AveragePrice | null
+    /** A copy of `source` (a new price of its own), not a new version of it */
+    copy?: boolean
     /** A new price's model to start with (e.g. what was searched for and not found) */
     initialModel?: string
     /** Only asset classes of this vertical / sub-vertical (e.g. an eFMV analysis's scope) */
     scopeVertical?: number | null
     scopeSubVertical?: number | null
   }>(),
-  { initialModel: '', scopeVertical: null, scopeSubVertical: null },
+  { copy: false, initialModel: '', scopeVertical: null, scopeSubVertical: null },
 )
 const open = defineModel<boolean>({ required: true })
 // `saved`: a new price, a new version, or only its photo and documents (no version; row null)
@@ -95,7 +100,8 @@ const resolved = ref<PreviewResult | null>(null)
 const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const openCount = ref(0) // remounts the pickers on every open
 
-const isNewVersion = computed(() => props.source !== null)
+const isNewVersion = computed(() => props.source !== null && !props.copy)
+const isCopy = computed(() => props.source !== null && props.copy)
 const subVertical = computed(() => assetClass.value?.sub_vertical_detail ?? null)
 const terms = computed(() => subVertical.value?.allowed_terms ?? [])
 const template = computed(() => assetClass.value?.spec_template ?? [])
@@ -171,7 +177,25 @@ watch(open, async (isOpen) => {
     }
   }
   rebuildEntries(previous)
+  if (s && props.copy && s.photo_id !== null) await copyPhoto(s.id, s.photo_id)
 })
+
+/** A copy starts with the original's photo: fetched here and sent as a file when saved */
+async function copyPhoto(rowId: number, photoId: number) {
+  try {
+    const response = await fetch(pricePhotoUrl(rowId, photoId), { credentials: 'same-origin' })
+    if (!response.ok) return
+    const blob = await response.blob()
+    const extension = blob.type.split('/')[1] || 'jpg'
+    const file = new File([blob], `photo.${extension}`, { type: blob.type })
+    media.value = {
+      ...media.value,
+      photo: { kind: 'file', file, preview: URL.createObjectURL(file) },
+    }
+  } catch {
+    // Without the photo: one can still be chosen in the form
+  }
+}
 
 // --- Preview: the API resolves values and warnings while the user types --------------------
 
@@ -332,7 +356,7 @@ async function submit() {
   termErrors.value = {}
   generalError.value = ''
   // Only the photo or documents changed: applied to the row, no new version
-  if (props.source && sameAsSource(points, original)) {
+  if (props.source && isNewVersion.value && sameAsSource(points, original)) {
     try {
       if (!hasMediaChanges(media.value)) {
         notifications.notify(t('averagePrices.media.nothingChanged'))
@@ -358,11 +382,11 @@ async function submit() {
       currency: CURRENCY,
       original_value: original,
       points,
-      supersedes: props.source?.id ?? null,
+      supersedes: isNewVersion.value ? props.source!.id : null,
     })
     // The photo and documents go to the row (the new version shares them)
     const report = await saveMedia(saved.id)
-    emit('saved', saved, isNewVersion.value ? 'version' : 'created')
+    emit('saved', saved, isNewVersion.value ? 'version' : isCopy.value ? 'copied' : 'created')
     report()
     open.value = false
   } catch (error) {
@@ -386,8 +410,20 @@ async function submit() {
   <FormDialog
     ref="formRef"
     v-model="open"
-    :title="isNewVersion ? $t('averagePrices.newVersion') : $t('averagePrices.new')"
-    :subtitle="source ? `${source.manufacturer.name} ${source.model}` : null"
+    :title="
+      isNewVersion
+        ? $t('averagePrices.newVersion')
+        : isCopy
+          ? $t('averagePrices.createCopy')
+          : $t('averagePrices.new')
+    "
+    :subtitle="
+      !source
+        ? null
+        : isCopy
+          ? $t('averagePrices.copyOf', { name: `${source.manufacturer.name} ${source.model}` })
+          : `${source.manufacturer.name} ${source.model}`
+    "
     icon="mdi-chart-timeline-variant"
     max-width="980"
     :persistent="saving"
@@ -559,8 +595,8 @@ async function submit() {
       <v-window-item value="media" eager :transition="false" :reverse-transition="false">
         <PriceMediaTab
           v-model="media"
-          :row-id="source?.id ?? null"
-          :photo-id="source?.photo_id ?? null"
+          :row-id="isNewVersion ? source!.id : null"
+          :photo-id="isNewVersion ? (source!.photo_id ?? null) : null"
           :icon="assetClass?.icon ?? 'mdi-image-outline'"
           :title="photoSearchTerm"
         />

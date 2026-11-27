@@ -54,17 +54,29 @@ const headers = computed(() => [
 
 const formOpen = ref(false)
 const source = ref<AveragePrice | null>(null)
+/** The form makes a copy of `source` (a new price), not a new version of it */
+const copying = ref(false)
 const detailOpen = ref(false)
 const detailId = ref<number | null>(null)
 
 function openNew() {
   source.value = null
+  copying.value = false
   formOpen.value = true
 }
 
 function openNewVersion(row: AveragePrice) {
   detailOpen.value = false
   source.value = row
+  copying.value = false
+  formOpen.value = true
+}
+
+/** Another price like this one, changing only what differs (not a version of it) */
+function openCopy(row: AveragePrice) {
+  detailOpen.value = false
+  source.value = row
+  copying.value = true
   formOpen.value = true
 }
 
@@ -78,6 +90,7 @@ function onSaved(row: AveragePriceDetail | null, outcome: SaveOutcome) {
     t(
       {
         created: 'averagePrices.created',
+        copied: 'averagePrices.copied',
         version: 'averagePrices.versionCreated',
         media: 'averagePrices.media.saved',
       }[outcome],
@@ -149,7 +162,7 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
           $t('averagePrices.deleteConfirm', { name: `${row.manufacturer.name} ${row.model}` })
       "
       :deleted-text="$t('averagePrices.deleted')"
-      edit-icon="mdi-file-replace-outline"
+      edit-icon="mdi-update"
       :edit-title="$t('averagePrices.newVersion')"
       :expandable="(row: AveragePrice) => row.supersedes !== null"
       :filters="filters"
@@ -312,14 +325,24 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
           data-testid="view"
           @click="openDetail(item)"
         />
+        <v-btn
+          icon="mdi-file-replace-outline"
+          variant="text"
+          size="small"
+          :aria-label="$t('averagePrices.createCopy')"
+          :title="$t('averagePrices.createCopy')"
+          data-testid="copy"
+          @click="openCopy(item)"
+        />
       </template>
     </ServerCrudTable>
 
-    <AveragePriceFormDialog v-model="formOpen" :source="source" @saved="onSaved" />
+    <AveragePriceFormDialog v-model="formOpen" :source="source" :copy="copying" @saved="onSaved" />
     <AveragePriceDetailDialog
       v-model="detailOpen"
       :row-id="detailId"
       @new-version="openNewVersion"
+      @copy="openCopy"
       @changed="table?.reload()"
     />
     <ComparePricesDialog v-model="compareOpen" :ids="selected" />

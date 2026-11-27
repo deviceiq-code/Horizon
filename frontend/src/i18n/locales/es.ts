@@ -1965,6 +1965,9 @@ const es: Messages = {
     newVersion: 'Nueva Versión',
     newVersionHint: 'La fila actual queda en el historial; esta la reemplaza.',
     saveNewVersion: 'Guardar Nueva Versión',
+    createCopy: 'Crear Copia',
+    copyOf: 'Copia de {name}',
+    copied: 'Copia creada.',
     view: 'Ver Detalles',
     sections: {
       asset: 'Bien',

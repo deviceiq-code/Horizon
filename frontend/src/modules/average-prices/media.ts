@@ -27,9 +27,9 @@ export interface MediaChanges {
   remove: number[]
 }
 
-/** How the price's form was saved: a new price, a new version, or only its photo and
- * documents (no version created) */
-export type SaveOutcome = 'created' | 'version' | 'media'
+/** How the price's form was saved: a new price, a copy of another (a new price too), a new
+ * version, or only its photo and documents (no version created) */
+export type SaveOutcome = 'created' | 'copied' | 'version' | 'media'
 
 export const noMediaChanges = (): MediaChanges => ({ photo: null, add: [], remove: [] })
 

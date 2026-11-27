@@ -529,7 +529,11 @@ Multi-user web system for **operating lease residual value pricing**
     money or "70%" of the original value — `termInput.ts::parseTermInput` —, a % becomes its
     value when the field is left, chip "% Value (x%)" below; `TermPointsInput.vue`), the
     original value in the header on the right (FormDialog `heading-end`); saving opens the tab
-    with an error; grid (ServerCrudTable; edit = "New version"; delete = all
+    with an error; grid (ServerCrudTable; edit = "New version" (`mdi-update`); "Create Copy"
+    (`mdi-file-replace-outline`, also in the detail, from any version) = the form with `copy`:
+    prefilled from the row — asset, specs, values, keywords and its photo (fetched and sent as
+    a file) —, saved as a new price of its own (no `supersedes`; documents stay with the
+    original); delete = all
     versions; rows with previous versions expand to list all versions and their average; column
     filters in `AveragePriceFilters.ts` → `?asset_class=&model=&original_value_min/max=&
     created_from/to=`), form (asset

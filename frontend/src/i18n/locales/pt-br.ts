@@ -1952,6 +1952,9 @@ const ptBR: Messages = {
     newVersion: 'Nova Versão',
     newVersionHint: 'A linha atual fica no histórico; esta a substitui.',
     saveNewVersion: 'Salvar Nova Versão',
+    createCopy: 'Criar Cópia',
+    copyOf: 'Cópia de {name}',
+    copied: 'Cópia criada.',
     view: 'Ver Detalhes',
     sections: {
       asset: 'Bem',

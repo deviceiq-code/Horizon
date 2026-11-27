@@ -531,6 +531,41 @@ describe('AveragePricesView', () => {
     wrapper.unmount()
   })
 
+  it('creates a copy: a new price of its own, prefilled from the row, with its photo', async () => {
+    prices.createAveragePrice.mockResolvedValue({ ...ROW, id: 102, supersedes: null })
+    prices.uploadPricePhoto.mockResolvedValue({ photo_id: 6 })
+    URL.createObjectURL = vi.fn<(object: Blob) => string>(() => 'blob:photo')
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(new Blob(['jpeg'], { type: 'image/jpeg' })))
+    prices.listAveragePrices.mockResolvedValue(page([{ ...ROW, photo_id: 4 }]))
+    const wrapper = mountView()
+    await settle()
+
+    await wrapper.find('[data-testid="copy"]').trigger('click')
+    await settle()
+    expect(fetchMock).toHaveBeenCalledWith('/api/average-prices/100/photo/?v=4', {
+      credentials: 'same-origin',
+    })
+    expect(inBody('.v-overlay--active')!.textContent).toContain('Copy of Caterpillar 320 GC')
+    const value = (id: string) => (inBody(`[data-testid="${id}"] input`) as HTMLInputElement).value
+    expect(value('model')).toBe('320 GC')
+    expect(value('spec-hours')).toBe('2,500')
+    // Unchanged is fine: still a new price (not "nothing changed")
+    await typeInto('model', '320 GC Long Reach')
+    await waitPreview()
+    await click('save')
+    await settle()
+
+    expect(prices.createAveragePrice).toHaveBeenCalledWith(
+      expect.objectContaining({ model: '320 GC Long Reach', supersedes: null }),
+    )
+    expect(prices.uploadPricePhoto).toHaveBeenCalledWith(102, expect.any(File))
+    expect(useNotificationsStore().text).toBe('Copy created.')
+    fetchMock.mockRestore()
+    wrapper.unmount()
+  })
+
   // --- Detail and history --------------------------------------------------------------------
 
   it('shows the details, the monthly curve and the history', async () => {

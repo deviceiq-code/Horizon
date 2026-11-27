@@ -25,7 +25,11 @@ import VersionsAverageCard from './VersionsAverageCard.vue'
 
 const props = defineProps<{ rowId: number | null }>()
 const open = defineModel<boolean>({ required: true })
-const emit = defineEmits<{ newVersion: [row: AveragePrice]; changed: [] }>()
+const emit = defineEmits<{
+  newVersion: [row: AveragePrice]
+  copy: [row: AveragePrice]
+  changed: []
+}>()
 
 const { t, locale } = useI18n()
 const { n } = useNumberFormat()
@@ -269,11 +273,22 @@ async function onVersionDeleted(erased: AveragePrice) {
         v-if="row && row.is_current && !row.deleted_at"
         variant="tonal"
         color="primary"
-        prepend-icon="mdi-file-replace-outline"
+        prepend-icon="mdi-update"
         data-testid="detail-new-version"
         @click="emit('newVersion', row)"
       >
         {{ $t('averagePrices.newVersion') }}
+      </v-btn>
+      <!-- Any version can be the start of another price -->
+      <v-btn
+        v-if="row && !row.deleted_at"
+        variant="text"
+        color="primary"
+        prepend-icon="mdi-file-replace-outline"
+        data-testid="detail-copy"
+        @click="emit('copy', row)"
+      >
+        {{ $t('averagePrices.createCopy') }}
       </v-btn>
       <v-spacer />
       <v-btn variant="text" @click="open = false">{{ $t('common.close') }}</v-btn>
