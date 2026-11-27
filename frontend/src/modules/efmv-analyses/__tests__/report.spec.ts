@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import type { EfmvAnalysis, Scenario } from '../api'
-import { disclaimerFor, extras, fillDisclaimer, reportHtml, type ReportFormat } from '../report'
+import {
+  disclaimerFor,
+  extras,
+  fillDisclaimer,
+  reportFileName,
+  reportHtml,
+  type ReportFormat,
+} from '../report'
 
 const TOTALS = {
   lo: '1424150.49',
@@ -79,6 +86,21 @@ const F: ReportFormat = {
 }
 
 describe('eFMV report', () => {
+  it('is titled as the PDF file is suggested to be: code - customer - vertical', () => {
+    // "/" cannot be in a file name: it separates as " - " too
+    expect(reportFileName(ANALYSIS)).toBe('EFMV-2026-0661 - Stefanini - IHM - IT')
+    expect(
+      reportFileName({
+        code: 'EFMV-2026-0012',
+        customer_detail: { name: 'ACME: "Tools" Ltda', trade_name: '' },
+        vertical_label: 'Industry / Yellow Line',
+      } as unknown as EfmvAnalysis),
+    ).toBe('EFMV-2026-0012 - ACME Tools Ltda - Industry - Yellow Line')
+    expect(
+      reportHtml(ANALYSIS, { scenarioIds: [10], assets: false, disclaimer: '', printedAt: '' }, F),
+    ).toContain('<title>EFMV-2026-0661 - Stefanini - IHM - IT</title>')
+  })
+
   it('fills the disclaimer variables; English when a language has none', () => {
     expect(
       fillDisclaimer('Put [{code}] — {customer}, {unknown}', {

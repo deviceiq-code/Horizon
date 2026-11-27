@@ -91,12 +91,24 @@ describe('printing an analysis', () => {
     await settle()
     expect(preview().srcdoc).not.toContain('48 Meses')
     // Prints that same frame
-    const print = vi.fn<() => void>()
+    // …with the page titled as the file the PDF is suggested to be, restored afterwards
+    document.title = 'Horizon'
+    let titleWhilePrinting = ''
+    const print = vi.fn<() => void>(() => {
+      titleWhilePrinting = document.title
+    })
     Object.defineProperty(preview(), 'contentWindow', {
       value: { focus: vi.fn<() => void>(), print },
     })
+    vi.useFakeTimers()
     ;(inBody('[data-testid="report-print"]') as HTMLButtonElement).click()
     expect(print).toHaveBeenCalled()
+    expect(titleWhilePrinting).toBe('EFMV-2026-0661 - IHM Engenharia - TI')
+    window.dispatchEvent(new Event('afterprint'))
+    expect(document.title).toBe('Horizon')
+    vi.runAllTimers()
+    vi.useRealTimers()
+    expect(document.title).toBe('Horizon')
     wrapper.unmount()
   })
 

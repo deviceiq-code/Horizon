@@ -236,6 +236,25 @@ ${options.assets ? assetsTable(scenario, f, currency) : ''}
 </section>`
 }
 
+/**
+ * The name the browser suggests when the report is saved as PDF (it takes the document's
+ * title): "<code> - <customer> - <vertical>". "/" cannot be in a file name, so the vertical's
+ * sub-vertical is separated the same way ("Industry / Yellow Line" → "Industry - Yellow Line");
+ * the other characters file systems refuse are left out.
+ */
+export function reportFileName(
+  analysis: Pick<EfmvAnalysis, 'code' | 'customer_detail' | 'vertical_label'>,
+): string {
+  const customer = analysis.customer_detail.trade_name || analysis.customer_detail.name
+  return [analysis.code, customer, analysis.vertical_label]
+    .filter((part) => part && part.trim())
+    .join(' - ')
+    .replace(/\s*\/\s*/g, ' - ')
+    .replace(/[\\:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function reportHtml(
   analysis: EfmvAnalysis,
   options: ReportOptions,
@@ -274,7 +293,7 @@ export function reportHtml(
     .join('')
   const title = `${t('efmv.report.title')} ${analysis.code}`
   return `<!doctype html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<html><head><meta charset="utf-8"><title>${escapeHtml(reportFileName(analysis))}</title>
 <style>
 ${style.fontFaces}
   @page { size: A4; margin: 15mm; }

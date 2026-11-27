@@ -560,7 +560,10 @@ Multi-user web system for **operating lease residual value pricing**
     in that language; what the API writes — asset classes, the automatic scope — stays in the
     user's); it follows the user's theme (`ReportStyle`: the light version's primary, `brand`
     as accent, text and tint, and its font — the page's @font-face rules copied into the frame,
-    files served by Horizon), previewed in an iframe (`srcdoc`) and that frame printed; made
+    files served by Horizon), previewed in an iframe (`srcdoc`) and that frame printed — the
+    PDF's suggested name is its `<title>`, `report.ts::reportFileName` ("<code> - <customer> -
+    <vertical>"; "/" becomes " - ", characters file names refuse dropped), also the page's
+    `document.title` while printing (restored on `afterprint`); made
     from the analysis as last saved; never stored — also from the list's Actions (a printer
     icon). While the project is private: **Shift + Print** prints it without the "Horizon"
     name (`ReportOptions.unbranded`; not shown on screen; through `utils/html.ts::printDocument`,

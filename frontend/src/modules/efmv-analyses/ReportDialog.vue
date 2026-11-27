@@ -22,7 +22,7 @@ import { formatMoney } from '@/utils/money'
 import { getEfmvAnalysis, type EfmvAnalysis } from './api'
 import { scenarioTitle } from './draft'
 import { colorThemeById } from '@/themes'
-import { disclaimerFor, reportHtml, type ReportStyle } from './report'
+import { disclaimerFor, reportFileName, reportHtml, type ReportStyle } from './report'
 
 const props = defineProps<{ analysisId: number }>()
 const open = defineModel<boolean>({ required: true })
@@ -143,16 +143,41 @@ function makeReport(unbranded: boolean): string {
 
 const html = computed(() => makeReport(false))
 
+/**
+ * While printing, the page's own title is the report's file name too: browsers suggest the PDF's
+ * name from a title — the frame's in some, the page's in others. Restored once printing is over
+ * (print() returns then in most browsers; a timeout for the others).
+ */
+function withFileTitle(run: () => void) {
+  if (!analysis.value) return
+  const previous = document.title
+  document.title = reportFileName(analysis.value)
+  let restored = false
+  const restore = () => {
+    if (restored) return
+    restored = true
+    document.title = previous
+  }
+  window.addEventListener('afterprint', restore, { once: true })
+  try {
+    run()
+  } finally {
+    setTimeout(restore, 1000)
+  }
+}
+
 function print(event?: MouseEvent | KeyboardEvent) {
   // Shift held: without the "Horizon" name
   if (event?.shiftKey) {
-    printDocument(makeReport(true))
+    withFileTitle(() => printDocument(makeReport(true)))
     return
   }
   const win = frame.value?.contentWindow
   if (!win) return
-  win.focus()
-  win.print()
+  withFileTitle(() => {
+    win.focus()
+    win.print()
+  })
 }
 </script>
 
