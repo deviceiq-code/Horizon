@@ -147,6 +147,7 @@ const en = {
     notLive: 'You are working in the test environment: its data is not the live data.',
   },
   dictionary: {
+    anyCase: 'The spelling itself, in any case — always counts',
     title: 'Word Dictionary',
     hint: 'Typed in a form (whole words, any case), these become the spelling on the left — for everyone who keeps the Word Dictionary Smart Tool on. The spelling itself, in any case, counts too.',
     replacement: 'Written As',

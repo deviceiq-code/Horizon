@@ -32,6 +32,15 @@ describe('the word dictionary (App Settings)', () => {
     const wrapper = mountWithPlugins(WordDictionarySection)
     await settle()
     expect(document.querySelectorAll('[data-testid="dictionary-word"]')).toHaveLength(2)
+    // Each word shows its own spelling (any case) among the ways to type it, even with no others
+    const words = document.querySelectorAll('[data-testid="dictionary-word"]')
+    const chips = (row: Element) =>
+      Array.from(row.querySelectorAll('[data-testid^="list-item"]')).map((c) =>
+        c.textContent!.trim(),
+      )
+    expect(chips(words[0]!)).toEqual(['ltda'])
+    expect(chips(words[1]!)).toEqual(['s/a', 'sa.'])
+    expect(words[0]!.querySelector('[data-testid="list-item-fixed"] .v-chip__close')).toBeNull()
     // Try it: what a text becomes
     const trial = inBody('[data-testid="dictionary-try"] input') as HTMLInputElement
     trial.value = 'Acme ltda, Beta sa.'

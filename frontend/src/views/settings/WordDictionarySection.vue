@@ -125,6 +125,8 @@ const tried = computed(() =>
               v-model="row.variants"
               :label="$t('dictionary.variants')"
               :max-length="60"
+              :fixed="row.replacement.trim() ? [row.replacement.trim().toLowerCase()] : []"
+              :fixed-title="$t('dictionary.anyCase')"
               data-testid="dictionary-variants"
               @update:model-value="save(row)"
             />

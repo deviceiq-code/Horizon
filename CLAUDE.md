@@ -359,7 +359,8 @@ Multi-user web system for **operating lease residual value pricing**
     `system.DictionaryWord` (replacement + variants; a way of typing belongs to one word only),
     `/api/system/word-dictionary/` (GET everyone, write administrators; no pagination), kept in
     Settings › App Settings › Administration (`views/settings/WordDictionarySection.vue`, with a
-    "Try It" field); starts with LTDA and S/A (sa., s.a., s.a).
+    "Try It" field; each word's own spelling, lowercase, is a fixed chip among the ways to type
+    it — `ListItemsField`'s `fixed`); starts with LTDA and S/A (sa., s.a., s.a).
     "Automatic Scope" (`auto_scope`, on; `scope_threshold` %, default 5): eFMV scenarios' scope
     is written from their assets — `efmv/scope.py::scope_summary` (pure): units by manufacturer
     and asset class (plural, in the user's language), groups under the threshold left out,

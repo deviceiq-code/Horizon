@@ -146,6 +146,7 @@ const es: Messages = {
     notLive: 'Está en el entorno de prueba: los datos no son los del entorno Live.',
   },
   dictionary: {
+    anyCase: 'La propia grafía, en cualquier mayúscula o minúscula — siempre cuenta',
     title: 'Diccionario de Palabras',
     hint: 'Escritas en un formulario (palabras enteras, en mayúsculas o minúsculas), pasan a la grafía de la izquierda — para todos los que mantienen activa la Smart Tool Diccionario de Palabras. La propia grafía, en cualquier caso, también cuenta.',
     replacement: 'Se Escribe',

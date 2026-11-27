@@ -146,6 +146,7 @@ const ptBR: Messages = {
     notLive: 'Você está no ambiente de teste: os dados não são os do ambiente Live.',
   },
   dictionary: {
+    anyCase: 'A própria grafia, em qualquer caixa — sempre conta',
     title: 'Dicionário de Palavras',
     hint: 'Digitadas num formulário (palavras inteiras, em qualquer caixa), viram a grafia da esquerda — para todos que mantêm ligado o Smart Tool Dicionário de Palavras. A própria grafia, em qualquer caixa, também conta.',
     replacement: 'Escrita Como',
