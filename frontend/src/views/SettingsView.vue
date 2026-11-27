@@ -638,6 +638,22 @@ async function save(changes: PreferencesUpdate) {
             </template>
           </SettingRow>
           <SettingRow
+            :title="$t('settings.smartTools.trimSpaces')"
+            :description="$t('settings.smartTools.trimSpacesHint')"
+          >
+            <v-switch
+              :model-value="preferences.trimSpaces"
+              color="primary"
+              inset
+              hide-details
+              density="compact"
+              :disabled="saving"
+              :aria-label="$t('settings.smartTools.trimSpaces')"
+              data-testid="trim-spaces"
+              @update:model-value="save({ trim_spaces: !!$event })"
+            />
+          </SettingRow>
+          <SettingRow
             :title="$t('settings.smartTools.autoScope')"
             :description="$t('settings.smartTools.autoScopeHint')"
           >

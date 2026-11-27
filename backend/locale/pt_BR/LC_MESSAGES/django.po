@@ -3150,3 +3150,6 @@ msgstr "Cada forma de digitar precisa de letras ou números."
 #, python-format
 msgid "“%(typed)s” already becomes “%(word)s”."
 msgstr "“%(typed)s” já vira “%(word)s”."
+
+msgid "remove extra spaces"
+msgstr "remover espaços desnecessários"

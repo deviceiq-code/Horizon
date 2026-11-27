@@ -155,6 +155,12 @@ def test_select_on_focus_is_on_by_default(logged_client):
     assert logged_client.get("/api/auth/me/").json()["preferences"]["select_on_focus"] is False
 
 
+def test_remove_extra_spaces_is_on_by_default(logged_client):
+    assert logged_client.get("/api/auth/preferences/").json()["trim_spaces"] is True
+    r = _patch(logged_client, {"trim_spaces": False})
+    assert (r.status_code, r.json()["trim_spaces"]) == (200, False)
+
+
 def test_automatic_scope_on_by_default_with_a_5_percent_threshold(logged_client):
     data = logged_client.get("/api/auth/preferences/").json()
     assert (data["auto_scope"], data["scope_threshold"]) == (True, "5.00")

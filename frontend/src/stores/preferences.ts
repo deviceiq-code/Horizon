@@ -56,6 +56,8 @@ export interface Preferences {
   select_on_focus: boolean
   /** Smart Tools: words typed in forms written as the shared dictionary says (wordDictionary.ts) */
   word_dictionary: boolean
+  /** Smart Tools: text typed in forms without extra spaces (tidySpaces.ts) */
+  trim_spaces: boolean
   /** Smart Tools: eFMV scenarios' scope written from their assets; negligible below (%) */
   auto_scope: boolean
   scope_threshold: string
@@ -81,6 +83,7 @@ export type PreferencesUpdate = Partial<{
   web_search_engine: WebSearchEngine
   select_on_focus: boolean
   word_dictionary: boolean
+  trim_spaces: boolean
   auto_scope: boolean
   scope_threshold: string
 }>
@@ -213,6 +216,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
   )
   // On unless turned off (only with the account)
   const wordDictionary = ref(true)
+  const trimSpaces = ref(true)
   const autoScope = ref(
     readStored(AUTO_SCOPE_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
   )
@@ -244,6 +248,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     web_search_engine?: string
     select_on_focus?: boolean
     word_dictionary?: boolean
+    trim_spaces?: boolean
     auto_scope?: boolean
     scope_threshold?: string
   }) {
@@ -311,6 +316,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
       store(SELECT_ON_FOCUS_STORAGE_KEY, String(p.select_on_focus))
     }
     if (typeof p.word_dictionary === 'boolean') wordDictionary.value = p.word_dictionary
+    if (typeof p.trim_spaces === 'boolean') trimSpaces.value = p.trim_spaces
     if (typeof p.auto_scope === 'boolean') {
       autoScope.value = p.auto_scope
       store(AUTO_SCOPE_STORAGE_KEY, String(p.auto_scope))
@@ -350,6 +356,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
       web_search_engine: webSearchEngine.value,
       select_on_focus: selectOnFocus.value,
       word_dictionary: wordDictionary.value,
+      trim_spaces: trimSpaces.value,
       auto_scope: autoScope.value,
       scope_threshold: scopeThreshold.value,
     }
@@ -398,6 +405,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     webSearchEngine,
     selectOnFocus,
     wordDictionary,
+    trimSpaces,
     autoScope,
     scopeThreshold,
     apply,

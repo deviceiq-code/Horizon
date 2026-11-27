@@ -2329,6 +2329,9 @@ const es: Messages = {
       wordDictionaryHint:
         'Las palabras escritas en los formularios quedan como dice el diccionario compartido al salir del campo — p. ej., “ltda” → “LTDA”, “s/a” → “S/A”. Solo palabras enteras, en mayúsculas o minúsculas.',
       editDictionary: 'Editar el Diccionario',
+      trimSpaces: 'Eliminar Espacios Innecesarios',
+      trimSpacesHint:
+        'Los espacios al inicio y al final de lo que escribe en los formularios, y los repetidos, se eliminan al salir del campo — p. ej., “ Prueba    de  Texto ” → “Prueba de Texto”. Los saltos de línea de las descripciones se mantienen.',
       // A name: the same in every language
       title: 'Smart Tools',
       description: 'Facilidades de Horizon que puede activar o desactivar.',

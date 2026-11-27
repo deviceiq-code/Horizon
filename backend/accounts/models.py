@@ -186,6 +186,8 @@ class UserPreferences(models.Model):
     select_on_focus = models.BooleanField(_("select on focus"), default=True)
     # Words typed in forms become the shared dictionary's spelling ("ltda" → "LTDA")
     word_dictionary = models.BooleanField(_("word dictionary"), default=True)
+    # Text typed in forms without spaces at the start or end nor repeated ones
+    trim_spaces = models.BooleanField(_("remove extra spaces"), default=True)
     # A button inside some text fields searches the Internet for what was typed
     web_search = models.BooleanField(_("search the Internet"), default=True)
     # eFMV scenarios: the scope written from their assets while it is not written by hand

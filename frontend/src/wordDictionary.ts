@@ -71,8 +71,10 @@ export function applyDictionary(
 
 const SKIPPED_INPUTS = new Set(['email', 'password', 'url', 'number', 'search', 'tel'])
 
+/** `skip`: what marks fields (or parts of a page) left alone by this tool */
 export function appliesTo(
   target: EventTarget | null,
+  skip = '[data-no-dictionary]',
 ): target is HTMLInputElement | HTMLTextAreaElement {
   if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return false
   if (target.readOnly || target.disabled) return false
@@ -81,7 +83,7 @@ export function appliesTo(
     if (['numeric', 'decimal', 'email', 'url', 'tel'].includes(target.inputMode)) return false
   }
   // Pickers: what is typed there is a search, not a value
-  if (target.closest('.v-autocomplete, .v-combobox, .v-select, [data-no-dictionary]')) return false
+  if (target.closest(`.v-autocomplete, .v-combobox, .v-select, ${skip}`)) return false
   // Only in forms (the dialogs that register things)
   return !!target.closest('.v-dialog form, form.v-form')
 }

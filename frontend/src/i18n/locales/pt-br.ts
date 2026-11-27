@@ -2314,6 +2314,9 @@ const ptBR: Messages = {
       wordDictionaryHint:
         'Palavras digitadas nos formulários são escritas como diz o dicionário compartilhado ao sair do campo — ex.: “ltda” → “LTDA”, “s/a” → “S/A”. Só palavras inteiras, em qualquer caixa.',
       editDictionary: 'Editar o Dicionário',
+      trimSpaces: 'Remover Espaços Desnecessários',
+      trimSpacesHint:
+        'Espaços no começo e no fim do que você digita nos formulários, e os repetidos, são removidos ao sair do campo — ex.: “ Teste    de  String ” → “Teste de String”. As quebras de linha das descrições são mantidas.',
       // A name: the same in every language
       title: 'Smart Tools',
       description: 'Facilidades do Horizon que você pode ligar ou desligar.',

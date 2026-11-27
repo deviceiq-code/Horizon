@@ -11,6 +11,7 @@ import { installSelectOnFocus } from '@/smartTools'
 import { useAuthStore } from '@/stores/auth'
 import { useDictionaryStore } from '@/stores/dictionary'
 import { installWordDictionary } from '@/wordDictionary'
+import { installTidySpaces } from '@/tidySpaces'
 
 const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
@@ -61,8 +62,13 @@ watch(
 const removeSelectOnFocus = installSelectOnFocus(() => preferences.selectOnFocus)
 onBeforeUnmount(removeSelectOnFocus)
 
-// Smart Tools: words typed in forms written as the shared dictionary says, when a field is left
 const auth = useAuthStore()
+// Smart Tools: text typed in forms without extra spaces, when a field is left (before the
+// dictionary, so it sees the tidy text — listeners run in the order installed)
+const removeTidySpaces = installTidySpaces(() => !!auth.user && preferences.trimSpaces)
+onBeforeUnmount(removeTidySpaces)
+
+// Smart Tools: words typed in forms written as the shared dictionary says, when a field is left
 const dictionary = useDictionaryStore()
 watch(
   () => auth.user?.id,

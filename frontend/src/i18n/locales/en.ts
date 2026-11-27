@@ -2310,6 +2310,9 @@ const en = {
       wordDictionaryHint:
         'Words typed in forms are written as the shared dictionary says when you leave the field — e.g. “ltda” → “LTDA”, “s/a” → “S/A”. Whole words only, in any case.',
       editDictionary: 'Edit the Dictionary',
+      trimSpaces: 'Remove Extra Spaces',
+      trimSpacesHint:
+        'Spaces at the start and end of what you type in forms, and repeated ones, are removed when you leave the field — e.g. “ Test    of  String ” → “Test of String”. Line breaks in descriptions are kept.',
       // A name: the same in every language
       title: 'Smart Tools',
       description: 'Conveniences of Horizon you can turn on or off.',

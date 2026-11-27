@@ -33,6 +33,7 @@ const user = (is_admin: boolean): User => ({
     time_format: 'auto',
     select_on_focus: true,
     word_dictionary: true,
+    trim_spaces: true,
     auto_scope: true,
     scope_threshold: '5.00',
     number_format: 'auto',
@@ -269,6 +270,21 @@ describe('SettingsView', () => {
     toggle.click()
     await settle()
     expect(save).toHaveBeenCalledWith({ select_on_focus: false })
+    wrapper.unmount()
+  })
+
+  it('Smart Tools: remove extra spaces, on by default, after the dictionary', async () => {
+    const { wrapper } = await mountAt('/settings', false)
+    const preferences = usePreferencesStore()
+    const save = vi.spyOn(preferences, 'save').mockResolvedValue()
+    const card = inBody('[data-testid="smart-tools"]')!
+    const text = card.textContent!
+    expect(text.indexOf('Remove Extra Spaces')).toBeGreaterThan(text.indexOf('Word Dictionary'))
+    const toggle = inBody('[data-testid="trim-spaces"] input') as HTMLInputElement
+    expect(toggle.checked).toBe(true)
+    toggle.click()
+    await settle()
+    expect(save).toHaveBeenCalledWith({ trim_spaces: false })
     wrapper.unmount()
   })
 })

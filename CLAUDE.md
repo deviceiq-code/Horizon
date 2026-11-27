@@ -361,6 +361,11 @@ Multi-user web system for **operating lease residual value pricing**
     Settings › App Settings › Administration (`views/settings/WordDictionarySection.vue`, with a
     "Try It" field; each word's own spelling, lowercase, is a fixed chip among the ways to type
     it — `ListItemsField`'s `fixed`); starts with LTDA and S/A (sa., s.a., s.a).
+    "Remove Extra Spaces" (`trim_spaces`, on): right after it, the same fields lose spaces at
+    the start/end and repeated ones when left (" Teste    de  String " → "Teste de String";
+    text areas keep their line breaks) — `src/tidySpaces.ts` (`tidySpaces`, pure;
+    `installTidySpaces`, installed before the dictionary so it sees the tidy text; skips
+    `[data-no-tidy]`).
     "Automatic Scope" (`auto_scope`, on; `scope_threshold` %, default 5): eFMV scenarios' scope
     is written from their assets — `efmv/scope.py::scope_summary` (pure): units by manufacturer
     and asset class (plural, in the user's language), groups under the threshold left out,
