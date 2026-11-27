@@ -6,6 +6,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore } from '@/stores/preferences'
 import { colorThemeById, vuetifyThemeName } from '@/themes'
 import { uiScaleFactor } from '@/uiScale'
+import { applyFavicon } from '@/favicon'
 import { installSelectOnFocus } from '@/smartTools'
 import { useAuthStore } from '@/stores/auth'
 import { useDictionaryStore } from '@/stores/dictionary'
@@ -30,6 +31,18 @@ watch(
     vuetifyTheme.change(
       vuetifyThemeName(colorTheme, mode === 'dark' || (mode === 'system' && osDark)),
     ),
+  { immediate: true },
+)
+
+// The browser tab's icon in the theme's brand color (German Powerhouse: CHG Red)
+watch(
+  () => [preferences.colorTheme, preferences.theme, systemDark.value] as const,
+  ([colorTheme, mode, osDark]) => {
+    const theme = colorThemeById(colorTheme)
+    const version = mode === 'dark' || (mode === 'system' && osDark) ? theme.dark : theme.light
+    const brand = version.colors?.brand
+    if (typeof brand === 'string') applyFavicon(brand)
+  },
   { immediate: true },
 )
 

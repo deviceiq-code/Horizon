@@ -417,7 +417,10 @@ Multi-user web system for **operating lease residual value pricing**
     **Browser icon**: `public/favicon.svg` — the mark in white on emerald (#00926F), simplified
     for small sizes —, with `favicon.ico` and `apple-touch-icon.png` made from it (cairosvg); the
     side menu's brand is this icon drawn by `components/BrandIcon.vue` in the theme's `brand`
-    color (every theme version has one; German Powerhouse: #FF2063) + "Horizon" written plainly.
+    color (every theme version has one; German Powerhouse: #FF2063) + "Horizon" written plainly;
+    the tab's icon follows it too (`src/favicon.ts::applyFavicon`, watched in App.vue: the link
+    elements point to an SVG data URL in the current version's `brand`; the files stay the
+    default until the theme is known).
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — the frame of authenticated pages (a clean dashboard look):
     dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active` — the open page's icon —, `sidebar-highlight` — its background —, `brand` — the Horizon icon;
