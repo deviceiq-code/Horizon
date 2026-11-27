@@ -3,27 +3,35 @@
  * Print an eFMV analysis: choose its scenarios (all at first) and whether each one's list of
  * assets goes too; the report (`report.ts`) is previewed in a frame and that same frame is
  * printed (or saved as PDF by the browser). Made from the analysis as last saved and the
- * disclaimer of the Pricing settings in the user's language; nothing is stored. While the
+ * disclaimer of the Pricing settings, in the language chosen in the dialog (the user's at
+ * first): its texts, scenario names, numbers and disclaimer — what the API writes (asset
+ * classes, the scope written from the assets) stays in the user's language. Nothing is stored. While the
  * project is private, Print with Shift held prints it without the "Horizon" name (not shown
  * anywhere on screen; through a hidden frame, so the preview stays as it is).
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDateFormat } from '@/composables/useDateFormat'
-import { useNumberFormat } from '@/composables/useNumberFormat'
+import { formatDate } from '@/dateFormat'
+import { LANGUAGES } from '@/i18n'
+import { formatNumber, type NumberKey } from '@/numberFormat'
+import { usePreferencesStore } from '@/stores/preferences'
 import { specSummary } from '@/modules/average-prices/specText'
 import { getPricingSettings } from '@/modules/pricing-settings/api'
 import { printDocument } from '@/utils/html'
 import { formatMoney } from '@/utils/money'
 import { getEfmvAnalysis, type EfmvAnalysis } from './api'
-import { disclaimerFor, reportHtml } from './report'
+import { scenarioTitle } from './draft'
+import { colorThemeById } from '@/themes'
+import { disclaimerFor, reportHtml, type ReportStyle } from './report'
 
 const props = defineProps<{ analysisId: number }>()
 const open = defineModel<boolean>({ required: true })
 
 const { t, locale } = useI18n()
-const { n } = useNumberFormat()
-const { d } = useDateFormat()
+const preferences = usePreferencesStore()
+/** The report's language: the user's at first, changeable in the dialog */
+const language = ref<string>(locale.value)
+const languageOptions = LANGUAGES.map((l) => ({ value: l.code, title: l.name }))
 
 const analysis = ref<EfmvAnalysis | null>(null)
 const disclaimers = ref<Record<string, string>>({})
@@ -47,6 +55,7 @@ async function load() {
   loading.value = true
   failed.value = false
   printedAt.value = new Date().toISOString()
+  language.value = locale.value
   try {
     const [data, settings] = await Promise.all([
       getEfmvAnalysis(props.analysisId),
@@ -62,23 +71,72 @@ async function load() {
   }
 }
 
+/** The font's @font-face rules as the page has them (their files served by Horizon) */
+function fontFaces(fontName: string): string {
+  const rules: string[] = []
+  for (const sheet of Array.from(document.styleSheets)) {
+    let list: CSSRuleList
+    try {
+      list = sheet.cssRules
+    } catch {
+      continue // another origin's sheet cannot be read
+    }
+    for (const rule of Array.from(list)) {
+      if (
+        rule instanceof CSSFontFaceRule &&
+        rule.style.getPropertyValue('font-family').includes(fontName)
+      ) {
+        rules.push(rule.cssText)
+      }
+    }
+  }
+  return rules.join('\n')
+}
+
+/** The report in the user's theme — its light version (paper is white) and its font */
+const style = computed<ReportStyle>(() => {
+  const theme = colorThemeById(preferences.colorTheme)
+  const colors = theme.light.colors ?? {}
+  return {
+    primary: String(colors.primary ?? '#00926F'),
+    accent: String(colors.brand ?? colors.primary ?? '#00926F'),
+    text: String(colors['on-surface'] ?? '#1C252E'),
+    tint: String(colors['surface-light'] ?? '#F4F6F8'),
+    fontFamily: theme.fontFamily,
+    fontFaces: fontFaces(theme.fontName),
+  }
+})
+
 function makeReport(unbranded: boolean): string {
   if (!analysis.value) return ''
+  const lang = language.value
+  const tr = (key: string, values?: Record<string, unknown>) =>
+    t(key, values ?? {}, { locale: lang })
+  const num = (value: number, key: NumberKey) => formatNumber(value, key, lang)
   return reportHtml(
     analysis.value,
     {
       scenarioIds: chosen.value,
       assets: withAssets.value,
-      disclaimer: disclaimerFor(disclaimers.value, locale.value),
+      disclaimer: disclaimerFor(disclaimers.value, lang),
       printedAt: printedAt.value,
       unbranded,
+      style: style.value,
     },
     {
-      t: (key, values) => (values ? t(key, values) : t(key)),
-      money: (value, currency) => formatMoney(value, currency, locale.value),
-      percent: (value) => `${n(Number(value), 'percentValue')}%`,
-      date: (iso) => d(new Date(iso), 'short'),
-      specs: (item) => specSummary(item.specs ?? [], t, n),
+      t: tr,
+      money: (value, currency) => formatMoney(value, currency, lang),
+      percent: (value) => `${num(Number(value), 'percentValue')}%`,
+      date: (iso) =>
+        formatDate(new Date(iso), 'short', lang, preferences.dateFormat, preferences.timeFormat),
+      specs: (item) => specSummary(item.specs ?? [], tr, num),
+      title: (scenario) =>
+        scenarioTitle(
+          String(scenario.term_months),
+          scenario.name,
+          (count) => t('efmv.scenario.termTitle', count, { locale: lang }),
+          tr('efmv.scenario.untitled'),
+        ),
     },
   )
 }
@@ -116,6 +174,16 @@ function print(event?: MouseEvent | KeyboardEvent) {
         <div v-else-if="analysis" class="report-layout">
           <!-- What goes in it -->
           <div class="options">
+            <v-select
+              v-model="language"
+              :items="languageOptions"
+              :label="$t('efmv.report.language')"
+              prepend-inner-icon="mdi-translate"
+              density="compact"
+              hide-details
+              class="mb-4"
+              data-testid="report-language"
+            />
             <div class="text-subtitle-2 mb-1">{{ $t('efmv.report.scenarios') }}</div>
             <v-checkbox
               v-for="scenario in analysis.scenarios"

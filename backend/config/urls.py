@@ -17,5 +17,6 @@ urlpatterns = [
     path("api/pricing/", include("pricing.control_panel")),
     # One search over every module (search/registry.py)
     path("api/search/", include("search.urls")),
+    path("api/system/", include("system.dictionary")),
     path("api/", include("users.urls")),
 ]

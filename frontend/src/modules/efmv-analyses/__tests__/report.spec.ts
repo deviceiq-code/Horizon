@@ -64,6 +64,8 @@ const ANALYSIS = {
   account_manager_detail: { id: 1, full_name: 'Ana Lima' },
   customer_detail: { id: 2, name: 'IHM Engenharia Ltda', trade_name: 'Stefanini/IHM', tax_id: '' },
   vertical_label: 'IT',
+  created_by_name: 'Bruno Reis',
+  created_at: '2026-11-20T10:00:00Z',
   scenarios: [scenario(10, '36 Months - Dell'), scenario(11, '48 Months', [LAPTOP])],
 } as unknown as EfmvAnalysis
 
@@ -73,6 +75,7 @@ const F: ReportFormat = {
   percent: (value) => `${Number(value).toFixed(2)}%`,
   date: () => '27/11/2026',
   specs: () => '',
+  title: (scenario) => scenario.title,
 }
 
 describe('eFMV report', () => {
@@ -104,6 +107,8 @@ describe('eFMV report', () => {
     expect(html).toContain('36 Months - Dell')
     expect(html).not.toContain('48 Months')
     expect(html).toContain('Stefanini/IHM')
+    // Who created it
+    expect(html).toContain('Bruno Reis')
     expect(html).toContain('R$ 1424150.49')
     expect(html).toContain('14.57%')
     // The scope: written from the assets when not typed
@@ -133,5 +138,30 @@ describe('eFMV report', () => {
     expect(html).toContain('efmv.report.assets')
     expect(html).toContain('Latitude 5440')
     expect(html).not.toContain('class="disclaimer"')
+  })
+
+  it("follows the user's theme: colors and font", () => {
+    const html = reportHtml(
+      ANALYSIS,
+      {
+        scenarioIds: [10],
+        assets: false,
+        disclaimer: '',
+        printedAt: '2026-11-27T10:00:00Z',
+        style: {
+          primary: '#2052E4',
+          accent: '#FF2063',
+          text: '#1C1C1C',
+          tint: '#E9F2FF',
+          fontFamily: "'Poppins', sans-serif",
+          fontFaces: "@font-face { font-family: 'Poppins'; src: url(/assets/poppins.woff2); }",
+        },
+      },
+      F,
+    )
+    expect(html).toContain("font-family: 'Poppins', sans-serif")
+    expect(html).toContain('url(/assets/poppins.woff2)')
+    expect(html).toContain('border-bottom: 2px solid #FF2063')
+    expect(html).toContain('color: #2052E4')
   })
 })

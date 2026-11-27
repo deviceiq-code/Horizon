@@ -7,6 +7,9 @@ import { usePreferencesStore } from '@/stores/preferences'
 import { colorThemeById, vuetifyThemeName } from '@/themes'
 import { uiScaleFactor } from '@/uiScale'
 import { installSelectOnFocus } from '@/smartTools'
+import { useAuthStore } from '@/stores/auth'
+import { useDictionaryStore } from '@/stores/dictionary'
+import { installWordDictionary } from '@/wordDictionary'
 
 const preferences = usePreferencesStore()
 const notifications = useNotificationsStore()
@@ -44,6 +47,22 @@ watch(
 // Smart Tools: entering a text field selects its content (when the user keeps it on)
 const removeSelectOnFocus = installSelectOnFocus(() => preferences.selectOnFocus)
 onBeforeUnmount(removeSelectOnFocus)
+
+// Smart Tools: words typed in forms written as the shared dictionary says, when a field is left
+const auth = useAuthStore()
+const dictionary = useDictionaryStore()
+watch(
+  () => auth.user?.id,
+  (id) => {
+    if (id) dictionary.load()
+  },
+  { immediate: true },
+)
+const removeWordDictionary = installWordDictionary(
+  () => !!auth.user && preferences.wordDictionary,
+  () => dictionary.words,
+)
+onBeforeUnmount(removeWordDictionary)
 
 // Size of the interface: zoom of the whole page (text, spacing, fields), from the user's
 // choice or — "auto" — the window's width (src/uiScale.ts). `--ui-zoom` lets layouts that

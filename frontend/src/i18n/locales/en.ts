@@ -146,6 +146,18 @@ const en = {
     development: 'Development (Test)',
     notLive: 'You are working in the test environment: its data is not the live data.',
   },
+  dictionary: {
+    title: 'Word Dictionary',
+    hint: 'Typed in a form (whole words, any case), these become the spelling on the left — for everyone who keeps the Word Dictionary Smart Tool on. The spelling itself, in any case, counts too.',
+    replacement: 'Written As',
+    variants: 'Also When Typed',
+    add: 'Add Word',
+    remove: 'Remove Word',
+    tryIt: 'Try It',
+    tryHint: 'Type a text to see what it becomes.',
+    tryPlaceholder: 'e.g. Acme ltda or Beta s.a.',
+    becomes: 'Becomes:',
+  },
   login: {
     username: 'Username',
     password: 'Password',
@@ -265,6 +277,8 @@ const en = {
   },
   efmv: {
     report: {
+      language: 'Language',
+      createdBy: 'Created By',
       title: 'eFMV Analysis',
       subtitle: 'Estimated fair market value at the end of the lease',
       dialogTitle: 'Print Analysis',
@@ -2291,6 +2305,10 @@ const en = {
       languageHint: 'Of the interface and of the system messages.',
     },
     smartTools: {
+      wordDictionary: 'Word Dictionary',
+      wordDictionaryHint:
+        'Words typed in forms are written as the shared dictionary says when you leave the field — e.g. “ltda” → “LTDA”, “s/a” → “S/A”. Whole words only, in any case.',
+      editDictionary: 'Edit the Dictionary',
       // A name: the same in every language
       title: 'Smart Tools',
       description: 'Conveniences of Horizon you can turn on or off.',

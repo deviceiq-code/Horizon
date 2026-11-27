@@ -10,9 +10,12 @@ import { useI18n } from 'vue-i18n'
 import { appName, SUITE_APPS, type AppId } from '@/apps'
 import SettingRow from '@/components/SettingRow.vue'
 import PricingSettingsSection from '@/modules/pricing-settings/PricingSettingsSection.vue'
+import WordDictionarySection from './WordDictionarySection.vue'
 
 const APP_SETTINGS: Partial<Record<AppId, Component>> = {
   pricing: PricingSettingsSection,
+  // What every app shares: the word dictionary (Smart Tools)
+  admin: WordDictionarySection,
 }
 
 const { t } = useI18n()

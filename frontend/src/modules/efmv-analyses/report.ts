@@ -42,6 +42,33 @@ export interface ReportOptions {
   printedAt: string
   /** Without the "Horizon" name (while the project is private: Shift + Print) */
   unbranded?: boolean
+  /** The user's theme (default: Emerald Slate's colors, Arial) */
+  style?: ReportStyle
+}
+
+/** The report's look, from the user's color theme (its light version: paper is white). */
+export interface ReportStyle {
+  /** Section titles and the figures' frame */
+  primary: string
+  /** The rule under the header and the Horizon name (the theme's brand color) */
+  accent: string
+  /** Body text */
+  text: string
+  /** A soft background for the main figures */
+  tint: string
+  /** CSS font-family */
+  fontFamily: string
+  /** The font's @font-face rules (the frame does not see the page's fonts) */
+  fontFaces: string
+}
+
+export const DEFAULT_REPORT_STYLE: ReportStyle = {
+  primary: '#00926F',
+  accent: '#00926F',
+  text: '#1C252E',
+  tint: '#F4F6F8',
+  fontFamily: 'Arial, Helvetica, sans-serif',
+  fontFaces: '',
 }
 
 /** How the report writes texts, money, percentages, dates and specifications. */
@@ -51,6 +78,8 @@ export interface ReportFormat {
   percent: (value: string) => string
   date: (iso: string) => string
   specs: (item: ScenarioItem) => string
+  /** A scenario's official name in the report's language ("36 Months - Desktops") */
+  title: (scenario: Scenario) => string
 }
 
 const currencyOf = (scenario: Scenario) => scenario.items.find((i) => i.currency)?.currency ?? 'BRL'
@@ -198,7 +227,7 @@ function scenarioSection(scenario: Scenario, options: ReportOptions, f: ReportFo
   }</div><div class="muted">${escapeHtml(f.money(totals.efmv_total, currency))}</div></td>
 ${share('hw')}${share('sw')}${share('sv')}</tr></table>`
   return `<section class="scenario">
-<h2>${escapeHtml(t('efmv.report.scenario'))} ${escapeHtml(scenario.title)}</h2>
+<h2>${escapeHtml(t('efmv.report.scenario'))} ${escapeHtml(f.title(scenario))}</h2>
 ${scope ? `<p class="scope">${escapeHtml(scope)}</p>` : ''}
 ${figures}
 ${extrasBlock(scenario, 'sv', f, currency)}
@@ -213,6 +242,7 @@ export function reportHtml(
   f: ReportFormat,
 ): string {
   const t = f.t
+  const style = options.style ?? DEFAULT_REPORT_STYLE
   const chosen = analysis.scenarios.filter((s) => options.scenarioIds.includes(s.id))
   const customer = customerName(analysis)
   const printed = f.date(options.printedAt)
@@ -232,6 +262,7 @@ export function reportHtml(
     [t('efmv.report.analysis'), analysis.code, analysis.external_reference ?? ''],
     [t('efmv.report.accountManager'), analysis.account_manager_detail.full_name, ''],
     [t('efmv.report.vertical'), analysis.vertical_label ?? '—', ''],
+    [t('efmv.report.createdBy'), analysis.created_by_name ?? '—', f.date(analysis.created_at)],
     [t('efmv.report.printedOn'), printed, ''],
   ]
     .map(
@@ -245,25 +276,27 @@ export function reportHtml(
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
+${style.fontFaces}
   @page { size: A4; margin: 15mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #1c252e; }
+  body { margin: 0; font-family: ${style.fontFamily}; font-size: 10pt; color: ${style.text}; }
   .sheet { padding: 8mm; }
   @media print { .sheet { padding: 0; } }
-  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #00926f; padding-bottom: 4mm; margin-bottom: 5mm; }
-  .brand { font-size: 16pt; font-weight: bold; color: #00926f; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid ${style.accent}; padding-bottom: 4mm; margin-bottom: 5mm; }
+  .brand { font-size: 16pt; font-weight: bold; color: ${style.accent}; }
   .doc-title { font-size: 13pt; font-weight: bold; }
-  .meta { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3mm; margin-bottom: 6mm; }
+  .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm 6mm; margin-bottom: 6mm; }
   .label { font-size: 8pt; color: #637381; text-transform: uppercase; letter-spacing: 0.04em; }
   .value { font-size: 10.5pt; font-weight: bold; }
   .muted { color: #637381; font-size: 8.5pt; font-weight: normal; }
   .scenario { page-break-inside: avoid; break-inside: avoid; border: 1px solid #dfe3e8; border-radius: 3mm; padding: 4mm 5mm; margin-bottom: 5mm; }
   h2 { font-size: 12pt; margin: 0 0 2mm; }
-  h3 { font-size: 9.5pt; margin: 4mm 0 1.5mm; text-transform: uppercase; letter-spacing: 0.04em; color: #00926f; }
+  h3 { font-size: 9.5pt; margin: 4mm 0 1.5mm; text-transform: uppercase; letter-spacing: 0.04em; color: ${style.primary}; }
   .scope { margin: 0 0 3mm; }
   table { border-collapse: collapse; width: 100%; }
   .figures td { border: 1px solid #dfe3e8; padding: 2mm 3mm; vertical-align: top; width: 20%; }
-  .figures td.main { background: #f4f6f8; }
+  .figures td.main { background: ${style.tint}; }
+  .scenario h2 { color: ${style.text}; border-left: 3px solid ${style.primary}; padding-left: 2.5mm; }
   .figures td.main .value { font-size: 12pt; }
   ul { margin: 0; padding-left: 5mm; }
   li { margin: 0.8mm 0; }

@@ -145,6 +145,18 @@ const es: Messages = {
     development: 'Desarrollo (Prueba)',
     notLive: 'Está en el entorno de prueba: los datos no son los del entorno Live.',
   },
+  dictionary: {
+    title: 'Diccionario de Palabras',
+    hint: 'Escritas en un formulario (palabras enteras, en mayúsculas o minúsculas), pasan a la grafía de la izquierda — para todos los que mantienen activa la Smart Tool Diccionario de Palabras. La propia grafía, en cualquier caso, también cuenta.',
+    replacement: 'Se Escribe',
+    variants: 'También Cuando Se Escribe',
+    add: 'Agregar Palabra',
+    remove: 'Quitar Palabra',
+    tryIt: 'Pruébelo',
+    tryHint: 'Escriba un texto para ver en qué se convierte.',
+    tryPlaceholder: 'p. ej., Acme ltda o Beta s.a.',
+    becomes: 'Queda:',
+  },
   login: {
     username: 'Usuario',
     password: 'Contraseña',
@@ -266,6 +278,8 @@ const es: Messages = {
   },
   efmv: {
     report: {
+      language: 'Idioma',
+      createdBy: 'Creado por',
       title: 'Análisis de eFMV',
       subtitle: 'Valor justo de mercado estimado al final del arrendamiento',
       dialogTitle: 'Imprimir Análisis',
@@ -2310,6 +2324,10 @@ const es: Messages = {
       languageHint: 'De la interfaz y de los mensajes del sistema.',
     },
     smartTools: {
+      wordDictionary: 'Diccionario de Palabras',
+      wordDictionaryHint:
+        'Las palabras escritas en los formularios quedan como dice el diccionario compartido al salir del campo — p. ej., “ltda” → “LTDA”, “s/a” → “S/A”. Solo palabras enteras, en mayúsculas o minúsculas.',
+      editDictionary: 'Editar el Diccionario',
       // A name: the same in every language
       title: 'Smart Tools',
       description: 'Facilidades de Horizon que puede activar o desactivar.',

@@ -1,7 +1,8 @@
 /**
  * Themes of the interface: colors and font. Besides Vuetify's colors, each version has the side
- * menu's: sidebar (background), on-sidebar (text), on-sidebar-strong (hovered/open page) and
- * sidebar-active (the open page's mark). Each one has a light and a dark version (Vuetify themes named
+ * menu's: sidebar (background), on-sidebar (text), on-sidebar-strong (hovered/open page),
+ * sidebar-active (the open page's icon), sidebar-highlight (the open page's background) and
+ * brand (the Horizon icon at its top). Each one has a light and a dark version (Vuetify themes named
  * "<id>-light" / "<id>-dark"); the user's mode (light, dark or system) picks the version.
  * To add a theme: a new entry here and its id in the backend's accounts.models.ColorTheme.
  */
@@ -49,6 +50,10 @@ const metallicFoundations: ColorTheme = {
       'on-sidebar': '#ADBBDA',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#7091E6',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#7091E6',
+      // The Horizon icon in the side menu
+      brand: '#7091E6',
     },
   },
   dark: {
@@ -70,6 +75,10 @@ const metallicFoundations: ColorTheme = {
       'on-sidebar': '#ADBBDA',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#7091E6',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#7091E6',
+      // The Horizon icon in the side menu
+      brand: '#7091E6',
     },
   },
 }
@@ -101,6 +110,10 @@ const earthySerene: ColorTheme = {
       'on-sidebar': '#C9B8A6',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#C9A57F',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#C9A57F',
+      // The Horizon icon in the side menu
+      brand: '#865D36',
     },
   },
   dark: {
@@ -123,6 +136,10 @@ const earthySerene: ColorTheme = {
       'on-sidebar': '#C9B8A6',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#C9A57F',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#C9A57F',
+      // The Horizon icon in the side menu
+      brand: '#AC8968',
     },
   },
 }
@@ -153,6 +170,10 @@ const sleekFuturistic: ColorTheme = {
       'on-sidebar': '#A9C7BF',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#4FB3B0',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#4FB3B0',
+      // The Horizon icon in the side menu
+      brand: '#116466',
     },
   },
   dark: {
@@ -175,6 +196,10 @@ const sleekFuturistic: ColorTheme = {
       'on-sidebar': '#A9C7BF',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#4FB3B0',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#4FB3B0',
+      // The Horizon icon in the side menu
+      brand: '#4FB3B0',
     },
   },
 }
@@ -211,6 +236,10 @@ const emeraldSlate: ColorTheme = {
       'on-sidebar': '#919EAB',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#00A76F',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#00A76F',
+      // The Horizon icon in the side menu
+      brand: '#00926F',
     },
     variables: {
       'border-color': '#919EAB',
@@ -240,6 +269,10 @@ const emeraldSlate: ColorTheme = {
       'on-sidebar': '#919EAB',
       'on-sidebar-strong': '#FFFFFF',
       'sidebar-active': '#00C296',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#00C296',
+      // The Horizon icon in the side menu
+      brand: '#00926F',
     },
     variables: {
       'border-color': '#919EAB',
@@ -249,8 +282,83 @@ const emeraldSlate: ColorTheme = {
   },
 }
 
+/**
+ * "German Powerhouse": the blue tones of the corporate design guidelines — Dark Blue for the
+ * frame, Active Blue for buttons and highlights, Soft Blue and Light Gray for backgrounds —, with
+ * CHG Red (#FF2063) for highlights — the accent, the open page's icon in the side menu and the
+ * Horizon icon; the open page's background is Soft Blue, the other items Light Gray —, Sage
+ * for success; Red never as text (errors use a darker red). Poppins, served by Horizon itself (@fontsource).
+ */
+const germanPowerhouse: ColorTheme = {
+  id: 'german_powerhouse',
+  name: 'German Powerhouse',
+  swatches: ['#1B1E4F', '#080593', '#2052E4', '#B6D3FF', '#FF2063'],
+  fontFamily: "'Poppins', 'Segoe UI', Roboto, sans-serif",
+  fontName: 'Poppins',
+  light: {
+    dark: false,
+    colors: {
+      primary: '#2052E4', // Active Blue: buttons, highlights, active
+      secondary: '#080593', // Blue
+      accent: '#FF2063', // CHG Red: highlights (never text)
+      info: '#2052E4',
+      success: '#528F6C', // Sage
+      warning: '#C77700',
+      error: '#C8103F',
+      background: '#F0F0F0', // Light Gray
+      surface: '#FFFFFF',
+      'surface-bright': '#FFFFFF',
+      'surface-light': '#E9F2FF', // Soft Blue, lighter
+      'surface-variant': '#B6D3FF', // Soft Blue
+      'on-surface-variant': '#1B1E4F',
+      'on-background': '#1C1C1C', // Off Black
+      'on-surface': '#1C1C1C',
+      // Side menu: Dark Blue (the hero color), Soft Blue text, Active Blue marks the open page
+      sidebar: '#1B1E4F',
+      'on-sidebar': '#F0F0F0', // Light Gray: the lightest tone of the palette
+      'on-sidebar-strong': '#FFFFFF',
+      'sidebar-active': '#FF2063', // CHG Red: the open page's icon
+      // The open page's background in the side menu
+      'sidebar-highlight': '#B6D3FF',
+      // The Horizon icon in the side menu
+      brand: '#FF2063',
+    },
+  },
+  dark: {
+    dark: true,
+    colors: {
+      // A lighter Active Blue, readable over the dark blues
+      primary: '#6E8FF0',
+      secondary: '#B6D3FF',
+      accent: '#FF2063',
+      info: '#6E8FF0',
+      success: '#7DB596',
+      warning: '#F0A93B',
+      error: '#FF5C85',
+      background: '#121433',
+      surface: '#1B1E4F', // Dark Blue
+      'surface-bright': '#2A2E6E',
+      'surface-light': '#23275E',
+      'surface-variant': '#080593',
+      'on-surface-variant': '#F0F0F0',
+      'on-background': '#F0F0F0',
+      'on-surface': '#F0F0F0',
+      sidebar: '#121433',
+      'on-sidebar': '#F0F0F0', // Light Gray: the lightest tone of the palette
+      'on-sidebar-strong': '#FFFFFF',
+      'sidebar-active': '#FF2063',
+      // The open page's background in the side menu
+      'sidebar-highlight': '#B6D3FF',
+      // The Horizon icon in the side menu
+      brand: '#FF2063',
+    },
+  },
+}
+
 export const COLOR_THEMES: readonly ColorTheme[] = [
   emeraldSlate,
+  // Second in Settings
+  germanPowerhouse,
   metallicFoundations,
   earthySerene,
   sleekFuturistic,

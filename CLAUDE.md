@@ -349,6 +349,17 @@ Multi-user web system for **operating lease residual value pricing**
     on or off, `src/smartTools.ts` installed in App.vue. "Select on Focus" (preference
     `select_on_focus`, on by default; also kept in the browser for the login page): entering a
     single-line text field selects its content (not textareas, read-only or empty fields).
+    "Word Dictionary" (`word_dictionary`, on): a word typed in a form becomes the shared
+    dictionary's spelling when the field is left ("ltda" → "LTDA", "s/a" → "S/A"; whole words —
+    never touching a letter or digit —, any case) — `src/wordDictionary.ts` (`applyDictionary`,
+    pure; `appliesTo`: text fields and text areas inside a `.v-dialog form` / `form.v-form`, not
+    e-mail/password/url/number/numeric/decimal inputs nor pickers nor `[data-no-dictionary]`;
+    the input event is dispatched so v-model follows), installed in App.vue; the words in
+    `stores/dictionary.ts`, loaded once signed in. The dictionary is shared, per environment:
+    `system.DictionaryWord` (replacement + variants; a way of typing belongs to one word only),
+    `/api/system/word-dictionary/` (GET everyone, write administrators; no pagination), kept in
+    Settings › App Settings › Administration (`views/settings/WordDictionarySection.vue`, with a
+    "Try It" field); starts with LTDA and S/A (sa., s.a., s.a).
     "Automatic Scope" (`auto_scope`, on; `scope_threshold` %, default 5): eFMV scenarios' scope
     is written from their assets — `efmv/scope.py::scope_summary` (pure): units by manufacturer
     and asset class (plural, in the user's language), groups under the threshold left out,
@@ -405,10 +416,11 @@ Multi-user web system for **operating lease residual value pricing**
     `HorizonLogo.vue` (mark + name + slogan in capitals, the theme's font; login page).
     **Browser icon**: `public/favicon.svg` — the mark in white on emerald (#00926F), simplified
     for small sizes —, with `favicon.ico` and `apple-touch-icon.png` made from it (cairosvg); the
-    side menu's brand is this icon + "Horizon" written plainly.
+    side menu's brand is this icon drawn by `components/BrandIcon.vue` in the theme's `brand`
+    color (every theme version has one; German Powerhouse: #FF2063) + "Horizon" written plainly.
   - `src/i18n/` — vue-i18n; `locales/en.ts` is the reference, others are typed with `Messages`.
   - `src/layouts/MainLayout.vue` — the frame of authenticated pages (a clean dashboard look):
-    dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active`;
+    dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active` — the open page's icon —, `sidebar-highlight` — its background —, `brand` — the Horizon icon;
     the brand fixed on top and Settings fixed at the bottom, the menu between them scrolls
     without scrollbars) with the Horizon brand, Home, a section named after the current app with its modules, a
     section "Pages" (in every app: Search, Notifications with the unread count), a section "Apps" with
@@ -539,8 +551,13 @@ Multi-user web system for **operating lease residual value pricing**
     goes; `report.ts::reportHtml` makes a whole HTML document (customer, analysis, account
     manager, vertical, date; per scenario its title, scope, LO, eFMV at EOL, HW / SW / SV, its
     services and software — attached and of their own —, optionally the assets; at the end the
-    Pricing settings' disclaimer in the user's language, English when empty, its variables
-    filled — `fillDisclaimer`), previewed in an iframe (`srcdoc`) and that frame printed; made
+    Pricing settings' disclaimer, English when empty, its variables filled — `fillDisclaimer`;
+    also who created it and when) in the language chosen in the dialog (the user's at first:
+    texts via `t(key, values, {locale})`, scenario names via `scenarioTitle`, numbers and money
+    in that language; what the API writes — asset classes, the automatic scope — stays in the
+    user's); it follows the user's theme (`ReportStyle`: the light version's primary, `brand`
+    as accent, text and tint, and its font — the page's @font-face rules copied into the frame,
+    files served by Horizon), previewed in an iframe (`srcdoc`) and that frame printed; made
     from the analysis as last saved; never stored — also from the list's Actions (a printer
     icon). While the project is private: **Shift + Print** prints it without the "Horizon"
     name (`ReportOptions.unbranded`; not shown on screen; through `utils/html.ts::printDocument`,
@@ -680,11 +697,16 @@ Multi-user web system for **operating lease residual value pricing**
     picks the version (App.vue; light by default). User preference `color_theme` (backend
     `accounts.models.ColorTheme`). Themes, in Settings' order (`COLOR_THEMES`): "Emerald
     Slate" (default; #1C252E, #00926F, #00A883, #CBEEE0, #F9FAFB; emerald over slate, the
-    dashboard look's reference palette) uses Public Sans; "Metallic Foundations" (#3D52A0,
+    dashboard look's reference palette) uses Public Sans; "German Powerhouse" (second; the
+    corporate design guidelines' blues — Dark Blue #1B1E4F frame, Active Blue #2052E4 primary,
+    Blue #080593, Soft Blue #B6D3FF, Light Gray #F0F0F0 background, Aubergine #9000C0 accent,
+    Sage #528F6C success; CHG Red #FF2063 for the accent, the open page's icon and the Horizon
+    icon — never as text; side menu items Light Gray #F0F0F0, the open page's background Soft
+    Blue) uses Poppins; "Metallic Foundations" (#3D52A0,
     #7091E6, #8697C4, #ADBBDA, #EDE8F5), "Earthy and Serene" (#3E362E, #865D36, #93785B,
     #AC8968, #A69080) and "Sleek and Futuristic" (#2C3531, #116466, #D9B08C, #FFCB9A, #D1E8E2)
     use the Ubuntu font (fonts: `@fontsource/*`, imported
-    in main.ts). New theme = entry in `COLOR_THEMES` (with the side menu colors) + choice in
+    in main.ts — bundled and served by Horizon itself, never from a CDN). New theme = entry in `COLOR_THEMES` (with the side menu colors) + choice in
     `ColorTheme`. Use theme colors (`primary`, `sidebar`…), never hard-coded ones.
   - UI: only open-source libraries without license keys (MIT/Apache/BSD). **Vuetify** components
   (auto-imported via `vite-plugin-vuetify`), `mdi-*` icons, themes in `src/themes.ts`.

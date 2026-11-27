@@ -609,6 +609,34 @@ async function save(changes: PreferencesUpdate) {
               @update:model-value="save({ select_on_focus: !!$event })"
             />
           </SettingRow>
+          <!-- The dictionary is shared; administrators keep it in App Settings -->
+          <SettingRow
+            :title="$t('settings.smartTools.wordDictionary')"
+            :description="$t('settings.smartTools.wordDictionaryHint')"
+          >
+            <v-switch
+              :model-value="preferences.wordDictionary"
+              color="primary"
+              inset
+              hide-details
+              density="compact"
+              :disabled="saving"
+              :aria-label="$t('settings.smartTools.wordDictionary')"
+              data-testid="word-dictionary"
+              @update:model-value="save({ word_dictionary: !!$event })"
+            />
+            <template v-if="isAdmin" #below>
+              <v-btn
+                variant="text"
+                size="small"
+                prepend-icon="mdi-book-edit-outline"
+                class="px-0"
+                data-testid="edit-dictionary"
+                @click="tab = 'appSettings'"
+                >{{ $t('settings.smartTools.editDictionary') }}</v-btn
+              >
+            </template>
+          </SettingRow>
           <SettingRow
             :title="$t('settings.smartTools.autoScope')"
             :description="$t('settings.smartTools.autoScopeHint')"

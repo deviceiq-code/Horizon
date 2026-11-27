@@ -6,7 +6,7 @@ import { i18n, setLanguage } from '@/i18n'
 import * as settingsApi from '@/modules/pricing-settings/api'
 import * as html from '@/utils/html'
 import vuetify from '@/plugins/vuetify'
-import { inBody, settle } from '@/test-utils'
+import { inBody, pickOption, settle } from '@/test-utils'
 import * as efmvApi from '../api'
 import ReportDialog from '../ReportDialog.vue'
 
@@ -34,11 +34,11 @@ const TOTALS = {
   sw_total: '0.00',
   sv_total: '0.00',
 }
-const scenario = (id: number, title: string) => ({
+const scenario = (id: number, title: string, term = 36) => ({
   id,
   name: '',
   title,
-  term_months: 36,
+  term_months: term,
   scope: 'Fleet',
   scope_suggestion: '',
   items: [],
@@ -56,10 +56,16 @@ describe('printing an analysis', () => {
       account_manager_detail: { id: 1, full_name: 'Ana Lima' },
       customer_detail: { id: 2, name: 'IHM Engenharia', trade_name: '', tax_id: '' },
       vertical_label: 'TI',
-      scenarios: [scenario(10, '36 Meses'), scenario(11, '48 Meses')],
+      created_by_name: 'Bruno Reis',
+      created_at: '2026-11-20T10:00:00Z',
+      scenarios: [scenario(10, '36 Meses', 36), scenario(11, '48 Meses', 48)],
     } as unknown as efmvApi.EfmvAnalysis)
     vi.mocked(settingsApi).getPricingSettings.mockResolvedValue({
-      report_disclaimer: { en: 'Note', 'pt-br': 'Atenção: inclua [{code}].' },
+      report_disclaimer: {
+        en: 'Note',
+        'pt-br': 'Atenção: inclua [{code}].',
+        es: 'Nota: [{code}].',
+      },
     } as unknown as settingsApi.PricingSettings)
   })
   afterEach(() => {
@@ -111,6 +117,25 @@ describe('printing an analysis', () => {
     expect(printed).not.toContain('Horizon')
     expect(printed).toContain('EFMV-2026-0661')
     expect(preview.srcdoc).toContain('class="brand">Horizon<')
+    wrapper.unmount()
+  })
+
+  it('the report’s language can change (the user’s at first); it names who created it', async () => {
+    const wrapper = mount(ReportDialog, {
+      props: { modelValue: true, analysisId: 3 },
+      attachTo: document.body,
+      global: { plugins: [vuetify, i18n] },
+    })
+    await settle()
+    const preview = () => (inBody('[data-testid="report-preview"]') as HTMLIFrameElement).srcdoc
+    expect(preview()).toContain('Análise de eFMV')
+    expect(preview()).toContain('Bruno Reis')
+    await pickOption('report-language', 'Español')
+    expect(preview()).toContain('Análisis de eFMV')
+    expect(preview()).toContain('36 Meses')
+    expect(preview()).toContain('Nota: [EFMV-2026-0661].')
+    // The interface stays in the user's language
+    expect(document.body.textContent).toContain('Cenários')
     wrapper.unmount()
   })
 })

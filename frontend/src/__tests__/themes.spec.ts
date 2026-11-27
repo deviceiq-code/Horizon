@@ -11,6 +11,8 @@ describe('color themes', () => {
     expect(Object.keys(vuetifyThemes())).toEqual([
       'emerald_slate-light',
       'emerald_slate-dark',
+      'german_powerhouse-light',
+      'german_powerhouse-dark',
       'metallic_foundations-light',
       'metallic_foundations-dark',
       'earthy_serene-light',
@@ -18,6 +20,31 @@ describe('color themes', () => {
       'sleek_futuristic-light',
       'sleek_futuristic-dark',
     ])
+  })
+
+  it('German Powerhouse comes second: the guidelines’ blues and Poppins', () => {
+    const theme = COLOR_THEMES[1]!
+    expect([theme.id, theme.name]).toEqual(['german_powerhouse', 'German Powerhouse'])
+    expect(theme.light.colors!.primary).toBe('#2052E4')
+    expect(theme.light.colors!.sidebar).toBe('#1B1E4F')
+    expect(theme.fontName).toBe('Poppins')
+    // CHG Red: the accent, the open page's mark and the Horizon icon in the side menu
+    for (const version of [theme.light, theme.dark]) {
+      expect(version.colors!.brand).toBe('#FF2063')
+      expect(version.colors!['sidebar-active']).toBe('#FF2063')
+      // …only on the open page's icon: its background is Soft Blue, the items Light Gray
+      expect(version.colors!['sidebar-highlight']).toBe('#B6D3FF')
+      expect(version.colors!['on-sidebar']).toBe('#F0F0F0')
+    }
+    expect(theme.fontFamily.startsWith("'Poppins'")).toBe(true)
+  })
+
+  it('every theme has a brand color for the Horizon icon', () => {
+    for (const theme of COLOR_THEMES) {
+      expect(theme.light.colors!.brand).toMatch(/^#[0-9A-F]{6}$/i)
+      expect(theme.dark.colors!.brand).toMatch(/^#[0-9A-F]{6}$/i)
+    }
+    expect(COLOR_THEMES[0]!.light.colors!.brand).toBe('#00926F')
   })
 
   it('Metallic Foundations is available too', () => {

@@ -3125,3 +3125,28 @@ msgstr "Cada texto puede tener hasta %(max)d caracteres."
 
 msgid "external reference"
 msgstr "referencia externa"
+
+msgid "replacement"
+msgstr "grafía"
+
+msgid "variants"
+msgstr "variantes"
+
+msgid "dictionary word"
+msgstr "palabra del diccionario"
+
+msgid "dictionary words"
+msgstr "palabras del diccionario"
+
+msgid "word dictionary"
+msgstr "diccionario de palabras"
+
+msgid "Type a word with letters or digits."
+msgstr "Escriba una palabra con letras o números."
+
+msgid "Each way to type it needs letters or digits."
+msgstr "Cada forma de escribirla necesita letras o números."
+
+#, python-format
+msgid "“%(typed)s” already becomes “%(word)s”."
+msgstr "“%(typed)s” ya se convierte en “%(word)s”."

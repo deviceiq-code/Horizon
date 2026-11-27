@@ -145,6 +145,18 @@ const ptBR: Messages = {
     development: 'Desenvolvimento (Teste)',
     notLive: 'Você está no ambiente de teste: os dados não são os do ambiente Live.',
   },
+  dictionary: {
+    title: 'Dicionário de Palavras',
+    hint: 'Digitadas num formulário (palavras inteiras, em qualquer caixa), viram a grafia da esquerda — para todos que mantêm ligado o Smart Tool Dicionário de Palavras. A própria grafia, em qualquer caixa, também conta.',
+    replacement: 'Escrita Como',
+    variants: 'Também Quando Digitada',
+    add: 'Adicionar Palavra',
+    remove: 'Remover Palavra',
+    tryIt: 'Experimente',
+    tryHint: 'Digite um texto para ver no que ele se transforma.',
+    tryPlaceholder: 'ex.: Acme ltda ou Beta s.a.',
+    becomes: 'Fica:',
+  },
   login: {
     username: 'Usuário',
     password: 'Senha',
@@ -265,6 +277,8 @@ const ptBR: Messages = {
   },
   efmv: {
     report: {
+      language: 'Idioma',
+      createdBy: 'Criada por',
       title: 'Análise de eFMV',
       subtitle: 'Valor justo de mercado estimado ao fim do arrendamento',
       dialogTitle: 'Imprimir Análise',
@@ -2295,6 +2309,10 @@ const ptBR: Messages = {
       languageHint: 'Da interface e das mensagens do sistema.',
     },
     smartTools: {
+      wordDictionary: 'Dicionário de Palavras',
+      wordDictionaryHint:
+        'Palavras digitadas nos formulários são escritas como diz o dicionário compartilhado ao sair do campo — ex.: “ltda” → “LTDA”, “s/a” → “S/A”. Só palavras inteiras, em qualquer caixa.',
+      editDictionary: 'Editar o Dicionário',
       // A name: the same in every language
       title: 'Smart Tools',
       description: 'Facilidades do Horizon que você pode ligar ou desligar.',

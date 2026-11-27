@@ -32,6 +32,7 @@ const user = (is_admin: boolean): User => ({
     date_format: 'auto',
     time_format: 'auto',
     select_on_focus: true,
+    word_dictionary: true,
     auto_scope: true,
     scope_threshold: '5.00',
     number_format: 'auto',
@@ -97,10 +98,15 @@ describe('SettingsView', () => {
     await click('tab-app-settings')
     await settle()
     expect(router.currentRoute.value.query.tab).toBe('appSettings')
-    const sections = [...document.querySelectorAll('[data-testid^="app-settings-"] h2')].map(
-      (h) => h.textContent?.trim(),
+    const sections = [...document.querySelectorAll('[data-testid^="app-settings-"] h2')].map((h) =>
+      h.textContent?.trim(),
     )
-    expect(sections).toEqual(['Pricing', 'Remarketing', 'Services and Partnerships', 'Administration'])
+    expect(sections).toEqual([
+      'Pricing',
+      'Remarketing',
+      'Services and Partnerships',
+      'Administration',
+    ])
     expect(inBody('[data-testid="app-settings-pricing"] [data-testid="compatible"]')).not.toBeNull()
     expect(inBody('[data-testid="app-settings-remarketing"]')!.textContent).toContain(
       'no settings of its own yet',

@@ -27,6 +27,7 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "web_search",
             "web_search_engine",
             "select_on_focus",
+            "word_dictionary",
             "auto_scope",
             "scope_threshold",
             "updated_at",

@@ -14,6 +14,12 @@ import '@fontsource/public-sans/400.css'
 import '@fontsource/public-sans/500.css'
 import '@fontsource/public-sans/600.css'
 import '@fontsource/public-sans/700.css'
+// Poppins (German Powerhouse): files bundled and served by Horizon, never from a CDN
+import '@fontsource/poppins/300.css'
+import '@fontsource/poppins/400.css'
+import '@fontsource/poppins/500.css'
+import '@fontsource/poppins/600.css'
+import '@fontsource/poppins/700.css'
 import './styles/main.css'
 
 const app = createApp(App)

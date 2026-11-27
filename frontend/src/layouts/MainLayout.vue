@@ -12,6 +12,7 @@
  *   notifications (alerts), light/dark mode, language, the app launcher and the user's menu
  *   (who they are and their roles; Profile and Help to come; Settings; Sign out).
  */
+import BrandIcon from '@/components/BrandIcon.vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
@@ -164,7 +165,8 @@ async function logout() {
     <template #prepend>
       <router-link :to="{ name: 'home' }" class="brand" data-testid="brand">
         <!-- The browser icon (the logo's mark in white on emerald) -->
-        <img src="/favicon.svg" alt="" width="32" height="32" class="brand-mark" />
+        <!-- In the theme's brand color (German Powerhouse: CHG Red) -->
+        <BrandIcon :size="32" class="brand-mark" />
         <span class="brand-name">Horizon</span>
       </router-link>
     </template>
@@ -481,7 +483,8 @@ async function logout() {
 }
 .menu-list :deep(.v-list-item--active) {
   color: rgb(var(--v-theme-on-sidebar-strong));
-  background: rgba(var(--v-theme-sidebar-active), 0.16);
+  /* The open page's background: its own color (the icon keeps sidebar-active) */
+  background: rgba(var(--v-theme-sidebar-highlight), 0.16);
 }
 .menu-list :deep(.v-list-item--active .v-list-item__prepend > .v-icon) {
   color: rgb(var(--v-theme-sidebar-active));

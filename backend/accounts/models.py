@@ -17,6 +17,7 @@ class ColorTheme(models.TextChoices):
     `theme`). Names are proper names: not translated."""
 
     EMERALD_SLATE = "emerald_slate", "Emerald Slate"
+    GERMAN_POWERHOUSE = "german_powerhouse", "German Powerhouse"
     METALLIC_FOUNDATIONS = "metallic_foundations", "Metallic Foundations"
     EARTHY_SERENE = "earthy_serene", "Earthy and Serene"
     SLEEK_FUTURISTIC = "sleek_futuristic", "Sleek and Futuristic"
@@ -183,6 +184,8 @@ class UserPreferences(models.Model):
     # Smart Tools (conveniences of the interface)
     # Entering a text field selects its content (typing replaces it)
     select_on_focus = models.BooleanField(_("select on focus"), default=True)
+    # Words typed in forms become the shared dictionary's spelling ("ltda" → "LTDA")
+    word_dictionary = models.BooleanField(_("word dictionary"), default=True)
     # A button inside some text fields searches the Internet for what was typed
     web_search = models.BooleanField(_("search the Internet"), default=True)
     # eFMV scenarios: the scope written from their assets while it is not written by hand

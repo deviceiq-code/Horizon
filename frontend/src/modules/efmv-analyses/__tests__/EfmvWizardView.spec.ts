@@ -76,6 +76,7 @@ async function mountWizard(roles = ['Account Manager']) {
       date_format: 'auto',
       time_format: 'auto',
       select_on_focus: true,
+      word_dictionary: true,
       auto_scope: true,
       scope_threshold: '5.00',
       number_format: 'auto',

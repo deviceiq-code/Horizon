@@ -95,7 +95,7 @@ describe('SearchView', () => {
     const { wrapper } = await mountSearch('/search?q=deere')
     expect(searchAll).toHaveBeenCalledWith('deere', '')
     expect(inBody('[data-testid="search-count"]')!.textContent).toContain(
-      "7 results found for ‘deere’",
+      '7 results found for ‘deere’',
     )
     expect(inBody('[data-testid="search-tab-all"]')!.textContent).toContain('All (7)')
     expect(inBody('[data-testid="search-tab-average_prices"]')!.textContent).toContain(
