@@ -28,6 +28,8 @@ const en = {
     saved: 'Keywords saved.',
   },
   common: {
+    readMore: 'Read More',
+    readLess: 'Read Less',
     moreActions: 'More Actions',
     audit: { created: 'Created on {date} by {name}', updated: 'Changed on {date} by {name}' },
     filters: { nameOrKeyword: 'Name or Keyword', all: 'All' },

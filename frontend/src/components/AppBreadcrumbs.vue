@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The path of the page in the suite, in the top bar: Horizon › Pricing › Average Prices.
+ * The path of the page in the suite, in the top bar: Home › Pricing › Average Prices.
  * Built from the route: the app (meta.app) and every matched route with a meta.titleKey
  * (module, then e.g. a Catalogs tab). Every step but the last is a link.
  */
@@ -21,7 +21,7 @@ const { t } = useI18n()
 const auth = useAuthStore()
 
 const crumbs = computed<Crumb[]>(() => {
-  const items: Crumb[] = [{ title: 'Horizon', to: { name: 'home' } }]
+  const items: Crumb[] = [{ title: t('apps.home'), to: { name: 'home' } }]
   const app = suiteApp(route.meta.app as string | undefined)
   if (app) {
     // The app links to its first page

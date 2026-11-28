@@ -198,7 +198,7 @@ describe('MainLayout', () => {
     expect(inBody('[data-testid="menu-app-pricing"]')).toBeNull()
     // The path is in the top bar
     expect(inBody('header [data-testid="breadcrumbs"]')!.textContent).toMatch(
-      /Horizon.*Administration.*Asset Classes/,
+      /^Home.*Administration.*Asset Classes/,
     )
     wrapper.unmount()
   })

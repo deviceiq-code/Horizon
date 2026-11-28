@@ -5,9 +5,11 @@
  * module —, then the System Journal — what is new in each version (all users). Versions newer than the last one the
  * user saw here are marked "New" (`ui_state.lastSeenRelease`). Each part can be hidden
  * (Settings › Appearance › Home: `show_data_journal`, `show_system_journal`), and they go
- * one under the other or side by side (`journal_layout`).
+ * one under the other or side by side (`journal_layout`). Each is kept to a reading height
+ * (`ReadMore`): "Read More" unfolds it — the System Journal then brings every version.
  */
 import { computed, onMounted, ref } from 'vue'
+import ReadMore from '@/components/ReadMore.vue'
 import { useDateFormat } from '@/composables/useDateFormat'
 import { eventModule, getJournal, type Journal } from '@/journal'
 import { usePreferencesStore } from '@/stores/preferences'
@@ -48,6 +50,17 @@ onMounted(async () => {
   }
 })
 
+/** Every release: asked for when the System Journal unfolds ("Read More") */
+async function loadAllReleases() {
+  if (!journal.value || journal.value.releases.length >= journal.value.releases_total) return
+  try {
+    const all = await getJournal(true)
+    journal.value = { ...journal.value, releases: all.releases }
+  } catch {
+    // The latest ones stay
+  }
+}
+
 const events = computed(() =>
   (journal.value?.events ?? []).map((event) => {
     const module = eventModule(event.key)
@@ -84,7 +97,7 @@ const events = computed(() =>
       <p v-else-if="!events.length" class="text-medium-emphasis mb-6" data-testid="journal-empty">
         {{ $t('home.journal.empty') }}
       </p>
-      <div v-else class="mb-6" data-testid="journal-events">
+      <ReadMore v-else class="mb-6" data-testid="journal-events">
         <component
           :is="event.to ? 'RouterLink' : 'div'"
           v-for="event in events"
@@ -96,7 +109,7 @@ const events = computed(() =>
           <v-icon :icon="event.icon" size="small" class="text-medium-emphasis" />
           <span>{{ $t(`home.journal.events.${event.key}`, event.count) }}</span>
         </component>
-      </div>
+      </ReadMore>
     </div>
 
     <!-- System Journal: what is new in each version -->
@@ -110,7 +123,12 @@ const events = computed(() =>
           {{ $t('home.journal.current', { version: journal.version }) }}
         </span>
       </div>
-      <div v-if="journal">
+      <ReadMore
+        v-if="journal"
+        :more="journal.releases.length < journal.releases_total"
+        data-testid="releases"
+        @expand="loadAllReleases"
+      >
         <div
           v-for="release in journal.releases"
           :key="release.version"
@@ -138,7 +156,7 @@ const events = computed(() =>
             <li v-for="(note, i) in release.notes" :key="i">{{ note }}</li>
           </ul>
         </div>
-      </div>
+      </ReadMore>
     </div>
   </section>
 </template>

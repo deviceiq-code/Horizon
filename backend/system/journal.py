@@ -1,10 +1,11 @@
 """The Home's journal: what happened in the system lately — counts only (never names, values or
 customers) — and what is new in each version (`releases.py`).
 
-`GET /api/system/journal/?days=` (default: the user's `journal_days` preference: 1 = today, 7 or
-30): every event of a module the user may open (its own ViewSet, as the centralized search) with
-how many happened since then; events that did not happen are left out. Each event says which
-module it belongs to — the frontend names it and opens its grid.
+`GET /api/system/journal/?days=&releases=all`: every event of a module the user may open (its
+own ViewSet, as the centralized search) with how many happened since the period's start —
+`days`, default the user's `journal_days` preference: 1 = today, 7 or 30 —; events that did
+not happen are left out. Each event says which module it belongs to (the frontend names it and
+opens its grid). Then the latest releases, or all of them with ?releases=all ("Read More").
 """
 
 from collections.abc import Callable
@@ -31,6 +32,7 @@ from pricing.views import AveragePriceViewSet
 from search.access import module_view
 from users.views import UserViewSet
 
+from .models import Release
 from .releases import current_version, release_notes
 
 PERIODS = (1, 7, 30)
@@ -121,12 +123,15 @@ def journal(request):
         if count:
             events.append({"key": event.key, "count": count})
     language = get_language() or "en"
+    # The latest releases; ?releases=all: the whole history ("Read More")
+    every_release = request.query_params.get("releases") == "all"
     return Response(
         {
             "days": days,
             "since": since.isoformat(),
             "events": events,
             "version": current_version(),
-            "releases": release_notes(language, RELEASES_SHOWN),
+            "releases": release_notes(language, None if every_release else RELEASES_SHOWN),
+            "releases_total": Release.objects.count(),
         }
     )

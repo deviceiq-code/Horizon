@@ -110,3 +110,12 @@ def test_every_release_has_its_notes_in_every_language():
         counts = {language: len(release.notes.get(language) or []) for language in languages}
         assert all(counts.values()), (release.version, counts)
         assert len(set(counts.values())) == 1, (release.version, counts)
+
+
+def test_the_latest_releases_or_the_whole_history(user, client_for, db):
+    for n in range(10, 17):
+        Release.objects.create(version=f"1.1.{n}", released_on="2026-12-01", notes={"en": ["x"]})
+    client = client_for(user)
+    body = client.get(URL).json()
+    assert len(body["releases"]) == 5 and body["releases_total"] > 5
+    assert len(client.get(URL, {"releases": "all"}).json()["releases"]) == body["releases_total"]

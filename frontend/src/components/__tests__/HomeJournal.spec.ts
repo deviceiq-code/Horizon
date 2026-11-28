@@ -24,6 +24,7 @@ const JOURNAL: journalApi.Journal = {
     { key: 'efmv_analyses.created', count: 1 },
   ],
   version: '1.0.1',
+  releases_total: 2,
   releases: [
     { version: '1.0.1', date: '2026-11-29', notes: ['Fixes.'] },
     { version: '1.0.0', date: '2026-11-28', notes: ['Business Entities.', 'Journal.'] },
@@ -109,6 +110,26 @@ describe('HomeJournal', () => {
     expect(wrapper.find('.journal--horizontal').exists()).toBe(true)
     expect(wrapper.find('[data-testid="data-journal"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="system-journal"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('"Read More" unfolds the System Journal with every version', async () => {
+    api.getJournal.mockResolvedValueOnce({ ...JOURNAL, releases_total: 9 })
+    const all = Array.from({ length: 9 }, (_, i) => ({
+      version: `1.0.${9 - i}`,
+      date: '2026-11-28',
+      notes: ['Note.'],
+    }))
+    api.getJournal.mockResolvedValueOnce({ ...JOURNAL, releases: all, releases_total: 9 })
+    const wrapper = mountJournal()
+    await settle()
+    const button = wrapper.find('[data-testid="system-journal"] [data-testid="read-more"]')
+    expect(button.text()).toBe('Read More')
+    await button.trigger('click')
+    await settle()
+    expect(api.getJournal).toHaveBeenLastCalledWith(true)
+    expect(wrapper.findAll('[data-testid^="release-1.0."]')).toHaveLength(9)
+    expect(button.text()).toBe('Read Less')
     wrapper.unmount()
   })
 

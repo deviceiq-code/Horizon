@@ -25,6 +25,8 @@ const ptBR: Messages = {
     saved: 'Palavras-chave salvas.',
   },
   common: {
+    readMore: 'Ler Mais',
+    readLess: 'Ler Menos',
     moreActions: 'Mais Ações',
     audit: { created: 'Criado em {date} por {name}', updated: 'Alterado em {date} por {name}' },
     filters: { nameOrKeyword: 'Nome ou Palavra-Chave', all: 'Todos' },

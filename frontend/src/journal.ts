@@ -25,11 +25,14 @@ export interface Journal {
   since: string
   events: JournalEvent[]
   version: string
+  /** The latest ones, or all of them (`allReleases`) */
   releases: Release[]
+  releases_total: number
 }
 
-export function getJournal() {
-  return api<Journal>('/system/journal/')
+/** `allReleases`: the whole history of versions (the System Journal's "Read More") */
+export function getJournal(allReleases = false) {
+  return api<Journal>(`/system/journal/${allReleases ? '?releases=all' : ''}`)
 }
 
 /** The module each event's category opens (its main route name) */

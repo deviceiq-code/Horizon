@@ -25,6 +25,8 @@ const es: Messages = {
     saved: 'Palabras clave guardadas.',
   },
   common: {
+    readMore: 'Leer Más',
+    readLess: 'Leer Menos',
     moreActions: 'Más Acciones',
     audit: { created: 'Creado el {date} por {name}', updated: 'Modificado el {date} por {name}' },
     filters: { nameOrKeyword: 'Nombre o Palabra Clave', all: 'Todos' },

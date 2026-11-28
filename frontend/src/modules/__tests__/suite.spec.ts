@@ -187,17 +187,17 @@ describe('AppBreadcrumbs', () => {
     }
   }
 
-  it('Horizon › Pricing › Average Prices', async () => {
+  it('Home › Pricing › Average Prices', async () => {
     const { wrapper, titles, links } = await crumbsAt('/pricing/average-prices')
-    expect(titles).toEqual(['Horizon', 'Pricing', 'Average Prices'])
+    expect(titles).toEqual(['Home', 'Pricing', 'Average Prices'])
     // The app links to its first page (eFMV Analyses); the page itself is no link
     expect(links).toEqual(['/', '/pricing/efmv-analyses', null])
     wrapper.unmount()
   })
 
-  it('a catalog: Horizon › Administration › Asset Classes', async () => {
+  it('a catalog: Home › Administration › Asset Classes', async () => {
     const { wrapper, titles, links } = await crumbsAt('/admin/catalogs/asset-classes')
-    expect(titles).toEqual(['Horizon', 'Administration', 'Asset Classes'])
+    expect(titles).toEqual(['Home', 'Administration', 'Asset Classes'])
     // The app links to its first page (administrators: Users)
     expect(links).toEqual(['/', '/admin/users', null])
     wrapper.unmount()

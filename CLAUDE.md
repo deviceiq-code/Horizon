@@ -501,7 +501,7 @@ Multi-user web system for **operating lease residual value pricing**
     no library) printed one per 50 × 30 mm page from a hidden frame (`inventory/labels.ts`). App names have no "Horizon" and stay in English in
     every language; areas are translated. Every module has an `app`; `moduleRoutes()` mounts its routes under the app's
     prefix with `meta.app/module/titleKey/adminOnly` and redirects the former address without
-    the prefix. Navigation: the top bar shows the path (`AppBreadcrumbs.vue`: Horizon › app › module
+    the prefix. Navigation: the top bar shows the path (`AppBreadcrumbs.vue`: Home › app › module
     (› page, from `meta.titleKey` — child routes set their own) and the app launcher
     (`AppLauncher.vue`); the side menu lists the current app's modules by section (an
     `AppModule.section` translation key, e.g. `menu.sections.management`; none: the app's name)
