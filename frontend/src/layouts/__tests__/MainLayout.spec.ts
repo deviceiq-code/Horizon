@@ -34,6 +34,7 @@ const ME: User = {
     select_on_focus: true,
     word_dictionary: true,
     trim_spaces: true,
+    journal_days: 7,
     auto_scope: true,
     scope_threshold: '5.00',
     number_format: 'auto',
@@ -170,14 +171,11 @@ describe('MainLayout', () => {
     wrapper.unmount()
   })
 
-  it('outside an app: the Horizon brand and the apps in the side menu', async () => {
+  it('outside an app: the Horizon brand; apps are switched in the top bar, not here', async () => {
     const { wrapper } = await mountLayout('/')
     expect(inBody('[data-testid="brand"]')!.textContent).toContain('Horizon')
     expect(inBody('[data-testid="app-title"]')).toBeNull()
-    expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-app-admin"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-app-remarketing"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-app-partners"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-app-pricing"]')).toBeNull()
     wrapper.unmount()
   })
 
@@ -190,13 +188,11 @@ describe('MainLayout', () => {
     )
     expect(inBody('[data-testid="menu-roles"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-catalogs-asset-classes"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-customers"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-service-providers"]')).not.toBeNull()
+    expect(inBody('[data-testid="menu-business-entities"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-users"]')).not.toBeNull()
     expect(inBody('[data-testid="menu-average-prices"]')).toBeNull()
-    // The other apps, to switch to; not the current one
-    expect(inBody('[data-testid="menu-app-pricing"]')).not.toBeNull()
-    expect(inBody('[data-testid="menu-app-admin"]')).toBeNull()
+    // No other apps in the side menu (the top bar's launcher switches them)
+    expect(inBody('[data-testid="menu-app-pricing"]')).toBeNull()
     // The path is in the top bar
     expect(inBody('header [data-testid="breadcrumbs"]')!.textContent).toMatch(
       /Horizon.*Administration.*Asset Classes/,

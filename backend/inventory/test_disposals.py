@@ -6,7 +6,9 @@ from decimal import Decimal
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.models import ProtectedError
 
+from entities.models import Buyer
 from service_providers.models import ServiceKind, ServiceProvider
 
 from . import disposals, inspection, services
@@ -137,6 +139,32 @@ def test_header_rules_by_kind(warehouse, customer, recycler, admin):
         contract=" CT-77 ",
     )
     assert relocation.contract == "CT-77"
+
+
+def test_a_third_party_sale_has_a_buyer_not_a_customer(warehouse, customer, admin):
+    with pytest.raises(DomainError) as error:
+        disposals.create(
+            kind=DisposalKind.THIRD_PARTY_SALE, warehouse=warehouse, user=admin, customer=customer
+        )
+    assert error.value.field == "buyer"
+    buyer = Buyer.objects.create(entity=customer.entity)  # the same entity, another role
+    sale = disposals.create(
+        kind=DisposalKind.THIRD_PARTY_SALE,
+        warehouse=warehouse,
+        user=admin,
+        customer=customer,  # not kept: the buyer is who it is sold to
+        buyer=buyer,
+    )
+    assert (sale.buyer, sale.customer) == (buyer, None)
+    # An inactive buyer is refused
+    buyer.is_active = False
+    buyer.save()
+    with pytest.raises(DomainError) as error:
+        disposals.update_header(sale, buyer=buyer)
+    assert error.value.field == "buyer"
+    # Nor can the role be removed while it bought something
+    with pytest.raises(ProtectedError):
+        buyer.delete()
 
 
 # --- Reservation -------------------------------------------------------------------------------

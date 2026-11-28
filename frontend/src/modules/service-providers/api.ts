@@ -29,6 +29,8 @@ export const SERVICE_ICONS: Record<ServiceKind, string> = {
 
 export interface ServiceProvider {
   id: number
+  /** Its business entity */
+  entity: number
   name: string
   trade_name: string
   /** Uppercase, without punctuation (CNPJ/CPF in Brazil) */
@@ -56,26 +58,11 @@ export interface ServiceProvider {
   updated_at: string
 }
 
-export type ServiceProviderInput = Omit<
-  ServiceProvider,
-  'id' | 'warehouses_count' | 'created_at' | 'updated_at'
->
-
 const BASE = '/service-providers/'
 
-/** Filters: `service` (a ServiceKind), `is_active`. */
+/** Service providers: the Service Provider role of business entities, read-only (written
+ * through `@/modules/business-entities/api`). Filters: `service` (a ServiceKind), `is_active`
+ * (active in the role and as an entity). */
 export function listServiceProviders(params: ListParams) {
   return api<Paginated<ServiceProvider>>(BASE + listQuery(params))
-}
-
-export function createServiceProvider(data: ServiceProviderInput) {
-  return api<ServiceProvider>(BASE, { method: 'POST', body: JSON.stringify(data) })
-}
-
-export function updateServiceProvider(id: number, data: ServiceProviderInput) {
-  return api<ServiceProvider>(`${BASE}${id}/`, { method: 'PATCH', body: JSON.stringify(data) })
-}
-
-export function deleteServiceProvider(id: number) {
-  return api<void>(`${BASE}${id}/`, { method: 'DELETE' })
 }

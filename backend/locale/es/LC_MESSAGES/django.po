@@ -3153,3 +3153,117 @@ msgstr "“%(typed)s” ya se convierte en “%(word)s”."
 
 msgid "remove extra spaces"
 msgstr "eliminar espacios innecesarios"
+
+msgid "Customer"
+msgstr "Cliente"
+
+msgid "Lessee"
+msgstr "Arrendatario"
+
+msgid "Supplier"
+msgstr "Proveedor"
+
+msgid "Service Provider"
+msgstr "Service Provider"
+
+msgid "Buyer"
+msgstr "Comprador"
+
+msgid "head office"
+msgstr "casa matriz"
+
+msgid "business entity"
+msgstr "entidad"
+
+msgid "business entities"
+msgstr "entidades"
+
+
+
+msgid "Products"
+msgstr "Productos"
+
+msgid "Services"
+msgstr "Servicios"
+
+msgid "supplies"
+msgstr "suministra"
+
+msgid "supplier"
+msgstr "proveedor"
+
+msgid "suppliers"
+msgstr "proveedores"
+
+msgid "buyer"
+msgstr "comprador"
+
+msgid "buyers"
+msgstr "compradores"
+
+msgid "This entity is the customer of analyses, appointments or disposals: the Customer role cannot be removed. Deactivate it instead."
+msgstr "Esta entidad es cliente de análisis, citas o destinos: el rol Cliente no se puede quitar. Desactívelo."
+
+
+msgid "Records point to this supplier: the role cannot be removed."
+msgstr "Hay registros vinculados a este proveedor: el rol no se puede quitar."
+
+msgid "This entity runs warehouses or was used in transfers or disposals: the Service Provider role cannot be removed. Deactivate it instead."
+msgstr "Esta entidad administra almacenes o se usó en transferencias o destinos: el rol Service Provider no se puede quitar. Desactívelo."
+
+msgid "This entity bought assets in disposals: the Buyer role cannot be removed. Deactivate it instead."
+msgstr "Esta entidad compró activos en destinos: el rol Comprador no se puede quitar. Desactívelo."
+
+msgid "Choose products, services or both."
+msgstr "Elija productos, servicios o ambos."
+
+msgid "A business entity with this tax ID already exists."
+msgstr "Ya existe una entidad con este documento."
+
+msgid "An entity cannot have itself or one of its branches as its head office."
+msgstr "Una entidad no puede tener como casa matriz a sí misma ni a una de sus sucursales."
+
+msgid "This entity is the head office of others and cannot be deleted."
+msgstr "Esta entidad es casa matriz de otras y no se puede eliminar."
+
+msgid "Other records point to this entity (its roles' analyses, appointments, warehouses, disposals…, or brands): it cannot be deleted. Deactivate it instead."
+msgstr "Hay registros vinculados a esta entidad (análisis, citas, almacenes, destinos… de sus roles, o marcas): no se puede eliminar. Desactívela."
+
+msgid "Choose the buyer."
+msgstr "Elija el comprador."
+
+msgid "This buyer is inactive."
+msgstr "Este comprador está inactivo."
+
+msgid "Renter"
+msgstr "Locatario"
+
+msgid "Bailee (Free Loan)"
+msgstr "Comodatario"
+
+msgid "Service Customer"
+msgstr "Cliente de Servicios"
+
+msgid "contract types"
+msgstr "modalidades"
+
+msgid "Today"
+msgstr "Hoy"
+
+msgid "Last 7 days"
+msgstr "Últimos 7 días"
+
+msgid "Last 30 days"
+msgstr "Últimos 30 días"
+
+msgid "journal period"
+msgstr "período del journal"
+
+msgid "released on"
+msgstr "publicada el"
+
+msgid "release"
+msgstr "versión"
+
+msgid "releases"
+msgstr "versiones"

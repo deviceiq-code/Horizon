@@ -68,6 +68,10 @@ export interface User {
   keywords: string[]
   last_login: string | null
   date_joined: string
+  /** Who created it (on date_joined) and who changed it last */
+  created_by_name?: string | null
+  updated_at?: string | null
+  updated_by_name?: string | null
 }
 
 export const ID_DOCUMENT_TYPES = ['cpf', 'rg', 'national_id', 'passport', 'other'] as const

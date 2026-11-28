@@ -17,7 +17,12 @@ import { LANGUAGES } from '@/i18n'
 import { ApiError } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { THEME_OPTIONS, usePreferencesStore, type PreferencesUpdate } from '@/stores/preferences'
+import {
+  JOURNAL_PERIODS,
+  THEME_OPTIONS,
+  usePreferencesStore,
+  type PreferencesUpdate,
+} from '@/stores/preferences'
 import { COLOR_THEMES } from '@/themes'
 import { UI_SCALE_ICONS, UI_SCALES, uiScaleFactor } from '@/uiScale'
 import { DATE_FORMATS, TIME_FORMATS } from '@/dateFormat'
@@ -191,6 +196,11 @@ async function save(changes: PreferencesUpdate) {
     saving.value = false
   }
 }
+
+/** The Home's journal: today, 7 or 30 days */
+const journalOptions = computed(() =>
+  JOURNAL_PERIODS.map((days) => ({ value: days, title: t(`home.journal.periods.${days}`) })),
+)
 </script>
 
 <template>
@@ -585,6 +595,27 @@ async function save(changes: PreferencesUpdate) {
                 {{ $t('system.userName.orders.lastFirst') }}
               </v-btn>
             </v-btn-toggle>
+          </SettingRow>
+        </v-card>
+
+        <!-- The Home: how far back its journal looks -->
+        <div class="group-title">{{ $t('settings.home.title') }}</div>
+        <v-card class="mb-6">
+          <SettingRow
+            :title="$t('settings.home.journalPeriod')"
+            :description="$t('settings.home.journalPeriodHint')"
+          >
+            <v-select
+              :model-value="preferences.journalDays"
+              :items="journalOptions"
+              :disabled="saving"
+              density="compact"
+              hide-details
+              class="control-narrow"
+              :aria-label="$t('settings.home.journalPeriod')"
+              data-testid="journal-days"
+              @update:model-value="save({ journal_days: $event })"
+            />
           </SettingRow>
         </v-card>
       </v-window-item>

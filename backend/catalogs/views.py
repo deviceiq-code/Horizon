@@ -19,6 +19,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from config.audit import AuditedViewSetMixin, touch
 from config.filters import EnabledFilter, NullsLastOrderingFilter
 from config.keywords import KeywordSearchFilter
 
@@ -46,7 +47,7 @@ from .serializers import (
 )
 
 
-class VerticalViewSet(viewsets.ModelViewSet):
+class VerticalViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     """CRUD for business verticals, with their sub-verticals nested.
 
     List supports ?search= (vertical, sub-vertical or account manager name), ?is_enabled=true
@@ -169,7 +170,7 @@ def name_and_rating_filters(queryset, params):
     return queryset
 
 
-class ManufacturerViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
+class ManufacturerViewSet(AuditedViewSetMixin, RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for manufacturers.
 
     List supports ?search= (name), ?is_enabled=true or false, column filters ?name= (name or
@@ -177,7 +178,9 @@ class ManufacturerViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     remarketing_score = their average, is_enabled), ?page= and ?page_size=.
     """
 
-    queryset = with_remarketing_score(Manufacturer.objects.all(), MANUFACTURER_RATINGS)
+    queryset = with_remarketing_score(
+        Manufacturer.objects.select_related("business_entity"), MANUFACTURER_RATINGS
+    )
     in_use_message = gettext_noop(
         "This manufacturer is used in average prices or asset models and cannot be deleted."
     )
@@ -219,7 +222,7 @@ class SubVerticalViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
+class AssetClassViewSet(AuditedViewSetMixin, RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for asset classes.
 
     List supports ?search= (name, keyword, sub-vertical or vertical name), ?vertical=<id>,
@@ -256,7 +259,7 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
             serializer = SpecTemplateSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             asset_class.spec_template = serializer.validated_data["fields"]
-            asset_class.save(update_fields=["spec_template", "updated_at"])
+            touch(asset_class, request, "spec_template")
         return Response({"fields": asset_class.spec_template})
 
     def get_queryset(self):
@@ -269,7 +272,7 @@ class AssetClassViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
         return name_and_rating_filters(queryset, params)
 
 
-class AssetModelViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
+class AssetModelViewSet(AuditedViewSetMixin, RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """CRUD for asset models (manufacturer + model of an asset class, used by inventory assets).
 
     List supports ?search= (model, manufacturer, asset class, keyword), ?is_enabled=,

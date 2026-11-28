@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     # Project
     "accounts",
     "assets",
+    "entities",
     "partners",
     "remarketing",
     "account_managers",

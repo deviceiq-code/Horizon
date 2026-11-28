@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from catalogs.models import Vertical
+from config.audit import AuditedSerializerMixin
 from config.keywords import KeywordsField
 from config.parties import AddressFieldsMixin, collapse_spaces
 from customers.models import Customer
@@ -64,7 +65,7 @@ from .models import (
 from .states import AreaType, accepted_statuses
 
 
-class WarehouseSerializer(AddressFieldsMixin, serializers.ModelSerializer):
+class WarehouseSerializer(AuditedSerializerMixin, AddressFieldsMixin, serializers.ModelSerializer):
     # Read: who runs an outsourced warehouse ({id, name} — trade name when it has one)
     service_provider_detail = serializers.SerializerMethodField()
     # Write: ids (at least one; only enabled verticals can be added). Read: also names
@@ -101,6 +102,8 @@ class WarehouseSerializer(AddressFieldsMixin, serializers.ModelSerializer):
             "keywords",
             "created_at",
             "updated_at",
+            "created_by_name",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "code", "created_at", "updated_at"]
         # The name's uniqueness is checked in validate_name with a friendlier message
@@ -154,7 +157,7 @@ class WarehouseSerializer(AddressFieldsMixin, serializers.ModelSerializer):
                 # Checked when chosen: a provider deactivated later does not block editing
                 if not provider.provides(ServiceKind.WAREHOUSING):
                     errors["service_provider"] = _("This provider does not offer warehousing.")
-                elif not provider.is_active:
+                elif not provider.is_usable:
                     errors["service_provider"] = _("This service provider is inactive.")
 
         if errors:
@@ -925,7 +928,7 @@ class GradeLevelSerializer(serializers.ModelSerializer):
         return value
 
 
-class PenaltyRateSerializer(serializers.ModelSerializer):
+class PenaltyRateSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     asset_class_name = serializers.CharField(source="asset_class.name", read_only=True)
 
     class Meta:
@@ -940,6 +943,8 @@ class PenaltyRateSerializer(serializers.ModelSerializer):
             "valid_to",
             "created_at",
             "updated_at",
+            "created_by_name",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
         extra_kwargs = {"value": {"min_value": 0}}
@@ -968,7 +973,7 @@ class PenaltyRateSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ErasureToolSerializer(serializers.ModelSerializer):
+class ErasureToolSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     methods = serializers.ListField(child=serializers.ChoiceField(choices=ErasureMethod.choices))
     asset_classes_detail = serializers.SerializerMethodField()
 
@@ -985,6 +990,8 @@ class ErasureToolSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
             "updated_at",
+            "created_by_name",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
         extra_kwargs = {"asset_classes": {"required": False}}
@@ -1646,6 +1653,7 @@ class DisposalSerializer(serializers.ModelSerializer):
     warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
     customer_name = serializers.SerializerMethodField()
+    buyer_name = serializers.SerializerMethodField()
     discard_provider_name = serializers.SerializerMethodField()
     appointment_code = serializers.SerializerMethodField()
     items_count = serializers.IntegerField(read_only=True, default=None)
@@ -1667,6 +1675,8 @@ class DisposalSerializer(serializers.ModelSerializer):
             "warehouse_name",
             "customer",
             "customer_name",
+            "buyer",
+            "buyer_name",
             "contract",
             "discard_provider",
             "discard_provider_name",
@@ -1698,6 +1708,9 @@ class DisposalSerializer(serializers.ModelSerializer):
 
     def get_customer_name(self, obj):
         return _customer_name(obj.customer)
+
+    def get_buyer_name(self, obj):
+        return _customer_name(obj.buyer)
 
     def get_discard_provider_name(self, obj):
         provider = obj.discard_provider

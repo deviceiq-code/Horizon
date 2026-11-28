@@ -157,7 +157,7 @@ def panel(*, start=None, end=None, warehouse=None, customer=None, today=None) ->
     lead_class: dict[str, list[int]] = defaultdict(list)
     lead_all = []
     for asset in Asset.objects.filter(pk__in=available_at).select_related(
-        "customer", "asset_model__asset_class"
+        "customer__entity", "asset_model__asset_class"
     ):
         days = (available_at[asset.pk] - asset.created_at).days
         lead_all.append(days)
@@ -225,7 +225,7 @@ def panel(*, start=None, end=None, warehouse=None, customer=None, today=None) ->
     )
     lot_groups: dict[str, tuple[int, int]] = {}
     customer_groups: dict[str, list[int]] = defaultdict(lambda: [0, 0])
-    for lot in ReceivingLot.objects.filter(pk__in=units_per_lot).select_related("customer"):
+    for lot in ReceivingLot.objects.filter(pk__in=units_per_lot).select_related("customer__entity"):
         found = occurrences_per_lot.get(lot.pk, 0)
         units = units_per_lot[lot.pk]
         lot_groups[lot.code] = (found, units)
@@ -237,7 +237,7 @@ def panel(*, start=None, end=None, warehouse=None, customer=None, today=None) ->
     created = assets.filter(_in("created_at", low, high)).exclude(parent_asset__isnull=False)
     serial_class: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     serial_customer: dict[str, list[int]] = defaultdict(lambda: [0, 0])
-    for asset in created.select_related("asset_model__asset_class", "customer"):
+    for asset in created.select_related("asset_model__asset_class", "customer__entity"):
         missing = int(asset.serial_status != "captured")
         for groups, label in (
             (serial_class, asset.asset_model.asset_class.name),
@@ -286,7 +286,9 @@ def panel(*, start=None, end=None, warehouse=None, customer=None, today=None) ->
     ).filter(_in("approved_at", low, high))
     scrap_class: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     scrap_customer: dict[str, list[int]] = defaultdict(lambda: [0, 0])
-    for report in reports.select_related("asset__asset_model__asset_class", "asset__customer"):
+    for report in reports.select_related(
+        "asset__asset_model__asset_class", "asset__customer__entity"
+    ):
         scrapped = int(report.recommended_destination == Destination.SCRAP)
         for groups, label in (
             (scrap_class, report.asset.asset_model.asset_class.name),

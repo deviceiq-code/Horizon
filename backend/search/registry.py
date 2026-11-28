@@ -18,12 +18,11 @@ from typing import Any
 from django.utils.translation import gettext_lazy as _
 
 from catalogs.views import AssetClassViewSet, ManufacturerViewSet, VerticalViewSet
-from customers.views import CustomerViewSet
 from efmv.views import EfmvAnalysisViewSet
+from entities.models import EntityRole
+from entities.views import BusinessEntityViewSet
 from inventory.views import AssetViewSet, WarehouseViewSet
 from pricing.views import AveragePriceViewSet
-from service_providers.models import ServiceKind
-from service_providers.views import ServiceProviderViewSet
 from users.display import display_name
 from users.models import user_photo_version
 from users.views import UserViewSet
@@ -88,12 +87,20 @@ def _price(obj, request) -> Result:
     return result
 
 
-def _customer(obj, request) -> Result:
+def _entity(obj, request) -> Result:
     return _result(
         obj,
         obj.trade_name or obj.name,
         subtitle=obj.name if obj.trade_name else obj.tax_id,
-        meta=_place(obj),
+        # Its roles ("Customer, Service Provider") and where it is
+        meta=" · ".join(
+            part
+            for part in (
+                ", ".join(str(EntityRole(role).label) for role in obj.roles()),
+                _place(obj),
+            )
+            if part
+        ),
         badge=_active(obj.is_active),
         search=obj.name,
     )
@@ -120,17 +127,6 @@ def _user(obj, request) -> Result:
         badge=None if obj.is_active else _active(False),
         search=obj.username,
         photo_version=user_photo_version(obj),
-    )
-
-
-def _provider(obj, request) -> Result:
-    return _result(
-        obj,
-        obj.trade_name or obj.name,
-        subtitle=obj.name if obj.trade_name else obj.tax_id,
-        meta=", ".join(str(ServiceKind(kind).label) for kind in obj.services),
-        badge=_active(obj.is_active),
-        search=obj.name,
     )
 
 
@@ -167,10 +163,9 @@ def _manufacturer(obj, request) -> Result:
 PROVIDERS: tuple[Provider, ...] = (
     Provider("efmv_analyses", EfmvAnalysisViewSet, _analysis),
     Provider("average_prices", AveragePriceViewSet, _price),
-    Provider("customers", CustomerViewSet, _customer),
+    Provider("business_entities", BusinessEntityViewSet, _entity),
     Provider("assets", AssetViewSet, _asset),
     Provider("users", UserViewSet, _user),
-    Provider("service_providers", ServiceProviderViewSet, _provider),
     Provider("warehouses", WarehouseViewSet, _warehouse),
     Provider("verticals", VerticalViewSet, _vertical),
     Provider("asset_classes", AssetClassViewSet, _asset_class),

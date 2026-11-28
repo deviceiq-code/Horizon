@@ -2,8 +2,8 @@
  * Small reference tables ("Catalogs"), shared by every app. Each one is a module of
  * Administration in the side menu's "Catalogs" section, with its own page (CatalogPage.vue).
  * To add one: its folder (api.ts, <Name>Tab.vue — a ServerCrudTable with column filters, as
- * Asset Classes' —, form dialog), an entry here and in MODULES (src/modules/index.ts). Customers
- * and service providers are catalogs too, built with `catalog()` in their own folders.
+ * Asset Classes' —, form dialog), an entry here and in MODULES (src/modules/index.ts). Business
+ * entities are a catalog too, built with `catalog()` in their own folder.
  */
 import { defineAsyncComponent, type Component } from 'vue'
 import type { AppModule } from '@/modules'

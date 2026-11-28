@@ -299,10 +299,23 @@ async function submit() {
     saving.value = false
   }
 }
+
+/** Who created the user (on its date_joined) and who changed it last */
+const userAudit = computed(() =>
+  props.user
+    ? {
+        created_at: props.user.date_joined,
+        created_by_name: props.user.created_by_name,
+        updated_at: props.user.updated_at,
+        updated_by_name: props.user.updated_by_name,
+      }
+    : null,
+)
 </script>
 
 <template>
   <FormDialog
+    :audit="userAudit"
     ref="formRef"
     v-model="open"
     :title="isEdit ? $t('users.edit') : $t('users.new')"

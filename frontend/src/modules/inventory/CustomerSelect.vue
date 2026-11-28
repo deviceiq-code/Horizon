@@ -24,7 +24,7 @@ async function search(term: string) {
     page: 1,
     pageSize: 30,
     search: term,
-    ordering: 'name',
+    ordering: 'entity__name',
     filters: { is_active: true },
   })
   return data.results.map((c) => ({

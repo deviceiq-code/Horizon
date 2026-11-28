@@ -106,8 +106,7 @@ describe('suite apps and routes', () => {
     expect(appModules('admin', true).map((m) => m.name)).toEqual([
       'users',
       'roles',
-      'customers',
-      'service-providers',
+      'business-entities',
       'catalogs-verticals',
       'catalogs-asset-classes',
       'catalogs-asset-models',
@@ -115,8 +114,7 @@ describe('suite apps and routes', () => {
     ])
     // Users, Roles and System Settings are for administrators
     expect(appModules('admin', false).map((m) => m.name)).toEqual([
-      'customers',
-      'service-providers',
+      'business-entities',
       'catalogs-verticals',
       'catalogs-asset-classes',
       'catalogs-asset-models',
@@ -155,6 +153,7 @@ describe('AppBreadcrumbs', () => {
         select_on_focus: true,
         word_dictionary: true,
         trim_spaces: true,
+        journal_days: 7,
         auto_scope: true,
         scope_threshold: '5.00',
         number_format: 'auto',

@@ -27,7 +27,7 @@ async function search(term: string) {
     page: 1,
     pageSize: 50,
     search: term,
-    ordering: 'name',
+    ordering: 'entity__name',
     filters: { is_active: true, ...(props.service ? { service: props.service } : {}) },
   })
   return data.results.map((p) => ({

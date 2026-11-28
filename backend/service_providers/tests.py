@@ -1,8 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from inventory.models import Warehouse
-
 from .models import ServiceKind, ServiceProvider
 
 URL = "/api/service-providers/"
@@ -45,62 +43,10 @@ def test_requires_login(client, db):
     assert client.get(URL).status_code == 403
 
 
-def test_create_normalizes_fields(logged_client):
-    response = _post(
-        logged_client,
-        {
-            "name": "  Logística   Rápida Ltda ",
-            "tax_id": "11.222.333/0001-81",
-            "services": ["transport", "warehousing", "transport"],
-            "contact_name": " Ana   Souza ",
-            "email": " Contato@Exemplo.COM ",
-            "postal_code": "06460-000",
-            "state": "sp",
-            "keywords": ["Galpão", "galpão"],
-        },
-    )
-    assert response.status_code == 201, response.json()
-    data = response.json()
-    assert data["name"] == "Logística Rápida Ltda"
-    assert data["tax_id"] == CNPJ
-    # Kept in the choices' order, without repeats
-    assert data["services"] == ["warehousing", "transport"]
-    assert data["contact_name"] == "Ana Souza"
-    assert data["email"] == "contato@exemplo.com"
-    assert data["postal_code"] == "06460000"
-    assert data["state"] == "SP"
-    assert data["keywords"] == ["galpão"]
-    assert data["warehouses_count"] == 0
-
-
-@pytest.mark.parametrize(
-    ("data", "field"),
-    [
-        ({"services": []}, "services"),
-        ({"services": ["catering"]}, "services"),
-        ({"tax_id": "11222333000100"}, "tax_id"),
-        ({"postal_code": "123"}, "postal_code"),
-        ({"state": "XX"}, "state"),
-        ({"name": "   "}, "name"),
-    ],
-)
-def test_create_rejects_invalid_fields(logged_client, data, field):
-    payload = {"name": "Prestador", "tax_id": CNPJ, "services": ["transport"], **data}
-    response = _post(logged_client, payload)
-    assert response.status_code == 400
-    assert field in response.json()
-
-
-def test_tax_id_is_unique_per_country(logged_client, storage):
-    response = _post(logged_client, {"name": "Outro", "tax_id": CNPJ, "services": ["repair"]})
-    assert response.status_code == 400
-    assert "tax_id" in response.json()
-    # Abroad tax IDs are free-form and not CPF/CNPJ-checked
-    response = _post(
-        logged_client,
-        {"name": "Other", "tax_id": CNPJ, "country": "us", "services": ["repair"]},
-    )
-    assert response.status_code == 201, response.json()
+def test_read_only_here(logged_client, storage):
+    """Service providers are a role of business entities: written at /api/business-entities/."""
+    assert _post(logged_client, {"name": "X", "tax_id": CNPJ}).status_code == 405
+    assert logged_client.delete(f"{URL}{storage.id}/").status_code == 405
 
 
 def test_list_filters_and_search(logged_client, storage, refurbisher):
@@ -113,29 +59,9 @@ def test_list_filters_and_search(logged_client, storage, refurbisher):
     assert names(logged_client.get(URL, {"search": "11.222.333"})) == ["Armazéns Gerais Ltda"]
 
 
-def test_running_warehouses_blocks_delete_and_removing_warehousing(logged_client, storage):
-    Warehouse.objects.create(name="CD Barueri", ownership="outsourced", service_provider=storage)
-    assert logged_client.get(f"{URL}{storage.id}/").json()["warehouses_count"] == 1
-
-    response = logged_client.delete(f"{URL}{storage.id}/")
-    assert response.status_code == 409
-    assert response.json()["detail"]
-
-    response = _patch(logged_client, storage, {"services": ["transport"]})
-    assert response.status_code == 400
-    assert "services" in response.json()
-    # Other changes keep working
-    assert _patch(logged_client, storage, {"services": ["warehousing"]}).status_code == 200
-
-
-def test_delete_unused(logged_client, refurbisher):
-    assert logged_client.delete(f"{URL}{refurbisher.id}/").status_code == 204
-    assert not ServiceProvider.objects.exists()
-
-
 def test_column_filters(logged_client, storage, refurbisher):
-    storage.keywords = ["galpão seco"]
-    storage.save()
+    storage.entity.keywords = ["galpão seco"]
+    storage.entity.save()
     names = lambda params: [p["name"] for p in logged_client.get(URL, params).json()["results"]]  # noqa: E731
     assert names({"name": "armagerais"}) == ["Armazéns Gerais Ltda"]  # trade name
     assert names({"name": "galpão"}) == ["Armazéns Gerais Ltda"]  # keyword

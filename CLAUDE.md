@@ -38,16 +38,38 @@ Multi-user web system for **operating lease residual value pricing**
     saving) and `src/components/PersonAvatar.vue` (circle, initials without a photo; also in
     the top bar). **The account manager owns the relation**:
     verticals are assigned on the account manager, never on the vertical.
-  - `customers/` — lessees (`Customer`: legal/trade name, tax ID, contact, address, active flag,
+  - `entities/` — **Business Entities** ("Entidades"; decisions in `docs/business-entities.md`):
+    every company or person Horizon deals with. `BusinessEntity` keeps what they share (legal /
+    trade name, tax ID unique per country, contact name, email, phone, address, active, notes,
+    keywords) and its head office `parent` (another entity, PROTECT; groups are the tree under
+    the one without a head office — never a cycle, `entities/hierarchy.py`, pure: `creates_cycle`,
+    `group_root`, `descendants`, `cnpj_root` — the first 8 characters —, `is_head_office_cnpj`).
+    **Roles** (`EntityRole`, tabs order): customer, supplier (`supplies` products |
+    services), service_provider, buyer — one table each, 1:1 with the entity
+    (`EntityRoleModel`: `entity`, its own `is_active`; `is_usable` = active in the role and as
+    an entity, what pickers offer; the entity's fields read through it — `customer.name`;
+    `RoleManager.create` also takes them, creating the entity — scripts and tests).
+    `/api/business-entities/`: CRUD with the roles nested (`customer: {...} | null` — an object
+    turns it on or changes it, null removes it — 409 `RoleInUse` when records point to it —,
+    absent leaves it); `?role=` (then `?is_active=` is the role's), `?account_manager=`,
+    `?service=`, `?supplies=`, `?parent=`, `?group=`, column filters; `GET /counts/` (per tab),
+    `GET /parent-suggestion/?country=&tax_id=&exclude=` (same CNPJ root, 0001 first). Deleting:
+    409 when it heads branches or records point to it.
+  - `customers/` — the **Customer** role (`Customer`: `entity`, `is_active`, `contract_types` —
+    "Modalidades", ArrayField of `ContractType`: renter (Locatário), lessee (Arrendatário),
+    bailee (Comodatário), service_customer (Tomador de Serviços); optional — a prospect has none;
+    kept in the list's order; `?contract_type=` here and in business entities; selling goods is
+    not one, buyers are a role —,
     `primary_account_manager` — required FK to a user with the Account Manager role, PROTECT —
-    and `secondary_account_managers` — M2M of such users, never including the primary). `customers/tax_ids.py` validates CPF and CNPJ, including the
-    alphanumeric CNPJ (in force since July 2026). CRUD at `/api/customers/`.
-  - `service_providers/` — **Service Providers** (a catalog, like customers): `ServiceProvider`
-    (legal/trade name, tax ID unique per country, contact name, email, phone, address, active,
-    notes, keywords) and `services` — ArrayField of `ServiceKind` (fixed list: warehousing,
-    transport, inspection, refurbishment, repair, data_erasure, packaging, sales, disposal; at
-    least one, kept in the list's order). `/api/service-providers/` (`?service=`). One that runs
-    warehouses cannot be deleted (409) nor lose warehousing (400).
+    and `secondary_account_managers` — M2M of such users, never including the primary); same
+    ids as before the entities, so every FK to it stays. `customers/tax_ids.py` validates CPF
+    and CNPJ, including the alphanumeric CNPJ (in force since July 2026). `/api/customers/` is
+    read-only (pickers): the role with its entity's fields flat; `is_active` = usable.
+  - `service_providers/` — the **Service Provider** role (`ServiceProvider`: `entity`,
+    `is_active`, `services` — ArrayField of `ServiceKind`, fixed list: warehousing, transport,
+    inspection, refurbishment, repair, data_erasure, packaging, sales, disposal; at least one,
+    kept in the list's order). `/api/service-providers/` read-only (`?service=`). One that runs
+    warehouses cannot lose warehousing (400) nor the role (409).
   - `inventory/` — **Inventory** of Asset Management (phases, decisions and RN → tests in
     `docs/inventory.md` — keep it updated). Phase 1 (foundation): `codes.py` (pure: Luhn,
     Horizon ID `H`+8 digits+check digit, container `C`…, `parse_code`, warehouse codes),
@@ -90,7 +112,7 @@ Multi-user web system for **operating lease residual value pricing**
     window comes back into view; a new one pops up top right (`AlertsMenu`'s snackbar, click
     opens it; those already there when the page opened do not); `DeadlineSetting`, `Holiday`,
     `AgingLimit`; pure `deadlines.py` (business days). Phase 5: `disposals.py` — `Disposal` (`DSP-…`;
-    relocation | lessee_sale | third_party_sale — buyer = a customer — | discard — a provider
+    relocation | lessee_sale | third_party_sale — `buyer`: the Buyer role — | discard — a provider
     offering disposal — | parts — recorded by `inspection.disassemble`), `DisposalItem` (asset
     or accessory quantity, `unit_value` per unit), `DisposalFile` (document | certificate |
     other): reserve (AVAILABLE → RESERVED; held → refused; scrap joins discards and stays
@@ -164,11 +186,12 @@ Multi-user web system for **operating lease residual value pricing**
     browser by their translated names; `highlight`) and `views/SearchView.vue` (`/search?q=&
     category=`: Haze's look — count, tabs with counts, groups, View All; side menu › Pages;
     top bar's magnifier; Ctrl+K / ⌘K anywhere).
-  - `config/parties.py` — shared input rules of customers, service providers and warehouses:
+  - `config/parties.py` — shared input rules of business entities and warehouses:
     `CompanyFieldsMixin` (name, trade name, tax ID: CPF/CNPJ in Brazil, unique per country —
     `tax_id_errors`), `AddressFieldsMixin` (country, email, phone, CEP/state in Brazil —
     `address_errors`) and `column_filters` (`?name=` name or keyword, `?tax_id=`, `?location=`
-    city or state, `?is_active=`).
+    city or state, `?is_active=`; `prefix="entity__"` for a role: its entity's fields, active in
+    both — `filter_active`).
   - `catalogs/` — small reference tables ("Cadastros"), one model each, under `/api/catalogs/<table>/`.
     `Vertical` (business vertical): name (unique, case-insensitive), enabled flag, notes — these
     apply to all its sub-verticals. Its account managers are read-only here
@@ -189,7 +212,8 @@ Multi-user web system for **operating lease residual value pricing**
     up), returned read-only as `remarketing_average` and sortable as `?ordering=remarketing_score`
     (DB annotation with the same formula). Pending decision: whether technology_renewal (5 = fast
     renewal, usually bad for remarketing) should count inverted, and weights.
-    `Manufacturer`: name (unique), ratings, enabled.
+    `Manufacturer` (a brand): name (unique), `business_entity` (optional, PROTECT: the company
+    behind it; `business_entity_detail`; its form's `EntityPicker`), ratings, enabled.
     `AssetClass`: name (English, unique per sub-vertical), `plural_name` (English, required;
     not sent = `catalogs/names.py::english_plural`), `translations` ({"pt-br": {name, plural},
     "es": …}, optional — empty: English; `names.localized`; folded in the form), icon (`mdi-*`; offered list in the frontend's
@@ -407,7 +431,7 @@ Multi-user web system for **operating lease residual value pricing**
     indented, no separator).
   - **Search the Internet** beside some text fields (`src/components/WebSearchButton.vue` in
     the field's `#append-inner`: disabled while empty, out of the Tab order, opens a new tab):
-    Average Prices' Model (searched with its manufacturer: "Dell P2423H"); Customers' legal
+    Average Prices' Model (searched with its manufacturer: "Dell P2423H"); Business Entities' legal
     name, trade name and tax ID; Manufacturers' name. A Smart Tool (`web_search`, on by
     default; off: the button is not shown).
     A page cannot use the browser's default search engine, so it is the preference
@@ -435,12 +459,12 @@ Multi-user web system for **operating lease residual value pricing**
     dark side menu (288 px; theme colors `sidebar`, `on-sidebar`, `on-sidebar-strong`, `sidebar-active` — the open page's icon —, `sidebar-highlight` — its background —, `brand` — the Horizon icon;
     the brand fixed on top and Settings fixed at the bottom, the menu between them scrolls
     without scrollbars) with the Horizon brand, Home, a section named after the current app with its modules, a
-    section "Pages" (in every app: Search, Notifications with the unread count), a section "Apps" with
-    the other apps, Settings at the bottom; open from 1440 px, collapsed to
+    section "Pages" (in every app: Search, Notifications with the unread count) — no section of
+    the other apps: they are switched in the top bar's app launcher —, Settings at the bottom; open from 1440 px, collapsed to
     icons below (they expand on hover); the top bar's button opens/collapses it and the choice
     is remembered with the account (preferences' `ui_state.sideMenu.wide|narrow`). Phones: a drawer.
-    Light top bar: that button, the path (`AppBreadcrumbs.vue`); then Search, Documentation and
-    Notifications (the user's alerts), the app launcher and the signed-in user (photo or
+    Light top bar: that button, the path (`AppBreadcrumbs.vue`); then Search and
+    Notifications (the user's alerts) — no Documentation for now —, the app launcher and the signed-in user (photo or
     initials + name; their menu: name, e-mail and roles — `/api/auth/me/` `email`, `role_refs` —,
     Dark Mode (a switch) and Language (`LanguageSelector.vue item`: the current one, the
     languages beside it; on the login page it is a globe + code button), Profile and Help &
@@ -462,8 +486,8 @@ Multi-user web system for **operating lease residual value pricing**
     Offers, Sales, Buyers, Sales Channels — `remarketing.<page>`; backend app `remarketing/`)
     and
     "Administração" (`/admin/…`, two side menu sections: Management — Users and Roles,
-    administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
-    Classes, Manufacturers, shared by every app). Asset Management (`/asset-management/…`,
+    administrators only — and Catalogs — Business Entities, Verticals, Asset Classes, Asset
+    Models, Manufacturers, shared by every app). Asset Management (`/asset-management/…`,
     `mdi-archive-cog-outline` — not a forklift: those are assets we lease (MHE); formerly the Remarketing app — `SuiteApp.formerPath`: its addresses under
     `/remarketing/` redirect, `moduleRoutes`; app id `assets`): section
     Inventory — Appointments (calendar `v-calendar` + list), Receiving (lots; lot page
@@ -481,7 +505,15 @@ Multi-user web system for **operating lease residual value pricing**
     (› page, from `meta.titleKey` — child routes set their own) and the app launcher
     (`AppLauncher.vue`); the side menu lists the current app's modules by section (an
     `AppModule.section` translation key, e.g. `menu.sections.management`; none: the app's name)
-    and the other apps; `/` is the suite's home (welcome banner with soft waves + app cards). The user's own settings (`/settings`) open from the user menu.
+    and the other apps; `/` is the suite's home (welcome banner with soft waves + app cards +
+    the **journal**, `components/HomeJournal.vue`: in lines, no cards — first the Data Journal,
+    counts of what happened in the period of the user's preference `journal_days`, today / 7 / 30
+    days, default 7, Settings › Appearance › Home — each line opens its module (`src/journal.ts`
+    `eventModule`); then the System Journal, the latest releases' notes, a blank line between
+    notes, "New" for versions newer than `ui_state.lastSeenRelease`). Backend
+    `system/journal.py`: `GET /api/system/journal/?days=` — `EVENTS` (key, the module's ViewSet,
+    how it counts), only modules the user may open (`search/access.py::module_view`, shared
+    with the centralized search), counts only — never names, values or customers. The user's own settings (`/settings`) open from the user menu.
   - `src/modules/` — one folder per business module; `src/modules/index.ts` (`MODULES`) feeds the
     router and the side menu (`adminOnly: true` hides it from non-administrators and the router guard refuses its
     routes). `account-managers/` is the reference module. `users/` exports two modules,
@@ -489,11 +521,23 @@ Multi-user web system for **operating lease residual value pricing**
     system roles show translated via `roleText.ts`; Roles is a page of cards like Haze's —
     `RolesView.vue`: name, users count, members as chips (the API's read-only `members`,
     six then "+N more"), description, keywords; edit/delete on the card, system roles locked).
+  - `src/modules/business-entities/` — **Business Entities** (`/admin/catalogs/business-entities`;
+    the former Customers and Service Providers pages are gone): `BusinessEntitiesTab.vue` — tabs
+    one per role, then All last (`?tab=customer`; All opens by default; counts from `/counts/`), each a `ServerCrudTable`
+    with that role's columns (All: roles as chips — outlined when inactive in it —, head office
+    / group; Customers: contract types and account managers; Suppliers: supplies; Service Providers: services) and,
+    in Status, the role's active; New in a role's tab starts with it.
+    `BusinessEntityFormDialog.vue`: tab Entity (identification, head office — `EntityPicker.vue`
+    — with the CNPJ root's suggestion when the tax ID is left, contact, address, a switch per
+    role, keywords, active, notes) and a tab per role turned on (`form-tab-<role>`); a role
+    turned off is sent as null. `BuyerPicker.vue` (value: the Buyer role's id; a third-party
+    sale). `customers/api.ts` and `service-providers/api.ts` only list (pickers), with
+    `ordering: 'entity__name'`.
   - `src/modules/catalogs/` — one module per reference table (section Catalogs of
     Administration), each a page `CatalogPage.vue` (title, subtitle, the table's `<Name>Tab.vue`)
     at `/admin/catalogs/<table>` (`/admin/catalogs` opens the first). A new small table is a new
-    entry in `catalogs/index.ts` (+ MODULES); customers and service providers use the exported
-    `catalog()` in their own folders (`/admin/customers` redirects).
+    entry in `catalogs/index.ts` (+ MODULES); business entities use the exported `catalog()` in
+    their own folder.
     **Every catalog page follows Asset Classes'** (also Warehouses): `CatalogPage` +
     `ServerCrudTable` with a filter row (`src/composables/useColumnFilters.ts`: text filters
     applied after a pause; "Name or Keyword" on the name column, selects with "All"), the
@@ -677,6 +721,18 @@ Multi-user web system for **operating lease residual value pricing**
 - Frontend: `cd frontend && npm run dev` | `npm run test:unit -- --run` | `npm run lint` | `npm run type-check`
 
 ## Conventions
+- **Every register ("cadastro") keeps the date and the user of its creation and of its last
+  change** (`config/audit.py`): `created_at` / `created_by` and `updated_at` / `updated_by`
+  (`created_by_field()` / `updated_by_field()`, users PROTECT), filled by
+  `AuditedViewSetMixin` (changes outside the serializer: `touch(instance, request, *fields)`),
+  returned as `created_by_name` / `updated_by_name` (`AuditedSerializerMixin`, `AUDIT_FIELDS`);
+  users keep theirs in `UserProfile` (created on `date_joined`). Their forms show them in the
+  footer, on the left (`FormDialog`'s `audit`). A new register gets them too.
+- **Versions** (`system.Release`, `system/releases.py`): **every change delivered adds a
+  release** — a data migration in `system/migrations/` (as `0008_release_1_0_0.py`), so every
+  environment gets the same — raising **only the last number** (1.0.0 → 1.0.1; the others only
+  when Fernando says so), with notes written for the users (what they can now do, not the
+  commits) **in every language** (en, pt-br, es — as many in each; a test fails otherwise).
 - **Money and percentages: always `Decimal` / `models.DecimalField`** (NUMERIC in Postgres). Never `float`.
   Precision (`config/decimals.py`): money 2 places, **percentages always calculated with 5**
   (`decimals.percent`); how many are shown is each user's `percent_places`.

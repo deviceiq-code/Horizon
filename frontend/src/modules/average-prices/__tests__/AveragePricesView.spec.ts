@@ -197,6 +197,8 @@ describe('AveragePricesView', () => {
           id: 7,
           keywords: [],
           name: 'Caterpillar',
+          business_entity: null,
+          business_entity_detail: null,
           reputation: '5.0',
           product_quality: '5.0',
           after_sales: '4.0',

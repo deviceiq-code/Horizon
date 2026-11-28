@@ -25,6 +25,11 @@ const USER_NAME_DISPLAYS: readonly UserNameDisplay[] = ['username', 'first_name'
 const FULL_NAME_ORDERS: readonly FullNameOrder[] = ['first_last', 'last_first']
 
 /** User preferences as returned by the API (/api/auth/preferences/). */
+/** How far back the Home's journal looks (days; 1 = today) — `accounts.models.JournalPeriod` */
+export const JOURNAL_PERIODS = [1, 7, 30] as const
+export type JournalDays = (typeof JOURNAL_PERIODS)[number]
+const isJournalDays = (v: unknown): v is JournalDays => JOURNAL_PERIODS.includes(v as JournalDays)
+
 export interface Preferences {
   language: string
   theme: Theme
@@ -58,6 +63,8 @@ export interface Preferences {
   word_dictionary: boolean
   /** Smart Tools: text typed in forms without extra spaces (tidySpaces.ts) */
   trim_spaces: boolean
+  /** The Home's journal: today (1) or the last 7 or 30 days */
+  journal_days: JournalDays
   /** Smart Tools: eFMV scenarios' scope written from their assets; negligible below (%) */
   auto_scope: boolean
   scope_threshold: string
@@ -84,6 +91,7 @@ export type PreferencesUpdate = Partial<{
   select_on_focus: boolean
   word_dictionary: boolean
   trim_spaces: boolean
+  journal_days: JournalDays
   auto_scope: boolean
   scope_threshold: string
 }>
@@ -96,6 +104,8 @@ export interface UiState {
   filters?: Record<string, boolean>
   /** Movement reads the location where the object is first (RN-19) */
   readOrigin?: boolean
+  /** The newest version the user saw in the Home's journal (newer ones show "New") */
+  lastSeenRelease?: string
 }
 
 const THEMES: readonly Theme[] = ['light', 'dark', 'system']
@@ -217,6 +227,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
   // On unless turned off (only with the account)
   const wordDictionary = ref(true)
   const trimSpaces = ref(true)
+  const journalDays = ref<JournalDays>(7)
   const autoScope = ref(
     readStored(AUTO_SCOPE_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
   )
@@ -249,6 +260,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     select_on_focus?: boolean
     word_dictionary?: boolean
     trim_spaces?: boolean
+    journal_days?: number
     auto_scope?: boolean
     scope_threshold?: string
   }) {
@@ -317,6 +329,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     }
     if (typeof p.word_dictionary === 'boolean') wordDictionary.value = p.word_dictionary
     if (typeof p.trim_spaces === 'boolean') trimSpaces.value = p.trim_spaces
+    if (isJournalDays(p.journal_days)) journalDays.value = p.journal_days
     if (typeof p.auto_scope === 'boolean') {
       autoScope.value = p.auto_scope
       store(AUTO_SCOPE_STORAGE_KEY, String(p.auto_scope))
@@ -357,6 +370,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
       select_on_focus: selectOnFocus.value,
       word_dictionary: wordDictionary.value,
       trim_spaces: trimSpaces.value,
+      journal_days: journalDays.value,
       auto_scope: autoScope.value,
       scope_threshold: scopeThreshold.value,
     }
@@ -406,6 +420,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     selectOnFocus,
     wordDictionary,
     trimSpaces,
+    journalDays,
     autoScope,
     scopeThreshold,
     apply,

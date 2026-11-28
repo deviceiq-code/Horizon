@@ -1,5 +1,5 @@
-"""Shared input rules of records that identify a company or a place: customers, service
-providers (legal name, trade name, tax ID) and warehouses (address and contact only).
+"""Shared input rules of records that identify a company or a place: business entities
+(legal name, trade name, tax ID) and warehouses (address and contact only).
 
 Serializers mix them in before `ModelSerializer`: the `validate_<field>` methods normalize each
 field and `address_errors` / `tax_id_errors` apply the rules that depend on the country.
@@ -109,29 +109,47 @@ class CompanyFieldsMixin(AddressFieldsMixin):
         return {}
 
 
-def column_filters(queryset, params, *, names=("name", "trade_name"), tax_id=True):
-    """Column filters of the grids of customers, service providers and warehouses:
+def column_filters(queryset, params, *, names=("name", "trade_name"), tax_id=True, prefix=""):
+    """Column filters of the grids of business entities, their roles and warehouses:
     ?name= (any of `names` or a keyword containing it), ?tax_id= (with or without
-    punctuation), ?location= (city or state) and ?is_active=true|false."""
+    punctuation), ?location= (city or state) and ?is_active=true|false.
+
+    `prefix`: where those fields are — "entity__" for a role (customer, service provider…),
+    whose "active" is then both the role's and its entity's."""
     name = " ".join(params.get("name", "").split()).lower()
     if name:
         queryset = queryset.annotate(
             keywords_text=Func(
-                F("keywords"), Value(" | "), function="array_to_string", output_field=CharField()
+                F(f"{prefix}keywords"),
+                Value(" | "),
+                function="array_to_string",
+                output_field=CharField(),
             )
         )
         match = Q(keywords_text__contains=name)
         for field in names:
-            match |= Q(**{f"{field}__icontains": name})
+            match |= Q(**{f"{prefix}{field}__icontains": name})
         queryset = queryset.filter(match)
     if tax_id:
         typed = normalize_tax_id(params.get("tax_id", ""))
         if typed:
-            queryset = queryset.filter(tax_id__contains=typed)
+            queryset = queryset.filter(**{f"{prefix}tax_id__contains": typed})
     location = collapse_spaces(params.get("location", ""))
     if location:
-        queryset = queryset.filter(Q(city__icontains=location) | Q(state__iexact=location))
+        queryset = queryset.filter(
+            Q(**{f"{prefix}city__icontains": location}) | Q(**{f"{prefix}state__iexact": location})
+        )
     active = params.get("is_active")
     if active in ("true", "false"):
-        queryset = queryset.filter(is_active=active == "true")
+        queryset = filter_active(queryset, active == "true", prefix)
     return queryset
+
+
+def filter_active(queryset, active: bool, prefix=""):
+    """Active (or not) records; for a role (`prefix` "entity__"), active in the role and as an
+    entity — not active when either is off."""
+    if not prefix:
+        return queryset.filter(is_active=active)
+    if active:
+        return queryset.filter(is_active=True, **{f"{prefix}is_active": True})
+    return queryset.filter(Q(is_active=False) | Q(**{f"{prefix}is_active": False}))

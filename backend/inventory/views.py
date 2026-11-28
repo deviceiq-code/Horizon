@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 
 from catalogs.models import AssetClass, AssetModel, PhotoKind
 from catalogs.views import RefuseDeletingWhenInUse
+from config.audit import AuditedViewSetMixin
 from config.filters import NullsLastOrderingFilter
 from config.keywords import KeywordSearchFilter
 from config.parties import column_filters
@@ -138,7 +139,7 @@ from .serializers import (
 from .states import AreaType, AssetStatus, DomainError
 
 
-class WarehouseViewSet(viewsets.ModelViewSet):
+class WarehouseViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     """CRUD for warehouses (Asset Management › Inventory).
 
     List supports ?search= (name, city, contact, verticals, provider's names, keywords),
@@ -146,7 +147,9 @@ class WarehouseViewSet(viewsets.ModelViewSet):
     column filters (?name=, ?location=, ?is_active=), ?ordering=, ?page= and ?page_size=.
     """
 
-    queryset = Warehouse.objects.select_related("service_provider").prefetch_related("verticals")
+    queryset = Warehouse.objects.select_related("service_provider__entity").prefetch_related(
+        "verticals"
+    )
     serializer_class = WarehouseSerializer
     filter_backends = [KeywordSearchFilter, NullsLastOrderingFilter]
     search_fields = [
@@ -155,8 +158,8 @@ class WarehouseViewSet(viewsets.ModelViewSet):
         "city",
         "contact_name",
         "verticals__name",
-        "service_provider__name",
-        "service_provider__trade_name",
+        "service_provider__entity__name",
+        "service_provider__entity__trade_name",
     ]
     ordering_fields = ["id", "name", "code", "ownership", "city", "state", "is_active"]
     ordering = ["name"]
@@ -409,7 +412,7 @@ class AssetViewSet(
                 asset.reports.select_related(
                     "asset__asset_model__manufacturer",
                     "asset__asset_model__asset_class",
-                    "asset__customer",
+                    "asset__customer__entity",
                     "asset__lot",
                     "technician",
                 ),
@@ -618,15 +621,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     """
 
     queryset = Appointment.objects.select_related(
-        "warehouse", "customer", "carrier", "created_by", "lot"
+        "warehouse", "customer__entity", "carrier__entity", "created_by", "lot"
     ).prefetch_related("expected_items__asset_model__manufacturer")
     serializer_class = AppointmentSerializer
     permission_classes = [role_permission(*SCHEDULERS)]
     filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
     search_fields = [
-        "customer__name",
-        "customer__trade_name",
-        "carrier__name",
+        "customer__entity__name",
+        "customer__entity__trade_name",
+        "carrier__entity__name",
         "carrier_name",
         "vehicle_plate",
         "driver_name",
@@ -646,7 +649,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(kind=params["kind"])
         if params.get("status") in AppointmentStatus.values:
             queryset = queryset.filter(status=params["status"])
-        for param in ("warehouse", "customer"):
+        for param in ("warehouse", "customer", "buyer"):
             if params.get(param, "").isdigit():
                 queryset = queryset.filter(**{f"{param}_id": int(params[param])})
         start, end = parse_date(params.get("from") or ""), parse_date(params.get("to") or "")
@@ -746,7 +749,7 @@ class ReceivingLotViewSet(
     received/, reconcile/, close/, attachments/, expected/ (not for receivers — RN-17)."""
 
     queryset = ReceivingLot.objects.select_related(
-        "warehouse", "customer", "appointment", "dock", "opened_by", "closed_by"
+        "warehouse", "customer__entity", "appointment", "dock", "opened_by", "closed_by"
     ).annotate(
         units_count=Count("assets", distinct=True),
         open_occurrences=Count(
@@ -756,7 +759,11 @@ class ReceivingLotViewSet(
     serializer_class = ReceivingLotSerializer
     permission_classes = [role_permission(*RECEIVERS)]
     filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
-    search_fields = ["customer__name", "customer__trade_name", "fiscal_document_number"]
+    search_fields = [
+        "customer__entity__name",
+        "customer__entity__trade_name",
+        "fiscal_document_number",
+    ]
     ordering_fields = ["opened_at", "status", "closed_at"]
     ordering = ["-opened_at"]
 
@@ -1178,7 +1185,7 @@ class GradeLevelViewSet(mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets
     pagination_class = None
 
 
-class PenaltyRateViewSet(viewsets.ModelViewSet):
+class PenaltyRateViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     """The penalty table (asset class × kind of finding, with validity; no overlaps — RN-03).
     ?asset_class=, ?finding_kind=, ?current=true (valid today), ?search= (asset class)."""
 
@@ -1205,7 +1212,7 @@ class PenaltyRateViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class ErasureToolViewSet(RefuseDeletingWhenInUse, viewsets.ModelViewSet):
+class ErasureToolViewSet(AuditedViewSetMixin, RefuseDeletingWhenInUse, viewsets.ModelViewSet):
     """Data erasure tools. ?asset_class= (tools serving it), ?is_active=, ?search=."""
 
     queryset = ErasureTool.objects.prefetch_related("asset_classes")
@@ -1242,7 +1249,7 @@ class InspectionViewSet(
     queryset = InspectionReport.objects.select_related(
         "asset__asset_model__manufacturer",
         "asset__asset_model__asset_class",
-        "asset__customer",
+        "asset__customer__entity",
         "asset__lot",
         "asset__current_location__warehouse",
         "asset__current_container",
@@ -1564,7 +1571,7 @@ class BlockFollowUpViewSet(
 
     queryset = BlockFollowUp.objects.select_related(
         "asset__asset_model__manufacturer",
-        "asset__customer",
+        "asset__customer__entity",
         "asset__lot",
         "asset__current_location",
         "finding",
@@ -1576,8 +1583,8 @@ class BlockFollowUpViewSet(
     search_fields = [
         "asset__horizon_id",
         "asset__serial",
-        "asset__customer__name",
-        "asset__customer__trade_name",
+        "asset__customer__entity__name",
+        "asset__customer__entity__trade_name",
     ]
     ordering_fields = ["due_date", "created_at", "status"]
     ordering = ["due_date", "id"]
@@ -1689,7 +1696,7 @@ class DisputeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
 
     queryset = Dispute.objects.select_related(
         "report__asset__asset_model__manufacturer",
-        "report__asset__customer",
+        "report__asset__customer__entity",
         "report__asset__lot",
         "report__asset__current_location",
         "registered_by",
@@ -1699,8 +1706,8 @@ class DisputeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
     filter_backends = [filters.SearchFilter, NullsLastOrderingFilter]
     search_fields = [
         "report__asset__horizon_id",
-        "report__asset__customer__name",
-        "report__asset__customer__trade_name",
+        "report__asset__customer__entity__name",
+        "report__asset__customer__entity__trade_name",
     ]
     ordering_fields = ["registered_at", "analysis_due", "status"]
     ordering = ["-registered_at"]
@@ -1799,7 +1806,7 @@ class ChargeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     queryset = Finding.objects.select_related(
         "report__asset__asset_model__manufacturer",
-        "report__asset__customer",
+        "report__asset__customer__entity",
         "report__asset__lot",
         "report__asset__current_location",
     )
@@ -1807,8 +1814,8 @@ class ChargeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = [
         "report__asset__horizon_id",
-        "report__asset__customer__name",
-        "report__asset__customer__trade_name",
+        "report__asset__customer__entity__name",
+        "report__asset__customer__entity__trade_name",
     ]
 
     def get_queryset(self):
@@ -1822,7 +1829,7 @@ class ChargeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         )
         if params.get("customer", "").isdigit():
             queryset = queryset.filter(report__asset__customer_id=int(params["customer"]))
-        return queryset.order_by("report__asset__customer__name", "id")
+        return queryset.order_by("report__asset__customer__entity__name", "id")
 
     @action(detail=True, methods=["post"])
     def charged(self, request, pk=None):
@@ -1981,7 +1988,7 @@ class StockAssetViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                 "asset_model__manufacturer",
                 "asset_model__asset_class",
                 "current_location__warehouse",
-                "customer",
+                "customer__entity",
                 "lot",
             )
             .prefetch_related(
@@ -2011,9 +2018,9 @@ class DisposalViewSet(
 ):
     """Disposals (relocation, sales, discard; parts are recorded by taking scrap apart).
 
-    List: ?status=, ?kind=, ?warehouse=, ?customer=, ?search= (code "DSP-2026-0001", customer,
-    provider, document number, keywords), pagination. Never deleted (cancel instead).
-    Commercial, analysts and supervisors create, change the header, add/remove items
+    List: ?status=, ?kind=, ?warehouse=, ?customer=, ?buyer=, ?search= (code "DSP-2026-0001",
+    customer, buyer, provider, document number, keywords), pagination. Never deleted (cancel
+    instead). Commercial, analysts and supervisors create, change the header, add/remove items
     (items/: {codes: [...], unit_value} or {accessory_model, quantity, condition, unit_value};
     items/<id>/ PATCH {unit_value} / DELETE) and cancel ({reason}). Storekeepers and
     supervisors pick (pick/: {code, shipping_location} or {item, code, quantity}) and ship.
@@ -2022,8 +2029,9 @@ class DisposalViewSet(
 
     queryset = Disposal.objects.select_related(
         "warehouse",
-        "customer",
-        "discard_provider",
+        "customer__entity",
+        "buyer__entity",
+        "discard_provider__entity",
         "appointment",
         "created_by",
         "shipped_by",
@@ -2038,10 +2046,12 @@ class DisposalViewSet(
     permission_classes = [role_permission(*DISPOSERS)]
     filter_backends = [KeywordSearchFilter, NullsLastOrderingFilter]
     search_fields = [
-        "customer__name",
-        "customer__trade_name",
-        "discard_provider__name",
-        "discard_provider__trade_name",
+        "customer__entity__name",
+        "customer__entity__trade_name",
+        "buyer__entity__name",
+        "buyer__entity__trade_name",
+        "discard_provider__entity__name",
+        "discard_provider__entity__trade_name",
         "document_number",
         "contract",
     ]
@@ -2084,7 +2094,7 @@ class DisposalViewSet(
         items = disposal.items.select_related(
             "asset__asset_model__manufacturer",
             "asset__asset_model__asset_class",
-            "asset__customer",
+            "asset__customer__entity",
             "asset__lot",
             "asset__current_location",
             "accessory_model__manufacturer",
@@ -2118,6 +2128,7 @@ class DisposalViewSet(
                 warehouse=values["warehouse"],
                 user=request.user,
                 customer=values.get("customer"),
+                buyer=values.get("buyer"),
                 contract=values.get("contract", ""),
                 discard_provider=values.get("discard_provider"),
                 appointment=values.get("appointment"),
@@ -2133,6 +2144,7 @@ class DisposalViewSet(
         values = self._header(request.data, partial=True)
         allowed = {
             "customer",
+            "buyer",
             "contract",
             "discard_provider",
             "appointment",
@@ -2389,7 +2401,7 @@ class TransferViewSet(
         items = transfer.items.select_related(
             "asset__asset_model__manufacturer",
             "asset__asset_model__asset_class",
-            "asset__customer",
+            "asset__customer__entity",
             "asset__lot",
             "asset__current_location",
             "asset__current_container",

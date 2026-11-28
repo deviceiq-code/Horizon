@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * A new disposal (kind and warehouse, then who it is for) or its header while open: the
- * customer — the lessee, or the buyer of a third-party sale (registered as a customer) —, the
+ * customer (the lessee), the buyer of a third-party sale (an entity with the Buyer role), the
  * contract of a relocation, the provider of a discard, a shipping appointment, notes, keywords.
  */
 import { computed, ref, watch } from 'vue'
@@ -12,6 +12,7 @@ import KeywordsField from '@/components/KeywordsField.vue'
 import { useDateFormat } from '@/composables/useDateFormat'
 import ServiceProviderPicker from '@/modules/service-providers/ServiceProviderPicker.vue'
 import { listWarehouses, type Warehouse } from '@/modules/warehouses/api'
+import BuyerPicker from '@/modules/business-entities/BuyerPicker.vue'
 import CustomerSelect from './CustomerSelect.vue'
 import {
   CUSTOMER_KINDS,
@@ -36,6 +37,7 @@ const appointments = ref<Appointment[]>([])
 const kind = ref<DisposalKind>('lessee_sale')
 const warehouseId = ref<number | null>(null)
 const customer = ref<number | null>(null)
+const buyer = ref<number | null>(null)
 const contract = ref('')
 const provider = ref<number | null>(null)
 const appointment = ref<number | null>(null)
@@ -62,11 +64,7 @@ const appointmentOptions = computed(() => [
   })),
 ])
 const hasCustomer = computed(() => CUSTOMER_KINDS.includes(kind.value))
-const customerLabel = computed(() =>
-  kind.value === 'third_party_sale'
-    ? t('inventory.disposals.buyer')
-    : t('inventory.appointments.customer'),
-)
+const hasBuyer = computed(() => kind.value === 'third_party_sale')
 const required = [(v: unknown) => (v !== null && v !== undefined) || t('validation.required')]
 
 async function loadAppointments() {
@@ -93,6 +91,7 @@ watch(open, async (isOpen) => {
   const current = props.disposal
   kind.value = (current?.kind as DisposalKind) ?? 'lessee_sale'
   customer.value = current?.customer ?? null
+  buyer.value = current?.buyer ?? null
   contract.value = current?.contract ?? ''
   provider.value = current?.discard_provider ?? null
   appointment.value = current?.appointment ?? null
@@ -128,6 +127,7 @@ async function submit() {
   generalError.value = ''
   const data = {
     customer: hasCustomer.value ? customer.value : null,
+    buyer: hasBuyer.value ? buyer.value : null,
     contract: kind.value === 'relocation' ? contract.value : '',
     discard_provider: kind.value === 'discard' ? provider.value : null,
     appointment: appointment.value,
@@ -150,7 +150,7 @@ async function submit() {
       const errors = error.fieldErrors()
       if (body.field && body.detail) {
         fieldErrors.value = { [body.field]: [body.detail] }
-        if (!['customer', 'discard_provider', 'appointment', 'kind'].includes(body.field))
+        if (!['customer', 'buyer', 'discard_provider', 'appointment', 'kind'].includes(body.field))
           generalError.value = body.detail
       } else if (Object.keys(errors).length) fieldErrors.value = errors
       else generalError.value = error.message || t('common.saveError')
@@ -202,7 +202,7 @@ async function submit() {
         <CustomerSelect
           :key="`customer-${openCount}-${kind}`"
           v-model="customer"
-          :label="customerLabel"
+          :label="$t('inventory.appointments.customer')"
           :initial-option="
             disposal?.customer
               ? { id: disposal.customer, name: disposal.customer_name ?? '' }
@@ -211,6 +211,19 @@ async function submit() {
           :rules="required"
           :error-messages="fieldErrors.customer"
           data-testid="disposal-customer"
+        />
+      </v-col>
+      <v-col v-if="hasBuyer" cols="12">
+        <BuyerPicker
+          :key="`buyer-${openCount}`"
+          v-model="buyer"
+          :label="$t('inventory.disposals.buyer')"
+          :initial-option="
+            disposal?.buyer ? { id: disposal.buyer, name: disposal.buyer_name ?? '' } : null
+          "
+          :rules="required"
+          :error-messages="fieldErrors.buyer"
+          data-testid="disposal-buyer"
         />
       </v-col>
       <v-col v-if="kind === 'relocation'" cols="12" md="4">

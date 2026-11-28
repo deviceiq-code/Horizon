@@ -25,6 +25,7 @@ const ptBR: Messages = {
     saved: 'Palavras-chave salvas.',
   },
   common: {
+    audit: { created: 'Criado em {date} por {name}', updated: 'Alterado em {date} por {name}' },
     filters: { nameOrKeyword: 'Nome ou Palavra-Chave', all: 'Todos' },
     yes: 'Sim',
     no: 'Não',
@@ -254,6 +255,35 @@ const ptBR: Messages = {
   home: {
     welcome: 'Olá, {name}',
     text: 'Escolha um app para começar.',
+    journal: {
+      dataTitle: 'Journal de Dados',
+      systemTitle: 'Journal de Sistema',
+      periods: { 1: 'Hoje', 7: 'Últimos 7 dias', 30: 'Últimos 30 dias' },
+      empty: 'Nada novo neste período.',
+      current: 'Horizon {version}',
+      version: 'Versão {version}',
+      new: 'Novo',
+      events: {
+        efmv_analyses: {
+          created: 'Nova análise eFMV | {n} novas análises eFMV',
+          updated: 'Análise eFMV atualizada | {n} análises eFMV atualizadas',
+        },
+        average_prices: {
+          created: 'Novo preço médio | {n} novos preços médios',
+          versions: 'Nova versão de preço médio | {n} novas versões de preços médios',
+        },
+        assets: { created: 'Ativo entrou no estoque | {n} ativos entraram no estoque' },
+        receiving_lots: { opened: 'Lote de recebimento aberto | {n} lotes de recebimento abertos' },
+        inspections: { approved: 'Laudo de vistoria aprovado | {n} laudos de vistoria aprovados' },
+        disposals: { shipped: 'Destinação expedida | {n} destinações expedidas' },
+        transfers: { received: 'Transferência recebida | {n} transferências recebidas' },
+        business_entities: { created: 'Nova entidade | {n} novas entidades' },
+        manufacturers: { created: 'Novo fabricante | {n} novos fabricantes' },
+        asset_classes: { created: 'Nova classe de ativo | {n} novas classes de ativo' },
+        asset_models: { created: 'Novo modelo de ativo | {n} novos modelos de ativo' },
+        users: { created: 'Novo usuário | {n} novos usuários' },
+      },
+    },
   },
   accountManagers: {
     title: 'Account Managers',
@@ -555,6 +585,72 @@ const ptBR: Messages = {
       sv: 'SV',
       svHint: 'Participação de serviços no LO',
     },
+  },
+  businessEntities: {
+    title: 'Entidades',
+    subtitle:
+      'Toda empresa ou pessoa com quem a Horizon se relaciona — clientes, fornecedores, service providers e compradores. Uma entidade pode ter vários papéis.',
+    new: 'Nova Entidade',
+    newInRole: 'Novo {role}',
+    edit: 'Editar Entidade',
+    tabs: { all: 'Todas', entity: 'Entidade' },
+    roles: {
+      customer: {
+        one: 'Cliente',
+        many: 'Clientes',
+        hint: 'A relação comercial: seus account managers e análises eFMV.',
+      },
+      supplier: {
+        one: 'Fornecedor',
+        many: 'Fornecedores',
+        hint: 'Fornece produtos e/ou serviços à Horizon.',
+      },
+      service_provider: {
+        one: 'Service Provider',
+        many: 'Service Providers',
+        hint: 'Presta serviços: armazenagem, transporte, recondicionamento e outros.',
+      },
+      buyer: {
+        one: 'Comprador',
+        many: 'Compradores',
+        hint: 'Compra ativos usados (Remarketing; vendas a terceiros). Ainda sem dados próprios.',
+      },
+    },
+    fields: {
+      contractTypes: 'Modalidades',
+      parent: 'Matriz',
+      group: 'Matriz / Grupo',
+      roles: 'Papéis',
+      supplies: 'Fornece',
+      active: 'Entidade Ativa',
+    },
+    supplies: { products: 'Produtos', services: 'Serviços' },
+    contractTypes: {
+      renter: 'Locatário',
+      lessee: 'Arrendatário',
+      bailee: 'Comodatário',
+      service_customer: 'Tomador de Serviços',
+    },
+    contractTypesHint:
+      'Como ele usa os ativos ou serviços da Horizon. Opcional: um prospect ainda não tem.',
+    rolesHint: 'Ligue o que esta entidade é para a Horizon; cada papel abre sua própria aba.',
+    parentHint: 'Outra entidade já cadastrada; o grupo é a árvore sob a que está no topo.',
+    parentSuggestion: 'Mesma raiz de CNPJ que {name} ({taxId}): é a matriz?',
+    useSuggestion: 'Usar como Matriz',
+    roleActive: 'Ativo como {role}',
+    runsWarehouses: 'Administra um armazém | Administra {n} armazéns',
+    groupOf: 'Grupo: {name}',
+    headOfBranches: 'Matriz de uma filial | Matriz de {n} filiais',
+    searchPlaceholder: 'Buscar por nome, documento, contato, cidade ou account manager',
+    empty: 'Nenhuma entidade ainda.',
+    noResults: 'Nenhuma entidade corresponde à busca.',
+    noBuyers: 'Nenhum comprador ativo encontrado.',
+    noneFound: 'Nenhuma entidade encontrada.',
+    created: 'Entidade criada.',
+    updated: 'Entidade atualizada.',
+    deleted: 'Entidade excluída.',
+    deleteTitle: 'Excluir Entidade',
+    deleteConfirm: 'Excluir "{name}" e todos os seus papéis? Isso não pode ser desfeito.',
   },
   customers: {
     title: 'Clientes',
@@ -1821,7 +1917,9 @@ const ptBR: Messages = {
     subtitle: 'Fabricantes dos bens e como se saem no remarketing.',
     new: 'Novo Fabricante',
     edit: 'Editar Fabricante',
+    businessEntityHint: 'Opcional: a empresa por trás da marca, cadastrada em Entidades.',
     fields: {
+      businessEntity: 'Entidade',
       name: 'Nome do Fabricante',
     },
     remarketing: {
@@ -2342,6 +2440,11 @@ const ptBR: Messages = {
     },
   },
   settings: {
+    home: {
+      title: 'Home',
+      journalPeriod: 'Período do Journal',
+      journalPeriodHint: 'Até quando o journal da Home olha para trás.',
+    },
     rows: {
       photoSearchHint:
         'Average Prices: fotos dos bens encontradas na internet, por uma instância do SearXNG.',

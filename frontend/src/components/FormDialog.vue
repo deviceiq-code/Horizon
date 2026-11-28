@@ -6,11 +6,21 @@
  *   glance (`heading-end` slot, e.g. a key value) and, optionally, more in the `header` slot
  *   (fixed);
  * - body (default slot): the other controls — the only part that scrolls;
- * - footer (`actions` slot): only the form's buttons (fixed), on the right.
+ * - footer (`actions` slot): only the form's buttons (fixed), on the right; on the left, for a
+ *   record being edited, who created it and who changed it last, and when (`audit`).
  * The whole dialog is a form: Enter or a submit button emits `submit`; `validate()` checks its
  * fields (exposed, as v-form's).
  */
 import { ref } from 'vue'
+import { useDateFormat } from '@/composables/useDateFormat'
+
+/** Who created a record and who changed it last (every register keeps them) */
+export interface AuditInfo {
+  created_at?: string | null
+  created_by_name?: string | null
+  updated_at?: string | null
+  updated_by_name?: string | null
+}
 
 const open = defineModel<boolean>({ required: true })
 withDefaults(
@@ -22,9 +32,12 @@ withDefaults(
     maxWidth?: number | string
     /** While saving: not closed by a click outside or Esc */
     persistent?: boolean
+    /** The record being edited: who created / changed it (footer, on the left) */
+    audit?: AuditInfo | null
   }>(),
-  { subtitle: null, icon: undefined, maxWidth: 760, persistent: false },
+  { subtitle: null, icon: undefined, maxWidth: 760, persistent: false, audit: null },
 )
+const { d } = useDateFormat()
 const emit = defineEmits<{ submit: [] }>()
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
@@ -66,6 +79,28 @@ defineExpose({
         <v-divider />
         <!-- Footer: only the buttons -->
         <footer class="form-dialog__footer" data-testid="form-dialog-footer">
+          <div
+            v-if="audit && (audit.created_at || audit.updated_at)"
+            class="form-dialog__audit"
+            data-testid="form-dialog-audit"
+          >
+            <div v-if="audit.created_at">
+              {{
+                $t('common.audit.created', {
+                  date: d(new Date(audit.created_at), 'dateTime'),
+                  name: audit.created_by_name || '—',
+                })
+              }}
+            </div>
+            <div v-if="audit.updated_at">
+              {{
+                $t('common.audit.updated', {
+                  date: d(new Date(audit.updated_at), 'dateTime'),
+                  name: audit.updated_by_name || '—',
+                })
+              }}
+            </div>
+          </div>
           <slot name="actions" />
         </footer>
       </v-form>
@@ -112,5 +147,11 @@ defineExpose({
 }
 .min-w-0 {
   min-width: 0;
+}
+.form-dialog__audit {
+  margin-right: auto;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  opacity: 0.7;
 }
 </style>

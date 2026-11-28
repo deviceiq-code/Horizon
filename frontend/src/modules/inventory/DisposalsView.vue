@@ -47,7 +47,8 @@ function show(disposal: { id: number }) {
   router.push({ name: 'inventory-disposal', params: { id: disposal.id } })
 }
 
-const destination = (item: Disposal) => item.customer_name ?? item.discard_provider_name ?? '—'
+const destination = (item: Disposal) =>
+  item.customer_name ?? item.buyer_name ?? item.discard_provider_name ?? '—'
 </script>
 
 <template>

@@ -158,6 +158,7 @@ function clearError(field: string) {
 
 <template>
   <FormDialog
+    :audit="vertical"
     ref="formRef"
     v-model="open"
     :title="isEdit ? $t('verticals.edit') : $t('verticals.new')"

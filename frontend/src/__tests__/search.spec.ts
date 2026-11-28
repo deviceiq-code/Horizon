@@ -34,7 +34,7 @@ describe('centralized search', () => {
   })
 
   it('a category is a module: its icon and title', () => {
-    expect(categoryInfo('customers').titleKey).toBe('customers.title')
+    expect(categoryInfo('business_entities').titleKey).toBe('businessEntities.title')
     expect(categoryInfo('efmv_analyses').icon).toMatch(/^mdi-/)
     expect(categoryInfo('pages')).toEqual({
       icon: 'mdi-file-document-outline',
@@ -47,8 +47,8 @@ describe('centralized search', () => {
       name: 'efmv-analysis',
       params: { id: 3 },
     })
-    expect(resultTarget('customers', result())).toEqual({
-      name: 'customers',
+    expect(resultTarget('business_entities', result())).toEqual({
+      name: 'business-entities',
       query: { search: 'Transportes Deere Ltda' },
     })
   })

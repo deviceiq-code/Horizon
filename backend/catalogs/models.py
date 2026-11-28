@@ -11,6 +11,7 @@ from django.utils import translation
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
+from config.audit import created_by_field, updated_by_field
 from config.keywords import keywords_field
 
 from .ratings import STARS_MAX, STARS_MIN, average_stars, is_half_star
@@ -28,7 +29,9 @@ class Vertical(models.Model):
     notes = models.TextField(_("notes"), blank=True)
     keywords = keywords_field()
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("business vertical")
@@ -179,13 +182,24 @@ class Manufacturer(models.Model):
     """
 
     name = models.CharField(_("name"), max_length=100)
+    # The business entity behind the brand (optional; e.g. Dell → Dell Computadores do Brasil)
+    business_entity = models.ForeignKey(
+        "entities.BusinessEntity",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="brands",
+        verbose_name=_("business entity"),
+    )
     reputation = star_rating_field(_("reputation"))
     product_quality = star_rating_field(_("product quality"))
     after_sales = star_rating_field(_("after-sales service"))
     keywords = keywords_field()
     is_enabled = models.BooleanField(_("enabled"), default=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("manufacturer")
@@ -259,7 +273,9 @@ class AssetClass(models.Model):
     )
     is_enabled = models.BooleanField(_("enabled"), default=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("asset class")
@@ -326,7 +342,9 @@ class AssetModel(models.Model):
     notes = models.TextField(_("notes"), blank=True)
     is_enabled = models.BooleanField(_("enabled"), default=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("asset model")

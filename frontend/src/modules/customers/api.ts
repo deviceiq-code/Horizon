@@ -3,6 +3,8 @@ import type { AccountManagerRef } from '@/modules/account-managers/api'
 
 export interface Customer {
   id: number
+  /** Its business entity */
+  entity: number
   name: string
   trade_name: string
   /** Uppercase, without punctuation (CNPJ/CPF in Brazil) */
@@ -32,29 +34,10 @@ export interface Customer {
   updated_at: string
 }
 
-export type CustomerInput = Omit<
-  Customer,
-  | 'id'
-  | 'primary_account_manager_name'
-  | 'secondary_account_managers_detail'
-  | 'created_at'
-  | 'updated_at'
->
-
 const BASE = '/customers/'
 
+/** Customers: the Customer role of business entities, read-only (written through
+ * `@/modules/business-entities/api`). `is_active`: active in the role and as an entity. */
 export function listCustomers(params: ListParams) {
   return api<Paginated<Customer>>(BASE + listQuery(params))
-}
-
-export function createCustomer(data: CustomerInput) {
-  return api<Customer>(BASE, { method: 'POST', body: JSON.stringify(data) })
-}
-
-export function updateCustomer(id: number, data: CustomerInput) {
-  return api<Customer>(`${BASE}${id}/`, { method: 'PATCH', body: JSON.stringify(data) })
-}
-
-export function deleteCustomer(id: number) {
-  return api<void>(`${BASE}${id}/`, { method: 'DELETE' })
 }

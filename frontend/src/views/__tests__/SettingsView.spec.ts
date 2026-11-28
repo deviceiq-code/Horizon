@@ -34,6 +34,7 @@ const user = (is_admin: boolean): User => ({
     select_on_focus: true,
     word_dictionary: true,
     trim_spaces: true,
+    journal_days: 7,
     auto_scope: true,
     scope_threshold: '5.00',
     number_format: 'auto',
@@ -271,6 +272,14 @@ describe('SettingsView', () => {
     toggle.click()
     await settle()
     expect(save).toHaveBeenCalledWith({ select_on_focus: false })
+    wrapper.unmount()
+  })
+
+  it("Appearance: the Home's journal period, 7 days by default", async () => {
+    const { wrapper } = await mountAt('/settings?tab=appearance', false)
+    const preferences = usePreferencesStore()
+    expect(preferences.journalDays).toBe(7)
+    expect(inBody('[data-testid="journal-days"]')!.textContent).toContain('Last 7 days')
     wrapper.unmount()
   })
 

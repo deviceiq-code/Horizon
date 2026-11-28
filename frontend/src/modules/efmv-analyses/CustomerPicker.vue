@@ -29,7 +29,7 @@ async function search(term: string) {
     page: 1,
     pageSize: 20,
     search: term,
-    ordering: 'name',
+    ordering: 'entity__name',
     filters: { account_manager: props.accountManager, is_active: true },
   })
   return data.results.map(toOption)

@@ -8,6 +8,7 @@ from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
 from catalogs.models import PhotoKind
+from config.audit import created_by_field, updated_by_field
 from config.keywords import keywords_field
 
 from .codes import next_warehouse_code, warehouse_code_prefix
@@ -70,7 +71,9 @@ class Warehouse(models.Model):
     keywords = keywords_field()
 
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("warehouse")
@@ -940,7 +943,9 @@ class PenaltyRate(models.Model):
     valid_from = models.DateField(_("valid from"))
     valid_to = models.DateField(_("valid to"), null=True, blank=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("penalty rate")
@@ -986,7 +991,9 @@ class ErasureTool(models.Model):
     notes = models.TextField(_("notes"), blank=True)
     is_active = models.BooleanField(_("active"), default=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("erasure tool")
@@ -1538,7 +1545,8 @@ class DisposalKind(models.TextChoices):
 
 # Kinds whose destination is a customer (relocation and lessee sale: a lessee; third-party
 # sale: the buyer, registered as a customer — decision)
-CUSTOMER_KINDS = (DisposalKind.RELOCATION, DisposalKind.LESSEE_SALE, DisposalKind.THIRD_PARTY_SALE)
+# The kinds with a customer (the lessee); a third-party sale has a buyer instead
+CUSTOMER_KINDS = (DisposalKind.RELOCATION, DisposalKind.LESSEE_SALE)
 
 
 class DisposalStatus(models.TextChoices):
@@ -1569,7 +1577,7 @@ class Disposal(models.Model):
     warehouse = models.ForeignKey(
         Warehouse, on_delete=models.PROTECT, related_name="disposals", verbose_name=_("warehouse")
     )
-    # Relocation / lessee sale: the lessee; third-party sale: the buyer
+    # Relocation / lessee sale: the lessee (a customer)
     customer = models.ForeignKey(
         "customers.Customer",
         on_delete=models.PROTECT,
@@ -1577,6 +1585,15 @@ class Disposal(models.Model):
         blank=True,
         related_name="disposals",
         verbose_name=_("customer"),
+    )
+    # Third-party sale: the buyer (an entity with the Buyer role)
+    buyer = models.ForeignKey(
+        "entities.Buyer",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="disposals",
+        verbose_name=_("buyer"),
     )
     # Relocation: the contract the assets go to (contracts live outside Horizon)
     contract = models.CharField(_("contract"), max_length=60, blank=True)

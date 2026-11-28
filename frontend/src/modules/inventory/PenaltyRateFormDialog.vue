@@ -85,6 +85,7 @@ async function submit() {
 
 <template>
   <FormDialog
+    :audit="rate"
     ref="formRef"
     v-model="open"
     :title="rate ? $t('inventory.penalties.edit') : $t('inventory.penalties.new')"

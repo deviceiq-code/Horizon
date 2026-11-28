@@ -96,6 +96,7 @@ function openTemplate(assetClass: AssetClass) {
 <template>
   <ServerCrudTable
     ref="table"
+    class="asset-classes-grid"
     :fetch-page="listAssetClasses"
     :delete-item="deleteAssetClass"
     :headers="headers"
@@ -267,3 +268,14 @@ function openTemplate(assetClass: AssetClass) {
     @saved="table?.reload()"
   />
 </template>
+
+<style scoped>
+/* Every row the same height — with keywords under the name or not — with room above the
+   specification count, which sits on the button's corner (a short row cut it) */
+.asset-classes-grid :deep(tbody tr:not(.v-data-table-rows-no-data) > td) {
+  height: 72px;
+}
+.asset-classes-grid :deep(.v-badge__badge) {
+  z-index: 1;
+}
+</style>

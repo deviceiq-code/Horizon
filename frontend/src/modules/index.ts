@@ -9,12 +9,11 @@ import { suiteApp, type AppId } from '@/apps'
 
 import averagePrices from './average-prices'
 import catalogs from './catalogs'
-import customers from './customers'
+import businessEntities from './business-entities'
 import efmvAnalyses from './efmv-analyses'
 import inventory from './inventory'
 import partners from './partners'
 import remarketing from './remarketing'
-import serviceProviders from './service-providers'
 import { roles, users } from './users'
 import warehouses from './warehouses'
 
@@ -54,11 +53,10 @@ export const MODULES: AppModule[] = [
   ...remarketing,
   // Services and Partnerships (a skeleton for now)
   ...partners,
-  // Administration: Management, then Catalogs (customers and service providers first)
+  // Administration: Management, then Catalogs (business entities first)
   users,
   roles,
-  customers,
-  serviceProviders,
+  businessEntities,
   ...catalogs,
 ]
 

@@ -1,4 +1,5 @@
 import { api, listQuery, type ListParams, type Paginated } from '@/api'
+import type { EntityRef } from '@/modules/business-entities/api'
 
 /** The three ratings that make up a manufacturer's remarketing rating (0–5 stars, half steps). */
 export const MANUFACTURER_RATINGS = ['reputation', 'product_quality', 'after_sales'] as const
@@ -8,6 +9,9 @@ export type ManufacturerRating = (typeof MANUFACTURER_RATINGS)[number]
 export interface Manufacturer {
   id: number
   name: string
+  /** The business entity behind the brand (optional) */
+  business_entity: number | null
+  business_entity_detail: EntityRef | null
   /** 0–5 stars as decimal strings ("3.5"); not filled in = "0.0" */
   reputation: string
   product_quality: string
@@ -22,7 +26,7 @@ export interface Manufacturer {
 
 export type ManufacturerInput = Pick<
   Manufacturer,
-  'name' | ManufacturerRating | 'is_enabled' | 'keywords'
+  'name' | 'business_entity' | ManufacturerRating | 'is_enabled' | 'keywords'
 >
 
 const BASE = '/catalogs/manufacturers/'

@@ -14,6 +14,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
+from config.audit import created_by_field, updated_by_field
 from config.keywords import keywords_field
 from config.photos import PhotoMixin, photo_version, remove_file_later
 
@@ -70,7 +71,9 @@ class Role(models.Model):
         settings.AUTH_USER_MODEL, blank=True, related_name="roles", verbose_name=_("users")
     )
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    created_by = created_by_field()
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+    updated_by = updated_by_field()
 
     class Meta:
         verbose_name = _("role")
@@ -134,6 +137,10 @@ class UserProfile(PhotoMixin, models.Model):
         verbose_name=_("user"),
     )
     photo = models.FileField(_("photo"), upload_to=_photo_path, max_length=255, blank=True)
+    # Who created the user (its date is the user's date_joined) and who changed it last
+    created_by = created_by_field()
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True, null=True)
+    updated_by = updated_by_field()
 
     # Identification
     id_document_type = models.CharField(

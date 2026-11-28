@@ -29,6 +29,8 @@ const api = vi.mocked(manufacturersApi)
 const DEERE: manufacturersApi.Manufacturer = {
   id: 1,
   keywords: [],
+  business_entity: null,
+  business_entity_detail: null,
   name: 'John Deere',
   reputation: '5.0',
   product_quality: '4.5',
@@ -149,6 +151,7 @@ describe('ManufacturersTab', () => {
 
     expect(api.createManufacturer).toHaveBeenCalledWith({
       name: 'New Holland',
+      business_entity: null,
       reputation: '4.5',
       product_quality: '4.0',
       after_sales: '0.0', // not filled in = 0 stars
@@ -201,6 +204,7 @@ describe('ManufacturersTab', () => {
 
     expect(api.updateManufacturer).toHaveBeenCalledWith(1, {
       name: 'John Deere',
+      business_entity: null,
       reputation: '5.0',
       product_quality: '4.5',
       after_sales: '5.0',

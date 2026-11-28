@@ -51,7 +51,7 @@ const open = (row: EfmvAnalysisRow, scenario?: number) =>
       :headers="headers"
       :sort-by="[{ key: 'updated_at', order: 'desc' }]"
       :ordering-fields="{
-        customer: 'customer__name',
+        customer: 'customer__entity__name',
         account_manager: 'account_manager__first_name',
       }"
       :search-placeholder="$t('efmv.searchPlaceholder')"

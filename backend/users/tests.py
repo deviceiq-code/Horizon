@@ -557,3 +557,16 @@ def test_roles_list_their_members(admin_client, analyst_role, admin):
         ("Carla Mendes", True),
     ]
     assert set(role["members"][0]) == {"id", "full_name", "photo_version", "is_active"}
+
+
+def test_users_and_roles_keep_who_created_and_who_changed_them(admin_client, analyst_role):
+    r = _post(
+        admin_client,
+        USERS,
+        {"username": "dora", "first_name": "Dora", "password": STRONG, "roles": []},
+    )
+    data = r.json()
+    assert (data["created_by_name"], data["updated_by_name"]) == ("Ana Souza", "Ana Souza")
+    assert data["date_joined"] and data["updated_at"]
+    r = _post(admin_client, "/api/roles/", {"name": "Auditors"})
+    assert r.json()["created_by_name"] == "Ana Souza"

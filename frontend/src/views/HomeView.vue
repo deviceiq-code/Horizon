@@ -1,7 +1,9 @@
 <script setup lang="ts">
-/** The suite's home: one card per app (Pricing, Asset Management, Remarketing, Services and Partnerships, Administration). */
+/** The suite's home: one card per app (Pricing, Asset Management, Remarketing, Services and
+ * Partnerships, Administration), then the journal (what happened lately and what is new). */
 import { useI18n } from 'vue-i18n'
 import { appName, SUITE_APPS, type SuiteApp } from '@/apps'
+import HomeJournal from '@/components/HomeJournal.vue'
 import { appModules } from '@/modules'
 import { useAuthStore } from '@/stores/auth'
 
@@ -64,6 +66,8 @@ function firstPage(app: SuiteApp) {
         </v-card>
       </v-col>
     </v-row>
+
+    <HomeJournal class="mt-8" />
   </v-container>
 </template>
 

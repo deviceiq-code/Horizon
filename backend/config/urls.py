@@ -8,6 +8,8 @@ admin.site.site_title = _("Horizon")
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
+    path("api/business-entities/", include("entities.urls")),
+    # Read-only lists of two roles, for pickers (written through business entities)
     path("api/customers/", include("customers.urls")),
     path("api/service-providers/", include("service_providers.urls")),
     path("api/inventory/", include("inventory.urls")),

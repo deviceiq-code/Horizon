@@ -1350,7 +1350,8 @@ export const DISPOSAL_STATUSES = ['reserved', 'picking', 'shipped', 'cancelled']
 export type DisposalStatus = (typeof DISPOSAL_STATUSES)[number]
 export type DisposalFileKind = 'document' | 'certificate' | 'other'
 /** Kinds whose destination is a customer (third-party sale: the buyer). */
-export const CUSTOMER_KINDS: DisposalKind[] = ['relocation', 'lessee_sale', 'third_party_sale']
+/** The kinds with a customer (the lessee); a third-party sale has a buyer instead */
+export const CUSTOMER_KINDS: DisposalKind[] = ['relocation', 'lessee_sale']
 
 export interface Disposal {
   id: number
@@ -1362,6 +1363,9 @@ export interface Disposal {
   warehouse_name: string
   customer: number | null
   customer_name: string | null
+  /** Third-party sale: the Buyer role of an entity */
+  buyer: number | null
+  buyer_name: string | null
   contract: string
   discard_provider: number | null
   discard_provider_name: string | null
@@ -1428,6 +1432,8 @@ export interface DisposalInput {
   kind?: DisposalKind
   warehouse?: number
   customer?: number | null
+  /** Third-party sale: the Buyer role's id */
+  buyer?: number | null
   contract?: string
   discard_provider?: number | null
   appointment?: number | null
@@ -1436,7 +1442,7 @@ export interface DisposalInput {
   keywords?: string[]
 }
 
-/** Filters: `status` (also `open`), `kind`, `warehouse`, `customer`. */
+/** Filters: `status` (also `open`), `kind`, `warehouse`, `customer`, `buyer`. */
 export function listDisposals(params: ListParams) {
   return api<Paginated<Disposal>>(`${BASE}/disposals/` + listQuery(params))
 }

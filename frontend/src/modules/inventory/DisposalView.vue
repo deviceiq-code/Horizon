@@ -73,7 +73,7 @@ const editable = computed(() => isOpen.value && canDispose.value)
 const destination = computed(() => {
   const v = disposal.value
   if (!v) return ''
-  return v.customer_name ?? v.discard_provider_name ?? '—'
+  return v.customer_name ?? v.buyer_name ?? v.discard_provider_name ?? '—'
 })
 const destinationLabel = computed(() => {
   switch (disposal.value?.kind) {

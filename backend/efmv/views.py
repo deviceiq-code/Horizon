@@ -51,13 +51,13 @@ class AnalysisOrderingFilter(filters.OrderingFilter):
 
 class EfmvAnalysisViewSet(viewsets.ModelViewSet):
     """eFMV analyses. ?search= (code, customer, account manager), ?account_manager=<user id>,
-    ?customer=<id>, ?ordering= (created_at, code, customer__name). Sending `scenarios` replaces
-    them. POST /scenario-preview/ {term_months, items: [{average_price, quantity}]} returns the
-    totals of a scenario being edited."""
+    ?customer=<id>, ?ordering= (created_at, code, customer__entity__name). Sending `scenarios`
+    replaces them. POST /scenario-preview/ {term_months, items: [{average_price, quantity}]}
+    returns the totals of a scenario being edited."""
 
     queryset = EfmvAnalysis.objects.select_related(
         "account_manager",
-        "customer",
+        "customer__entity",
         "created_by",
         "updated_by",
         "vertical",
@@ -68,8 +68,8 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
     filter_backends = [AnalysisSearchFilter, AnalysisOrderingFilter]
     search_fields = [
         "external_reference",
-        "customer__name",
-        "customer__trade_name",
+        "customer__entity__name",
+        "customer__entity__trade_name",
         "account_manager__first_name",
         "account_manager__last_name",
         "scenarios__name",
@@ -78,7 +78,7 @@ class EfmvAnalysisViewSet(viewsets.ModelViewSet):
         "code",
         "created_at",
         "updated_at",
-        "customer__name",
+        "customer__entity__name",
         "account_manager__first_name",
     ]
     # The latest updated first

@@ -1,36 +1,36 @@
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from config.keywords import keywords_field
+from entities.models import EntityRoleModel
 
 
-class Customer(models.Model):
-    """A lessee: company (CNPJ) or individual (CPF) that signs leasing contracts."""
+class ContractType(models.TextChoices):
+    """How a customer takes Horizon's assets or services ("Modalidades"; several per customer,
+    none while only a prospect). Selling goods is not one: buyers are a role of their own."""
 
-    # Identification
-    name = models.CharField(_("legal name"), max_length=200)
-    trade_name = models.CharField(_("trade name"), max_length=200, blank=True)
-    # CNPJ/CPF in Brazil (validated); other countries' tax IDs are free-form.
-    # Always stored uppercase without punctuation.
-    tax_id = models.CharField(_("tax ID"), max_length=20)
-    country = models.CharField(_("country"), max_length=2, default="BR")  # ISO 3166-1 alpha-2
+    RENTER = "renter", _("Renter")
+    LESSEE = "lessee", _("Lessee")
+    BAILEE = "bailee", _("Bailee (Free Loan)")
+    SERVICE_CUSTOMER = "service_customer", _("Service Customer")
 
-    # Contact
-    email = models.EmailField(_("email"), blank=True)
-    phone = models.CharField(_("phone"), max_length=30, blank=True)
 
-    # Address
-    postal_code = models.CharField(_("postal code"), max_length=10, blank=True)
-    street = models.CharField(_("street"), max_length=200, blank=True)
-    number = models.CharField(_("number"), max_length=20, blank=True)
-    complement = models.CharField(_("complement"), max_length=100, blank=True)
-    district = models.CharField(_("district"), max_length=100, blank=True)
-    city = models.CharField(_("city"), max_length=100, blank=True)
-    state = models.CharField(_("state"), max_length=50, blank=True)
+class Customer(EntityRoleModel):
+    """The Customer role of a business entity (company or person): the commercial
+    relationship — its account managers, eFMV analyses — and its contract types (renter,
+    lessee…). Its identification, contact and address are the entity's (`customer.name`)."""
 
-    # Relationship: exactly one primary account manager and any number of secondary ones —
-    # users with the "Account Manager" role. Such a user cannot be deleted nor lose the role.
+    # ContractType values, in the choices' order; none while only a prospect
+    contract_types = ArrayField(
+        models.CharField(max_length=30, choices=ContractType.choices),
+        default=list,
+        blank=True,
+        verbose_name=_("contract types"),
+    )
+
+    # Exactly one primary account manager and any number of secondary ones — users with the
+    # "Account Manager" role. Such a user cannot be deleted nor lose the role.
     primary_account_manager = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -43,20 +43,7 @@ class Customer(models.Model):
         related_name="secondary_customers",
         verbose_name=_("secondary account managers"),
     )
-    is_active = models.BooleanField(_("active"), default=True)
-    notes = models.TextField(_("notes"), blank=True)
-    keywords = keywords_field()
 
-    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
-    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
-
-    class Meta:
+    class Meta(EntityRoleModel.Meta):
         verbose_name = _("customer")
         verbose_name_plural = _("customers")
-        ordering = ["name"]
-        constraints = [
-            models.UniqueConstraint(fields=["country", "tax_id"], name="customer_unique_tax_id"),
-        ]
-
-    def __str__(self):
-        return self.name

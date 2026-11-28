@@ -104,6 +104,14 @@ class WebSearchEngine(models.TextChoices):
 MAX_UI_STATE_BYTES = 20_000
 
 
+class JournalPeriod(models.IntegerChoices):
+    """How far back the Home's journal looks (days; 1 = today)."""
+
+    TODAY = 1, _("Today")
+    WEEK = 7, _("Last 7 days")
+    MONTH = 30, _("Last 30 days")
+
+
 class UserPreferences(models.Model):
     """Settings each user picks on the settings page."""
 
@@ -188,6 +196,10 @@ class UserPreferences(models.Model):
     word_dictionary = models.BooleanField(_("word dictionary"), default=True)
     # Text typed in forms without spaces at the start or end nor repeated ones
     trim_spaces = models.BooleanField(_("remove extra spaces"), default=True)
+    # The Home's journal: what happened today (1) or in the last 7 or 30 days
+    journal_days = models.PositiveSmallIntegerField(
+        _("journal period"), choices=JournalPeriod, default=JournalPeriod.WEEK
+    )
     # A button inside some text fields searches the Internet for what was typed
     web_search = models.BooleanField(_("search the Internet"), default=True)
     # eFMV scenarios: the scope written from their assets while it is not written by hand

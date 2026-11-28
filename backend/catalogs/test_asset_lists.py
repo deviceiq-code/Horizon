@@ -5,6 +5,8 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 
+from entities.models import BusinessEntity
+
 from .models import AssetClass, Manufacturer, SubVertical, Vertical
 from .ratings import average_stars, is_half_star
 
@@ -184,6 +186,17 @@ def test_create_manufacturer(logged_client, db):
         True,
     )
     assert r.json()["remarketing_average"] == "3.83"
+
+
+def test_a_brand_points_to_the_business_entity_behind_it(logged_client, db):
+    dell = BusinessEntity.objects.create(name="Dell Computadores do Brasil Ltda", tax_id="X1")
+    r = _post(logged_client, MANUFACTURERS, {"name": "Dell", "business_entity": dell.pk})
+    assert r.status_code == 201, r.json()
+    assert r.json()["business_entity_detail"]["name"] == "Dell Computadores do Brasil Ltda"
+    assert _post(logged_client, MANUFACTURERS, {"name": "HP"}).json()["business_entity"] is None
+    # The entity cannot be deleted while a brand points to it
+    response = logged_client.delete(f"/api/business-entities/{dell.pk}/")
+    assert response.status_code == 409
 
 
 def test_ratings_not_filled_in_are_zero_stars(logged_client, db):

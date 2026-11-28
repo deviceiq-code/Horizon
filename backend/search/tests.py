@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 
 from catalogs.models import Manufacturer, Vertical
 from customers.models import Customer
+from entities.models import BusinessEntity
 from users.models import Role
 from users.testing import make_account_manager
 
@@ -41,12 +42,17 @@ def test_one_search_over_every_module_with_counts_and_a_few_results(data):
     assert body["q"] == "deere"
     by_key = {c["key"]: c for c in body["categories"]}
     # Only categories with matches, in the registry's order
-    assert [c["key"] for c in body["categories"]] == ["customers", "verticals", "manufacturers"]
-    customer = by_key["customers"]["results"][0]
-    assert by_key["customers"]["count"] == 1
+    assert [c["key"] for c in body["categories"]] == [
+        "business_entities",
+        "verticals",
+        "manufacturers",
+    ]
+    customer = by_key["business_entities"]["results"][0]
+    assert by_key["business_entities"]["count"] == 1
     assert customer["title"] == "TransDeere"
     assert customer["subtitle"] == "Transportes Deere Ltda"
-    assert customer["meta"] == "Campinas / SP"
+    # Its roles, then where it is
+    assert customer["meta"] == "Customer · Campinas / SP"
     assert customer["badge"] == {"text": "Active", "color": "success"}
     # What to type in the module's grid to find it
     assert customer["search"] == "Transportes Deere Ltda"
@@ -54,9 +60,11 @@ def test_one_search_over_every_module_with_counts_and_a_few_results(data):
 
 
 def test_finds_what_the_modules_grid_finds_keywords_and_account_managers_too(data):
-    Customer.objects.filter(name__startswith="Transportes").update(keywords=["forestry fleet"])
-    assert _search(_client(data), q="forestry")["categories"][0]["key"] == "customers"
-    assert _search(_client(data), q="souza")["categories"][0]["key"] == "customers"
+    BusinessEntity.objects.filter(name__startswith="Transportes").update(
+        keywords=["forestry fleet"]
+    )
+    assert _search(_client(data), q="forestry")["categories"][0]["key"] == "business_entities"
+    assert _search(_client(data), q="souza")["categories"][0]["key"] == "business_entities"
 
 
 def test_one_category_gives_more_results_the_others_only_their_count(data):
@@ -70,7 +78,8 @@ def test_one_category_gives_more_results_the_others_only_their_count(data):
     )
     one = {c["key"]: c for c in _search(client, q="deere", category="manufacturers")["categories"]}
     assert len(one["manufacturers"]["results"]) == 8
-    assert one["customers"]["count"] == 1 and one["customers"]["results"] == []
+    entities = one["business_entities"]
+    assert entities["count"] == 1 and entities["results"] == []
 
 
 def test_users_only_for_administrators(data):

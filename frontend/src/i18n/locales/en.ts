@@ -28,6 +28,7 @@ const en = {
     saved: 'Keywords saved.',
   },
   common: {
+    audit: { created: 'Created on {date} by {name}', updated: 'Changed on {date} by {name}' },
     filters: { nameOrKeyword: 'Name or Keyword', all: 'All' },
     yes: 'Yes',
     no: 'No',
@@ -250,6 +251,35 @@ const en = {
   home: {
     welcome: 'Welcome, {name}',
     text: 'Choose an app to start.',
+    journal: {
+      dataTitle: 'Data Journal',
+      systemTitle: 'System Journal',
+      periods: { 1: 'Today', 7: 'Last 7 days', 30: 'Last 30 days' },
+      empty: 'Nothing new in this period.',
+      current: 'Horizon {version}',
+      version: 'Version {version}',
+      new: 'New',
+      events: {
+        efmv_analyses: {
+          created: 'New eFMV analysis | {n} new eFMV analyses',
+          updated: 'eFMV analysis updated | {n} eFMV analyses updated',
+        },
+        average_prices: {
+          created: 'New average price | {n} new average prices',
+          versions: 'New average price version | {n} new average price versions',
+        },
+        assets: { created: 'Asset entered the inventory | {n} assets entered the inventory' },
+        receiving_lots: { opened: 'Receiving lot opened | {n} receiving lots opened' },
+        inspections: { approved: 'Inspection report approved | {n} inspection reports approved' },
+        disposals: { shipped: 'Disposal shipped | {n} disposals shipped' },
+        transfers: { received: 'Transfer received | {n} transfers received' },
+        business_entities: { created: 'New business entity | {n} new business entities' },
+        manufacturers: { created: 'New manufacturer | {n} new manufacturers' },
+        asset_classes: { created: 'New asset class | {n} new asset classes' },
+        asset_models: { created: 'New asset model | {n} new asset models' },
+        users: { created: 'New user | {n} new users' },
+      },
+    },
   },
   accountManagers: {
     title: 'Account Managers',
@@ -549,6 +579,72 @@ const en = {
       sv: 'SV',
       svHint: 'Services share of the LO',
     },
+  },
+  businessEntities: {
+    title: 'Business Entities',
+    subtitle:
+      'Every company or person Horizon deals with — customers, suppliers, service providers and buyers. One entity may have several roles.',
+    new: 'New Business Entity',
+    newInRole: 'New {role}',
+    edit: 'Edit Business Entity',
+    tabs: { all: 'All', entity: 'Entity' },
+    roles: {
+      customer: {
+        one: 'Customer',
+        many: 'Customers',
+        hint: 'The commercial relationship: its account managers and eFMV analyses.',
+      },
+      supplier: {
+        one: 'Supplier',
+        many: 'Suppliers',
+        hint: 'Supplies Horizon with products and/or services.',
+      },
+      service_provider: {
+        one: 'Service Provider',
+        many: 'Service Providers',
+        hint: 'Provides services: warehousing, transport, refurbishment and more.',
+      },
+      buyer: {
+        one: 'Buyer',
+        many: 'Buyers',
+        hint: 'Buys used assets (Remarketing; third-party sales). No data of its own yet.',
+      },
+    },
+    fields: {
+      contractTypes: 'Contract Types',
+      parent: 'Head Office',
+      group: 'Head Office / Group',
+      roles: 'Roles',
+      supplies: 'Supplies',
+      active: 'Active Entity',
+    },
+    supplies: { products: 'Products', services: 'Services' },
+    contractTypes: {
+      renter: 'Renter',
+      lessee: 'Lessee',
+      bailee: 'Bailee (Free Loan)',
+      service_customer: 'Service Customer',
+    },
+    contractTypesHint:
+      "How it takes Horizon's assets or services. Optional: a prospect has none yet.",
+    rolesHint: 'Turn on what this entity is for Horizon; each role opens its own tab.',
+    parentHint: 'Another entity registered; the group is the tree under the one at the top.',
+    parentSuggestion: 'Same CNPJ root as {name} ({taxId}): its head office?',
+    useSuggestion: 'Use as Head Office',
+    roleActive: 'Active as {role}',
+    runsWarehouses: 'Runs one warehouse | Runs {n} warehouses',
+    groupOf: 'Group: {name}',
+    headOfBranches: 'Head office of one branch | Head office of {n} branches',
+    searchPlaceholder: 'Search by name, tax ID, contact, city or account manager',
+    empty: 'No business entities yet.',
+    noResults: 'No business entities match your search.',
+    noBuyers: 'No active buyers found.',
+    noneFound: 'No business entities found.',
+    created: 'Business entity created.',
+    updated: 'Business entity updated.',
+    deleted: 'Business entity deleted.',
+    deleteTitle: 'Delete Business Entity',
+    deleteConfirm: 'Delete "{name}" and all its roles? This cannot be undone.',
   },
   customers: {
     title: 'Customers',
@@ -1812,7 +1908,9 @@ const en = {
     subtitle: 'Asset manufacturers and how they do in remarketing.',
     new: 'New Manufacturer',
     edit: 'Edit Manufacturer',
+    businessEntityHint: 'Optional: the company behind the brand, registered in Business Entities.',
     fields: {
+      businessEntity: 'Business Entity',
       name: 'Manufacturer Name',
     },
     remarketing: {
@@ -2334,6 +2432,11 @@ const en = {
     },
   },
   settings: {
+    home: {
+      title: 'Home',
+      journalPeriod: 'Journal Period',
+      journalPeriodHint: "How far back the Home's journal looks.",
+    },
     rows: {
       photoSearchHint:
         'Average Prices: photos of the assets found on the internet, through a SearXNG instance.',

@@ -1,52 +1,60 @@
-from django.utils.translation import gettext_lazy as _
+"""Customers as pickers and other modules read them: the Customer role with its entity's
+identification, contact and address (flat, as when they lived here). Written through business
+entities (`entities.serializers`)."""
+
 from rest_framework import serializers
 
-from config.keywords import KeywordsField
-from config.parties import CompanyFieldsMixin
 from users.display import full_name_in, person_ref
-from users.models import is_account_manager
 
 from .models import Customer
 
+ENTITY_FIELDS = [
+    "name",
+    "trade_name",
+    "tax_id",
+    "country",
+    "email",
+    "phone",
+    "postal_code",
+    "street",
+    "number",
+    "complement",
+    "district",
+    "city",
+    "state",
+    "notes",
+    "keywords",
+]
 
-class CustomerSerializer(CompanyFieldsMixin, serializers.ModelSerializer):
-    # Write: primary_account_manager (id, required) and secondary_account_managers (ids).
-    # Read: also names, for display.
+
+class CustomerSerializer(serializers.ModelSerializer):
     primary_account_manager_name = serializers.SerializerMethodField()
     secondary_account_managers_detail = serializers.SerializerMethodField()
-    keywords = KeywordsField()
+    # Active in the role and as an entity
+    is_active = serializers.BooleanField(source="is_usable", read_only=True)
 
     class Meta:
         model = Customer
         fields = [
             "id",
-            "name",
-            "trade_name",
-            "tax_id",
-            "country",
-            "email",
-            "phone",
-            "postal_code",
-            "street",
-            "number",
-            "complement",
-            "district",
-            "city",
-            "state",
+            "entity",
+            *ENTITY_FIELDS,
+            "contract_types",
             "primary_account_manager",
             "primary_account_manager_name",
             "secondary_account_managers",
             "secondary_account_managers_detail",
             "is_active",
-            "notes",
-            "keywords",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
-        extra_kwargs = {"secondary_account_managers": {"required": False}}
-        # Uniqueness of (country, tax_id) is checked in validate() with a friendlier message
-        validators = []
+        read_only_fields = fields
+
+    def get_fields(self):
+        fields = super().get_fields()
+        for name in ENTITY_FIELDS:
+            fields[name] = serializers.ReadOnlyField(source=f"entity.{name}")
+        return fields
 
     def get_primary_account_manager_name(self, obj) -> str:
         return full_name_in(self.context, obj.primary_account_manager)
@@ -54,36 +62,3 @@ class CustomerSerializer(CompanyFieldsMixin, serializers.ModelSerializer):
     def get_secondary_account_managers_detail(self, obj) -> list[dict]:
         refs = [person_ref(self.context, m) for m in obj.secondary_account_managers.all()]
         return sorted(refs, key=lambda ref: ref["full_name"].lower())
-
-    def validate_primary_account_manager(self, value):
-        if not is_account_manager(value):
-            raise serializers.ValidationError(_("This user is not an account manager."))
-        return value
-
-    def validate_secondary_account_managers(self, value):
-        if any(not is_account_manager(user) for user in value):
-            raise serializers.ValidationError(_("This user is not an account manager."))
-        return value
-
-    # --- Cross-field rules (they depend on the country) --------------------------------------
-
-    def validate(self, attrs):
-        errors = self.address_errors(attrs)
-        errors.update(self.tax_id_errors(attrs, _("A customer with this tax ID already exists.")))
-
-        # The primary account manager is not also a secondary one
-        primary = self.current(attrs, "primary_account_manager", None)
-        if "secondary_account_managers" in attrs:
-            secondaries = attrs["secondary_account_managers"]
-        elif self.instance is not None:
-            secondaries = list(self.instance.secondary_account_managers.all())
-        else:
-            secondaries = []
-        if primary is not None and primary in secondaries:
-            errors["secondary_account_managers"] = _(
-                "The primary account manager cannot also be a secondary one."
-            )
-
-        if errors:
-            raise serializers.ValidationError(errors)
-        return attrs

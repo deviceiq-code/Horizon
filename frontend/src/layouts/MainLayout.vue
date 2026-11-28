@@ -17,7 +17,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
-import { appName, SUITE_APPS, suiteApp, type AppId } from '@/apps'
+import { appName, suiteApp } from '@/apps'
 import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
 import AlertsMenu from '@/components/AlertsMenu.vue'
 import AppLauncher from '@/components/AppLauncher.vue'
@@ -76,18 +76,6 @@ const sections = computed(() => {
   }
   return groups
 })
-/** The other apps the user can open (switching apps from the side menu) */
-const otherApps = computed(() =>
-  SUITE_APPS.filter(
-    (app) =>
-      app.id !== currentApp.value?.id &&
-      !app.comingSoon &&
-      appModules(app.id, !!auth.user?.is_admin).length,
-  ),
-)
-function firstPageOf(appId: AppId) {
-  return { name: appModules(appId, !!auth.user?.is_admin)[0]!.name }
-}
 
 // --- Side menu: open or collapsed ----------------------------------------------------------------
 
@@ -214,19 +202,6 @@ async function logout() {
           </v-chip>
         </template>
       </v-list-item>
-
-      <!-- The other apps -->
-      <template v-if="otherApps.length">
-        <div class="section">{{ $t('menu.apps') }}</div>
-        <v-list-item
-          v-for="app in otherApps"
-          :key="app.id"
-          :to="firstPageOf(app.id)"
-          :prepend-icon="app.icon"
-          :title="appName(app, t)"
-          :data-testid="`menu-app-${app.id}`"
-        />
-      </template>
     </v-list>
 
     <template #append>
@@ -278,16 +253,6 @@ async function logout() {
           :aria-label="$t('menu.search')"
           data-testid="search"
           @click="router.push({ name: 'search' })"
-        />
-        <v-btn
-          icon="mdi-book-open-outline"
-          variant="text"
-          size="small"
-          class="bar-icon"
-          :title="$t('menu.docs')"
-          :aria-label="$t('menu.docs')"
-          data-testid="docs"
-          @click="comingSoon('menu.docs')"
         />
         <AlertsMenu />
         <AppLauncher />

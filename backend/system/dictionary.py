@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.routers import DefaultRouter
 
+from config.audit import AUDIT_FIELDS, AuditedSerializerMixin, AuditedViewSetMixin
 from users.permissions import is_administrator
 
 from .models import MAX_VARIANTS, MAX_WORD, DictionaryWord
@@ -15,7 +16,7 @@ def tidy(text: str) -> str:
     return " ".join(str(text).split())
 
 
-class DictionaryWordSerializer(serializers.ModelSerializer):
+class DictionaryWordSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     variants = serializers.ListField(
         child=serializers.CharField(max_length=MAX_WORD, allow_blank=True),
         required=False,
@@ -24,8 +25,8 @@ class DictionaryWordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DictionaryWord
-        fields = ["id", "replacement", "variants", "updated_at"]
-        read_only_fields = ["id", "updated_at"]
+        fields = ["id", "replacement", "variants", *AUDIT_FIELDS]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
     def validate_replacement(self, value):
         value = tidy(value)
@@ -72,7 +73,7 @@ class ReadAllWriteAdmins(permissions.BasePermission):
         return request.method in permissions.SAFE_METHODS or is_administrator(request.user)
 
 
-class DictionaryWordViewSet(viewsets.ModelViewSet):
+class DictionaryWordViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     queryset = DictionaryWord.objects.all()
     serializer_class = DictionaryWordSerializer
     permission_classes = [ReadAllWriteAdmins]
@@ -82,4 +83,8 @@ class DictionaryWordViewSet(viewsets.ModelViewSet):
 
 router = DefaultRouter()
 router.register("word-dictionary", DictionaryWordViewSet, basename="word-dictionary")
-urlpatterns = router.urls
+from django.urls import path  # noqa: E402
+
+from .journal import journal  # noqa: E402
+
+urlpatterns = [path("journal/", journal, name="journal"), *router.urls]

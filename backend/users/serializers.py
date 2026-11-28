@@ -8,12 +8,13 @@ from rest_framework import serializers
 
 from accounts.models import UserNameDisplay
 from catalogs.models import Vertical
+from config.audit import AuditedSerializerMixin
 from config.environments import KNOWN as ENVIRONMENTS
 from config.environments import current as current_environment
 from config.keywords import KeywordsField
 from customers.tax_ids import is_valid_cpf, normalize_tax_id
 
-from .display import context_format, format_user_name, full_name_in
+from .display import context_format, display_name_in, format_user_name, full_name_in
 from .models import (
     IdDocumentType,
     Role,
@@ -25,7 +26,7 @@ from .models import (
 User = get_user_model()
 
 
-class RoleSerializer(serializers.ModelSerializer):
+class RoleSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     users_count = serializers.SerializerMethodField()
     # Who has the role, by name: {id, full_name, photo_version, is_active} (read-only)
     members = serializers.SerializerMethodField()
@@ -43,6 +44,9 @@ class RoleSerializer(serializers.ModelSerializer):
             "users_count",
             "members",
             "created_at",
+            "created_by_name",
+            "updated_at",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "key", "is_system", "users_count", "members", "created_at"]
 
@@ -186,6 +190,9 @@ class UserSerializer(serializers.ModelSerializer):
             "verticals_detail",
             "last_login",
             "date_joined",
+            "created_by_name",
+            "updated_at",
+            "updated_by_name",
         ]
         read_only_fields = [
             "id",
@@ -208,6 +215,24 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_photo_version(self, obj) -> str | None:
         return user_photo_version(obj)
+
+    # Who created it (on date_joined) and who changed it last (kept in the profile)
+    created_by_name = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField(source="profile.updated_at", read_only=True)
+    updated_by_name = serializers.SerializerMethodField()
+
+    def get_created_by_name(self, obj) -> str | None:
+        by = obj.profile.created_by
+        return display_name_in(self.context, by) if by else None
+
+    def get_updated_by_name(self, obj) -> str | None:
+        by = obj.profile.updated_by
+        return display_name_in(self.context, by) if by else None
+
+    def _editor(self):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        return user if user is not None and user.is_authenticated else None
 
     def get_has_password(self, obj) -> bool:
         return obj.has_usable_password()
@@ -337,6 +362,7 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()  # the profile is created with the user
         user.roles.set(roles)
+        profile_data["created_by"] = self._editor()
         self._save_profile(user, profile_data)
         return user
 
@@ -357,6 +383,7 @@ class UserSerializer(serializers.ModelSerializer):
     def _save_profile(self, user, data: dict) -> None:
         profile = UserProfile.for_user(user)
         verticals = data.pop("verticals", None)
+        data["updated_by"] = self._editor()
         for field, value in data.items():
             setattr(profile, field, value)
         profile.save()

@@ -38,8 +38,7 @@ describe('module routes', () => {
     expect(admin).toEqual([
       ['users', 'menu.sections.management'],
       ['roles', 'menu.sections.management'],
-      ['customers', 'menu.sections.catalogs'],
-      ['service-providers', 'menu.sections.catalogs'],
+      ['business-entities', 'menu.sections.catalogs'],
       ['catalogs-verticals', 'menu.sections.catalogs'],
       ['catalogs-asset-classes', 'menu.sections.catalogs'],
       ['catalogs-asset-models', 'menu.sections.catalogs'],
@@ -52,13 +51,6 @@ describe('module routes', () => {
     await router.push({ name: 'catalogs' })
     expect(router.currentRoute.value.name).toBe('catalogs-verticals')
     expect(router.currentRoute.value.path).toBe('/catalogs/verticals')
-  })
-
-  it('the former Customers page opens the Customers catalog', async () => {
-    const router = makeRouter()
-    await router.push('/customers')
-    expect(router.currentRoute.value.name).toBe('customers')
-    expect(router.currentRoute.value.path).toBe('/catalogs/customers')
   })
 
   it('Inventory opens Appointments; its pages are in the Asset Management app', async () => {

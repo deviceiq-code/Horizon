@@ -2,46 +2,35 @@ from django.db.models import Q
 from rest_framework import viewsets
 
 from config.filters import NullsLastOrderingFilter
-from config.keywords import KeywordSearchFilter
 from config.parties import column_filters
+from entities.views import TaxIdSearchFilter
 
-from .models import Customer
+from .models import ContractType, Customer
 from .serializers import CustomerSerializer
-from .tax_ids import normalize_tax_id
 
 
-class CustomerSearchFilter(KeywordSearchFilter):
-    """Regular search (and keywords), plus tax ID typed with or without punctuation
-    ("11.222.333/0001-81")."""
+class CustomerViewSet(viewsets.ReadOnlyModelViewSet):
+    """Customers (the Customer role of business entities), read-only — for pickers and the
+    search; they are written through /api/business-entities/.
 
-    def filter_queryset(self, request, queryset, view):
-        filtered = super().filter_queryset(request, queryset, view)
-        term = request.query_params.get(self.search_param, "")
-        tax_id = normalize_tax_id(term)
-        if len(tax_id) < 3:
-            return filtered
-        return queryset.filter(Q(pk__in=filtered.values("pk")) | Q(tax_id__contains=tax_id))
-
-
-class CustomerViewSet(viewsets.ModelViewSet):
-    """CRUD for customers.
-
-    List supports ?search= (name, trade name, tax ID, email, city, primary or secondary
-    account manager), ?account_manager=<user id> (primary or secondary), column filters
-    (config.parties.column_filters: ?name=, ?tax_id=, ?location=, ?is_active=),
-    ?ordering=, ?page= and ?page_size=.
+    List supports ?contract_type=<type>, ?search= (name, trade name, tax ID, email, city,
+    primary or secondary account manager), ?account_manager=<user id> (primary or
+    secondary), column filters (config.parties.column_filters: ?name=, ?tax_id=, ?location=,
+    ?is_active= — active in the role and as an entity), ?ordering=, ?page= and ?page_size=.
     """
 
-    queryset = Customer.objects.select_related("primary_account_manager").prefetch_related(
-        "secondary_account_managers"
-    )
+    queryset = Customer.objects.select_related(
+        "entity", "primary_account_manager"
+    ).prefetch_related("secondary_account_managers")
     serializer_class = CustomerSerializer
-    filter_backends = [CustomerSearchFilter, NullsLastOrderingFilter]
+    filter_backends = [TaxIdSearchFilter, NullsLastOrderingFilter]
+    keywords_lookup = "entity__keywords"
+    tax_id_field = "entity__tax_id"
     search_fields = [
-        "name",
-        "trade_name",
-        "email",
-        "city",
+        "entity__name",
+        "entity__trade_name",
+        "entity__email",
+        "entity__city",
         "primary_account_manager__first_name",
         "primary_account_manager__last_name",
         "secondary_account_managers__first_name",
@@ -49,23 +38,25 @@ class CustomerViewSet(viewsets.ModelViewSet):
     ]
     ordering_fields = [
         "id",
-        "name",
-        "trade_name",
-        "tax_id",
-        "city",
-        "state",
+        "entity__name",
+        "entity__trade_name",
+        "entity__tax_id",
+        "entity__city",
         "is_active",
         "primary_account_manager__first_name",
     ]
-    ordering = ["name"]
+    ordering = ["entity__name"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
         params = self.request.query_params
+        contract_type = params.get("contract_type", "")
+        if contract_type in ContractType.values:
+            queryset = queryset.filter(contract_types__contains=[contract_type])
         manager = params.get("account_manager", "")
         if manager.isdigit():
             queryset = queryset.filter(
                 Q(primary_account_manager_id=int(manager))
                 | Q(secondary_account_managers__id=int(manager))
             ).distinct()
-        return column_filters(queryset, params)
+        return column_filters(queryset, params, prefix="entity__")

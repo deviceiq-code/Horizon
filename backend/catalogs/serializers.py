@@ -6,6 +6,7 @@ from django.db.models import ProtectedError
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from config.audit import AuditedSerializerMixin
 from config.keywords import KeywordsField
 from users.display import person_ref
 from users.models import ACCOUNT_MANAGER
@@ -81,7 +82,7 @@ class SubVerticalSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class VerticalSerializer(serializers.ModelSerializer):
+class VerticalSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     # Read-only: the account managers who work in this vertical. Administrators assign them on
     # the user (Users → the user's verticals), not here.
     account_managers_detail = serializers.SerializerMethodField()
@@ -100,6 +101,8 @@ class VerticalSerializer(serializers.ModelSerializer):
             "sub_verticals",
             "created_at",
             "updated_at",
+            "created_by_name",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -217,25 +220,35 @@ def remarketing_average_field():
     return serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
 
 
-class ManufacturerSerializer(serializers.ModelSerializer):
+class ManufacturerSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     remarketing_average = remarketing_average_field()
     keywords = KeywordsField()
+    business_entity_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = Manufacturer
         fields = [
             "id",
             "name",
+            "business_entity",
+            "business_entity_detail",
             *MANUFACTURER_RATINGS,
             "remarketing_average",
             "is_enabled",
             "keywords",
             "created_at",
             "updated_at",
+            "created_by_name",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
         # Not filled in = 0 stars (model default); null is not accepted
         extra_kwargs = {field: {"allow_null": False} for field in MANUFACTURER_RATINGS}
+
+    def get_business_entity_detail(self, obj) -> dict | None:
+        from entities.serializers import entity_ref
+
+        return entity_ref(obj.business_entity)
 
     def validate_name(self, value):
         value = _collapse_spaces(value)
@@ -284,7 +297,7 @@ class SubVerticalOptionSerializer(serializers.ModelSerializer):
 _ICON = re.compile(r"^mdi-[a-z0-9]+(-[a-z0-9]+)*$")
 
 
-class AssetClassSerializer(serializers.ModelSerializer):
+class AssetClassSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     # Read-only: the sub-vertical with its label and vertical, for display
     sub_vertical_detail = SubVerticalOptionSerializer(source="sub_vertical", read_only=True)
     remarketing_average = remarketing_average_field()
@@ -309,6 +322,8 @@ class AssetClassSerializer(serializers.ModelSerializer):
             "is_enabled",
             "created_at",
             "updated_at",
+            "created_by_name",
+            "updated_by_name",
         ]
         # The template is edited through /api/catalogs/asset-classes/<id>/spec-template/
         read_only_fields = ["id", "spec_template", "created_at", "updated_at"]
@@ -448,7 +463,7 @@ def _clean_list(values) -> list[str]:
     return items
 
 
-class AssetModelSerializer(serializers.ModelSerializer):
+class AssetModelSerializer(AuditedSerializerMixin, serializers.ModelSerializer):
     """`specs` is written as {key: value} for the asset class's template and read back as the
     stored snapshot (catalogs.specs.snapshot_values), as average prices'."""
 
@@ -486,6 +501,8 @@ class AssetModelSerializer(serializers.ModelSerializer):
             "assets_count",
             "created_at",
             "updated_at",
+            "created_by_name",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
         # The name's uniqueness per manufacturer is checked in validate() (friendlier)

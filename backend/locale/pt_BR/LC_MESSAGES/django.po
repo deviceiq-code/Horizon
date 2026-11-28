@@ -3153,3 +3153,117 @@ msgstr "“%(typed)s” já vira “%(word)s”."
 
 msgid "remove extra spaces"
 msgstr "remover espaços desnecessários"
+
+msgid "Customer"
+msgstr "Cliente"
+
+msgid "Lessee"
+msgstr "Arrendatário"
+
+msgid "Supplier"
+msgstr "Fornecedor"
+
+msgid "Service Provider"
+msgstr "Service Provider"
+
+msgid "Buyer"
+msgstr "Comprador"
+
+msgid "head office"
+msgstr "matriz"
+
+msgid "business entity"
+msgstr "entidade"
+
+msgid "business entities"
+msgstr "entidades"
+
+
+
+msgid "Products"
+msgstr "Produtos"
+
+msgid "Services"
+msgstr "Serviços"
+
+msgid "supplies"
+msgstr "fornece"
+
+msgid "supplier"
+msgstr "fornecedor"
+
+msgid "suppliers"
+msgstr "fornecedores"
+
+msgid "buyer"
+msgstr "comprador"
+
+msgid "buyers"
+msgstr "compradores"
+
+msgid "This entity is the customer of analyses, appointments or disposals: the Customer role cannot be removed. Deactivate it instead."
+msgstr "Esta entidade é cliente de análises, agendamentos ou destinações: o papel Cliente não pode ser removido. Desative-o."
+
+
+msgid "Records point to this supplier: the role cannot be removed."
+msgstr "Há registros ligados a este fornecedor: o papel não pode ser removido."
+
+msgid "This entity runs warehouses or was used in transfers or disposals: the Service Provider role cannot be removed. Deactivate it instead."
+msgstr "Esta entidade administra armazéns ou foi usada em transferências ou destinações: o papel Service Provider não pode ser removido. Desative-o."
+
+msgid "This entity bought assets in disposals: the Buyer role cannot be removed. Deactivate it instead."
+msgstr "Esta entidade comprou ativos em destinações: o papel Comprador não pode ser removido. Desative-o."
+
+msgid "Choose products, services or both."
+msgstr "Escolha produtos, serviços ou ambos."
+
+msgid "A business entity with this tax ID already exists."
+msgstr "Já existe uma entidade com este documento."
+
+msgid "An entity cannot have itself or one of its branches as its head office."
+msgstr "Uma entidade não pode ter como matriz a si mesma nem uma de suas filiais."
+
+msgid "This entity is the head office of others and cannot be deleted."
+msgstr "Esta entidade é matriz de outras e não pode ser excluída."
+
+msgid "Other records point to this entity (its roles' analyses, appointments, warehouses, disposals…, or brands): it cannot be deleted. Deactivate it instead."
+msgstr "Há registros ligados a esta entidade (análises, agendamentos, armazéns, destinações… dos seus papéis, ou marcas): ela não pode ser excluída. Desative-a."
+
+msgid "Choose the buyer."
+msgstr "Escolha o comprador."
+
+msgid "This buyer is inactive."
+msgstr "Este comprador está inativo."
+
+msgid "Renter"
+msgstr "Locatário"
+
+msgid "Bailee (Free Loan)"
+msgstr "Comodatário"
+
+msgid "Service Customer"
+msgstr "Tomador de Serviços"
+
+msgid "contract types"
+msgstr "modalidades"
+
+msgid "Today"
+msgstr "Hoje"
+
+msgid "Last 7 days"
+msgstr "Últimos 7 dias"
+
+msgid "Last 30 days"
+msgstr "Últimos 30 dias"
+
+msgid "journal period"
+msgstr "período do journal"
+
+msgid "released on"
+msgstr "lançada em"
+
+msgid "release"
+msgstr "versão"
+
+msgid "releases"
+msgstr "versões"

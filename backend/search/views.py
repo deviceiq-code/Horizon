@@ -1,13 +1,9 @@
 """GET /api/search/?q=&category=: the centralized search (search/registry.py)."""
 
-import copy
-
-from django.http import QueryDict
 from rest_framework.decorators import api_view
-from rest_framework.exceptions import APIException
-from rest_framework.request import Request
 from rest_framework.response import Response
 
+from .access import module_view
 from .registry import PROVIDERS, Provider
 
 # All the categories: a few of each; one category: up to this many
@@ -17,21 +13,8 @@ MAX_RESULTS = 50
 
 def _filtered(provider: Provider, request, q: str):
     """The provider's list, as its own grid would search it — None when the user may not."""
-    http = copy.copy(request._request)
-    http.GET = QueryDict(mutable=True)
-    http.GET["search"] = q
-    sub = Request(http, parsers=request.parsers, authenticators=request.authenticators)
-    sub.user = request.user
-    sub._auth = request.auth
-    view = provider.view()
-    view.request = sub
-    view.args, view.kwargs = (), {}
-    view.action = "list"
-    view.format_kwarg = None
-    view.headers = {}
-    try:
-        view.check_permissions(sub)
-    except APIException:
+    view = module_view(provider.view, request, {"search": q})
+    if view is None:
         return None
     return view.filter_queryset(view.get_queryset())
 

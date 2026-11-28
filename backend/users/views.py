@@ -11,6 +11,7 @@ from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 
 from config import environments
+from config.audit import AuditedViewSetMixin
 from config.environments import LIVE
 from config.filters import NullsLastOrderingFilter
 from config.keywords import KeywordSearchFilter
@@ -205,7 +206,7 @@ class _Refused(Exception):
         self.message = message
 
 
-class RoleViewSet(LiveUsersMixin, viewsets.ModelViewSet):
+class RoleViewSet(AuditedViewSetMixin, LiveUsersMixin, viewsets.ModelViewSet):
     """Roles users can have. ?search= (name, description), ?ordering= (name, users_count).
     System roles (Administrator, Account Manager) cannot be changed or deleted; roles with
     users cannot be deleted."""

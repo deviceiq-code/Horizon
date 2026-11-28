@@ -47,24 +47,24 @@ from .states import AreaType, AssetStatus, DomainError, area_accepts
 
 
 def check_header(
-    *, kind: str, warehouse, customer=None, discard_provider=None, appointment=None
+    *, kind: str, warehouse, customer=None, buyer=None, discard_provider=None, appointment=None
 ) -> None:
     """Who and what the disposal is for, by kind."""
     if kind not in DisposalKind.values or kind == DisposalKind.PARTS:
         raise DomainError(_("Choose the kind of disposal."), field="kind")
     if kind in CUSTOMER_KINDS and customer is None:
-        message = (
-            _("Choose the buyer (registered as a customer).")
-            if kind == DisposalKind.THIRD_PARTY_SALE
-            else _("Choose the customer.")
-        )
-        raise DomainError(message, field="customer")
+        raise DomainError(_("Choose the customer."), field="customer")
+    if kind == DisposalKind.THIRD_PARTY_SALE:
+        if buyer is None:
+            raise DomainError(_("Choose the buyer."), field="buyer")
+        if not buyer.is_usable:
+            raise DomainError(_("This buyer is inactive."), field="buyer")
     if kind == DisposalKind.DISCARD:
         if discard_provider is None:
             raise DomainError(
                 _("Choose the provider that receives the discard."), field="discard_provider"
             )
-        if not discard_provider.is_active or "disposal" not in (discard_provider.services or []):
+        if not discard_provider.is_usable or "disposal" not in (discard_provider.services or []):
             raise DomainError(
                 _("Choose an active provider offering disposal."), field="discard_provider"
             )
@@ -87,6 +87,7 @@ def create(
     warehouse,
     user,
     customer=None,
+    buyer=None,
     contract: str = "",
     discard_provider=None,
     appointment=None,
@@ -97,6 +98,7 @@ def create(
         kind=kind,
         warehouse=warehouse,
         customer=customer,
+        buyer=buyer,
         discard_provider=discard_provider,
         appointment=appointment,
     )
@@ -105,6 +107,7 @@ def create(
         kind=kind,
         warehouse=warehouse,
         customer=customer if kind in CUSTOMER_KINDS else None,
+        buyer=buyer if kind == DisposalKind.THIRD_PARTY_SALE else None,
         contract=contract.strip() if kind == DisposalKind.RELOCATION else "",
         discard_provider=discard_provider if kind == DisposalKind.DISCARD else None,
         appointment=appointment,
@@ -123,8 +126,8 @@ def _lock_open(disposal: Disposal) -> Disposal:
 
 @transaction.atomic
 def update_header(disposal: Disposal, **fields) -> Disposal:
-    """Customer, contract, provider, appointment, document number, notes and keywords, while
-    open (the kind and the warehouse never change)."""
+    """Customer, buyer, contract, provider, appointment, document number, notes and keywords,
+    while open (the kind and the warehouse never change)."""
     disposal = _lock_open(disposal)
     for name, value in fields.items():
         setattr(disposal, name, value)
@@ -132,11 +135,14 @@ def update_header(disposal: Disposal, **fields) -> Disposal:
         kind=disposal.kind,
         warehouse=disposal.warehouse,
         customer=disposal.customer,
+        buyer=disposal.buyer,
         discard_provider=disposal.discard_provider,
         appointment=disposal.appointment,
     )
     if disposal.kind not in CUSTOMER_KINDS:
         disposal.customer = None
+    if disposal.kind != DisposalKind.THIRD_PARTY_SALE:
+        disposal.buyer = None
     if disposal.kind != DisposalKind.RELOCATION:
         disposal.contract = ""
     if disposal.kind != DisposalKind.DISCARD:

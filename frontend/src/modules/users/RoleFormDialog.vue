@@ -67,6 +67,7 @@ async function submit() {
 
 <template>
   <FormDialog
+    :audit="role"
     ref="formRef"
     v-model="open"
     :title="isEdit ? $t('users.roles.edit') : $t('users.roles.new')"

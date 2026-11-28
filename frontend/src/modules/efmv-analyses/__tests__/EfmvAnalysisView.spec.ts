@@ -156,6 +156,7 @@ async function mountView(
       select_on_focus: true,
       word_dictionary: true,
       trim_spaces: true,
+      journal_days: 7,
       auto_scope: true,
       scope_threshold: '5.00',
       number_format: 'auto',

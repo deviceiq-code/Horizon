@@ -29,6 +29,7 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
             "select_on_focus",
             "word_dictionary",
             "trim_spaces",
+            "journal_days",
             "auto_scope",
             "scope_threshold",
             "updated_at",

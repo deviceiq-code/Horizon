@@ -93,6 +93,7 @@ async function submit() {
 
 <template>
   <FormDialog
+    :audit="tool"
     ref="formRef"
     v-model="open"
     :title="tool ? $t('inventory.erasure.edit') : $t('inventory.erasure.new')"

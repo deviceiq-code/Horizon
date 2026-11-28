@@ -33,7 +33,7 @@ const RESPONSE: searchModule.SearchResponse = {
       ],
     },
     {
-      key: 'customers',
+      key: 'business_entities',
       count: 1,
       results: [
         {
@@ -109,9 +109,9 @@ describe('SearchView', () => {
     expect(inBody('[data-testid="search-more-average_prices"]')!.textContent).toContain(
       'View All (6)',
     )
-    const customers = inBody('[data-testid="search-group-customers"]')!
+    const customers = inBody('[data-testid="search-group-business_entities"]')!
     expect(customers.querySelector('[data-testid="search-badge"]')!.textContent).toContain('Active')
-    expect(inBody('[data-testid="search-more-customers"]')).toBeNull()
+    expect(inBody('[data-testid="search-more-business_entities"]')).toBeNull()
     wrapper.unmount()
   })
 
@@ -123,14 +123,16 @@ describe('SearchView', () => {
     expect(searchAll).toHaveBeenLastCalledWith('deere', 'average_prices')
     expect(router.currentRoute.value.query).toEqual({ q: 'deere', category: 'average_prices' })
     // Only that category now
-    expect(inBody('[data-testid="search-group-customers"]')).toBeNull()
+    expect(inBody('[data-testid="search-group-business_entities"]')).toBeNull()
 
     await click('search-tab-all')
     await settle()
-    const result = inBody('[data-testid="search-group-customers"] [data-testid="search-result"]')
+    const result = inBody(
+      '[data-testid="search-group-business_entities"] [data-testid="search-result"]',
+    )
     ;(result as HTMLElement).click()
     // The module's page loads on demand
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('customers'))
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('business-entities'))
     expect(router.currentRoute.value.query).toEqual({ search: 'Transportes Deere Ltda' })
     wrapper.unmount()
   })
