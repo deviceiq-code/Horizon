@@ -36,7 +36,7 @@ export const SUITE_APPS: readonly SuiteApp[] = [
     path: 'asset-management',
     name: 'Asset Management',
     descriptionKey: 'apps.assets.description',
-    icon: 'mdi-forklift',
+    icon: 'mdi-archive-cog-outline',
     formerPath: 'remarketing',
   },
   {

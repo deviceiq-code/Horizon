@@ -464,7 +464,7 @@ Multi-user web system for **operating lease residual value pricing**
     "Administração" (`/admin/…`, two side menu sections: Management — Users and Roles,
     administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
     Classes, Manufacturers, shared by every app). Asset Management (`/asset-management/…`,
-    `mdi-forklift`; formerly the Remarketing app — `SuiteApp.formerPath`: its addresses under
+    `mdi-archive-cog-outline` — not a forklift: those are assets we lease (MHE); formerly the Remarketing app — `SuiteApp.formerPath`: its addresses under
     `/remarketing/` redirect, `moduleRoutes`; app id `assets`): section
     Inventory — Appointments (calendar `v-calendar` + list), Receiving (lots; lot page
     `/asset-management/inventory/receiving/:id`), Inspection (queue; report page
