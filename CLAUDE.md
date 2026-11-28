@@ -728,11 +728,12 @@ Multi-user web system for **operating lease residual value pricing**
   returned as `created_by_name` / `updated_by_name` (`AuditedSerializerMixin`, `AUDIT_FIELDS`);
   users keep theirs in `UserProfile` (created on `date_joined`). Their forms show them in the
   footer, on the left (`FormDialog`'s `audit`). A new register gets them too.
-- **Versions** (`system.Release`, `system/releases.py`): **every change delivered adds a
-  release** — a data migration in `system/migrations/` (as `0008_release_1_0_0.py`), so every
-  environment gets the same — raising **only the last number** (1.0.0 → 1.0.1; the others only
-  when Fernando says so), with notes written for the users (what they can now do, not the
-  commits) **in every language** (en, pt-br, es — as many in each; a test fails otherwise).
+- **Versions** (`system.Release`, `system/releases.py`) change **only with a commit on main**:
+  **before committing**, add the release — a data migration in `system/migrations/` (as
+  `0008_release_1_0_0.py`), migrated in Live and Development — raising **only the last number**
+  (1.0.0 → 1.0.1; the others only when Fernando says so), with notes written for the users
+  (what they can now do since the previous release, not the commits) **in every language**
+  (en, pt-br, es — as many in each; a test fails otherwise); then commit, the release in it.
 - **Money and percentages: always `Decimal` / `models.DecimalField`** (NUMERIC in Postgres). Never `float`.
   Precision (`config/decimals.py`): money 2 places, **percentages always calculated with 5**
   (`decimals.percent`); how many are shown is each user's `percent_places`.
