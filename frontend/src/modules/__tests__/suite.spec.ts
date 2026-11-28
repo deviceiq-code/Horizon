@@ -58,6 +58,7 @@ describe('suite apps and routes', () => {
     setLanguage('pt-br')
     expect(SUITE_APPS.map((app) => appName(app, t))).toEqual([
       'Pricing',
+      'Asset Management',
       'Remarketing',
       'Services and Partnerships',
       'Administração',
@@ -73,6 +74,12 @@ describe('suite apps and routes', () => {
       'partners-discounts',
     ])
     expect(appModules('remarketing', false).map((m) => m.name)).toEqual([
+      'remarketing-offers',
+      'remarketing-sales',
+      'remarketing-buyers',
+      'remarketing-channels',
+    ])
+    expect(appModules('assets', false).map((m) => m.name)).toEqual([
       'inventory-appointments',
       'inventory-receiving',
       'inventory-inspections',

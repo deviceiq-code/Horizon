@@ -13,6 +13,7 @@ import customers from './customers'
 import efmvAnalyses from './efmv-analyses'
 import inventory from './inventory'
 import partners from './partners'
+import remarketing from './remarketing'
 import serviceProviders from './service-providers'
 import { roles, users } from './users'
 import warehouses from './warehouses'
@@ -46,9 +47,11 @@ export const MODULES: AppModule[] = [
   // Pricing: eFMV Analyses first
   efmvAnalyses,
   averagePrices,
-  // Remarketing: Inventory
+  // Asset Management: Inventory
   ...inventory,
   warehouses,
+  // Remarketing (a skeleton for now)
+  ...remarketing,
   // Services and Partnerships (a skeleton for now)
   ...partners,
   // Administration: Management, then Catalogs (customers and service providers first)
@@ -67,12 +70,22 @@ export function appModules(app: AppId | undefined, isAdmin: boolean): AppModule[
 /**
  * Routes of every module under its app's prefix, with what the layout needs in `meta`: the
  * app, the module and its title (breadcrumb) and whether administrators only can open it.
- * The former addresses without the prefix redirect to the new ones.
+ * The former addresses without the prefix — or under the app's former prefix — redirect to the
+ * new ones.
  */
 export function moduleRoutes(): RouteRecordRaw[] {
   return MODULES.flatMap((module) => {
-    const prefix = suiteApp(module.app)!.path
+    const app = suiteApp(module.app)!
+    const prefix = app.path
     return module.routes.flatMap((route) => [
+      ...(app.formerPath
+        ? [
+            {
+              path: `/${app.formerPath}/${route.path}/:rest(.*)*`,
+              redirect: (to) => to.fullPath.replace(`/${app.formerPath}/`, `/${prefix}/`),
+            } as RouteRecordRaw,
+          ]
+        : []),
       {
         ...route,
         path: `${prefix}/${route.path}`,

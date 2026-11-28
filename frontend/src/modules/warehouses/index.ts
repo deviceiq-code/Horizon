@@ -1,12 +1,12 @@
 import { defineAsyncComponent } from 'vue'
 import type { AppModule } from '@/modules'
 
-/** Remarketing › Inventory › Warehouses: a page like the catalogs' (title, subtitle, grid). */
+/** Asset Management › Inventory › Warehouses: a page like the catalogs' (title, subtitle, grid). */
 const warehouses: AppModule = {
   name: 'warehouses',
   icon: 'mdi-warehouse',
   titleKey: 'warehouses.title',
-  app: 'remarketing',
+  app: 'assets',
   section: 'menu.sections.inventory',
   routes: [
     {

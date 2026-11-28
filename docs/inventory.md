@@ -1,4 +1,4 @@
-# Inventory (Remarketing)
+# Inventory (Asset Management)
 
 The physical life of the assets returned at the end of operating leases: from their arrival at a
 warehouse to their way out. Source: the business specification "Módulo de Estoque: Recebimento,
@@ -112,7 +112,7 @@ Vistoria, Armazenamento e Movimentação" (Nov 2026), delivered in 7 phases.
   marks, C heavy use, D accident or misuse) · Functioning 1 works, 2 with restrictions, 3 does
   not work, 0 not testable · Completeness C complete, P accessory items missing, I essential
   parts missing — e.g. **B1C**. Codes are fixed (`GRADE_CODES`); names and descriptions are
-  editable (`GradeLevel`, Remarketing › Inventory Catalogs › Grades). The three values are kept
+  editable (`GradeLevel`, Asset Management › Inventory Catalogs › Grades). The three values are kept
   separately on the report (for pricing); the asset keeps its current grade
   (`Asset.condition_grade`).
 - **Suggestions** (`inventory/grades.py`, pure): functioning from the model's test script (all
@@ -353,7 +353,7 @@ DELETE, `approve/`, `pick/`, `send/`, `receive/`, `finish/`, `cancel/`, `files/`
 Business rule refusals answer 400 `{"detail": "<translated reason>", "field": "<field>"}`.
 Asset models: `/api/catalogs/asset-models/`.
 
-## Pages (Remarketing › Inventory)
+## Pages (Asset Management › Inventory)
 
 Appointments (calendar month/week/day + list; expected list editor), Receiving (lots; lot page:
 Triage, Received, Occurrences, Files, Data Erasure, Expected List), Inspection (queue, in

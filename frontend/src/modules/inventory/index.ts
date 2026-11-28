@@ -1,5 +1,5 @@
 /**
- * Remarketing › Inventory: appointments (receivings and shipments), receiving lots (triage),
+ * Asset Management › Inventory: appointments (receivings and shipments), receiving lots (triage),
  * the scan-driven movement page and the inventory's pages (assets, accessories, locations,
  * containers, labels). Warehouses live in their own folder.
  */
@@ -21,7 +21,7 @@ function page(
     name,
     icon,
     titleKey: `${key}.title`,
-    app: 'remarketing',
+    app: 'assets',
     section: INVENTORY_SECTION,
     routes: [
       catalogPage
@@ -53,7 +53,7 @@ export const receiving: AppModule = {
   name: 'inventory-receiving',
   icon: 'mdi-truck-check-outline',
   titleKey: 'inventory.lots.title',
-  app: 'remarketing',
+  app: 'assets',
   section: INVENTORY_SECTION,
   routes: [
     {
@@ -97,7 +97,7 @@ export const inspections: AppModule = {
   name: 'inventory-inspections',
   icon: 'mdi-clipboard-search-outline',
   titleKey: 'inventory.inspections.title',
-  app: 'remarketing',
+  app: 'assets',
   section: INVENTORY_SECTION,
   routes: [
     {
@@ -155,7 +155,7 @@ export const disposals: AppModule = {
   name: 'inventory-disposals-list',
   icon: 'mdi-truck-delivery-outline',
   titleKey: 'inventory.disposals.title',
-  app: 'remarketing',
+  app: 'assets',
   section: INVENTORY_SECTION,
   routes: [
     {
@@ -186,7 +186,7 @@ export const transfers: AppModule = {
   name: 'inventory-transfers',
   icon: 'mdi-swap-horizontal',
   titleKey: 'inventory.transfers.title',
-  app: 'remarketing',
+  app: 'assets',
   section: INVENTORY_SECTION,
   routes: [
     {
@@ -217,7 +217,7 @@ export const counts: AppModule = {
   name: 'inventory-counts',
   icon: 'mdi-clipboard-list-outline',
   titleKey: 'inventory.counts.title',
-  app: 'remarketing',
+  app: 'assets',
   section: INVENTORY_SECTION,
   routes: [
     {

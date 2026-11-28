@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-import { MODULES, visibleModules } from '@/modules'
+import { MODULES, moduleRoutes, visibleModules } from '@/modules'
 
 function makeRouter() {
   return createRouter({
@@ -11,6 +11,22 @@ function makeRouter() {
 }
 
 describe('module routes', () => {
+  it('Asset Management was the Remarketing app: its former addresses open the same pages', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', children: moduleRoutes() }],
+    })
+    await router.push('/remarketing/inventory/stock?warehouse=2')
+    expect(router.currentRoute.value.name).toBe('inventory-stock')
+    expect(router.currentRoute.value.fullPath).toBe('/asset-management/inventory/stock?warehouse=2')
+    await router.push('/remarketing/inventory/warehouses')
+    expect(router.currentRoute.value.name).toBe('warehouses')
+    // The new Remarketing app has pages of its own
+    await router.push('/remarketing/offers')
+    expect(router.currentRoute.value.name).toBe('remarketing-offers')
+    expect(router.currentRoute.value.path).toBe('/remarketing/offers')
+  })
+
   it('every module has a route with its name (the menu links to it)', () => {
     const router = makeRouter()
     const missing = MODULES.map((m) => m.name).filter((name) => !router.hasRoute(name))
@@ -45,12 +61,12 @@ describe('module routes', () => {
     expect(router.currentRoute.value.path).toBe('/catalogs/customers')
   })
 
-  it('Inventory opens Appointments; its pages are in the Remarketing app', async () => {
+  it('Inventory opens Appointments; its pages are in the Asset Management app', async () => {
     const router = makeRouter()
     await router.push('/inventory')
     expect(router.currentRoute.value.name).toBe('inventory-appointments')
-    const remarketing = MODULES.filter((m) => m.app === 'remarketing')
-    expect(remarketing.map((m) => [m.name, m.section])).toEqual([
+    const assets = MODULES.filter((m) => m.app === 'assets')
+    expect(assets.map((m) => [m.name, m.section])).toEqual([
       ...[
         'inventory-appointments',
         'inventory-receiving',

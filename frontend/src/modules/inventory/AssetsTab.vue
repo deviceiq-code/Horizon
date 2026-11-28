@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Assets in stock (Remarketing › Inventory): grid with column filters and the detail with the
+/** Assets in stock (Asset Management › Inventory): grid with column filters and the detail with the
  * whole history. Assets enter through the triage of receiving lots and are never deleted. */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

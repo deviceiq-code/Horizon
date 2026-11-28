@@ -19,7 +19,7 @@ from config.photos import PhotoMixin, photo_version, remove_file_later
 
 ADMINISTRATOR = "administrator"
 ACCOUNT_MANAGER = "account_manager"
-# Inventory (Remarketing)
+# Inventory (Asset Management)
 RECEIVER = "receiver"
 INSPECTION_TECHNICIAN = "inspection_technician"
 STOREKEEPER = "storekeeper"

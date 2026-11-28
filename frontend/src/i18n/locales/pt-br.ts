@@ -57,11 +57,50 @@ const ptBR: Messages = {
     label: 'Idioma',
     select: 'Selecionar idioma',
   },
-  partners: {
-    underConstruction: 'Em Construção',
-    underConstructionHint:
-      'Esta página faz parte do esqueleto do app: suas regras de negócio estão sendo definidas.',
+  underConstruction: {
+    label: 'Em Construção',
+    hint: 'Esta página faz parte do esqueleto do app: suas regras de negócio estão sendo definidas.',
     planned: 'Previsto',
+  },
+  remarketing: {
+    offers: {
+      title: 'Ofertas',
+      subtitle: 'Ativos usados oferecidos à venda, com preço a partir do estoque.',
+      planned: [
+        'Ofertas montadas a partir do estoque disponível (ativos e lotes)',
+        'Preços pedidos a partir dos laudos e do eFMV',
+        'Validade e situação de cada oferta',
+      ],
+    },
+    sales: {
+      title: 'Vendas',
+      subtitle: 'Vendas de ativos usados, do pedido à entrega.',
+      planned: [
+        'Pedidos de venda e seus ativos',
+        'Faturamento e pagamento',
+        'Expedição pelas destinações do Asset Management',
+      ],
+    },
+    buyers: {
+      title: 'Compradores',
+      subtitle: 'Brokers, revendedores e clientes que compram ativos usados.',
+      planned: [
+        'Compradores e seus contatos',
+        'Histórico de compras',
+        'Preferências por classe de ativo',
+      ],
+    },
+    channels: {
+      title: 'Canais de Venda',
+      subtitle: 'Onde os ativos usados são vendidos: venda direta, leilões e marketplaces.',
+      planned: [
+        'Canais e suas taxas',
+        'Publicação das ofertas em cada canal',
+        'Resultados por canal',
+      ],
+    },
+  },
+  partners: {
     services: {
       title: 'Serviços',
       subtitle: 'Os serviços que a Horizon oferece, para escolher nas análises de eFMV.',
@@ -172,8 +211,12 @@ const ptBR: Messages = {
       description:
         'Precificação de eFMV: preços médios dos bens, suas curvas de valor e análises de eFMV.',
     },
+    assets: {
+      description:
+        'Estoque de ativos: recebimento, laudos de vistoria, estoque, movimentações, transferências, inventários e destinações.',
+    },
     remarketing: {
-      description: 'Gestão de ativos e estoque, relatórios de vistoria e venda de bens usados.',
+      description: 'Venda de ativos usados: ofertas, compradores, vendas e canais de venda.',
     },
     partners: {
       description: 'Serviços, parceiros, programas de incentivo, descontos e taxas.',

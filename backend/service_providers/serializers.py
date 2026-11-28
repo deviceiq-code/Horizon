@@ -12,7 +12,7 @@ class ServiceProviderSerializer(CompanyFieldsMixin, serializers.ModelSerializer)
         child=serializers.ChoiceField(choices=ServiceKind.choices), allow_empty=True
     )
     keywords = KeywordsField()
-    # Warehouses it runs (read-only; Remarketing › Inventory)
+    # Warehouses it runs (read-only; Asset Management › Inventory)
     warehouses_count = serializers.SerializerMethodField()
 
     class Meta:

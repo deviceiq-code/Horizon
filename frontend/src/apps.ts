@@ -3,7 +3,7 @@
  * under its own address prefix and side menu. "Administration" holds what every app shares:
  * users and roles; catalogs (customers, service providers, verticals…).
  */
-export type AppId = 'pricing' | 'remarketing' | 'partners' | 'admin'
+export type AppId = 'pricing' | 'assets' | 'remarketing' | 'partners' | 'admin'
 
 export interface SuiteApp {
   id: AppId
@@ -17,6 +17,8 @@ export interface SuiteApp {
   icon: string
   /** Not available yet: shown as "coming soon" */
   comingSoon?: boolean
+  /** Address prefix it had before (its pages there redirect here) */
+  formerPath?: string
 }
 
 export const SUITE_APPS: readonly SuiteApp[] = [
@@ -29,6 +31,16 @@ export const SUITE_APPS: readonly SuiteApp[] = [
     icon: 'mdi-sale-outline',
   },
   {
+    // Inventory of assets (formerly the "Remarketing" app, at /remarketing/…)
+    id: 'assets',
+    path: 'asset-management',
+    name: 'Asset Management',
+    descriptionKey: 'apps.assets.description',
+    icon: 'mdi-forklift',
+    formerPath: 'remarketing',
+  },
+  {
+    // Sale of used assets (a skeleton for now)
     id: 'remarketing',
     path: 'remarketing',
     name: 'Remarketing',

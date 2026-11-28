@@ -60,11 +60,46 @@ const en = {
     label: 'Language',
     select: 'Select language',
   },
-  partners: {
-    underConstruction: 'Under Construction',
-    underConstructionHint:
-      'This page is part of the app’s skeleton: its business rules are being defined.',
+  underConstruction: {
+    label: 'Under Construction',
+    hint: 'This page is part of the app’s skeleton: its business rules are being defined.',
     planned: 'Planned',
+  },
+  remarketing: {
+    offers: {
+      title: 'Offers',
+      subtitle: 'Used assets offered for sale, priced from the stock.',
+      planned: [
+        'Offers built from the available stock (assets and lots)',
+        'Asking prices from the inspection reports and the eFMV',
+        'Validity and status of each offer',
+      ],
+    },
+    sales: {
+      title: 'Sales',
+      subtitle: 'Sales of used assets, from the order to the delivery.',
+      planned: [
+        'Sales orders and their assets',
+        'Invoicing and payment',
+        'Shipping through Asset Management’s disposals',
+      ],
+    },
+    buyers: {
+      title: 'Buyers',
+      subtitle: 'Brokers, resellers and customers who buy used assets.',
+      planned: ['Buyers and their contacts', 'Purchase history', 'Preferences by asset class'],
+    },
+    channels: {
+      title: 'Sales Channels',
+      subtitle: 'Where used assets are sold: direct sales, auctions and marketplaces.',
+      planned: [
+        'Channels and their fees',
+        'Publishing offers in each channel',
+        'Results per channel',
+      ],
+    },
+  },
+  partners: {
     services: {
       title: 'Services',
       subtitle: 'The services Horizon offers, to choose in eFMV analyses.',
@@ -172,8 +207,12 @@ const en = {
     pricing: {
       description: 'eFMV pricing: average prices of assets, their value curves and eFMV analyses.',
     },
+    assets: {
+      description:
+        'Inventory of assets: receiving, inspection reports, stock, movements, transfers, counts and disposals.',
+    },
     remarketing: {
-      description: 'Asset and inventory management, inspection reports and sale of used assets.',
+      description: 'Sale of used assets: offers, buyers, sales and sales channels.',
     },
     partners: {
       description: 'Services, partners, incentive programs, discounts and fees.',

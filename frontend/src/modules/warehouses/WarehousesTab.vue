@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Warehouses (Remarketing › Inventory): grid with column filters, as the catalogs'. */
+/** Warehouses (Asset Management › Inventory): grid with column filters, as the catalogs'. */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ActiveChip from '@/components/ActiveChip.vue'

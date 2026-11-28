@@ -1,7 +1,7 @@
 /**
  * Services and Partnerships (an app of the suite): the services Horizon offers, partners,
  * incentive programs, discounts and fees. A skeleton for now: each module is
- * a page saying what it will hold (`UnderConstruction.vue`) while the business rules are
+ * a page saying what it will hold (`components/UnderConstruction.vue`) while the business rules are
  * defined; the backend app is `partners/` (no models yet).
  */
 import type { AppModule } from '@/modules'
@@ -16,8 +16,8 @@ function page(name: string, path: string, key: string, icon: string): AppModule 
       {
         path,
         name,
-        component: () => import('./UnderConstruction.vue'),
-        props: { page: key, icon },
+        component: () => import('@/components/UnderConstruction.vue'),
+        props: { textKey: `partners.${key}`, icon },
       },
     ],
   }

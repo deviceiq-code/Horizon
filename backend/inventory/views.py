@@ -139,7 +139,7 @@ from .states import AreaType, AssetStatus, DomainError
 
 
 class WarehouseViewSet(viewsets.ModelViewSet):
-    """CRUD for warehouses (Remarketing › Inventory).
+    """CRUD for warehouses (Asset Management › Inventory).
 
     List supports ?search= (name, city, contact, verticals, provider's names, keywords),
     ?ownership=own|outsourced, ?vertical=<id> (warehouses serving it), ?service_provider=<id>,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** The suite's home: one card per app (Pricing, Remarketing soon, Administration). */
+/** The suite's home: one card per app (Pricing, Asset Management, Remarketing, Services and Partnerships, Administration). */
 import { useI18n } from 'vue-i18n'
 import { appName, SUITE_APPS, type SuiteApp } from '@/apps'
 import { appModules } from '@/modules'

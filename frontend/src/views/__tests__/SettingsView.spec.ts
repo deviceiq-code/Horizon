@@ -104,6 +104,7 @@ describe('SettingsView', () => {
     )
     expect(sections).toEqual([
       'Pricing',
+      'Asset Management',
       'Remarketing',
       'Services and Partnerships',
       'Administration',

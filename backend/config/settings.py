@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "accounts",
     "assets",
     "partners",
+    "remarketing",
     "account_managers",
     "customers",
     "catalogs",

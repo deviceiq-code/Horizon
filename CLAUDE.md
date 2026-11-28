@@ -19,6 +19,9 @@ Multi-user web system for **operating lease residual value pricing**
   - `assets/` — domain app (no models yet; business rules to be defined).
   - `partners/` — Services and Partnerships (no models yet; planned: a catalog of
     services for eFMV analyses, partners, incentive programs, discounts, fees).
+  - `remarketing/` — Remarketing, the sale of used assets (no models yet; planned: offers built
+    from the stock, sales, buyers, sales channels). The inventory — formerly this app — is
+    Asset Management (`inventory/`).
   - **Account managers are users** with the system role "Account Manager" (`users`,
     `ACCOUNT_MANAGER`); administrators manage them in Users (no separate screen; the former
     address opens Users filtered by that role). The business verticals they work in are on the
@@ -45,7 +48,7 @@ Multi-user web system for **operating lease residual value pricing**
     transport, inspection, refurbishment, repair, data_erasure, packaging, sales, disposal; at
     least one, kept in the list's order). `/api/service-providers/` (`?service=`). One that runs
     warehouses cannot be deleted (409) nor lose warehousing (400).
-  - `inventory/` — **Inventory** of Remarketing (phases, decisions and RN → tests in
+  - `inventory/` — **Inventory** of Asset Management (phases, decisions and RN → tests in
     `docs/inventory.md` — keep it updated). Phase 1 (foundation): `codes.py` (pure: Luhn,
     Horizon ID `H`+8 digits+check digit, container `C`…, `parse_code`, warehouse codes),
     `states.py` (pure: `AssetStatus`, `AreaType`, `TRANSITIONS` RN-01, `AREA_STATUSES` RN-02,
@@ -451,19 +454,24 @@ Multi-user web system for **operating lease residual value pricing**
     (`.v-data-table` in `.v-main`) stick under the top bar while the rows scroll — so grids must not
     get their own vertical scroll (no `height`/`fixed-header` on page grids; dialogs may).
   - **Suite of apps** (like Microsoft 365), the suite being "Horizon": `src/apps.ts`
-    (`SUITE_APPS`): "Pricing" (`/pricing/…`; menu: eFMV Analyses first — the app opens it —, Average Prices), "Remarketing", "Services and Partnerships"
+    (`SUITE_APPS`): "Pricing" (`/pricing/…`; menu: eFMV Analyses first — the app opens it —, Average Prices), "Asset Management", "Remarketing", "Services and Partnerships"
     (`/partners/…`; a skeleton: modules Services, Partners, Incentive Programs, Discounts and
-    Fees, each `partners/UnderConstruction.vue` — purpose and what is planned, texts in
-    `partners.<page>`; backend app `partners/` without models yet) and
+    Fees, each `components/UnderConstruction.vue` — purpose and what is planned, texts under
+    its `textKey`, here `partners.<page>`; backend app `partners/` without models yet),
+    "Remarketing" (`/remarketing/…`, `mdi-storefront-outline`; a skeleton the same way:
+    Offers, Sales, Buyers, Sales Channels — `remarketing.<page>`; backend app `remarketing/`)
+    and
     "Administração" (`/admin/…`, two side menu sections: Management — Users and Roles,
     administrators only — and Catalogs — Customers, Service Providers, Verticals, Asset
-    Classes, Manufacturers, shared by every app). Remarketing (`/remarketing/…`): section
+    Classes, Manufacturers, shared by every app). Asset Management (`/asset-management/…`,
+    `mdi-forklift`; formerly the Remarketing app — `SuiteApp.formerPath`: its addresses under
+    `/remarketing/` redirect, `moduleRoutes`; app id `assets`): section
     Inventory — Appointments (calendar `v-calendar` + list), Receiving (lots; lot page
-    `/remarketing/inventory/receiving/:id`), Inspection (queue; report page
-    `/remarketing/inventory/inspection/:id` — `InspectionWizard.vue` for drafts, `ReportSheet.vue`
+    `/asset-management/inventory/receiving/:id`), Inspection (queue; report page
+    `/asset-management/inventory/inspection/:id` — `InspectionWizard.vue` for drafts, `ReportSheet.vue`
     printable), Movement, Assets, Accessories, Locations, Containers, Labels
     (`src/modules/inventory/`), section Inventory Catalogs — Grades, Penalty Table, Erasure Tools — and
-    Warehouses (`/remarketing/inventory/<page>`). Scan screens are for barcode guns (keyboard
+    Warehouses (`/asset-management/inventory/<page>`). Scan screens are for barcode guns (keyboard
     wedge + Enter; focused field, color + sound — `inventory/beep.ts`); codes checked in the
     browser by `src/utils/inventoryCodes.ts`; labels are Code 128 SVG (`src/utils/code128.ts`,
     no library) printed one per 50 × 30 mm page from a hidden frame (`inventory/labels.ts`). App names have no "Horizon" and stay in English in

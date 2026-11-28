@@ -57,11 +57,50 @@ const es: Messages = {
     label: 'Idioma',
     select: 'Seleccionar idioma',
   },
-  partners: {
-    underConstruction: 'En Construcción',
-    underConstructionHint:
-      'Esta página es parte del esqueleto de la app: sus reglas de negocio se están definiendo.',
+  underConstruction: {
+    label: 'En Construcción',
+    hint: 'Esta página es parte del esqueleto de la app: sus reglas de negocio se están definiendo.',
     planned: 'Previsto',
+  },
+  remarketing: {
+    offers: {
+      title: 'Ofertas',
+      subtitle: 'Activos usados ofrecidos a la venta, con precio a partir del stock.',
+      planned: [
+        'Ofertas armadas a partir del stock disponible (activos y lotes)',
+        'Precios pedidos a partir de los informes y del eFMV',
+        'Vigencia y estado de cada oferta',
+      ],
+    },
+    sales: {
+      title: 'Ventas',
+      subtitle: 'Ventas de activos usados, del pedido a la entrega.',
+      planned: [
+        'Pedidos de venta y sus activos',
+        'Facturación y pago',
+        'Despacho por los destinos de Asset Management',
+      ],
+    },
+    buyers: {
+      title: 'Compradores',
+      subtitle: 'Brokers, revendedores y clientes que compran activos usados.',
+      planned: [
+        'Compradores y sus contactos',
+        'Historial de compras',
+        'Preferencias por clase de activo',
+      ],
+    },
+    channels: {
+      title: 'Canales de Venta',
+      subtitle: 'Dónde se venden los activos usados: venta directa, subastas y marketplaces.',
+      planned: [
+        'Canales y sus tarifas',
+        'Publicación de las ofertas en cada canal',
+        'Resultados por canal',
+      ],
+    },
+  },
+  partners: {
     services: {
       title: 'Servicios',
       subtitle: 'Los servicios que Horizon ofrece, para elegir en los análisis de eFMV.',
@@ -172,9 +211,12 @@ const es: Messages = {
       description:
         'Precios de eFMV: precios promedio de los bienes, sus curvas de valor y análisis de eFMV.',
     },
-    remarketing: {
+    assets: {
       description:
-        'Gestión de activos e inventario, informes de inspección y venta de bienes usados.',
+        'Inventario de activos: recepción, informes de inspección, stock, movimientos, transferencias, conteos y destinos.',
+    },
+    remarketing: {
+      description: 'Venta de activos usados: ofertas, compradores, ventas y canales de venta.',
     },
     partners: {
       description: 'Servicios, socios, programas de incentivo, descuentos y tarifas.',

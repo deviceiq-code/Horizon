@@ -22,7 +22,7 @@ class Ownership(models.TextChoices):
 
 
 class Warehouse(models.Model):
-    """A stock location of Remarketing: where returned equipment is received and kept until it
+    """A stock location of Asset Management: where returned equipment is received and kept until it
     is made available to buyers of used assets."""
 
     name = models.CharField(_("name"), max_length=100)

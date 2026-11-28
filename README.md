@@ -109,7 +109,7 @@ must run once a day. With cron, on the machine that runs Horizon (`crontab -e`):
 With Development (Test) configured, add the same line with
 `HORIZON_ENVIRONMENT=development uv run python manage.py check_deadlines` (and another log).
 Running it more than once a day is harmless (it is idempotent). Supervisors can also run it
-from Remarketing › Inventory Catalogs › Deadlines and Holidays ("Check Deadlines Now").
+from Asset Management › Inventory Catalogs › Deadlines and Holidays ("Check Deadlines Now").
 
 ## Tests and quality
 ```bash
