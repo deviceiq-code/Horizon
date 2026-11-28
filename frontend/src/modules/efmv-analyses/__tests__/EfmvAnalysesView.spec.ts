@@ -82,3 +82,41 @@ describe('EfmvAnalysesView', () => {
     wrapper.unmount()
   })
 })
+
+describe('EfmvAnalysesView: double click', () => {
+  beforeEach(() => setLanguage('en'))
+  afterEach(() => {
+    vi.clearAllMocks()
+    document.body.innerHTML = ''
+  })
+
+  it('a double click on a row opens the analysis', async () => {
+    efmv.listEfmvAnalyses.mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [ROW],
+    })
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', name: 'efmv-analyses-list', component: EfmvAnalysesView },
+        { path: '/new', name: 'efmv-analysis-new', component: { render: () => null } },
+        { path: '/:id', name: 'efmv-analysis', component: { render: () => null } },
+      ],
+    })
+    await router.push('/')
+    const wrapper = mount(EfmvAnalysesView, {
+      attachTo: document.body,
+      global: { plugins: [vuetify, i18n, pinia, router] },
+    })
+    await settle()
+    await wrapper.find('tbody tr').trigger('dblclick')
+    await settle()
+    expect(router.currentRoute.value.name).toBe('efmv-analysis')
+    expect(router.currentRoute.value.params.id).toBe('3')
+    wrapper.unmount()
+  })
+})

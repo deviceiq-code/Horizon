@@ -65,6 +65,7 @@ const open = (row: EfmvAnalysisRow, scenario?: number) =>
       :edit-title="$t('efmv.open')"
       @create="router.push({ name: 'efmv-analysis-new' })"
       @edit="open"
+      @open="open"
     >
       <template #row-actions="{ item }">
         <v-btn

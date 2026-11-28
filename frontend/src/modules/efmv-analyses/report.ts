@@ -282,6 +282,11 @@ export function reportHtml(
     [t('efmv.report.accountManager'), analysis.account_manager_detail.full_name, ''],
     [t('efmv.report.vertical'), analysis.vertical_label ?? '—', ''],
     [t('efmv.report.createdBy'), analysis.created_by_name ?? '—', f.date(analysis.created_at)],
+    [
+      t('efmv.report.changedBy'),
+      analysis.updated_by_name ?? '—',
+      analysis.updated_at ? f.date(analysis.updated_at) : '',
+    ],
     [t('efmv.report.printedOn'), printed, ''],
   ]
     .map(

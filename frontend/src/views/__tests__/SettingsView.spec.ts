@@ -35,6 +35,9 @@ const user = (is_admin: boolean): User => ({
     word_dictionary: true,
     trim_spaces: true,
     journal_days: 7,
+    show_data_journal: true,
+    show_system_journal: true,
+    journal_layout: 'vertical',
     auto_scope: true,
     scope_threshold: '5.00',
     number_format: 'auto',
@@ -280,6 +283,13 @@ describe('SettingsView', () => {
     const preferences = usePreferencesStore()
     expect(preferences.journalDays).toBe(7)
     expect(inBody('[data-testid="journal-days"]')!.textContent).toContain('Last 7 days')
+    // Both parts shown by default, each in a row before / after the period
+    const shown = (id: string) =>
+      (inBody(`[data-testid="${id}"] input`) as HTMLInputElement).checked
+    expect(shown('show-data-journal')).toBe(true)
+    expect(shown('show-system-journal')).toBe(true)
+    // Vertical by default
+    expect(inBody('[data-testid="journal-layout-vertical"]')!.className).toContain('v-btn--active')
     wrapper.unmount()
   })
 

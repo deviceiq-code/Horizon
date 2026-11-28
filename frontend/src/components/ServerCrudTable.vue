@@ -20,6 +20,18 @@ import { activeFilters, useServerTable, type SortItem } from '@/composables/useS
 import { useNotificationsStore } from '@/stores/notifications'
 import { usePreferencesStore } from '@/stores/preferences'
 
+/** An action of a row (a button, or an item of its "…" menu) */
+export interface RowAction {
+  key: string
+  icon: string
+  title: string
+  color?: string
+  onClick: () => void
+}
+
+/** More actions than this in a row: all of them go into the "…" menu */
+const MAX_INLINE_ACTIONS = 3
+
 const props = defineProps<{
   fetchPage: (params: ListParams) => Promise<Paginated<T>>
   deleteItem: (id: number) => Promise<void>
@@ -52,12 +64,16 @@ const props = defineProps<{
   canDelete?: (item: T) => boolean
   /** Rows show a checkbox (v-model:selected = their ids; no "select all") */
   selectable?: boolean
+  /** A row's own actions, before edit and delete. Up to MAX_INLINE_ACTIONS in all: buttons;
+   * more: every one of them in a "…" menu */
+  rowActionsList?: (item: T) => RowAction[]
 }>()
 
 /** Ids of the selected rows (with `selectable`), kept across pages */
 const selected = defineModel<number[]>('selected', { default: () => [] })
 
-const emit = defineEmits<{ create: []; edit: [item: T]; clearFilters: [] }>()
+// `open`: a row double-clicked (e.g. its details)
+const emit = defineEmits<{ create: []; edit: [item: T]; open: [item: T]; clearFilters: [] }>()
 
 const { t } = useI18n()
 const notifications = useNotificationsStore()
@@ -154,6 +170,39 @@ function toggleFilters() {
 }
 
 defineExpose({ reload: load })
+
+/** Every action of a row: its own, then edit and delete (when allowed) */
+function actionsOf(item: T): RowAction[] {
+  const actions = [...(props.rowActionsList?.(item) ?? [])]
+  if (!props.canEdit || props.canEdit(item)) {
+    actions.push({
+      key: 'edit',
+      icon: props.editIcon ?? 'mdi-pencil-outline',
+      title: props.editTitle ?? t('common.edit'),
+      onClick: () => emit('edit', item),
+    })
+  }
+  if (!props.canDelete || props.canDelete(item)) {
+    actions.push({
+      key: 'delete',
+      icon: 'mdi-delete-outline',
+      title: t('common.delete'),
+      color: 'error',
+      onClick: () => askDelete(item),
+    })
+  }
+  return actions
+}
+
+function inlineActions(item: T): RowAction[] {
+  const all = actionsOf(item)
+  return all.length > MAX_INLINE_ACTIONS ? [] : all
+}
+
+function menuActions(item: T): RowAction[] {
+  const all = actionsOf(item)
+  return all.length > MAX_INLINE_ACTIONS ? all : []
+}
 </script>
 
 <template>
@@ -222,6 +271,7 @@ defineExpose({ reload: load })
         must-sort
         hover
         @update:options="load"
+        @dblclick:row="(_event: Event, row: { item: T }) => emit('open', row.item)"
       >
         <!-- Selecting is row by row (pages limit how many) -->
         <template #[`header.data-table-select`] />
@@ -279,26 +329,42 @@ defineExpose({ reload: load })
           <!-- Extra actions provided by the page, before edit/delete -->
           <slot name="row-actions" :item="item" />
           <v-btn
-            v-if="!canEdit || canEdit(item)"
-            :icon="editIcon ?? 'mdi-pencil-outline'"
+            v-for="action in inlineActions(item)"
+            :key="action.key"
+            :icon="action.icon"
             variant="text"
             size="small"
-            :aria-label="editTitle ?? $t('common.edit')"
-            :title="editTitle ?? $t('common.edit')"
-            data-testid="edit"
-            @click="emit('edit', item)"
+            :color="action.color"
+            :aria-label="action.title"
+            :title="action.title"
+            :data-testid="action.key"
+            @click="action.onClick"
           />
-          <v-btn
-            v-if="!canDelete || canDelete(item)"
-            icon="mdi-delete-outline"
-            variant="text"
-            size="small"
-            color="error"
-            :aria-label="$t('common.delete')"
-            :title="$t('common.delete')"
-            data-testid="delete"
-            @click="askDelete(item)"
-          />
+          <!-- More than three: all of them in a menu -->
+          <v-menu v-if="menuActions(item).length" location="bottom end">
+            <template #activator="{ props: menu }">
+              <v-btn
+                v-bind="menu"
+                icon="mdi-dots-horizontal"
+                variant="text"
+                size="small"
+                :aria-label="$t('common.moreActions')"
+                :title="$t('common.moreActions')"
+                data-testid="more-actions"
+              />
+            </template>
+            <v-list density="compact" data-testid="more-actions-menu">
+              <v-list-item
+                v-for="action in menuActions(item)"
+                :key="action.key"
+                :prepend-icon="action.icon"
+                :title="action.title"
+                :base-color="action.color"
+                :data-testid="action.key"
+                @click="action.onClick"
+              />
+            </v-list>
+          </v-menu>
         </template>
       </v-data-table-server>
     </v-card>

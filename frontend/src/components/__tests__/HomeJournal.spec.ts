@@ -80,6 +80,38 @@ describe('HomeJournal', () => {
     wrapper.unmount()
   })
 
+  it('each part can be hidden; with both hidden nothing is asked for', async () => {
+    const preferences = usePreferencesStore()
+    preferences.showSystemJournal = false
+    let wrapper = mountJournal()
+    await settle()
+    expect(wrapper.text()).toContain('Data Journal')
+    expect(wrapper.text()).not.toContain('System Journal')
+    wrapper.unmount()
+    preferences.showDataJournal = false
+    api.getJournal.mockClear()
+    wrapper = mountJournal()
+    await settle()
+    expect(api.getJournal).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="journal"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('the journals one under the other (default) or side by side', async () => {
+    const preferences = usePreferencesStore()
+    let wrapper = mountJournal()
+    await settle()
+    expect(wrapper.find('.journal--vertical').exists()).toBe(true)
+    wrapper.unmount()
+    preferences.journalLayout = 'horizontal'
+    wrapper = mountJournal()
+    await settle()
+    expect(wrapper.find('.journal--horizontal').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="data-journal"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="system-journal"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('nothing in the period: says so', async () => {
     api.getJournal.mockResolvedValue({ ...JOURNAL, events: [], days: 1 })
     const wrapper = mountJournal()

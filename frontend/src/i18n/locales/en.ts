@@ -28,6 +28,7 @@ const en = {
     saved: 'Keywords saved.',
   },
   common: {
+    moreActions: 'More Actions',
     audit: { created: 'Created on {date} by {name}', updated: 'Changed on {date} by {name}' },
     filters: { nameOrKeyword: 'Name or Keyword', all: 'All' },
     yes: 'Yes',
@@ -349,6 +350,7 @@ const en = {
     report: {
       language: 'Language',
       createdBy: 'Created By',
+      changedBy: 'Changed By',
       title: 'eFMV Analysis',
       subtitle: 'Estimated fair market value at the end of the lease',
       dialogTitle: 'Print Analysis',
@@ -2434,6 +2436,13 @@ const en = {
   settings: {
     home: {
       title: 'Home',
+      journalLayout: 'Journal Layout',
+      journalLayoutHint: 'The Data and System Journals one under the other, or side by side.',
+      layouts: { vertical: 'Vertical', horizontal: 'Horizontal' },
+      showDataJournal: 'Show Data Journal',
+      showDataJournalHint: 'What happened lately in the modules you open: counts only.',
+      showSystemJournal: 'Show System Journal',
+      showSystemJournalHint: 'What is new in each version of Horizon.',
       journalPeriod: 'Journal Period',
       journalPeriodHint: "How far back the Home's journal looks.",
     },

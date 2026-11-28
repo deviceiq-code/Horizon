@@ -428,21 +428,6 @@ async function save() {
                 {{ analysis.vertical_label ?? '—' }}
               </div>
             </div>
-            <div
-              class="premise"
-              :title="analysis.created_by_name ?? undefined"
-              data-testid="created-at"
-            >
-              <div class="premise-label">{{ $t('efmv.fields.createdAt') }}</div>
-              <div class="premise-value">
-                <v-icon
-                  icon="mdi-calendar-outline"
-                  size="small"
-                  class="mr-2 text-medium-emphasis"
-                />
-                {{ d(new Date(analysis.created_at), 'short') }}
-              </div>
-            </div>
             <div class="premise" data-testid="premise-reference">
               <div class="premise-label">{{ $t('efmv.fields.externalReference') }}</div>
               <div class="premise-value">
@@ -490,6 +475,37 @@ async function save() {
                   data-testid="edit-keywords"
                   @click="editKeywords"
                 />
+              </div>
+            </div>
+            <!-- A line of their own: when it was created and changed, and by whom -->
+            <div class="premises-break" />
+            <div class="premise" data-testid="created-at">
+              <div class="premise-label">{{ $t('efmv.fields.createdAt') }}</div>
+              <div class="premise-value">
+                <v-icon
+                  icon="mdi-calendar-outline"
+                  size="small"
+                  class="mr-2 text-medium-emphasis"
+                />
+                {{ d(new Date(analysis.created_at), 'short') }}
+                <span v-if="analysis.created_by_name" class="text-medium-emphasis ml-1">
+                  · {{ analysis.created_by_name }}
+                </span>
+              </div>
+            </div>
+            <!-- Who saved it last, and when -->
+            <div class="premise" data-testid="updated-at">
+              <div class="premise-label">{{ $t('efmv.fields.updatedAt') }}</div>
+              <div class="premise-value">
+                <v-icon
+                  icon="mdi-calendar-edit-outline"
+                  size="small"
+                  class="mr-2 text-medium-emphasis"
+                />
+                {{ d(new Date(analysis.updated_at), 'dateTime') }}
+                <span v-if="analysis.updated_by_name" class="text-medium-emphasis ml-1">
+                  · {{ analysis.updated_by_name }}
+                </span>
               </div>
             </div>
           </div>
@@ -732,7 +748,12 @@ async function save() {
   font-weight: 500;
   line-height: 1.2;
 }
-/* The premises: small captions over their values, side by side */
+/* The premises: small captions over their values, side by side; created / changed on a
+   second line */
+.premises-break {
+  flex-basis: 100%;
+  height: 0;
+}
 .premises {
   display: flex;
   flex-wrap: wrap;

@@ -404,10 +404,23 @@ async function submit() {
     saving.value = false
   }
 }
+
+/** Who created the price (its first version) and who changed it last */
+function priceAudit(price: AveragePrice | null | undefined) {
+  return price
+    ? {
+        created_at: price.first_created_at,
+        created_by_name: price.first_created_by_name,
+        updated_at: price.updated_at,
+        updated_by_name: price.updated_by_name,
+      }
+    : null
+}
 </script>
 
 <template>
   <FormDialog
+    :audit="isNewVersion ? priceAudit(source) : null"
     ref="formRef"
     v-model="open"
     :title="

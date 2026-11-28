@@ -38,6 +38,12 @@ export interface AveragePrice {
   supersedes: number | null
   created_at: string
   created_by_name: string | null
+  /** The row (every version): created with its first version; changed last by a new version
+   * or its photo or documents */
+  first_created_at: string
+  first_created_by_name: string | null
+  updated_at: string | null
+  updated_by_name: string | null
   deleted_at: string | null
   /** Documents of the row (shared by all its versions) */
   documents_count: number

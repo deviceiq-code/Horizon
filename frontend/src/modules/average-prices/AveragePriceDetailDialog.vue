@@ -95,10 +95,23 @@ async function onVersionDeleted(erased: AveragePrice) {
   }
   await load(next)
 }
+
+/** Who created the price (its first version) and who changed it last */
+function priceAudit(price: AveragePrice | null | undefined) {
+  return price
+    ? {
+        created_at: price.first_created_at,
+        created_by_name: price.first_created_by_name,
+        updated_at: price.updated_at,
+        updated_by_name: price.updated_by_name,
+      }
+    : null
+}
 </script>
 
 <template>
   <FormDialog
+    :audit="priceAudit(row)"
     v-model="open"
     :title="row ? `${row.manufacturer.name} ${row.model}` : $t('averagePrices.title')"
     max-width="980"

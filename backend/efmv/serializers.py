@@ -624,6 +624,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
     customer_detail = serializers.SerializerMethodField()
     vertical_label = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
     sub_vertical = serializers.PrimaryKeyRelatedField(
         queryset=SubVertical.objects.all(), required=False, allow_null=True
     )
@@ -648,6 +649,7 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
             "created_at",
             "created_by_name",
             "updated_at",
+            "updated_by_name",
         ]
         read_only_fields = ["id", "code", "created_at", "updated_at"]
 
@@ -660,6 +662,9 @@ class EfmvAnalysisSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj) -> str | None:
         return full_name_in(self.context, obj.created_by) if obj.created_by else None
+
+    def get_updated_by_name(self, obj) -> str | None:
+        return full_name_in(self.context, obj.updated_by) if obj.updated_by else None
 
     def get_vertical_label(self, obj) -> str | None:
         """ "Industry" or "Industry / Yellow line" """

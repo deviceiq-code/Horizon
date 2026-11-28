@@ -10,7 +10,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNumberFormat } from '@/composables/useNumberFormat'
 import MoneyField from '@/components/MoneyField.vue'
-import ServerCrudTable from '@/components/ServerCrudTable.vue'
+import ServerCrudTable, { type RowAction } from '@/components/ServerCrudTable.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import { formatMoney } from '@/utils/money'
 import AveragePriceDetailDialog from './AveragePriceDetailDialog.vue'
@@ -139,6 +139,24 @@ watch(selected, (ids) => {
 })
 
 const money = (row: AveragePrice) => formatMoney(row.original_value, row.currency, locale.value)
+
+/** View and Create Copy, then New Version and Delete — four: all in the row's "…" menu */
+function rowActions(row: AveragePrice): RowAction[] {
+  return [
+    {
+      key: 'view',
+      icon: 'mdi-eye-outline',
+      title: t('averagePrices.view'),
+      onClick: () => openDetail(row),
+    },
+    {
+      key: 'copy',
+      icon: 'mdi-file-replace-outline',
+      title: t('averagePrices.createCopy'),
+      onClick: () => openCopy(row),
+    },
+  ]
+}
 </script>
 
 <template>
@@ -171,6 +189,8 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       v-model:selected="selected"
       @clear-filters="clearFilters"
       @create="openNew"
+      :row-actions-list="rowActions"
+      @open="openDetail"
       @edit="openNewVersion"
     >
       <template #toolbar>
@@ -314,26 +334,6 @@ const money = (row: AveragePrice) => formatMoney(row.original_value, row.currenc
       </template>
       <template #expanded-row="{ item }">
         <PriceVersionsPanel :row="item" @open="openDetail" @deleted="table?.reload()" />
-      </template>
-      <template #row-actions="{ item }">
-        <v-btn
-          icon="mdi-eye-outline"
-          variant="text"
-          size="small"
-          :aria-label="$t('averagePrices.view')"
-          :title="$t('averagePrices.view')"
-          data-testid="view"
-          @click="openDetail(item)"
-        />
-        <v-btn
-          icon="mdi-file-replace-outline"
-          variant="text"
-          size="small"
-          :aria-label="$t('averagePrices.createCopy')"
-          :title="$t('averagePrices.createCopy')"
-          data-testid="copy"
-          @click="openCopy(item)"
-        />
       </template>
     </ServerCrudTable>
 

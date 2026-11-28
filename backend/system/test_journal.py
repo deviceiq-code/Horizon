@@ -65,6 +65,17 @@ def test_only_modules_the_user_may_open(user, client_for):
     assert _events(client_for(admin).get(URL))["users.created"] >= 2
 
 
+def test_both_parts_shown_by_default(user, client_for):
+    data = client_for(user).get("/api/auth/preferences/").json()
+    assert (data["show_data_journal"], data["show_system_journal"]) == (True, True)
+    assert data["journal_layout"] == "vertical"
+    client = client_for(user)
+    r = client.patch(
+        "/api/auth/preferences/", {"journal_layout": "diagonal"}, content_type="application/json"
+    )
+    assert r.status_code == 400
+
+
 def test_the_period_is_the_users_preference(user, client_for):
     client = client_for(user)
     client.patch("/api/auth/preferences/", {"journal_days": 30}, content_type="application/json")

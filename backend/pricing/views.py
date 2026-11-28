@@ -263,6 +263,7 @@ class AveragePriceViewSet(
             content_type=content_type_for(name),
             uploaded_by=request.user,
         )
+        AveragePrice.mark_changed(row.lineage, request.user)
         return Response(PriceDocumentSerializer(document).data, status=status.HTTP_201_CREATED)
 
     def _document(self, document_id):
@@ -275,7 +276,9 @@ class AveragePriceViewSet(
     @action(detail=True, methods=["delete"], url_path=r"documents/(?P<document_id>\d+)")
     def delete_document(self, request, pk=None, document_id=None):
         """Remove a document and its stored file."""
-        self._document(document_id).delete()
+        document = self._document(document_id)
+        document.delete()
+        AveragePrice.mark_changed(document.lineage, request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["get"], url_path=r"documents/(?P<document_id>\d+)/download")
@@ -324,6 +327,7 @@ class AveragePriceViewSet(
             if current is None:
                 raise Http404
             current.delete()
+            AveragePrice.mark_changed(row.lineage, request.user)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         upload = request.FILES.get("file")
@@ -416,6 +420,7 @@ def _replace_photo(row, current, content, name, size, source_url, user):
         )
         if current is not None:
             current.delete()  # replaced
+        AveragePrice.mark_changed(row.lineage, user)
     return photo
 
 

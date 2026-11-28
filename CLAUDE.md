@@ -508,7 +508,10 @@ Multi-user web system for **operating lease residual value pricing**
     and the other apps; `/` is the suite's home (welcome banner with soft waves + app cards +
     the **journal**, `components/HomeJournal.vue`: in lines, no cards — first the Data Journal,
     counts of what happened in the period of the user's preference `journal_days`, today / 7 / 30
-    days, default 7, Settings › Appearance › Home — each line opens its module (`src/journal.ts`
+    days, default 7, Settings › Appearance › Home — where each part can be hidden
+    (`show_data_journal`, `show_system_journal`, on by default; both off: not even asked for)
+    and placed one under the other or side by side (`journal_layout` vertical | horizontal,
+    default vertical) — each line opens its module (`src/journal.ts`
     `eventModule`); then the System Journal, the latest releases' notes, a blank line between
     notes, "New" for versions newer than `ui_state.lastSeenRelease`). Backend
     `system/journal.py`: `GET /api/system/journal/?days=` — `EVENTS` (key, the module's ViewSet,
@@ -549,7 +552,12 @@ Multi-user web system for **operating lease residual value pricing**
     confirmation, notifications; optional `expandable` + `expanded-row` slot; column filters:
     `filters` object + `filter.<key>` slots, a row under the titles turned on/off with the
     "Filters" button — remembered per grid with `filters-storage-key`, in the account's `ui_state`; turning off
-    clears them; `hide-create` hides "New"; `toolbar` slot: buttons between Filters and New; `selectable` + `v-model:selected`: a checkbox per row, ids kept across pages, no select-all); pages pass columns, texts and `item.<key>` cell slots, open
+    clears them; `hide-create` hides "New"; `toolbar` slot: buttons between Filters and New; a row's own actions as data —
+    `row-actions-list` (`RowAction`: key, icon, title, color, onClick) — before edit and delete:
+    **up to 3 actions in a row: buttons; more than 3: all of them in a "…" menu**
+    (`more-actions`; e.g. Average Prices: View, Create Copy, New Version, Delete);
+    a double click on a row emits `open` (Average Prices: its details; eFMV Analyses: the
+    analysis); `selectable` + `v-model:selected`: a checkbox per row, ids kept across pages, no select-all); pages pass columns, texts and `item.<key>` cell slots, open
     their own form on `create`/`edit` and call the exposed `reload()` after saving. Use it for new
     simple CRUD pages (Manufacturers and Asset classes do).
   - **Battle Cards** (`src/components/BattleCards.vue`: cards as columns of one grid, a line per
@@ -617,7 +625,7 @@ Multi-user web system for **operating lease residual value pricing**
     manager, vertical, date; per scenario its title, scope, LO, eFMV at EOL, HW / SW / SV, its
     services and software — attached and of their own —, optionally the assets; at the end the
     Pricing settings' disclaimer, English when empty, its variables filled — `fillDisclaimer`;
-    also who created it and when) in the language chosen in the dialog (the user's at first:
+    also who created it and who changed it last, and when) in the language chosen in the dialog (the user's at first:
     texts via `t(key, values, {locale})`, scenario names via `scenarioTitle`, numbers and money
     in that language; what the API writes — asset classes, the automatic scope — stays in the
     user's); it follows the user's theme (`ReportStyle`: the light version's primary, `brand`
@@ -726,7 +734,10 @@ Multi-user web system for **operating lease residual value pricing**
   (`created_by_field()` / `updated_by_field()`, users PROTECT), filled by
   `AuditedViewSetMixin` (changes outside the serializer: `touch(instance, request, *fields)`),
   returned as `created_by_name` / `updated_by_name` (`AuditedSerializerMixin`, `AUDIT_FIELDS`);
-  users keep theirs in `UserProfile` (created on `date_joined`). Their forms show them in the
+  users keep theirs in `UserProfile` (created on `date_joined`); average prices (immutable
+  versions): created = the row's first version (`first_created_at` / `first_created_by_name`),
+  changed = `updated_at` / `updated_by` on its current version — a new version, or its photo
+  or documents (`AveragePrice.mark_changed`); eFMV analyses show both in their header. Their forms show them in the
   footer, on the left (`FormDialog`'s `audit`). A new register gets them too.
 - **Versions** (`system.Release`, `system/releases.py`) change **only with a commit on main**:
   **before committing**, add the release — a data migration in `system/migrations/` (as

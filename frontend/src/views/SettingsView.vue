@@ -602,13 +602,80 @@ const journalOptions = computed(() =>
         <div class="group-title">{{ $t('settings.home.title') }}</div>
         <v-card class="mb-6">
           <SettingRow
+            :title="$t('settings.home.showDataJournal')"
+            :description="$t('settings.home.showDataJournalHint')"
+          >
+            <v-switch
+              :model-value="preferences.showDataJournal"
+              color="primary"
+              inset
+              hide-details
+              density="compact"
+              :disabled="saving"
+              :aria-label="$t('settings.home.showDataJournal')"
+              data-testid="show-data-journal"
+              @update:model-value="save({ show_data_journal: !!$event })"
+            />
+          </SettingRow>
+          <SettingRow
+            :title="$t('settings.home.showSystemJournal')"
+            :description="$t('settings.home.showSystemJournalHint')"
+          >
+            <v-switch
+              :model-value="preferences.showSystemJournal"
+              color="primary"
+              inset
+              hide-details
+              density="compact"
+              :disabled="saving"
+              :aria-label="$t('settings.home.showSystemJournal')"
+              data-testid="show-system-journal"
+              @update:model-value="save({ show_system_journal: !!$event })"
+            />
+          </SettingRow>
+          <SettingRow
+            :title="$t('settings.home.journalLayout')"
+            :description="$t('settings.home.journalLayoutHint')"
+          >
+            <v-btn-toggle
+              :model-value="preferences.journalLayout"
+              mandatory
+              divided
+              variant="outlined"
+              color="primary"
+              density="comfortable"
+              :disabled="saving"
+              data-testid="journal-layout"
+              @update:model-value="save({ journal_layout: $event })"
+            >
+              <v-btn
+                value="vertical"
+                prepend-icon="mdi-view-agenda-outline"
+                class="text-none"
+                data-testid="journal-layout-vertical"
+              >
+                {{ $t('settings.home.layouts.vertical') }}
+              </v-btn>
+              <v-btn
+                value="horizontal"
+                prepend-icon="mdi-view-column-outline"
+                class="text-none"
+                data-testid="journal-layout-horizontal"
+              >
+                {{ $t('settings.home.layouts.horizontal') }}
+              </v-btn>
+            </v-btn-toggle>
+          </SettingRow>
+          <!-- The period: of the Data Journal (disabled while it is hidden) -->
+          <SettingRow
+            :disabled="!preferences.showDataJournal"
             :title="$t('settings.home.journalPeriod')"
             :description="$t('settings.home.journalPeriodHint')"
           >
             <v-select
               :model-value="preferences.journalDays"
               :items="journalOptions"
-              :disabled="saving"
+              :disabled="saving || !preferences.showDataJournal"
               density="compact"
               hide-details
               class="control-narrow"

@@ -73,6 +73,8 @@ const ANALYSIS = {
   vertical_label: 'IT',
   created_by_name: 'Bruno Reis',
   created_at: '2026-11-20T10:00:00Z',
+  updated_by_name: 'Carla Dias',
+  updated_at: '2026-11-25T10:00:00Z',
   scenarios: [scenario(10, '36 Months - Dell'), scenario(11, '48 Months', [LAPTOP])],
 } as unknown as EfmvAnalysis
 
@@ -131,6 +133,9 @@ describe('eFMV report', () => {
     expect(html).toContain('Stefanini/IHM')
     // Who created it
     expect(html).toContain('Bruno Reis')
+    // Who changed it last, too
+    expect(html).toContain('efmv.report.changedBy')
+    expect(html).toContain('Carla Dias')
     expect(html).toContain('R$ 1424150.49')
     expect(html).toContain('14.57%')
     // The scope: written from the assets when not typed

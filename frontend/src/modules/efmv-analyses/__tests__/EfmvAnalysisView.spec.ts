@@ -131,6 +131,7 @@ const ANALYSIS: efmvApi.EfmvAnalysis = {
   created_at: '2026-11-20T10:00:00Z',
   created_by_name: 'Fernando Almeida',
   updated_at: '2026-11-20T10:00:00Z',
+  updated_by_name: 'Bruno Lima',
 }
 
 async function mountView(
@@ -157,6 +158,9 @@ async function mountView(
       word_dictionary: true,
       trim_spaces: true,
       journal_days: 7,
+      show_data_journal: true,
+      show_system_journal: true,
+      journal_layout: 'vertical',
       auto_scope: true,
       scope_threshold: '5.00',
       number_format: 'auto',
@@ -373,6 +377,8 @@ describe('EfmvAnalysisView', () => {
     const { wrapper } = await mountView({ id: 3 })
     expect(inBody('[data-testid="analysis-title"]')!.textContent).toContain('EFMV-2026-0003')
     expect(inBody('[data-testid="created-at"]')!.textContent).toMatch(/11\/20\/2026/)
+    // Who saved it last, and when
+    expect(inBody('[data-testid="updated-at"]')!.textContent).toContain('Bruno Lima')
     expect(inBody('[data-testid="tab-0"]')!.textContent).toContain('Base')
     expect(inBody('[data-testid="total-lo"]')!.textContent).toMatch(/200,000\.00/)
     expect(inBody('[data-testid="remove-scenario"]')!.hasAttribute('disabled')).toBe(true)

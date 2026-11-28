@@ -107,6 +107,10 @@ const ROW: pricesApi.AveragePriceDetail = {
   supersedes: 90,
   created_at: '2026-11-19T15:00:00Z',
   created_by_name: 'Ana Souza',
+  first_created_at: '2026-11-10T15:00:00Z',
+  first_created_by_name: 'Bruno Lima',
+  updated_at: '2026-11-19T15:00:00Z',
+  updated_by_name: 'Ana Souza',
   deleted_at: null,
   documents_count: 0,
   photo_id: null,
@@ -160,6 +164,17 @@ async function fillNew(
   await settle()
   amounts[1]!.value = '55,000'
   amounts[1]!.dispatchEvent(new Event('input'))
+  await settle()
+}
+
+/** A row's actions are in its "…" menu (more than three) */
+async function moreActions(
+  wrapper: ReturnType<typeof mountView>,
+  action: 'view' | 'copy' | 'edit' | 'delete',
+) {
+  await wrapper.find('[data-testid="more-actions"]').trigger('click')
+  await settle()
+  inBody(`[data-testid="more-actions-menu"] [data-testid="${action}"]`)!.click()
   await settle()
 }
 
@@ -221,6 +236,14 @@ describe('AveragePricesView', () => {
   it('lists rows with asset, model, original value and the % at each term', async () => {
     const wrapper = mountView()
     await settle()
+    // Four actions: all of them in the "…" menu
+    const actions = wrapper
+      .find('tbody tr')
+      .findAll('button')
+      .map((b) => b.attributes('data-testid'))
+    expect(actions).toContain('more-actions')
+    expect(actions).not.toContain('view')
+    expect(actions).not.toContain('edit')
 
     expect(prices.listAveragePrices).toHaveBeenCalledWith(
       expect.objectContaining({ ordering: '-created_at' }),
@@ -438,7 +461,7 @@ describe('AveragePricesView', () => {
     prices.uploadPriceDocument.mockResolvedValue({} as pricesApi.PriceDocument)
     const wrapper = mountView()
     await settle()
-    await wrapper.find('[data-testid="edit"]').trigger('click')
+    await moreActions(wrapper, 'edit')
     await settle()
     await click('tab-media')
     const file = new File(['pdf'], 'Catalog.pdf', { type: 'application/pdf' })
@@ -460,7 +483,7 @@ describe('AveragePricesView', () => {
     prices.listPriceDocuments.mockResolvedValue([])
     const wrapper = mountView()
     await settle()
-    await wrapper.find('[data-testid="edit"]').trigger('click')
+    await moreActions(wrapper, 'edit')
     await settle()
     await waitPreview()
     await click('save')
@@ -497,7 +520,7 @@ describe('AveragePricesView', () => {
     const wrapper = mountView()
     await settle()
 
-    await wrapper.find('[data-testid="edit"]').trigger('click')
+    await moreActions(wrapper, 'edit')
     await settle()
     expect(assetClasses.getAssetClass).toHaveBeenCalledWith(5)
     const value = (id: string) => (inBody(`[data-testid="${id}"] input`) as HTMLInputElement).value
@@ -544,7 +567,7 @@ describe('AveragePricesView', () => {
     const wrapper = mountView()
     await settle()
 
-    await wrapper.find('[data-testid="copy"]').trigger('click')
+    await moreActions(wrapper, 'copy')
     await settle()
     expect(fetchMock).toHaveBeenCalledWith('/api/average-prices/100/photo/?v=4', {
       credentials: 'same-origin',
@@ -570,15 +593,29 @@ describe('AveragePricesView', () => {
 
   // --- Detail and history --------------------------------------------------------------------
 
+  it('a double click on a row opens its details', async () => {
+    const wrapper = mountView()
+    await settle()
+    await wrapper.find('tbody tr').trigger('dblclick')
+    await settle()
+    expect(prices.getAveragePrice).toHaveBeenCalledWith(100)
+    wrapper.unmount()
+  })
+
   it('shows the details, the monthly curve and the history', async () => {
     const wrapper = mountView()
     await settle()
 
-    await wrapper.find('[data-testid="view"]').trigger('click')
+    await moreActions(wrapper, 'view')
     await settle()
     expect(prices.getAveragePrice).toHaveBeenCalledWith(100)
     expect(inBody('[data-testid="detail-specs"]')!.textContent).toContain('2500')
     expect(inBody('[data-testid="detail-terms"]')!.textContent).toContain('% of Original')
+    // Created with its first version; changed last by the newest
+    const audit = inBody('[data-testid="form-dialog-audit"]')!.textContent!
+    expect(audit).toContain('Created on 11/10/2026')
+    expect(audit).toContain('by Bruno Lima')
+    expect(audit).toContain('Changed on 11/19/2026')
 
     await click('tab-curve')
     expect(document.body.querySelectorAll('[data-testid="curve-row"]')).toHaveLength(25)
@@ -607,7 +644,7 @@ describe('AveragePricesView', () => {
     const wrapper = mountView()
     await settle()
 
-    await wrapper.find('[data-testid="delete"]').trigger('click')
+    await moreActions(wrapper, 'delete')
     await settle()
     expect(document.body.textContent).toContain('and all its versions')
     await confirmOpenDialog()
@@ -669,7 +706,7 @@ describe('AveragePricesView', () => {
   it('shows the average of all versions in the history', async () => {
     const wrapper = mountView()
     await settle()
-    await wrapper.find('[data-testid="view"]').trigger('click')
+    await moreActions(wrapper, 'view')
     await settle()
     await click('tab-history')
 
@@ -687,7 +724,7 @@ describe('AveragePricesView', () => {
     prices.deleteAveragePriceVersion.mockResolvedValue(undefined)
     const wrapper = mountView()
     await settle()
-    await wrapper.find('[data-testid="view"]').trigger('click')
+    await moreActions(wrapper, 'view')
     await settle()
     await click('tab-history')
 
@@ -719,7 +756,7 @@ describe('AveragePricesView', () => {
     prices.getAveragePriceHistory.mockResolvedValue({ versions: [ROW], average: null })
     const wrapper = mountView()
     await settle()
-    await wrapper.find('[data-testid="view"]').trigger('click')
+    await moreActions(wrapper, 'view')
     await settle()
     await click('tab-history')
 

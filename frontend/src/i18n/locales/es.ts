@@ -25,6 +25,7 @@ const es: Messages = {
     saved: 'Palabras clave guardadas.',
   },
   common: {
+    moreActions: 'Más Acciones',
     audit: { created: 'Creado el {date} por {name}', updated: 'Modificado el {date} por {name}' },
     filters: { nameOrKeyword: 'Nombre o Palabra Clave', all: 'Todos' },
     yes: 'Sí',
@@ -355,6 +356,7 @@ const es: Messages = {
     report: {
       language: 'Idioma',
       createdBy: 'Creado por',
+      changedBy: 'Modificado por',
       title: 'Análisis de eFMV',
       subtitle: 'Valor justo de mercado estimado al final del arrendamiento',
       dialogTitle: 'Imprimir Análisis',
@@ -2458,6 +2460,13 @@ const es: Messages = {
   settings: {
     home: {
       title: 'Home',
+      journalLayout: 'Diseño del Journal',
+      journalLayoutHint: 'Los Journals de Datos y del Sistema uno debajo del otro, o lado a lado.',
+      layouts: { vertical: 'Vertical', horizontal: 'Horizontal' },
+      showDataJournal: 'Mostrar Journal de Datos',
+      showDataJournalHint: 'Lo que pasó recientemente en los módulos que usted abre: solo conteos.',
+      showSystemJournal: 'Mostrar Journal del Sistema',
+      showSystemJournalHint: 'Las novedades de cada versión de Horizon.',
       journalPeriod: 'Período del Journal',
       journalPeriodHint: 'Hasta cuándo mira hacia atrás el journal de la Home.',
     },

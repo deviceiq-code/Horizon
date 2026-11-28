@@ -3267,3 +3267,18 @@ msgstr "versión"
 
 msgid "releases"
 msgstr "versiones"
+
+msgid "show data journal"
+msgstr "mostrar journal de datos"
+
+msgid "show system journal"
+msgstr "mostrar journal del sistema"
+
+msgid "journal layout"
+msgstr "diseño del journal"
+
+msgid "Vertical"
+msgstr "Vertical"
+
+msgid "Horizontal"
+msgstr "Horizontal"

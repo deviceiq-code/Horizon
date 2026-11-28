@@ -104,6 +104,13 @@ class WebSearchEngine(models.TextChoices):
 MAX_UI_STATE_BYTES = 20_000
 
 
+class JournalLayout(models.TextChoices):
+    """How the Home's two journals are placed."""
+
+    VERTICAL = "vertical", _("Vertical")
+    HORIZONTAL = "horizontal", _("Horizontal")
+
+
 class JournalPeriod(models.IntegerChoices):
     """How far back the Home's journal looks (days; 1 = today)."""
 
@@ -196,6 +203,13 @@ class UserPreferences(models.Model):
     word_dictionary = models.BooleanField(_("word dictionary"), default=True)
     # Text typed in forms without spaces at the start or end nor repeated ones
     trim_spaces = models.BooleanField(_("remove extra spaces"), default=True)
+    # The Home's journal: its two parts shown or not
+    show_data_journal = models.BooleanField(_("show data journal"), default=True)
+    show_system_journal = models.BooleanField(_("show system journal"), default=True)
+    # One under the other (vertical) or side by side (horizontal)
+    journal_layout = models.CharField(
+        _("journal layout"), max_length=12, choices=JournalLayout, default=JournalLayout.VERTICAL
+    )
     # The Home's journal: what happened today (1) or in the last 7 or 30 days
     journal_days = models.PositiveSmallIntegerField(
         _("journal period"), choices=JournalPeriod, default=JournalPeriod.WEEK

@@ -28,6 +28,11 @@ const FULL_NAME_ORDERS: readonly FullNameOrder[] = ['first_last', 'last_first']
 /** How far back the Home's journal looks (days; 1 = today) — `accounts.models.JournalPeriod` */
 export const JOURNAL_PERIODS = [1, 7, 30] as const
 export type JournalDays = (typeof JOURNAL_PERIODS)[number]
+/** How the Home's two journals are placed — `accounts.models.JournalLayout` */
+export const JOURNAL_LAYOUTS = ['vertical', 'horizontal'] as const
+export type JournalLayout = (typeof JOURNAL_LAYOUTS)[number]
+const isJournalLayout = (v: unknown): v is JournalLayout =>
+  JOURNAL_LAYOUTS.includes(v as JournalLayout)
 const isJournalDays = (v: unknown): v is JournalDays => JOURNAL_PERIODS.includes(v as JournalDays)
 
 export interface Preferences {
@@ -63,6 +68,11 @@ export interface Preferences {
   word_dictionary: boolean
   /** Smart Tools: text typed in forms without extra spaces (tidySpaces.ts) */
   trim_spaces: boolean
+  /** The Home's journal: its two parts shown or not */
+  show_data_journal: boolean
+  show_system_journal: boolean
+  /** The Home's two journals: one under the other or side by side */
+  journal_layout: JournalLayout
   /** The Home's journal: today (1) or the last 7 or 30 days */
   journal_days: JournalDays
   /** Smart Tools: eFMV scenarios' scope written from their assets; negligible below (%) */
@@ -91,6 +101,9 @@ export type PreferencesUpdate = Partial<{
   select_on_focus: boolean
   word_dictionary: boolean
   trim_spaces: boolean
+  show_data_journal: boolean
+  show_system_journal: boolean
+  journal_layout: JournalLayout
   journal_days: JournalDays
   auto_scope: boolean
   scope_threshold: string
@@ -228,6 +241,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
   const wordDictionary = ref(true)
   const trimSpaces = ref(true)
   const journalDays = ref<JournalDays>(7)
+  const showDataJournal = ref(true)
+  const showSystemJournal = ref(true)
+  const journalLayout = ref<JournalLayout>('vertical')
   const autoScope = ref(
     readStored(AUTO_SCOPE_STORAGE_KEY, (v): v is string => v === 'false', 'true') !== 'false',
   )
@@ -261,6 +277,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
     word_dictionary?: boolean
     trim_spaces?: boolean
     journal_days?: number
+    show_data_journal?: boolean
+    show_system_journal?: boolean
+    journal_layout?: string
     auto_scope?: boolean
     scope_threshold?: string
   }) {
@@ -330,6 +349,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
     if (typeof p.word_dictionary === 'boolean') wordDictionary.value = p.word_dictionary
     if (typeof p.trim_spaces === 'boolean') trimSpaces.value = p.trim_spaces
     if (isJournalDays(p.journal_days)) journalDays.value = p.journal_days
+    if (typeof p.show_data_journal === 'boolean') showDataJournal.value = p.show_data_journal
+    if (typeof p.show_system_journal === 'boolean') showSystemJournal.value = p.show_system_journal
+    if (isJournalLayout(p.journal_layout)) journalLayout.value = p.journal_layout
     if (typeof p.auto_scope === 'boolean') {
       autoScope.value = p.auto_scope
       store(AUTO_SCOPE_STORAGE_KEY, String(p.auto_scope))
@@ -371,6 +393,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
       word_dictionary: wordDictionary.value,
       trim_spaces: trimSpaces.value,
       journal_days: journalDays.value,
+      show_data_journal: showDataJournal.value,
+      show_system_journal: showSystemJournal.value,
+      journal_layout: journalLayout.value,
       auto_scope: autoScope.value,
       scope_threshold: scopeThreshold.value,
     }
@@ -421,6 +446,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
     wordDictionary,
     trimSpaces,
     journalDays,
+    showDataJournal,
+    showSystemJournal,
+    journalLayout,
     autoScope,
     scopeThreshold,
     apply,

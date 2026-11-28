@@ -336,3 +336,23 @@ def test_photo_name_from_url():
     )
     assert photo_name_from_url("https://a.com/", "png") == "photo.png"
     assert photo_name_from_url("https://a.com/image.php", "webp") == "image.webp"
+
+
+def test_the_row_keeps_who_created_it_and_who_changed_it_last(logged_client, catalog, price):
+    """Created: its first version; changed: a new version, or its photo or documents."""
+    from django.contrib.auth import get_user_model
+
+    row = logged_client.get(f"{URL}{price.pk}/").json()
+    assert (row["first_created_by_name"], row["updated_by_name"]) == ("Ana Souza", "Ana Souza")
+    bruno = get_user_model().objects.create_user("bruno", first_name="Bruno", last_name="Lima")
+    logged_client.force_login(bruno)
+    _upload(logged_client, price.pk, "quote.pdf", b"%PDF-1.4")
+    row = logged_client.get(f"{URL}{price.pk}/").json()
+    assert (row["first_created_by_name"], row["updated_by_name"]) == ("Ana Souza", "Bruno Lima")
+    second = _new_version(logged_client, catalog, price.pk, "110000")
+    row = logged_client.get(f"{URL}{second}/").json()
+    # Still created with the first version; changed by the new one
+    assert row["first_created_at"] == logged_client.get(f"{URL}{price.pk}/").json()["created_at"]
+    assert (row["first_created_by_name"], row["updated_by_name"]) == ("Ana Souza", "Bruno Lima")
+    _photo(logged_client, second, "front.png", b"\x89PNG")
+    assert logged_client.get(f"{URL}{second}/").json()["updated_at"] >= row["updated_at"]

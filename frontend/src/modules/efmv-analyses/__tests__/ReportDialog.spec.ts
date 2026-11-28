@@ -58,6 +58,8 @@ describe('printing an analysis', () => {
       vertical_label: 'TI',
       created_by_name: 'Bruno Reis',
       created_at: '2026-11-20T10:00:00Z',
+      updated_by_name: 'Carla Dias',
+      updated_at: '2026-11-25T10:00:00Z',
       scenarios: [scenario(10, '36 Meses', 36), scenario(11, '48 Meses', 48)],
     } as unknown as efmvApi.EfmvAnalysis)
     vi.mocked(settingsApi).getPricingSettings.mockResolvedValue({

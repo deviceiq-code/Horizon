@@ -149,6 +149,7 @@ export interface EfmvAnalysis {
   created_at: string
   created_by_name: string | null
   updated_at: string
+  updated_by_name: string | null
 }
 
 export interface EfmvAnalysisRow {

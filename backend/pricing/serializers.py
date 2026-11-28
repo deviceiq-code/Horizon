@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -43,6 +44,11 @@ class AveragePriceSerializer(serializers.ModelSerializer):
     points = PricePointSerializer(many=True, read_only=True)
     increasing_terms = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    # The row (every version): created with its first version; changed last by a new version
+    # or its photo or documents
+    first_created_at = serializers.SerializerMethodField()
+    first_created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
     # Documents of the row (all versions); annotated by the viewset
     documents_count = serializers.SerializerMethodField()
     # Id of the photo (changes when replaced; used to refresh the image); annotated
@@ -70,6 +76,10 @@ class AveragePriceSerializer(serializers.ModelSerializer):
             "supersedes",
             "created_at",
             "created_by_name",
+            "first_created_at",
+            "first_created_by_name",
+            "updated_at",
+            "updated_by_name",
             "deleted_at",
             "documents_count",
             "photo_id",
@@ -106,6 +116,29 @@ class AveragePriceSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj) -> str | None:
         return display_name_in(self.context, obj.created_by)
+
+    def _first(self, obj) -> AveragePrice:
+        """The row's first version (still kept), read once per lineage."""
+        cache = self.context.setdefault("_first_versions", {})
+        if obj.lineage not in cache:
+            cache[obj.lineage] = (
+                AveragePrice.objects.filter(lineage=obj.lineage)
+                .select_related("created_by")
+                .order_by("created_at", "id")
+                .first()
+            ) or obj
+        return cache[obj.lineage]
+
+    def get_first_created_at(self, obj) -> str:
+        # As every other date of the API (time zone and format)
+        return serializers.DateTimeField().to_representation(self._first(obj).created_at)
+
+    def get_first_created_by_name(self, obj) -> str | None:
+        first = self._first(obj)
+        return display_name_in(self.context, first.created_by) if first.created_by_id else None
+
+    def get_updated_by_name(self, obj) -> str | None:
+        return display_name_in(self.context, obj.updated_by) if obj.updated_by_id else None
 
 
 class CurvePointSerializer(serializers.Serializer):
@@ -250,6 +283,8 @@ class AveragePriceCreateSerializer(serializers.Serializer):
                 # A new version keeps the row's documents
                 **({"lineage": previous.lineage} if previous is not None else {}),
                 created_by=self.context["request"].user,
+                updated_by=self.context["request"].user,
+                updated_at=timezone.now(),
             )
             PricePoint.objects.bulk_create(
                 PricePoint(

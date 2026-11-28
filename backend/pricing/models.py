@@ -19,6 +19,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from catalogs.models import AssetClass, Manufacturer, SubVertical
+from config.audit import updated_by_field
 from config.keywords import keywords_field
 
 from .curves import increasing_terms, monthly_curve, percent_of
@@ -98,6 +99,10 @@ class AveragePrice(models.Model):
         related_name="+",
         verbose_name=_("created by"),
     )
+    # The row's last change (a new version, or its photo or documents — they never make one);
+    # kept on its current version
+    updated_at = models.DateTimeField(_("updated at"), null=True, blank=True)
+    updated_by = updated_by_field()
     deleted_at = models.DateTimeField(_("deleted at"), null=True, blank=True)
     deleted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -122,6 +127,14 @@ class AveragePrice(models.Model):
 
     def __str__(self):
         return f"{self.manufacturer} {self.model}"
+
+    @staticmethod
+    def mark_changed(lineage, user) -> None:
+        """The row (all its versions) changed without a new version — its photo or documents:
+        recorded on its current version."""
+        AveragePrice.objects.filter(lineage=lineage, is_current=True).update(
+            updated_at=timezone.now(), updated_by=user if user.is_authenticated else None
+        )
 
     # --- Curve (computed, never stored) ------------------------------------------------------
 
